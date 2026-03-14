@@ -1,12 +1,18 @@
 name: 🏗️ Setup GitHub Project Board (Scrum)
 
-# Runs when this branch is pushed AND can be re-triggered manually from
-# Actions > "Setup GitHub Project Board (Scrum)" > Run workflow.
-# The workflow is IDEMPOTENT: it skips label/issue creation if they already exist.
+# HOW TO RUN THIS WORKFLOW:
+#   1. Merge this PR into main.
+#   2. Go to Actions > "Setup GitHub Project Board (Scrum)" > Run workflow (main branch).
+#   3. Done! All 8 labels, 12 issues and the project board will be created automatically.
+#
+# The workflow is IDEMPOTENT: it skips everything if issues already exist.
 on:
+  # Triggers on push to main (after the PR is merged) OR on the feature branch.
   push:
     branches:
+      - main
       - copilot/setup-github-project-board
+  # Also allows manual trigger from the Actions tab.
   workflow_dispatch:
 
 permissions:
@@ -122,7 +128,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh label create "📄 documentation" \
-            --description "Memoria, README, Presentacion" \
+            --description "Memoria, README, Presentación" \
             --color "0052cc" \
             --repo "${{ github.repository }}" \
             --force
@@ -500,12 +506,12 @@ jobs:
           OWNER="${{ github.repository_owner }}"
 
           echo "==> Creating GitHub Project V2 board..."
-          PROJECT_URL=$(gh project create \
+          PROJECT_JSON=$(gh project create \
             --owner "$OWNER" \
             --title "Mockia.io – Scrum Board" \
-            --format json 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('url',''))" || echo "")
+            --format json 2>/dev/null || echo "")
 
-          if [ -z "$PROJECT_URL" ]; then
+          if [ -z "$PROJECT_JSON" ]; then
             echo "::warning::Could not create project board automatically. Please create it manually at https://github.com/users/${OWNER}/projects/new"
             echo ""
             echo "Manual setup instructions:"
@@ -517,11 +523,9 @@ jobs:
             exit 0
           fi
 
-          echo "Project created at: $PROJECT_URL"
-
-          echo "==> Getting project number..."
-          PROJECT_NUMBER=$(echo "$PROJECT_URL" | grep -oE '[0-9]+$')
-          echo "Project number: $PROJECT_NUMBER"
+          PROJECT_NUMBER=$(echo "$PROJECT_JSON" | jq -r '.number')
+          PROJECT_URL=$(echo "$PROJECT_JSON" | jq -r '.url')
+          echo "Project created at: $PROJECT_URL (number: $PROJECT_NUMBER)"
 
           echo "==> Fetching all open issues to add to project..."
           ISSUE_NUMBERS=$(gh issue list --repo "$REPO" --state open --json number --jq '.[].number')
