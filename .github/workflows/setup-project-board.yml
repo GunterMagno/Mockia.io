@@ -1,0 +1,541 @@
+name: 🏗️ Setup GitHub Project Board (Scrum)
+
+# Runs when this branch is pushed AND can be re-triggered manually from
+# Actions > "Setup GitHub Project Board (Scrum)" > Run workflow.
+# The workflow is IDEMPOTENT: it skips label/issue creation if they already exist.
+on:
+  push:
+    branches:
+      - copilot/setup-github-project-board
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+  repository-projects: write
+  # projects: write  — uncomment if using a GitHub App token with project scope
+
+jobs:
+  # ── Guard: skip everything if labels+issues already exist ─────────────────
+  check-setup:
+    name: 🔎 Check if setup already done
+    runs-on: ubuntu-latest
+    outputs:
+      already_done: ${{ steps.check.outputs.already_done }}
+    steps:
+      - name: Check existing issues
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          COUNT=$(gh issue list \
+            --repo "${{ github.repository }}" \
+            --state all \
+            --json number \
+            --jq 'length')
+          if [ "$COUNT" -gt "0" ]; then
+            echo "already_done=true" >> "$GITHUB_OUTPUT"
+            echo "⚠️  Setup already done ($COUNT issues exist). Skipping to avoid duplicates."
+          else
+            echo "already_done=false" >> "$GITHUB_OUTPUT"
+            echo "▶️  No issues found. Running full setup..."
+          fi
+
+  create-labels:
+    name: 🏷️ Create Labels
+    runs-on: ubuntu-latest
+    needs: check-setup
+    if: needs.check-setup.outputs.already_done == 'false'
+    steps:
+      - name: Create label – architecture
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create "🏗️ architecture" \
+            --description "Docker, Setup base, Monorepo" \
+            --color "0075ca" \
+            --repo "${{ github.repository }}" \
+            --force
+
+      - name: Create label – design
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create "🎨 design" \
+            --description "Figma, UI/UX, Wireframes" \
+            --color "e4e669" \
+            --repo "${{ github.repository }}" \
+            --force
+
+      - name: Create label – frontend
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create "🖥️ frontend" \
+            --description "React, React Query, SCSS, Vite" \
+            --color "7057ff" \
+            --repo "${{ github.repository }}" \
+            --force
+
+      - name: Create label – backend
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create "⚙️ backend" \
+            --description "Node.js, Express, Wildcards" \
+            --color "e11d48" \
+            --repo "${{ github.repository }}" \
+            --force
+
+      - name: Create label – database
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create "🗄️ database" \
+            --description "MongoDB, Mongoose" \
+            --color "0e8a16" \
+            --repo "${{ github.repository }}" \
+            --force
+
+      - name: Create label – ai-integration
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create "🤖 ai-integration" \
+            --description "OpenRouter, LLMs, Prompts" \
+            --color "d93f0b" \
+            --repo "${{ github.repository }}" \
+            --force
+
+      - name: Create label – devops
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create "🚀 devops" \
+            --description "GitHub Actions, CI/CD, Deploy, Docker" \
+            --color "1d76db" \
+            --repo "${{ github.repository }}" \
+            --force
+
+      - name: Create label – documentation
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create "📄 documentation" \
+            --description "Memoria, README, Presentacion" \
+            --color "0052cc" \
+            --repo "${{ github.repository }}" \
+            --force
+
+  create-issues:
+    name: 📋 Create Issues
+    runs-on: ubuntu-latest
+    needs: [check-setup, create-labels]
+    if: needs.check-setup.outputs.already_done == 'false'
+    steps:
+      # ── FASE 1 ──────────────────────────────────────────────────────────────
+
+      - name: Issue – [Fase 1] Configuración de Repositorios y Entorno Dockerizado
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BODY: |
+            ## 🗓️ Fase 1 · Semanas 1–2 · Estimación: 8 horas
+
+            **Descripción:**
+            Configurar la estructura base del monorepo (o repositorios separados) para frontend y backend, y contenerizar el entorno de desarrollo usando Docker para asegurar que todo el stack MERN funcione sin problemas de dependencias locales.
+
+            ## Subtareas
+
+            - [ ] Inicializar repositorio(s) con `.gitignore` para Node y React.
+            - [ ] Inicializar proyecto Backend (Node/Express) con TypeScript/ES6.
+            - [ ] Inicializar proyecto Frontend (Vite + React.js).
+            - [ ] Crear `docker-compose.yml` para levantar MongoDB en local.
+            - [ ] Crear `Dockerfile` para Backend y Frontend en modo desarrollo.
+            - [ ] Verificar que ambos servicios se comunican correctamente.
+
+            ## Criterios de aceptación
+
+            - Los tres servicios (frontend, backend, MongoDB) arrancan con un solo `docker compose up`.
+            - El backend responde en `http://localhost:3001/health`.
+            - El frontend carga en `http://localhost:5173`.
+        run: |
+          gh issue create \
+            --title "[Fase 1] Configuración de Repositorios y Entorno Dockerizado" \
+            --body "$BODY" \
+            --label "🏗️ architecture,🚀 devops" \
+            --repo "${{ github.repository }}"
+
+      - name: Issue – [Fase 1] Diseño UI/UX y Wireframes del Dashboard
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BODY: |
+            ## 🗓️ Fase 1 · Semanas 1–2 · Estimación: 12 horas
+
+            **Descripción:**
+            Diseñar en Figma la interfaz de usuario de Mockia.io. Debe tener un aspecto profesional tipo SaaS, similar a Swagger o Postman, centrado en la usabilidad para desarrolladores.
+
+            ## Subtareas
+
+            - [ ] Definir paleta de colores y tipografía (SCSS variables).
+            - [ ] Diseñar pantalla de Login/Registro.
+            - [ ] Diseñar vista del Dashboard (Lista de proyectos/workspaces).
+            - [ ] Diseñar vista detallada del Proyecto (Lista de endpoints generados).
+            - [ ] Diseñar vista del Editor de JSON (Editor de código, selector de latencia, forzado de estados HTTP).
+
+            ## Criterios de aceptación
+
+            - Prototipo navegable en Figma con al menos 4 pantallas.
+            - Variables SCSS definidas para colores, tipografía y espaciado.
+        run: |
+          gh issue create \
+            --title "[Fase 1] Diseño UI/UX y Wireframes del Dashboard" \
+            --body "$BODY" \
+            --label "🎨 design" \
+            --repo "${{ github.repository }}"
+
+      - name: Issue – [Fase 1] Modelado de la Base de Datos (MongoDB)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BODY: |
+            ## 🗓️ Fase 1 · Semanas 1–2 · Estimación: 6 horas
+
+            **Descripción:**
+            Crear los esquemas de Mongoose para soportar la lógica de negocio. Es crucial diseñar un esquema flexible para los Mocks (endpoints y respuestas dinámicas).
+
+            ## Subtareas
+
+            - [ ] Crear modelo `User` (nombre, email, password hasheada).
+            - [ ] Crear modelo `Workspace/Project` (referencia al owner).
+            - [ ] Crear modelo `MockEndpoint` (ruta, método HTTP, latencia_ms, estado_forzado).
+            - [ ] Crear modelo o esquema dinámico para almacenar la respuesta JSON asociada al endpoint.
+
+            ## Criterios de aceptación
+
+            - Los 3 modelos Mongoose están creados y validados.
+            - Las relaciones entre `User → Project → MockEndpoint` funcionan correctamente.
+            - Se puede guardar y recuperar un MockEndpoint con JSON arbitrario.
+        run: |
+          gh issue create \
+            --title "[Fase 1] Modelado de la Base de Datos (MongoDB)" \
+            --body "$BODY" \
+            --label "🗄️ database,⚙️ backend" \
+            --repo "${{ github.repository }}"
+
+      # ── FASE 2 ──────────────────────────────────────────────────────────────
+
+      - name: Issue – [Fase 2] Sistema de Autenticación con JWT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BODY: |
+            ## 🗓️ Fase 2 · Semanas 3–4 · Estimación: 15 horas
+
+            **Descripción:**
+            Implementar el registro y login seguro para que los usuarios puedan tener sus espacios de trabajo aislados y persistentes.
+
+            ## Subtareas
+
+            - [ ] (Backend) Crear endpoints `/api/auth/register` y `/api/auth/login`.
+            - [ ] (Backend) Implementar encriptación con `bcrypt` y generación de JWT.
+            - [ ] (Backend) Crear middleware de protección de rutas privadas.
+            - [ ] (Frontend) Crear formularios de autenticación en React.
+            - [ ] (Frontend) Gestionar el token en el local storage o cookies seguras.
+            - [ ] (Frontend) Proteger rutas del frontend (ej. no acceder al dashboard sin loguearse).
+
+            ## Criterios de aceptación
+
+            - Un usuario puede registrarse con email + password.
+            - Un usuario puede iniciar sesión y recibir un JWT válido.
+            - Las rutas privadas devuelven 401 sin token válido.
+            - Las rutas del frontend redirigen a `/login` si no hay sesión activa.
+        run: |
+          gh issue create \
+            --title "[Fase 2] Sistema de Autenticación con JWT" \
+            --body "$BODY" \
+            --label "⚙️ backend,🖥️ frontend" \
+            --repo "${{ github.repository }}"
+
+      - name: Issue – [Fase 2] CRUD de Proyectos y Espacios de Trabajo
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BODY: |
+            ## 🗓️ Fase 2 · Semanas 3–4 · Estimación: 10 horas
+
+            **Descripción:**
+            Permitir a los usuarios gestionar sus múltiples proyectos (APIs) desde el dashboard.
+
+            ## Subtareas
+
+            - [ ] (Backend) Crear rutas CRUD protegidas por JWT para `Projects`.
+            - [ ] (Frontend) Configurar `React Query` para manejar el estado de las peticiones.
+            - [ ] (Frontend) Crear interfaz para listar, crear y borrar proyectos.
+            - [ ] (Frontend) Integrar estilos SCSS en los componentes.
+
+            ## Criterios de aceptación
+
+            - Un usuario autenticado puede crear, listar, editar y borrar sus proyectos.
+            - Un usuario NO puede ver ni modificar proyectos de otro usuario.
+            - La interfaz del dashboard muestra los proyectos con React Query (loading, error, success states).
+        run: |
+          gh issue create \
+            --title "[Fase 2] CRUD de Proyectos y Espacios de Trabajo" \
+            --body "$BODY" \
+            --label "⚙️ backend,🖥️ frontend" \
+            --repo "${{ github.repository }}"
+
+      # ── FASE 3 ──────────────────────────────────────────────────────────────
+
+      - name: Issue – [Fase 3] Ingesta automatizada de repositorios GitHub
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BODY: |
+            ## 🗓️ Fase 3 · Semanas 5–6 · Estimación: 15 horas
+
+            **Descripción:**
+            Desarrollar el servicio que recibe una URL de GitHub, descarga/lee el contenido del código relevante (interfaces, types, endpoints) y prepara el contexto para la IA.
+
+            ## Subtareas
+
+            - [ ] (Backend) Crear endpoint que reciba la URL del repo.
+            - [ ] (Backend) Integrar API de GitHub para leer el árbol de archivos (o usar script de clonado parcial).
+            - [ ] (Backend) Filtrar archivos relevantes (ej. ignorar `node_modules`, leer solo `.ts`, `.json`, `.swagger`).
+            - [ ] (Backend) Concatenar el contenido en un formato optimizado (contexto bruto).
+
+            ## Criterios de aceptación
+
+            - Dado un repositorio público de GitHub, el endpoint devuelve el contenido relevante de los archivos filtrados.
+            - Los archivos de `node_modules`, `dist` y `.git` son ignorados.
+            - El contexto generado tiene un límite de tokens para no exceder el contexto del LLM.
+        run: |
+          gh issue create \
+            --title "[Fase 3] Ingesta automatizada de repositorios GitHub" \
+            --body "$BODY" \
+            --label "⚙️ backend,🤖 ai-integration" \
+            --repo "${{ github.repository }}"
+
+      - name: Issue – [Fase 3] Integración con OpenRouter y Generación de Mocks
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BODY: |
+            ## 🗓️ Fase 3 · Semanas 5–6 · Estimación: 15 horas
+
+            **Descripción:**
+            Conectar el backend con la API de OpenRouter (LLMs). Enviar el contexto extraído de GitHub y pedirle a la IA que devuelva un JSON estructurado con las rutas y datos falsos realistas.
+
+            ## Subtareas
+
+            - [ ] (Backend) Crear cuenta y obtener API Key en OpenRouter.
+            - [ ] (Backend) Diseñar el "System Prompt" para asegurar que la IA devuelva solo JSON válido (rutas, métodos y datos realistas).
+            - [ ] (Backend) Enviar petición a OpenRouter con el contexto de GitHub.
+            - [ ] (Backend) Parsear la respuesta y guardarla en MongoDB creando los documentos `MockEndpoint` correspondientes al proyecto.
+            - [ ] (Frontend) Crear UI de "Cargando..." mientras la IA procesa el repositorio.
+
+            ## Criterios de aceptación
+
+            - Dado el contexto de un repositorio, la IA devuelve un JSON válido con al menos 3 endpoints.
+            - Los endpoints generados se almacenan correctamente en MongoDB.
+            - El frontend muestra un spinner mientras la IA procesa y la lista de endpoints al terminar.
+        run: |
+          gh issue create \
+            --title "[Fase 3] Integración con OpenRouter y Generación de Mocks" \
+            --body "$BODY" \
+            --label "⚙️ backend,🤖 ai-integration,🗄️ database" \
+            --repo "${{ github.repository }}"
+
+      # ── FASE 4 ──────────────────────────────────────────────────────────────
+
+      - name: Issue – [Fase 4] Motor de Enrutamiento Dinámico Mock (Wildcards)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BODY: |
+            ## 🗓️ Fase 4 · Semanas 7–8 · Estimación: 12 horas
+
+            **Descripción:**
+            Implementar el corazón del servidor Mock. Express debe capturar cualquier petición hacia `api.mockia.io/mock/:projectId/*` y devolver la respuesta configurada en la BBDD.
+
+            ## Subtareas
+
+            - [ ] (Backend) Configurar ruta wildcard `app.all('/mock/:projectId/*', ...)` en Express.
+            - [ ] (Backend) Extraer el `projectId`, método y ruta solicitada de la request.
+            - [ ] (Backend) Buscar en MongoDB si existe ese `MockEndpoint`.
+            - [ ] (Backend) Si existe, devolver el JSON guardado con código 200.
+            - [ ] (Backend) Si no existe, devolver un error 404 estructurado.
+
+            ## Criterios de aceptación
+
+            - Una petición `GET /mock/{projectId}/users` devuelve el JSON configurado para ese endpoint.
+            - Una petición a un endpoint no configurado devuelve un 404 con mensaje descriptivo.
+            - El router acepta todos los métodos HTTP (GET, POST, PUT, DELETE, PATCH).
+        run: |
+          gh issue create \
+            --title "[Fase 4] Motor de Enrutamiento Dinámico Mock (Wildcards)" \
+            --body "$BODY" \
+            --label "⚙️ backend" \
+            --repo "${{ github.repository }}"
+
+      - name: Issue – [Fase 4] Implementar Forzado de Estados HTTP y Latencia
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BODY: |
+            ## 🗓️ Fase 4 · Semanas 7–8 · Estimación: 10 horas
+
+            **Descripción:**
+            Permitir que el Mock Router devuelva errores forzados (500, 401) o retrase la respuesta (latencia de red) según lo haya configurado el usuario.
+
+            ## Subtareas
+
+            - [ ] (Backend) Modificar el Mock Router: Si el endpoint tiene latencia, usar `setTimeout` antes de enviar la respuesta.
+            - [ ] (Backend) Modificar el Mock Router: Si el endpoint tiene un estado forzado (ej. 500), ignorar el JSON y devolver un código 500.
+            - [ ] (Frontend) Añadir selectores en la interfaz para configurar Latencia (0ms, 500ms, 2000ms) y Estado HTTP.
+
+            ## Criterios de aceptación
+
+            - Un endpoint configurado con `latencyMs: 2000` tarda ~2 segundos en responder.
+            - Un endpoint configurado con `statusCode: 500` devuelve HTTP 500 independientemente del JSON guardado.
+            - El usuario puede cambiar latencia y estado forzado desde el dashboard sin recargar.
+        run: |
+          gh issue create \
+            --title "[Fase 4] Implementar Forzado de Estados HTTP y Latencia" \
+            --body "$BODY" \
+            --label "⚙️ backend,🖥️ frontend" \
+            --repo "${{ github.repository }}"
+
+      - name: Issue – [Fase 4] Editor en caliente y Panel de Endpoints
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BODY: |
+            ## 🗓️ Fase 4 · Semanas 7–8 · Estimación: 14 horas
+
+            **Descripción:**
+            Implementar el panel interactivo estilo Swagger donde el usuario pueda ver las rutas que generó la IA y modificar el JSON de respuesta.
+
+            ## Subtareas
+
+            - [ ] (Frontend) Listar todos los endpoints generados para un proyecto en formato acordeón/lista.
+            - [ ] (Frontend) Integrar un editor de código en la web (ej. `Monaco Editor` o `CodeMirror`) para editar JSON con resaltado de sintaxis.
+            - [ ] (Frontend) Enviar cambios del JSON manual al backend y actualizar MongoDB.
+            - [ ] (Frontend) Mostrar la URL pública para que el usuario pueda copiarla fácilmente al portapapeles.
+
+            ## Criterios de aceptación
+
+            - El usuario puede expandir cada endpoint para ver y editar su JSON de respuesta.
+            - Los cambios guardados se persisten en MongoDB y se reflejan inmediatamente al hacer la petición.
+            - Hay un botón "Copiar URL" que copia la URL pública del mock al portapapeles.
+        run: |
+          gh issue create \
+            --title "[Fase 4] Editor en caliente y Panel de Endpoints" \
+            --body "$BODY" \
+            --label "🖥️ frontend" \
+            --repo "${{ github.repository }}"
+
+      # ── FASE 5 ──────────────────────────────────────────────────────────────
+
+      - name: Issue – [Fase 5] CI/CD y Despliegue en Producción
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BODY: |
+            ## 🗓️ Fase 5 · Semanas 9–10 · Estimación: 10 horas
+
+            **Descripción:**
+            Llevar la aplicación a internet para que sea consumible públicamente.
+
+            ## Subtareas
+
+            - [ ] Configurar workflow de GitHub Actions para verificar build en cada push.
+            - [ ] Desplegar Frontend SPA en Vercel (o Netlify).
+            - [ ] Desplegar Backend Node.js en Render (o Fly.io / Heroku).
+            - [ ] Configurar variables de entorno (MongoDB URI, JWT Secret, OpenRouter Key) en producción.
+            - [ ] Configurar Rate Limiting básico en Express para proteger la API en producción.
+
+            ## Criterios de aceptación
+
+            - Cada push a `main` ejecuta el pipeline de CI y verifica que el build no rompe.
+            - La aplicación es accesible públicamente en una URL HTTPS.
+            - Las variables de entorno sensibles están configuradas en el proveedor cloud y NO están en el código.
+        run: |
+          gh issue create \
+            --title "[Fase 5] CI/CD y Despliegue en Producción" \
+            --body "$BODY" \
+            --label "🚀 devops" \
+            --repo "${{ github.repository }}"
+
+      - name: Issue – [Fase 5] Pruebas QA y Documentación Final (Memoria)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BODY: |
+            ## 🗓️ Fase 5 · Semanas 9–10 · Estimación: 15 horas
+
+            **Descripción:**
+            Redactar la memoria del proyecto para el ciclo DAW y asegurar que la plataforma es presentable y está exenta de bugs críticos.
+
+            ## Subtareas
+
+            - [ ] Pruebas cruzadas (End-to-End): Crear un proyecto, leer un repo, y hacer peticiones desde Postman a la URL de producción simulando latencia.
+            - [ ] Redactar el README.md del repositorio de GitHub.
+            - [ ] Escribir la memoria técnica y funcional del proyecto (Justificación, manual de usuario, conclusiones).
+            - [ ] Preparar la presentación/demo para el tribunal.
+
+            ## Criterios de aceptación
+
+            - El flujo completo (registro → crear proyecto → ingestar repo → usar mock desde Postman) funciona en producción sin errores.
+            - El README tiene instrucciones claras de instalación, uso y arquitectura.
+            - La memoria cubre todos los apartados requeridos por el módulo de Proyecto DAW.
+        run: |
+          gh issue create \
+            --title "[Fase 5] Pruebas QA y Documentación Final (Memoria)" \
+            --body "$BODY" \
+            --label "📄 documentation" \
+            --repo "${{ github.repository }}"
+
+  create-project-board:
+    name: 📊 Create GitHub Project Board
+    runs-on: ubuntu-latest
+    needs: [check-setup, create-issues]
+    if: needs.check-setup.outputs.already_done == 'false'
+    steps:
+      - name: Create Project V2 board and add issues
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          REPO="${{ github.repository }}"
+          OWNER="${{ github.repository_owner }}"
+
+          echo "==> Creating GitHub Project V2 board..."
+          PROJECT_URL=$(gh project create \
+            --owner "$OWNER" \
+            --title "Mockia.io – Scrum Board" \
+            --format json 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('url',''))" || echo "")
+
+          if [ -z "$PROJECT_URL" ]; then
+            echo "::warning::Could not create project board automatically. Please create it manually at https://github.com/users/${OWNER}/projects/new"
+            echo ""
+            echo "Manual setup instructions:"
+            echo "1. Go to https://github.com/users/${OWNER}/projects/new?type=board"
+            echo "2. Name it: Mockia.io – Scrum Board"
+            echo "3. Add columns: Backlog | To Do (Sprint Actual) | In Progress | In Review / Testing | Done"
+            echo "4. Add custom field: Estimate (Hours) – type Number"
+            echo "5. Add all issues from the repository to the board"
+            exit 0
+          fi
+
+          echo "Project created at: $PROJECT_URL"
+
+          echo "==> Getting project number..."
+          PROJECT_NUMBER=$(echo "$PROJECT_URL" | grep -oE '[0-9]+$')
+          echo "Project number: $PROJECT_NUMBER"
+
+          echo "==> Fetching all open issues to add to project..."
+          ISSUE_NUMBERS=$(gh issue list --repo "$REPO" --state open --json number --jq '.[].number')
+
+          for ISSUE_NUM in $ISSUE_NUMBERS; do
+            echo "  Adding issue #${ISSUE_NUM} to project..."
+            gh project item-add "$PROJECT_NUMBER" \
+              --owner "$OWNER" \
+              --url "https://github.com/${REPO}/issues/${ISSUE_NUM}" || true
+          done
+
+          echo ""
+          echo "✅ Done! Project board: $PROJECT_URL"
+          echo ""
+          echo "IMPORTANT: After setup, manually configure the board columns:"
+          echo "  Backlog | To Do (Sprint Actual) | In Progress | In Review / Testing | Done"
+          echo "  And add a custom 'Estimate (Hours)' number field."
