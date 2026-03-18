@@ -1,0 +1,92 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules
+package-lock.json
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
+
+# Build outputs
+dist
+build
+.next
+out
+
+# IDE and Editor
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+
+# TypeScript
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# Testing
+.nyc_output
+coverage
+
+# Docker
+.docker
+docker-compose.override.yml
+
+# OS specific
+Thumbs.db
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Logs
+logs
+*.log
+lerna-debug.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids
+*.seed
+*.pid.lock
+
+# Temporary files
+tmp
+temp
+*.tmp
+
+# IDE specific
+.vscode/settings.json
+.vscode/launch.json
+.vscode/extensions.json
+
+# Environment
+.env.production
+.env.staging
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Cache
+.cache
+.eslintcache
+
+# Prettier & ESLint
+.prettierrc
+.prettierignore
+.eslintignore
+
+# Makefile
+Makefile
+
+# Archived
+.archived/

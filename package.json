@@ -1,0 +1,26 @@
+{
+  "name": "mockia.io",
+  "version": "1.0.0",
+  "description": "Generador Inteligente de Mock APIs y Documentación",
+  "private": true,
+  "workspaces": [
+    "packages/frontend",
+    "packages/backend",
+    "packages/shared"
+  ],
+  "scripts": {
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "docker:rebuild": "docker-compose up -d --build"
+  },
+  "keywords": [
+    "mock",
+    "api",
+    "generator",
+    "ai",
+    "documentation"
+  ],
+  "author": "Alejandro Borrego Cruz",
+  "license": "MIT"
+}

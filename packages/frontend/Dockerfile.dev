@@ -1,0 +1,25 @@
+# Frontend Development Dockerfile with hot-reload support
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install development dependencies
+RUN npm install -g npm@latest
+
+# Copy package files
+COPY packages/frontend/package.json .
+
+# Install dependencies
+RUN npm install
+
+# Create src and public directories
+RUN mkdir -p src
+
+# Expose port (Vite default)
+EXPOSE 5173
+
+# Set host to 0.0.0.0 to allow external connections
+ENV VITE_HOST=0.0.0.0
+
+# Default command (will be overridden by docker-compose)
+CMD ["npm", "run", "dev"]
