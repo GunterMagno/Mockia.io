@@ -14,9 +14,7 @@
     "ecmaVersion": "latest",
     "sourceType": "module"
   },
-  "plugins": [
-    "@typescript-eslint"
-  ],
+  "plugins": ["@typescript-eslint"],
   "rules": {
     "no-console": "warn",
     "no-debugger": "warn",
@@ -32,9 +30,7 @@
   },
   "overrides": [
     {
-      "files": [
-        "packages/frontend/**/*.{ts,tsx}"
-      ],
+      "files": ["packages/frontend/**/*.{ts,tsx}"],
       "extends": [
         "eslint:recommended",
         "plugin:@typescript-eslint/recommended",
@@ -50,11 +46,7 @@
           "jsx": true
         }
       },
-      "plugins": [
-        "@typescript-eslint",
-        "react",
-        "react-hooks"
-      ],
+      "plugins": ["@typescript-eslint", "react", "react-hooks"],
       "settings": {
         "react": {
           "version": "detect"
