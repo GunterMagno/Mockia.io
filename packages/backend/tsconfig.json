@@ -19,8 +19,7 @@
     "types": ["node"],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@mockia/shared": ["../shared/src"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src"],
