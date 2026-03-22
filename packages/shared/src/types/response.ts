@@ -1,5 +1,5 @@
 /**
- * Standard success response
+ * Standard success response with typed data
  */
 export interface SuccessResponse<T = any> {
   success: true;
@@ -8,28 +8,33 @@ export interface SuccessResponse<T = any> {
 }
 
 /**
- * Paginated response
+ * Pagination info
+ */
+export interface PaginationInfo {
+  page: number;
+  limit: number;
+  total: number;
+  pages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
+
+/**
+ * Paginated response with data array and pagination metadata
  */
 export interface PaginatedResponse<T = any> {
   success: true;
   data: T[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    pages: number;
-    hasNext: boolean;
-    hasPrev: boolean;
-  };
+  pagination: PaginationInfo;
   timestamp: string;
 }
 
 /**
  * Creates a standard success response
+ * @param data - The data to include in response
+ * @returns SuccessResponse object
  */
-export const createSuccessResponse = <T>(
-  data: T
-): SuccessResponse<T> => ({
+export const createSuccessResponse = <T>(data: T): SuccessResponse<T> => ({
   success: true,
   data,
   timestamp: new Date().toISOString(),
@@ -37,6 +42,11 @@ export const createSuccessResponse = <T>(
 
 /**
  * Creates a paginated response
+ * @param data - Array of items
+ * @param page - Current page number
+ * @param limit - Items per page
+ * @param total - Total items in database
+ * @returns PaginatedResponse object
  */
 export const createPaginatedResponse = <T>(
   data: T[],

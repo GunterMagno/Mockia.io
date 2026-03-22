@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { register } from './auth.controller';
-import { registerSchema } from './auth.validation';
+import { register, login, refresh } from './auth.controller';
+import { registerSchema, loginSchema, refreshSchema } from './auth.validation';
 import { validate } from '../middlewares/validateRequest';
 
 /**
@@ -32,6 +32,43 @@ authRouter.post(
   '/register',
   validate({ body: registerSchema }),
   register
+);
+
+/**
+ * POST /api/auth/login
+ * Authenticates a user and returns JWT tokens
+ *
+ * Validations:
+ * - email: required, valid email format
+ * - password: required
+ *
+ * Responses:
+ * - 200: Login successful, returns user + tokens
+ * - 400: Invalid input data
+ * - 401: Invalid credentials
+ */
+authRouter.post(
+  '/login',
+  validate({ body: loginSchema }),
+  login
+);
+
+/**
+ * POST /api/auth/refresh
+ * Refreshes the access token using a valid refresh token
+ *
+ * Validations:
+ * - refreshToken: required, must be a valid JWT
+ *
+ * Responses:
+ * - 200: Token refresh successful, returns new tokens
+ * - 400: Invalid input data
+ * - 401: Invalid or expired refresh token
+ */
+authRouter.post(
+  '/refresh',
+  validate({ body: refreshSchema }),
+  refresh
 );
 
 export default authRouter;

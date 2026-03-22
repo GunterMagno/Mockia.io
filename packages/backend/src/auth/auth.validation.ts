@@ -49,3 +49,16 @@ export const loginSchema = Joi.object({
       'any.required': 'Password is required',
     }),
 });
+
+/**
+ * Schema for refresh token validation
+ * Validates refresh token is provided
+ */
+export const refreshSchema = Joi.object({
+  refreshToken: Joi.string()
+    .required()
+    .messages({
+      'any.required': 'Refresh token is required',
+      'string.empty': 'Refresh token cannot be empty',
+    }),
+});

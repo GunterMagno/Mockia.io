@@ -1,5 +1,6 @@
 /**
- * Permission levels for routes and authorization middlewares
+ * Permission levels for routes and authorization
+ * Used to define access control for API endpoints
  */
 export enum PermissionLevel {
   PUBLIC = 'public',

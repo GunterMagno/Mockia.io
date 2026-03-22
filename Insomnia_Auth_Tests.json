@@ -5,23 +5,26 @@
   "__export_source": "insomnia.desktop.app:v9.0.0",
   "resources": [
     {
-      "_id": "wrk_mockia_register",
+      "_id": "wrk_mockia_complete",
       "_type": "workspace",
-      "name": "Mockia.io - Register Testing",
-      "description": "Test suite for user registration and validation (Issue #31)",
+      "name": "Mockia.io - Complete API Testing",
+      "description": "Unified test suite for Issues #31 (Registration) and #32 (JWT & Auth)",
       "scope": "workspace"
     },
     {
-      "_id": "env_production",
+      "_id": "env_development",
       "_type": "environment",
-      "parentId": "wrk_mockia_register",
-      "name": "Production",
+      "parentId": "wrk_mockia_complete",
+      "name": "Development",
       "data": {
         "base_url": "http://localhost:3000/api",
         "test_email": "test@example.com",
         "test_email_dup": "testdup@example.com",
+        "test_email_auth": "auth@example.com",
         "test_password": "password123",
-        "test_username": "testuser"
+        "test_username": "testuser",
+        "access_token": "",
+        "refresh_token": ""
       },
       "isPrivate": false,
       "metaSortKey": 1
@@ -29,9 +32,19 @@
     {
       "_id": "fld_register",
       "_type": "request_group",
-      "parentId": "wrk_mockia_register",
-      "name": "7.1 Caso OK (201)",
-      "description": "Registrar un nuevo usuario con datos válidos - Esperado: 201",
+      "parentId": "wrk_mockia_complete",
+      "name": "ISSUE #31 - Registration (7.1)",
+      "description": "User registration and validation tests",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 1
+    },
+    {
+      "_id": "fld_register_ok",
+      "_type": "request_group",
+      "parentId": "fld_register",
+      "name": "7.1 OK (201)",
+      "description": "Successful registration - Expected: 201",
       "environment": {},
       "environmentPropertyOrder": null,
       "metaSortKey": 1
@@ -39,9 +52,9 @@
     {
       "_id": "req_register_ok",
       "_type": "request",
-      "parentId": "fld_register",
-      "name": "7.1.1 - Registro exitoso",
-      "description": "Registra un usuario con datos válidos.\n\nEsperado:\n- Código: 201\n- Body con id, email, username, createdAt, updatedAt\n- SIN password ni passwordHash",
+      "parentId": "fld_register_ok",
+      "name": "7.1.1 - Successful registration",
+      "description": "Registers a user with valid data.\n\nExpected:\n- Code: 201\n- Body with id, email, username, createdAt, updatedAt\n- WITHOUT password or passwordHash",
       "method": "POST",
       "url": "{{ base_url }}/auth/register",
       "headers": [
@@ -60,11 +73,11 @@
       "isPrivate": false
     },
     {
-      "_id": "fld_duplicate",
+      "_id": "fld_register_dup",
       "_type": "request_group",
-      "parentId": "wrk_mockia_register",
-      "name": "7.1.2 Email duplicado (409)",
-      "description": "Intenta registrar el mismo email - Esperado: 409 Conflict",
+      "parentId": "fld_register",
+      "name": "7.1.2 Duplicate email (409)",
+      "description": "Attempts to register with duplicate email - Expected: 409 Conflict",
       "environment": {},
       "environmentPropertyOrder": null,
       "metaSortKey": 2
@@ -72,9 +85,9 @@
     {
       "_id": "req_register_dup_first",
       "_type": "request",
-      "parentId": "fld_duplicate",
-      "name": "7.1.2.1 - Primer registro (base para duplicado)",
-      "description": "Registra un usuario para después probar el duplicado",
+      "parentId": "fld_register_dup",
+      "name": "7.1.2.1 - First registration (setup)",
+      "description": "Registers a user for duplicate testing",
       "method": "POST",
       "url": "{{ base_url }}/auth/register",
       "headers": [
@@ -95,9 +108,9 @@
     {
       "_id": "req_register_dup_second",
       "_type": "request",
-      "parentId": "fld_duplicate",
-      "name": "7.1.2.2 - Intento de duplicado",
-      "description": "Intenta registrar con el mismo email - Esperado: 409 Conflict\nMensaje indicando que el email ya existe",
+      "parentId": "fld_register_dup",
+      "name": "7.1.2.2 - Duplicate attempt",
+      "description": "Attempts to register with the same email - Expected: 409 Conflict\nMessage indicating email already exists",
       "method": "POST",
       "url": "{{ base_url }}/auth/register",
       "headers": [
@@ -116,11 +129,11 @@
       "isPrivate": false
     },
     {
-      "_id": "fld_validation",
+      "_id": "fld_register_validation",
       "_type": "request_group",
-      "parentId": "wrk_mockia_register",
-      "name": "7.1.3 Datos inválidos (400)",
-      "description": "Pruebas de validación - Esperado: 400 con errores",
+      "parentId": "fld_register",
+      "name": "7.1.3 Invalid data (400)",
+      "description": "Validation tests - Expected: 400 with errors",
       "environment": {},
       "environmentPropertyOrder": null,
       "metaSortKey": 3
@@ -128,22 +141,14 @@
     {
       "_id": "req_validation_no_email",
       "_type": "request",
-      "parentId": "fld_validation",
-      "name": "7.1.3.1 - Email vacío",
-      "description": "Envía body con email vacío\n\nEsperado:\n- Código: 400\n- Mensaje/lista de errores indicando que email falla",
+      "parentId": "fld_register_validation",
+      "name": "7.1.3.1 - Empty email",
+      "description": "Sends body with empty email",
       "method": "POST",
       "url": "{{ base_url }}/auth/register",
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        }
-      ],
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
       "parameters": [],
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"email\": \"\",\n  \"password\": \"password123\",\n  \"username\": \"testuser\"\n}"
-      },
+      "body": {"mimeType": "application/json", "text": "{\n  \"email\": \"\",\n  \"password\": \"password123\",\n  \"username\": \"testuser\"\n}"},
       "authentication": {},
       "metaSortKey": 1,
       "isPrivate": false
@@ -151,22 +156,14 @@
     {
       "_id": "req_validation_invalid_email",
       "_type": "request",
-      "parentId": "fld_validation",
-      "name": "7.1.3.2 - Email sin @",
-      "description": "Envía email sin formato válido (sin @)\n\nEsperado:\n- Código: 400\n- Mensaje/lista de errores indicando formato email inválido",
+      "parentId": "fld_register_validation",
+      "name": "7.1.3.2 - Invalid email format",
+      "description": "Sends email without valid format (no @)",
       "method": "POST",
       "url": "{{ base_url }}/auth/register",
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        }
-      ],
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
       "parameters": [],
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"email\": \"invalidemail.com\",\n  \"password\": \"password123\",\n  \"username\": \"testuser\"\n}"
-      },
+      "body": {"mimeType": "application/json", "text": "{\n  \"email\": \"invalidemail.com\",\n  \"password\": \"password123\",\n  \"username\": \"testuser\"\n}"},
       "authentication": {},
       "metaSortKey": 2,
       "isPrivate": false
@@ -174,22 +171,14 @@
     {
       "_id": "req_validation_short_password",
       "_type": "request",
-      "parentId": "fld_validation",
-      "name": "7.1.3.3 - Password demasiado corta",
-      "description": "Envía password con menos de 8 caracteres\n\nEsperado:\n- Código: 400\n- Mensaje/lista de errores indicando que password es muy corta (mínimo 8 caracteres)",
+      "parentId": "fld_register_validation",
+      "name": "7.1.3.3 - Short password",
+      "description": "Sends password with less than 8 characters",
       "method": "POST",
       "url": "{{ base_url }}/auth/register",
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        }
-      ],
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
       "parameters": [],
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"short\",\n  \"username\": \"testuser\"\n}"
-      },
+      "body": {"mimeType": "application/json", "text": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"short\",\n  \"username\": \"testuser\"\n}"},
       "authentication": {},
       "metaSortKey": 3,
       "isPrivate": false
@@ -197,22 +186,14 @@
     {
       "_id": "req_validation_empty_password",
       "_type": "request",
-      "parentId": "fld_validation",
-      "name": "7.1.3.4 - Password vacío",
-      "description": "Envía password vacío\n\nEsperado:\n- Código: 400\n- Mensaje/lista de errores indicando que password es requerido",
+      "parentId": "fld_register_validation",
+      "name": "7.1.3.4 - Empty password",
+      "description": "Sends empty password",
       "method": "POST",
       "url": "{{ base_url }}/auth/register",
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        }
-      ],
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
       "parameters": [],
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"\",\n  \"username\": \"testuser\"\n}"
-      },
+      "body": {"mimeType": "application/json", "text": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"\",\n  \"username\": \"testuser\"\n}"},
       "authentication": {},
       "metaSortKey": 4,
       "isPrivate": false
@@ -220,22 +201,14 @@
     {
       "_id": "req_validation_empty_username",
       "_type": "request",
-      "parentId": "fld_validation",
-      "name": "7.1.3.5 - Username vacío",
-      "description": "Envía username vacío\n\nEsperado:\n- Código: 400\n- Mensaje/lista de errores indicando que username es requerido",
+      "parentId": "fld_register_validation",
+      "name": "7.1.3.5 - Empty username",
+      "description": "Sends empty username",
       "method": "POST",
       "url": "{{ base_url }}/auth/register",
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        }
-      ],
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
       "parameters": [],
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"username\": \"\"\n}"
-      },
+      "body": {"mimeType": "application/json", "text": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"username\": \"\"\n}"},
       "authentication": {},
       "metaSortKey": 5,
       "isPrivate": false
@@ -243,22 +216,14 @@
     {
       "_id": "req_validation_short_username",
       "_type": "request",
-      "parentId": "fld_validation",
-      "name": "7.1.3.6 - Username demasiado corto",
-      "description": "Envía username de 1 carácter (mínimo es 2)\n\nEsperado:\n- Código: 400\n- Mensaje/lista de errores indicando que username es muy corto",
+      "parentId": "fld_register_validation",
+      "name": "7.1.3.6 - Short username",
+      "description": "Sends 1-character username (minimum is 2)",
       "method": "POST",
       "url": "{{ base_url }}/auth/register",
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        }
-      ],
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
       "parameters": [],
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"username\": \"a\"\n}"
-      },
+      "body": {"mimeType": "application/json", "text": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"username\": \"a\"\n}"},
       "authentication": {},
       "metaSortKey": 6,
       "isPrivate": false
@@ -266,22 +231,14 @@
     {
       "_id": "req_validation_long_username",
       "_type": "request",
-      "parentId": "fld_validation",
-      "name": "7.1.3.7 - Username demasiado largo",
-      "description": "Envía username mayor a 80 caracteres\n\nEsperado:\n- Código: 400\n- Mensaje/lista de errores indicando que username es muy largo",
+      "parentId": "fld_register_validation",
+      "name": "7.1.3.7 - Long username",
+      "description": "Sends username longer than 80 characters",
       "method": "POST",
       "url": "{{ base_url }}/auth/register",
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        }
-      ],
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
       "parameters": [],
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"username\": \"thisusernameissupermassivelytooooooooooooooooooooooooooooooooolongmorethan80characters\"\n}"
-      },
+      "body": {"mimeType": "application/json", "text": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"username\": \"thisusernameissupermassivelytooooooooooooooooooooooooooooooooolongmorethan80characters\"\n}"},
       "authentication": {},
       "metaSortKey": 7,
       "isPrivate": false
@@ -289,24 +246,246 @@
     {
       "_id": "req_validation_multiple",
       "_type": "request",
-      "parentId": "fld_validation",
-      "name": "7.1.3.8 - Múltiples errores",
-      "description": "Envía múltiples campos inválidos simultáneamente\n\nEsperado:\n- Código: 400\n- Mensaje/lista de errores indicando todos los campos que fallan",
+      "parentId": "fld_register_validation",
+      "name": "7.1.3.8 - Multiple errors",
+      "description": "Sends multiple invalid fields simultaneously",
       "method": "POST",
       "url": "{{ base_url }}/auth/register",
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        }
-      ],
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
       "parameters": [],
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"email\": \"noesat.com\",\n  \"password\": \"short\",\n  \"username\": \"\"\n}"
-      },
+      "body": {"mimeType": "application/json", "text": "{\n  \"email\": \"bademail\",\n  \"password\": \"short\",\n  \"username\": \"x\"\n}"},
       "authentication": {},
       "metaSortKey": 8,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_auth",
+      "_type": "request_group",
+      "parentId": "wrk_mockia_complete",
+      "name": "ISSUE #32 - JWT & Auth (7.2)",
+      "description": "JWT authentication, refresh tokens, and protected routes",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 2
+    },
+    {
+      "_id": "fld_auth_setup",
+      "_type": "request_group",
+      "parentId": "fld_auth",
+      "name": "Setup - Register auth user",
+      "description": "Registers a test user for auth tests",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 0
+    },
+    {
+      "_id": "req_auth_register",
+      "_type": "request",
+      "parentId": "fld_auth_setup",
+      "name": "Register auth test user",
+      "description": "Registers a new user for authentication tests",
+      "method": "POST",
+      "url": "{{ base_url }}/auth/register",
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
+      "parameters": [],
+      "body": {"mimeType": "application/json", "text": "{\n  \"email\": \"{{ test_email_auth }}\",\n  \"password\": \"{{ test_password }}\",\n  \"username\": \"authuser\"\n}"},
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_login",
+      "_type": "request_group",
+      "parentId": "fld_auth",
+      "name": "7.2.1 - Login (Success & Errors)",
+      "description": "Test login endpoint with valid and invalid credentials",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 1
+    },
+    {
+      "_id": "req_login_success",
+      "_type": "request",
+      "parentId": "fld_login",
+      "name": "7.2.1.1 - Login successful (200)",
+      "description": "Authenticates user with valid email and password\n\nExpected:\n- Code: 200 OK\n- Body with user data and tokens",
+      "method": "POST",
+      "url": "{{ base_url }}/auth/login",
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
+      "parameters": [],
+      "body": {"mimeType": "application/json", "text": "{\n  \"email\": \"{{ test_email_auth }}\",\n  \"password\": \"{{ test_password }}\"\n}"},
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_login_invalid_email",
+      "_type": "request",
+      "parentId": "fld_login",
+      "name": "7.2.1.2 - Invalid email (401)",
+      "description": "Attempts login with non-existent email",
+      "method": "POST",
+      "url": "{{ base_url }}/auth/login",
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
+      "parameters": [],
+      "body": {"mimeType": "application/json", "text": "{\n  \"email\": \"nonexistent@example.com\",\n  \"password\": \"password123\"\n}"},
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_login_invalid_password",
+      "_type": "request",
+      "parentId": "fld_login",
+      "name": "7.2.1.3 - Invalid password (401)",
+      "description": "Attempts login with wrong password",
+      "method": "POST",
+      "url": "{{ base_url }}/auth/login",
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
+      "parameters": [],
+      "body": {"mimeType": "application/json", "text": "{\n  \"email\": \"{{ test_email_auth }}\",\n  \"password\": \"wrongpassword123\"\n}"},
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_login_missing_email",
+      "_type": "request",
+      "parentId": "fld_login",
+      "name": "7.2.1.4 - Missing email (400)",
+      "description": "Attempts login without email",
+      "method": "POST",
+      "url": "{{ base_url }}/auth/login",
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
+      "parameters": [],
+      "body": {"mimeType": "application/json", "text": "{\n  \"password\": \"password123\"\n}"},
+      "authentication": {},
+      "metaSortKey": 4,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_refresh",
+      "_type": "request_group",
+      "parentId": "fld_auth",
+      "name": "7.2.2 - Refresh Tokens",
+      "description": "Test refresh token endpoint",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 2
+    },
+    {
+      "_id": "req_refresh_success",
+      "_type": "request",
+      "parentId": "fld_refresh",
+      "name": "7.2.2.1 - Refresh successful (200)",
+      "description": "Refreshes access token using valid refresh token",
+      "method": "POST",
+      "url": "{{ base_url }}/auth/refresh",
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
+      "parameters": [],
+      "body": {"mimeType": "application/json", "text": "{\n  \"refreshToken\": \"{{ refresh_token }}\"\n}"},
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_refresh_invalid_token",
+      "_type": "request",
+      "parentId": "fld_refresh",
+      "name": "7.2.2.2 - Invalid refresh token (401)",
+      "description": "Attempts to refresh with invalid token",
+      "method": "POST",
+      "url": "{{ base_url }}/auth/refresh",
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
+      "parameters": [],
+      "body": {"mimeType": "application/json", "text": "{\n  \"refreshToken\": \"invalid_token_string\"\n}"},
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_refresh_missing_token",
+      "_type": "request",
+      "parentId": "fld_refresh",
+      "name": "7.2.2.3 - Missing refresh token (400)",
+      "description": "Attempts to refresh without providing token",
+      "method": "POST",
+      "url": "{{ base_url }}/auth/refresh",
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
+      "parameters": [],
+      "body": {"mimeType": "application/json", "text": "{}"},
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_protected",
+      "_type": "request_group",
+      "parentId": "fld_auth",
+      "name": "7.2.3 - Protected Routes (authenticateToken)",
+      "description": "Test authenticateToken middleware on protected routes",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 3
+    },
+    {
+      "_id": "req_protected_success",
+      "_type": "request",
+      "parentId": "fld_protected",
+      "name": "7.2.3.1 - Valid token (200)",
+      "description": "Access protected route with valid Authorization header",
+      "method": "GET",
+      "url": "{{ base_url }}/projects",
+      "headers": [{"name": "Authorization", "value": "Bearer {{ access_token }}"}],
+      "parameters": [],
+      "body": {},
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_protected_no_token",
+      "_type": "request",
+      "parentId": "fld_protected",
+      "name": "7.2.3.2 - No token (401)",
+      "description": "Access protected route without Authorization header",
+      "method": "GET",
+      "url": "{{ base_url }}/projects",
+      "headers": [],
+      "parameters": [],
+      "body": {},
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_protected_invalid_format",
+      "_type": "request",
+      "parentId": "fld_protected",
+      "name": "7.2.3.3 - Invalid header format (401)",
+      "description": "Access protected route with malformed Authorization header",
+      "method": "GET",
+      "url": "{{ base_url }}/projects",
+      "headers": [{"name": "Authorization", "value": "InvalidToken token_here"}],
+      "parameters": [],
+      "body": {},
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_protected_invalid_token",
+      "_type": "request",
+      "parentId": "fld_protected",
+      "name": "7.2.3.4 - Invalid token (401)",
+      "description": "Access protected route with invalid/corrupted token",
+      "method": "GET",
+      "url": "{{ base_url }}/projects",
+      "headers": [{"name": "Authorization", "value": "Bearer invalid_token_string"}],
+      "parameters": [],
+      "body": {},
+      "authentication": {},
+      "metaSortKey": 4,
       "isPrivate": false
     }
   ]

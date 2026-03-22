@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import { connectDB, disconnectDB, getConnectionStatus } from './config/connection';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
 import { authRouter } from './auth/auth.routes';
+import { projectsRouter } from './projects/projects.routes';
 
 dotenv.config();
 
@@ -78,6 +79,9 @@ app.get('/api', (req: Request, res: Response) => {
 
 // Authentication routes
 app.use('/api/auth', authRouter);
+
+// Projects routes (protected)
+app.use('/api/projects', projectsRouter);
 
 // TODO: Add more application routes here
 // app.use('/api/users', userRoutes);
