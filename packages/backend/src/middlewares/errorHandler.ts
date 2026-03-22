@@ -32,6 +32,15 @@ export const errorHandler = (
     appError = err;
   }
 
+  // Manejo específico para DuplicateUserError
+  else if (err.name === 'DuplicateUserError') {
+    appError = new AppError(
+      err.message,
+      ErrorCode.CONFLICT,
+      409
+    );
+  }
+
   else if (err.name === 'ValidationError' || err.name === 'CastError') {
     appError = new AppError(
       'Error de validación',

@@ -89,3 +89,4 @@ Makefile
 
 # Archived
 .archived/
+.oculto/

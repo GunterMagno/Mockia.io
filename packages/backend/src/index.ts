@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import { connectDB, disconnectDB, getConnectionStatus } from './config/connection';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
+import { authRouter } from './auth/auth.routes';
 
 dotenv.config();
 
@@ -75,7 +76,10 @@ app.get('/api', (req: Request, res: Response) => {
 // RUTAS DE APLICACIÓN
 // ============================================================================
 
-// TODO: Agregar rutas de la aplicación aquí
+// Rutas de autenticación
+app.use('/api/auth', authRouter);
+
+// TODO: Agregar más rutas de la aplicación aquí
 // app.use('/api/users', userRoutes);
 // app.use('/api/mocks', mockRoutes);
 // etc.
