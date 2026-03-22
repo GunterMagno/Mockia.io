@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { ErrorCode } from '@mockia/shared';
 
 /**
- * Clase personalizada para errores de la API
+ * Custom API error class
  */
 export class AppError extends Error {
   constructor(
@@ -17,8 +17,8 @@ export class AppError extends Error {
 }
 
 /**
- * Middleware global de manejo de errores
- * Normaliza todas las respuestas de error
+ * Global error handling middleware
+ * Normalizes all error responses
  */
 export const errorHandler = (
   err: Error,
@@ -32,7 +32,7 @@ export const errorHandler = (
     appError = err;
   }
 
-  // Manejo específico para DuplicateUserError
+  // Specific handling for DuplicateUserError
   else if (err.name === 'DuplicateUserError') {
     appError = new AppError(
       err.message,
@@ -43,7 +43,7 @@ export const errorHandler = (
 
   else if (err.name === 'ValidationError' || err.name === 'CastError') {
     appError = new AppError(
-      'Error de validación',
+      'Validation error',
       ErrorCode.VALIDATION_ERROR,
       400,
       { originalError: err.message }
@@ -51,7 +51,7 @@ export const errorHandler = (
   }
   else {
     appError = new AppError(
-      err.message || 'Error interno del servidor',
+      err.message || 'Internal server error',
       ErrorCode.INTERNAL_SERVER_ERROR,
       500
     );
@@ -65,7 +65,7 @@ export const errorHandler = (
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
   });
 
-  // Respuesta normalizada
+  // Normalized response
   res.status(appError.statusCode).json({
     success: false,
     error: {
@@ -78,7 +78,7 @@ export const errorHandler = (
 };
 
 /**
- * Middleware para 404
+ * Middleware for 404 errors
  */
 export const notFoundHandler = (
   req: Request,
@@ -86,7 +86,7 @@ export const notFoundHandler = (
   next: NextFunction
 ): void => {
   const error = new AppError(
-    `Ruta no encontrada: ${req.method} ${req.path}`,
+    `Route not found: ${req.method} ${req.path}`,
     ErrorCode.NOT_FOUND,
     404
   );
@@ -94,8 +94,8 @@ export const notFoundHandler = (
 };
 
 /**
- * Wrapper para async en rutas
- * Uso: router.get('/path', asyncHandler(async (req, res) => { ... }))
+ * Wrapper for async in routes
+ * Usage: router.get('/path', asyncHandler(async (req, res) => { ... }))
  */
 export const asyncHandler = (
   fn: (req: Request, res: Response, next: NextFunction) => Promise<any>

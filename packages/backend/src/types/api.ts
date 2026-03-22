@@ -1,5 +1,5 @@
 /**
- * Tipos Index - Exporta todos los tipos locales del Backend
+ * Types Index - Exports all local backend types
  */
 
 export * from './auth';

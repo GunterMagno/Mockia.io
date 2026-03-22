@@ -1,5 +1,5 @@
 /**
- * Error personalizado para conflictos de usuario (ej: email duplicado)
+ * Custom error for user conflicts (e.g: duplicate email)
  */
 export class DuplicateUserError extends Error {
   constructor(message: string) {

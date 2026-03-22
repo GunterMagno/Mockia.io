@@ -1,0 +1,313 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-03-22T12:00:00.000Z",
+  "__export_source": "insomnia.desktop.app:v9.0.0",
+  "resources": [
+    {
+      "_id": "wrk_mockia_register",
+      "_type": "workspace",
+      "name": "Mockia.io - Register Testing",
+      "description": "Test suite for user registration and validation (Issue #31)",
+      "scope": "workspace"
+    },
+    {
+      "_id": "env_production",
+      "_type": "environment",
+      "parentId": "wrk_mockia_register",
+      "name": "Production",
+      "data": {
+        "base_url": "http://localhost:3000/api",
+        "test_email": "test@example.com",
+        "test_email_dup": "testdup@example.com",
+        "test_password": "password123",
+        "test_username": "testuser"
+      },
+      "isPrivate": false,
+      "metaSortKey": 1
+    },
+    {
+      "_id": "fld_register",
+      "_type": "request_group",
+      "parentId": "wrk_mockia_register",
+      "name": "7.1 Caso OK (201)",
+      "description": "Registrar un nuevo usuario con datos válidos - Esperado: 201",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 1
+    },
+    {
+      "_id": "req_register_ok",
+      "_type": "request",
+      "parentId": "fld_register",
+      "name": "7.1.1 - Registro exitoso",
+      "description": "Registra un usuario con datos válidos.\n\nEsperado:\n- Código: 201\n- Body con id, email, username, createdAt, updatedAt\n- SIN password ni passwordHash",
+      "method": "POST",
+      "url": "{{ base_url }}/auth/register",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"{{ test_email }}\",\n  \"password\": \"{{ test_password }}\",\n  \"username\": \"{{ test_username }}\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_duplicate",
+      "_type": "request_group",
+      "parentId": "wrk_mockia_register",
+      "name": "7.1.2 Email duplicado (409)",
+      "description": "Intenta registrar el mismo email - Esperado: 409 Conflict",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 2
+    },
+    {
+      "_id": "req_register_dup_first",
+      "_type": "request",
+      "parentId": "fld_duplicate",
+      "name": "7.1.2.1 - Primer registro (base para duplicado)",
+      "description": "Registra un usuario para después probar el duplicado",
+      "method": "POST",
+      "url": "{{ base_url }}/auth/register",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"{{ test_email_dup }}\",\n  \"password\": \"password456\",\n  \"username\": \"dupuser1\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_register_dup_second",
+      "_type": "request",
+      "parentId": "fld_duplicate",
+      "name": "7.1.2.2 - Intento de duplicado",
+      "description": "Intenta registrar con el mismo email - Esperado: 409 Conflict\nMensaje indicando que el email ya existe",
+      "method": "POST",
+      "url": "{{ base_url }}/auth/register",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"{{ test_email_dup }}\",\n  \"password\": \"differentpassword\",\n  \"username\": \"dupuser2\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_validation",
+      "_type": "request_group",
+      "parentId": "wrk_mockia_register",
+      "name": "7.1.3 Datos inválidos (400)",
+      "description": "Pruebas de validación - Esperado: 400 con errores",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 3
+    },
+    {
+      "_id": "req_validation_no_email",
+      "_type": "request",
+      "parentId": "fld_validation",
+      "name": "7.1.3.1 - Email vacío",
+      "description": "Envía body con email vacío\n\nEsperado:\n- Código: 400\n- Mensaje/lista de errores indicando que email falla",
+      "method": "POST",
+      "url": "{{ base_url }}/auth/register",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"\",\n  \"password\": \"password123\",\n  \"username\": \"testuser\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_validation_invalid_email",
+      "_type": "request",
+      "parentId": "fld_validation",
+      "name": "7.1.3.2 - Email sin @",
+      "description": "Envía email sin formato válido (sin @)\n\nEsperado:\n- Código: 400\n- Mensaje/lista de errores indicando formato email inválido",
+      "method": "POST",
+      "url": "{{ base_url }}/auth/register",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"invalidemail.com\",\n  \"password\": \"password123\",\n  \"username\": \"testuser\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_validation_short_password",
+      "_type": "request",
+      "parentId": "fld_validation",
+      "name": "7.1.3.3 - Password demasiado corta",
+      "description": "Envía password con menos de 8 caracteres\n\nEsperado:\n- Código: 400\n- Mensaje/lista de errores indicando que password es muy corta (mínimo 8 caracteres)",
+      "method": "POST",
+      "url": "{{ base_url }}/auth/register",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"short\",\n  \"username\": \"testuser\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_validation_empty_password",
+      "_type": "request",
+      "parentId": "fld_validation",
+      "name": "7.1.3.4 - Password vacío",
+      "description": "Envía password vacío\n\nEsperado:\n- Código: 400\n- Mensaje/lista de errores indicando que password es requerido",
+      "method": "POST",
+      "url": "{{ base_url }}/auth/register",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"\",\n  \"username\": \"testuser\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 4,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_validation_empty_username",
+      "_type": "request",
+      "parentId": "fld_validation",
+      "name": "7.1.3.5 - Username vacío",
+      "description": "Envía username vacío\n\nEsperado:\n- Código: 400\n- Mensaje/lista de errores indicando que username es requerido",
+      "method": "POST",
+      "url": "{{ base_url }}/auth/register",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"username\": \"\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 5,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_validation_short_username",
+      "_type": "request",
+      "parentId": "fld_validation",
+      "name": "7.1.3.6 - Username demasiado corto",
+      "description": "Envía username de 1 carácter (mínimo es 2)\n\nEsperado:\n- Código: 400\n- Mensaje/lista de errores indicando que username es muy corto",
+      "method": "POST",
+      "url": "{{ base_url }}/auth/register",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"username\": \"a\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 6,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_validation_long_username",
+      "_type": "request",
+      "parentId": "fld_validation",
+      "name": "7.1.3.7 - Username demasiado largo",
+      "description": "Envía username mayor a 80 caracteres\n\nEsperado:\n- Código: 400\n- Mensaje/lista de errores indicando que username es muy largo",
+      "method": "POST",
+      "url": "{{ base_url }}/auth/register",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"username\": \"thisusernameissupermassivelytooooooooooooooooooooooooooooooooolongmorethan80characters\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 7,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_validation_multiple",
+      "_type": "request",
+      "parentId": "fld_validation",
+      "name": "7.1.3.8 - Múltiples errores",
+      "description": "Envía múltiples campos inválidos simultáneamente\n\nEsperado:\n- Código: 400\n- Mensaje/lista de errores indicando todos los campos que fallan",
+      "method": "POST",
+      "url": "{{ base_url }}/auth/register",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"noesat.com\",\n  \"password\": \"short\",\n  \"username\": \"\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 8,
+      "isPrivate": false
+    }
+  ]
+}

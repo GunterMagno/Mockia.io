@@ -1,7 +1,7 @@
 import { Request } from 'express';
 
 /**
- * Request extendido con información de autenticación
+ * Extended Request with authentication information
  */
 export interface AuthRequest extends Request {
   user?: {

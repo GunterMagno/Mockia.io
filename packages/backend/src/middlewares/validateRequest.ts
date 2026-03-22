@@ -4,7 +4,7 @@ import { ErrorCode } from '@mockia/shared';
 import { AppError } from './errorHandler';
 
 /**
- * Opciones de validación simple
+ * Simple validation options
  */
 interface ValidateOptions {
   body?: Schema;
@@ -13,8 +13,8 @@ interface ValidateOptions {
 }
 
 /**
- * Middleware de validación con Joi
- * Uso: router.post('/users', validate({
+ * Joi validation middleware
+ * Usage: router.post('/users', validate({
  *   body: Joi.object({
  *     email: Joi.string().email().required(),
  *     password: Joi.string().min(6).required(),
@@ -25,7 +25,7 @@ export const validate = (options: ValidateOptions) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const errors: Record<string, string[]> = {};
 
-    // Validar body
+    // Validate body
     if (options.body) {
       const { error, value } = options.body.validate(req.body, {
         abortEarly: false,
@@ -42,7 +42,7 @@ export const validate = (options: ValidateOptions) => {
       }
     }
 
-    // Validar query
+    // Validate query
     if (options.query) {
       const { error, value } = options.query.validate(req.query, {
         abortEarly: false,
@@ -59,7 +59,7 @@ export const validate = (options: ValidateOptions) => {
       }
     }
 
-    // Validar params
+    // Validate params
     if (options.params) {
       const { error, value } = options.params.validate(req.params, {
         abortEarly: false,
@@ -76,10 +76,10 @@ export const validate = (options: ValidateOptions) => {
       }
     }
 
-    // Si hay errores, lanzar AppError
+    // If there are errors, throw AppError
     if (Object.keys(errors).length > 0) {
       throw new AppError(
-        'Validación fallida',
+        'Validation failed',
         ErrorCode.VALIDATION_ERROR,
         400,
         errors

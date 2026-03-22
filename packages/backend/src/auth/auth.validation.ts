@@ -2,50 +2,50 @@ import Joi from 'joi';
 import { CreateUserRequest } from '@mockia/shared';
 
 /**
- * Esquema de validación para el registro de usuario
- * Valida que el body de la petición coincida con CreateUserRequest
+ * Validation schema for user registration
+ * Validates that the request body matches CreateUserRequest
  */
 export const registerSchema = Joi.object<CreateUserRequest>({
   email: Joi.string()
     .email()
     .required()
     .messages({
-      'string.email': 'El email debe ser válido',
-      'any.required': 'El email es requerido',
+      'string.email': 'Email must be valid',
+      'any.required': 'Email is required',
     }),
   password: Joi.string()
     .min(8)
     .required()
     .messages({
-      'string.min': 'La contraseña debe tener al menos 8 caracteres',
-      'any.required': 'La contraseña es requerida',
+      'string.min': 'Password must be at least 8 characters',
+      'any.required': 'Password is required',
     }),
   username: Joi.string()
     .min(2)
     .max(80)
     .required()
     .messages({
-      'string.min': 'El nombre de usuario debe tener al menos 2 caracteres',
-      'string.max': 'El nombre de usuario no puede exceder 80 caracteres',
-      'any.required': 'El nombre de usuario es requerido',
+      'string.min': 'Username must be at least 2 characters',
+      'string.max': 'Username cannot exceed 80 characters',
+      'any.required': 'Username is required',
     })
 });
 
 /**
- * Esquema para validación de login
- * (Útil para futuras rutas de autenticación)
+ * Schema for login validation
+ * (Useful for future authentication routes)
  */
 export const loginSchema = Joi.object({
   email: Joi.string()
     .email()
     .required()
     .messages({
-      'string.email': 'El email debe ser válido',
-      'any.required': 'El email es requerido',
+      'string.email': 'Email must be valid',
+      'any.required': 'Email is required',
     }),
   password: Joi.string()
     .required()
     .messages({
-      'any.required': 'La contraseña es requerida',
+      'any.required': 'Password is required',
     }),
 });

@@ -4,29 +4,29 @@ import { registerSchema } from './auth.validation';
 import { validate } from '../middlewares/validateRequest';
 
 /**
- * Router de autenticación
- * Define las rutas de auth y el orden de middlewares
+ * Authentication router
+ * Defines auth routes and middleware stack
  *
- * Stack de middlewares para cada ruta:
- * 1. validate({ body: registerSchema }) - Valida que el body sea un CreateUserRequest válido
- * 2. register - Controlador que registra el usuario
+ * Middleware stack for each route:
+ * 1. validate({ body: registerSchema }) - Validates that body is a valid CreateUserRequest
+ * 2. register - Controller that registers the user
  */
 
 export const authRouter = Router();
 
 /**
  * POST /api/auth/register
- * Registra un nuevo usuario
+ * Registers a new user
  *
- * Validaciones:
- * - email: requerido, formato email válido
- * - password: requerida, mínimo 8 caracteres
- * - username: requerido, 2-80 caracteres
+ * Validations:
+ * - email: required, valid email format
+ * - password: required, minimum 8 characters
+ * - username: required, 2-80 characters
  *
- * Respuestas:
- * - 201: Usuario registrado exitosamente
- * - 400: Datos de entrada inválidos
- * - 409: Email ya registrado
+ * Responses:
+ * - 201: User registered successfully
+ * - 400: Invalid input data
+ * - 409: Email already registered
  */
 authRouter.post(
   '/register',

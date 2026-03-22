@@ -17,65 +17,65 @@ const RECONNECT_INTERVAL_MS = 5000;
 let reconnectAttempts = 0;
 
 /**
- * Establece la conexión a MongoDB con Mongoose
- * Incluye manejo de reconexiones automáticas y logging
+ * Establishes connection to MongoDB with Mongoose
+ * Includes automatic reconnection handling and logging
  */
 export const connectDB = async (): Promise<Connection> => {
   try {
     if (mongoose.connection.readyState === 1) {
-      console.log('[MongoDB] Ya hay conexión activa');
+      console.log('[MongoDB] Connection already active');
       return mongoose.connection;
     }
 
-    console.log('[MongoDB] Conectando a MongoDB...');
+    console.log('[MongoDB] Connecting to MongoDB...');
 
     await mongoose.connect(MONGODB_URI, MONGODB_OPTIONS);
 
     reconnectAttempts = 0;
-    console.log('[MongoDB] Conexión establecida exitosamente');
+    console.log('[MongoDB] Connection established successfully');
 
-    // Configurar listeners para reconexión
+    // Configure listeners for reconnection
     setupConnectionListeners();
 
     return mongoose.connection;
   } catch (error) {
-    console.error('[MongoDB] Error al conectar:', error);
+    console.error('[MongoDB] Connection error:', error);
     throw error;
   }
 };
 
 /**
- * Configura listeners para manejar eventos de conexión
+ * Configures listeners to handle connection events
  */
 const setupConnectionListeners = (): void => {
   mongoose.connection.on('connected', () => {
-    console.log('[MongoDB] Conectado a MongoDB');
+    console.log('[MongoDB] Connected to MongoDB');
     reconnectAttempts = 0;
   });
 
   mongoose.connection.on('error', (error: MongooseError) => {
-    console.error('[MongoDB] Error de conexión:', error);
+    console.error('[MongoDB] Connection error:', error);
     attemptReconnect();
   });
 
   mongoose.connection.on('disconnected', () => {
-    console.warn('[MongoDB] Desconectado de MongoDB');
+    console.warn('[MongoDB] Disconnected from MongoDB');
     attemptReconnect();
   });
 
   mongoose.connection.on('reconnected', () => {
-    console.log('[MongoDB] Reconectado a MongoDB');
+    console.log('[MongoDB] Reconnected to MongoDB');
     reconnectAttempts = 0;
   });
 };
 
 /**
- * Intenta reconectar a MongoDB con backoff exponencial
+ * Attempts to reconnect to MongoDB with exponential backoff
  */
 const attemptReconnect = async (): Promise<void> => {
   if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
     console.error(
-      `[MongoDB] Se alcanzó el máximo de intentos de reconexión (${MAX_RECONNECT_ATTEMPTS})`
+      `[MongoDB] Maximum reconnection attempts reached (${MAX_RECONNECT_ATTEMPTS})`
     );
     return;
   }
@@ -84,40 +84,40 @@ const attemptReconnect = async (): Promise<void> => {
   const delay = RECONNECT_INTERVAL_MS * reconnectAttempts;
 
   console.log(
-    `[MongoDB] Intentando reconectar en ${delay}ms (intento ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`
+    `[MongoDB] Attempting to reconnect in ${delay}ms (attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`
   );
 
   setTimeout(async () => {
     try {
       await mongoose.connect(MONGODB_URI, MONGODB_OPTIONS);
     } catch (error) {
-      console.error('[MongoDB] Error en reconexión:', error);
+      console.error('[MongoDB] Reconnection error:', error);
       attemptReconnect();
     }
   }, delay);
 };
 
 /**
- * Desconecta de MongoDB de forma segura (graceful shutdown)
+ * Safely disconnects from MongoDB (graceful shutdown)
  */
 export const disconnectDB = async (): Promise<void> => {
   try {
     if (mongoose.connection.readyState === 0) {
-      console.log('[MongoDB] Ya está desconectado');
+      console.log('[MongoDB] Already disconnected');
       return;
     }
 
-    console.log('[MongoDB] Desconectando...');
+    console.log('[MongoDB] Disconnecting...');
     await mongoose.disconnect();
-    console.log('[MongoDB] Desconexión completada');
+    console.log('[MongoDB] Disconnection completed');
   } catch (error) {
-    console.error('[MongoDB] Error al desconectar:', error);
+    console.error('[MongoDB] Disconnection error:', error);
     throw error;
   }
 };
 
 /**
- * Obtiene el estado de la conexión
+ * Gets connection status
  */
 export const getConnectionStatus = (): {
   isConnected: boolean;

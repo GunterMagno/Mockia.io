@@ -1,8 +1,8 @@
 import { Schema, model, Document } from 'mongoose';
 
 /**
- * Interface interna para el documento de usuario en MongoDB
- * Extiende Document de Mongoose para acceder a métodos y propiedades de instancia
+ * Internal interface for user document in MongoDB
+ * Extends Mongoose Document to access instance methods and properties
  */
 interface UserDocument extends Document {
   email: string;
@@ -13,8 +13,8 @@ interface UserDocument extends Document {
 }
 
 /**
- * Schema del usuario
- * Define la estructura y validaciones del documento en MongoDB
+ * User schema
+ * Defines the structure and validations of the document in MongoDB
  */
 const userSchema = new Schema<UserDocument>(
   {
@@ -40,8 +40,8 @@ const userSchema = new Schema<UserDocument>(
 );
 
 /**
- * Modelo de usuario para operaciones CRUD en MongoDB
- * Se mapará a tipos de API en la capa de servicio
+ * User model for CRUD operations in MongoDB
+ * Will be mapped to API types in the service layer
  */
 export const UserModel = model<UserDocument>('User', userSchema);
 

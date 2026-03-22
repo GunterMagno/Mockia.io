@@ -1,5 +1,5 @@
 /**
- * Respuesta de éxito estándar
+ * Standard success response
  */
 export interface SuccessResponse<T = any> {
   success: true;
@@ -8,7 +8,7 @@ export interface SuccessResponse<T = any> {
 }
 
 /**
- * Respuesta paginada
+ * Paginated response
  */
 export interface PaginatedResponse<T = any> {
   success: true;
@@ -25,7 +25,7 @@ export interface PaginatedResponse<T = any> {
 }
 
 /**
- * Crea una respuesta de éxito estándar
+ * Creates a standard success response
  */
 export const createSuccessResponse = <T>(
   data: T
@@ -36,7 +36,7 @@ export const createSuccessResponse = <T>(
 });
 
 /**
- * Crea una respuesta paginada
+ * Creates a paginated response
  */
 export const createPaginatedResponse = <T>(
   data: T[],

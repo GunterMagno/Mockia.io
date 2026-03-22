@@ -1,5 +1,5 @@
 /**
- * Niveles de permisos para rutas y middlewares de autorización
+ * Permission levels for routes and authorization middlewares
  */
 export enum PermissionLevel {
   PUBLIC = 'public',
