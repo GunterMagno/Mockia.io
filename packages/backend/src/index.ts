@@ -1,49 +1,177 @@
 import express, { Express, Request, Response } from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import morgan from 'morgan';
 import dotenv from 'dotenv';
+import { connectDB, disconnectDB, getConnectionStatus } from './config/connection';
+import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
+import { authRouter } from './auth/auth.routes';
+import { projectsRouter } from './projects/projects.routes';
 
 dotenv.config();
 
 const app: Express = express();
 const port = process.env.BACKEND_PORT || 3000;
+const isDevelopment = process.env.NODE_ENV === 'development';
 
-// Middleware
-app.use(express.json());
+// ============================================================================
+// SECURITY AND UTILITY MIDDLEWARES
+// ============================================================================
 
-// Health check
+// Helmet: HTTP headers security
+app.use(helmet());
+
+// CORS: Cross-origin resource sharing control
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    credentials: true,
+    optionsSuccessStatus: 200,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
+
+// Morgan: HTTP request logging
+const morganFormat = isDevelopment ? 'dev' : 'combined';
+app.use(morgan(morganFormat));
+
+// Express.json with 10mb limit
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
+
+// ============================================================================
+// HEALTH CHECK ROUTES
+// ============================================================================
+
+/**
+ * Health check endpoint
+ */
 app.get('/api/health', (req: Request, res: Response) => {
+  const dbStatus = getConnectionStatus();
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
+    environment: process.env.NODE_ENV,
+    database: dbStatus,
   });
 });
 
-// Root endpoint
+/**
+ * Root endpoint
+ */
 app.get('/api', (req: Request, res: Response) => {
   res.json({
     message: 'Mockia.io API',
     version: '1.0.0',
-    description: 'Generador Inteligente de Mock APIs y Documentación',
+    description: 'Intelligent Mock API and Documentation Generator',
+    endpoints: {
+      health: '/api/health',
+      docs: '/api/docs',
+    },
   });
 });
 
-// Error handling middleware
-app.use((err: any, req: Request, res: Response) => {
-  console.error('Error:', err);
-  res.status(500).json({
-    error: 'Internal server error',
-    message: process.env.NODE_ENV === 'development' ? err.message : undefined,
-  });
-});
+// ============================================================================
+// APPLICATION ROUTES
+// ============================================================================
 
-// 404 handler
-app.use((req: Request, res: Response) => {
-  res.status(404).json({ error: 'Not found' });
-});
+// Authentication routes
+app.use('/api/auth', authRouter);
 
-app.listen(port, () => {
-  console.log(`[Backend] 🚀 Server running on http://localhost:${port}/api`);
-  console.log(`[Backend] Environment: ${process.env.NODE_ENV}`);
-});
+// Projects routes (protected)
+app.use('/api/projects', projectsRouter);
+
+// TODO: Add more application routes here
+// app.use('/api/users', userRoutes);
+// app.use('/api/mocks', mockRoutes);
+// etc.
+
+// ============================================================================
+// ERROR HANDLING
+// ============================================================================
+
+// 404 handler: must be before the error handler
+app.use(notFoundHandler);
+
+// Global error handler: must be at the end
+app.use(errorHandler);
+
+// ============================================================================
+// SERVER INITIALIZATION
+// ============================================================================
+
+/**
+ * Start server with graceful shutdown
+ */
+const startServer = async (): Promise<void> => {
+  try {
+    // Connect to MongoDB
+    await connectDB();
+
+    const server = app.listen(port, () => {
+      console.log(`[Backend] Server started at http://localhost:${port}/api`);
+      console.log(`[Backend] Environment: ${process.env.NODE_ENV}`);
+      console.log(`[Backend] Directory: ${process.cwd()}`);
+    });
+
+    // ========================================================================
+    // GRACEFUL SHUTDOWN
+    // ========================================================================
+
+    /**Handles graceful server shutdown
+     */
+    const gracefulShutdown = async (signal: string): Promise<void> => {
+      console.log(`[Backend] Signal received: ${signal}`);
+      console.log('[Backend] Starting graceful shutdown...');
+
+      // Stop accepting new connections
+      server.close(async () => {
+        console.log('[Backend] HTTP server closed');
+
+        try {
+          // Disconnect from MongoDB
+          await disconnectDB();
+          console.log('[Backend] Application closed successfully');
+          process.exit(0);
+        } catch (error) {
+          console.error('[Backend] Error during shutdown:', error);
+          process.exit(1);
+        }
+      });
+
+      // 10 second timeout to force closure
+      setTimeout(() => {
+        console.error('[Backend] Forcing shutdown after timeout');
+        process.exit(1);
+      }, 10000);
+    };
+
+    // Listen for termination signals
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+    // Handle uncaught exceptions
+    process.on('uncaughtException', (error: Error) => {
+      console.error('[Backend] Uncaught exception:', error);
+      process.exit(1);
+    });
+
+    // Handle uncaught promise rejections
+    process.on('unhandledRejection', (reason: any) => {
+      console.error('[Backend] Uncaught promise rejection:', reason);
+      process.exit(1);
+    });
+  } catch (error) {
+    console.error('[Backend] Error starting server:', error);
+    process.exit(1);
+  }
+};
+
+// Start server only if executed directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  startServer();
+}
 
 export default app;

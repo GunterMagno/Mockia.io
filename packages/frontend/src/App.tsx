@@ -21,7 +21,7 @@ function App() {
     <div className="container">
       <header>
         <h1>🚀 Mockia.io</h1>
-        <p>Generador de Mock APIs - Stack MERN</p>
+        <p>Mock API Generator - MERN Stack</p>
       </header>
 
       <main>
@@ -31,11 +31,11 @@ function App() {
             <p className="error">❌ {error}</p>
           ) : health ? (
             <div className="success">
-              <p>✅ Conectado</p>
+              <p>✅ Connected</p>
               <p>Uptime: {health.uptime.toFixed(2)}s</p>
             </div>
           ) : (
-            <p>Cargando...</p>
+            <p>Loading...</p>
           )}
         </section>
       </main>

@@ -37,6 +37,8 @@ services:
       BACKEND_HOST: 0.0.0.0
       MONGODB_URI: mongodb://${MONGO_INITDB_ROOT_USERNAME:-root}:${MONGO_INITDB_ROOT_PASSWORD:-password}@mongo:27017/mockia?authSource=admin
       JWT_SECRET: ${JWT_SECRET:-your-jwt-secret-key}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-dev_access_token_secret_change_in_production}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev_refresh_token_secret_change_in_production}
       OPENROUTER_KEY: ${OPENROUTER_KEY:-}
       LOG_LEVEL: ${LOG_LEVEL:-debug}
     depends_on:

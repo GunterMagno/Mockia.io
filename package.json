@@ -28,6 +28,7 @@
   "author": "Alejandro Borrego Cruz",
   "license": "MIT",
   "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
     "@typescript-eslint/eslint-plugin": "^6.10.0",
     "@typescript-eslint/parser": "^6.10.0",
     "eslint": "^8.50.0",
