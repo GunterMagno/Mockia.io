@@ -10,3 +10,4 @@ export * from './error';
 export * from './auth';
 export * from './response';
 export * from './permissions';
+export * from './project';

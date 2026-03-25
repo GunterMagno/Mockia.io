@@ -169,8 +169,11 @@ const startServer = async (): Promise<void> => {
   }
 };
 
-// Start server only if executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Start server only if NOT in test environment
+// Note: Direct execution check commented out due to ESM/CommonJS module compatibility
+// The app is exported below for testing purposes
+if (process.env.NODE_ENV !== 'test') {
+  // In production, start the server directly
   startServer();
 }
 

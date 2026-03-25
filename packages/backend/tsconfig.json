@@ -16,7 +16,7 @@
     "noImplicitAny": true,
     "strictNullChecks": true,
     "moduleResolution": "node",
-    "types": ["node"],
+    "types": ["node", "jest"],
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
