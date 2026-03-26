@@ -32,6 +32,7 @@ export interface Project {
   ownerId: string;
   members: ProjectMember[];
   isArchived: boolean;
+  archivedAt?: string;
   createdAt: string;
   updatedAt: string;
 }

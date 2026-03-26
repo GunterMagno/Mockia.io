@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/authenticateToken';
 import { asyncHandler } from '../middlewares/errorHandler';
-import { createProject, getUserProjects, getProjectById } from '../services/project.service';
+import { createProject, getUserProjects, getProjectById, updateProject, archiveProject, cleanupArchivedProjects } from '../services/project.service';
 import type { CreateProjectRequest } from '@mockia/shared';
 
 /**
@@ -88,6 +88,86 @@ export const getProjectByIdHandler = asyncHandler(
     res.status(200).json({
       success: true,
       data: project,
+      timestamp: new Date().toISOString(),
+    });
+  }
+);
+
+/**
+ * PUT /api/projects/:id
+ * Updates a project's title and/or description
+ * Only the project owner can update
+ *
+ * @param req - Authenticated request with user info and params
+ * @param res - Express response
+ * @returns 200 with updated project
+ * @throws 400 if validation fails
+ * @throws 403 if user is not the owner
+ * @throws 404 if project not found
+ */
+export const updateProjectHandler = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new Error('User ID not found in request');
+    }
+
+    const { id } = req.params;
+    const updateData = req.body;
+    const project = await updateProject(id, userId, updateData);
+
+    res.status(200).json({
+      success: true,
+      data: project,
+      timestamp: new Date().toISOString(),
+    });
+  }
+);
+
+/**
+ * DELETE /api/projects/:id
+ * Archives a project (soft-delete)
+ * Only the project owner can archive
+ *
+ * @param req - Authenticated request with user info and params
+ * @param res - Express response
+ * @returns 204 No Content or 200 with archived project
+ * @throws 403 if user is not the owner
+ * @throws 404 if project not found
+ */
+export const archiveProjectHandler = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new Error('User ID not found in request');
+    }
+
+    const { id } = req.params;
+    await archiveProject(id, userId);
+
+    res.status(204).send();
+  }
+);
+
+/**
+ * POST /api/projects/cleanup-archived
+ * Manually executes the cleanup of archived projects older than 30 days
+ * (Normally runs automatically daily at 3 AM)
+ *
+ * @param req - Authenticated request
+ * @param res - Express response
+ * @returns 200 with count of deleted projects
+ */
+export const cleanupArchivedProjectsHandler = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const deletedCount = await cleanupArchivedProjects();
+
+    res.status(200).json({
+      success: true,
+      data: {
+        deletedCount,
+        message: `${deletedCount} archived project(s) permanently deleted`,
+      },
       timestamp: new Date().toISOString(),
     });
   }

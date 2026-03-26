@@ -3,10 +3,13 @@ import {
   createProjectHandler,
   getUserProjectsHandler,
   getProjectByIdHandler,
+  updateProjectHandler,
+  archiveProjectHandler,
+  cleanupArchivedProjectsHandler,
 } from './projects.controller';
 import { authenticateToken } from '../middlewares/authenticateToken';
 import { validate } from '../middlewares/validateRequest';
-import { createProjectSchema } from './projects.validation';
+import { createProjectSchema, updateProjectSchema } from './projects.validation';
 
 /**
  * Projects router
@@ -70,6 +73,29 @@ projectsRouter.get(
 );
 
 /**
+ * POST /api/projects/cleanup-archived
+ * Manually executes cleanup of archived projects older than 30 days
+ *
+ * Authentication: Required (JWT Bearer token)
+ *
+ * Middleware stack:
+ * 1. authenticateToken - Verifies JWT and attaches user info
+ * 2. cleanupArchivedProjectsHandler - Controller
+ *
+ * Note: Normally runs automatically daily at 3 AM
+ * This endpoint allows manual execution for testing/admin purposes
+ *
+ * Responses:
+ * - 200: Success with count of deleted projects
+ * - 401: Missing or invalid token
+ */
+projectsRouter.post(
+  '/cleanup-archived',
+  authenticateToken,
+  cleanupArchivedProjectsHandler
+);
+
+/**
  * GET /api/projects/:id
  * Retrieves a specific project by ID
  *
@@ -93,6 +119,67 @@ projectsRouter.get(
   '/:id',
   authenticateToken,
   getProjectByIdHandler
+);
+
+/**
+ * PUT /api/projects/:id
+ * Updates a project's title and/or description
+ *
+ * Authentication: Required (JWT Bearer token)
+ * Authorization: User must be the project owner
+ *
+ * Middleware stack:
+ * 1. authenticateToken - Verifies JWT and attaches user info
+ * 2. validate - Validates request body against schema
+ * 3. updateProjectHandler - Controller
+ *
+ * URL parameters:
+ * - id: Project ID (MongoDB ObjectId)
+ *
+ * Request body:
+ * {
+ *   "title": "Updated Title",
+ *   "description": "Updated description"
+ * }
+ *
+ * Responses:
+ * - 200: Updated project
+ * - 400: Validation error
+ * - 401: Missing or invalid token
+ * - 403: User is not the project owner
+ * - 404: Project not found
+ */
+projectsRouter.put(
+  '/:id',
+  authenticateToken,
+  validate({ body: updateProjectSchema }),
+  updateProjectHandler
+);
+
+/**
+ * DELETE /api/projects/:id
+ * Archives a project (soft-delete)
+ *
+ * Authentication: Required (JWT Bearer token)
+ * Authorization: User must be the project owner
+ *
+ * Middleware stack:
+ * 1. authenticateToken - Verifies JWT and attaches user info
+ * 2. archiveProjectHandler - Controller
+ *
+ * URL parameters:
+ * - id: Project ID (MongoDB ObjectId)
+ *
+ * Responses:
+ * - 204: Project archived successfully (no content)
+ * - 401: Missing or invalid token
+ * - 403: User is not the project owner
+ * - 404: Project not found
+ */
+projectsRouter.delete(
+  '/:id',
+  authenticateToken,
+  archiveProjectHandler
 );
 
 export default projectsRouter;

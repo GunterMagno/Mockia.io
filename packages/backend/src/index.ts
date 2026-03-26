@@ -7,6 +7,7 @@ import { connectDB, disconnectDB, getConnectionStatus } from './config/connectio
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
 import { authRouter } from './auth/auth.routes';
 import { projectsRouter } from './projects/projects.routes';
+import { startProjectCleanupScheduler } from './scheduler/projectCleanup';
 
 dotenv.config();
 
@@ -109,6 +110,9 @@ const startServer = async (): Promise<void> => {
   try {
     // Connect to MongoDB
     await connectDB();
+
+    // Start project cleanup scheduler
+    startProjectCleanupScheduler();
 
     const server = app.listen(port, () => {
       console.log(`[Backend] Server started at http://localhost:${port}/api`);

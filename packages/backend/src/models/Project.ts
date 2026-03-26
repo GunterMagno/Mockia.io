@@ -29,6 +29,7 @@ interface ProjectDocument extends Document {
   ownerId: Types.ObjectId;
   members: ProjectMemberDocument[];
   isArchived: boolean;
+  archivedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -92,6 +93,11 @@ const projectSchema = new Schema<ProjectDocument>(
     isArchived: {
       type: Boolean,
       default: false,
+      index: true,
+    },
+    archivedAt: {
+      type: Date,
+      default: null,
       index: true,
     },
   },
