@@ -1042,6 +1042,255 @@
       "authentication": {},
       "metaSortKey": 2,
       "isPrivate": false
+    },
+    {
+      "_id": "fld_projects_members",
+      "_type": "request_group",
+      "parentId": "fld_projects_main",
+      "name": "2.7 - Add/Invite Members",
+      "description": "Test adding members to projects with role-based access control",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 7
+    },
+    {
+      "_id": "req_projects_members_add_success",
+      "_type": "request",
+      "parentId": "fld_projects_members",
+      "name": "2.7.1 - Add member as EDITOR (201)",
+      "description": "Adds a user to a project with EDITOR role\n\nExpected:\n- Code: 201\n- JSON response with updated project\n- New member appears in members array with EDITOR role",
+      "method": "POST",
+      "url": "{{ base_url }}/projects/{{ project_id }}/members",
+      "headers": [
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"},
+        {"name": "Content-Type", "value": "application/json"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"targetEmail\": \"{{ test_email_auth_2 }}\",\n  \"role\": \"EDITOR\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_projects_members_add_viewer",
+      "_type": "request",
+      "parentId": "fld_projects_members",
+      "name": "2.7.2 - Add member as VIEWER (201)",
+      "description": "Adds a user to a project with VIEWER role\n\nExpected:\n- Code: 201\n- JSON response with updated project\n- New member appears in members array with VIEWER role",
+      "method": "POST",
+      "url": "{{ base_url }}/projects/{{ project_id }}/members",
+      "headers": [
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"},
+        {"name": "Content-Type", "value": "application/json"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"targetEmail\": \"test_viewer@example.com\",\n  \"role\": \"VIEWER\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_projects_members_add_duplicate",
+      "_type": "request",
+      "parentId": "fld_projects_members",
+      "name": "2.7.3 - Add duplicate member (400)",
+      "description": "Attempts to add a user who is already a member\n\nExpected:\n- Code: 400\n- Error: User is already a member of this project",
+      "method": "POST",
+      "url": "{{ base_url }}/projects/{{ project_id }}/members",
+      "headers": [
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"},
+        {"name": "Content-Type", "value": "application/json"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"targetEmail\": \"{{ test_email_auth_2 }}\",\n  \"role\": \"VIEWER\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_projects_members_add_invalid_email",
+      "_type": "request",
+      "parentId": "fld_projects_members",
+      "name": "2.7.4 - Add with invalid email (400)",
+      "description": "Attempts to add with invalid email format\n\nExpected:\n- Code: 400\n- Error: Invalid email format",
+      "method": "POST",
+      "url": "{{ base_url }}/projects/{{ project_id }}/members",
+      "headers": [
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"},
+        {"name": "Content-Type", "value": "application/json"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"targetEmail\": \"not-an-email\",\n  \"role\": \"EDITOR\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 4,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_projects_members_add_nonexistent_user",
+      "_type": "request",
+      "parentId": "fld_projects_members",
+      "name": "2.7.5 - Add non-existent user (404)",
+      "description": "Attempts to add a user that doesn't exist in the system\n\nExpected:\n- Code: 404\n- Error: User not found",
+      "method": "POST",
+      "url": "{{ base_url }}/projects/{{ project_id }}/members",
+      "headers": [
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"},
+        {"name": "Content-Type", "value": "application/json"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"targetEmail\": \"nonexistent@example.com\",\n  \"role\": \"EDITOR\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 5,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_projects_members_add_not_owner",
+      "_type": "request",
+      "parentId": "fld_projects_members",
+      "name": "2.7.6 - Add as non-owner (403)",
+      "description": "Attempts to add a member without being the project owner\n\nExpected:\n- Code: 403\n- Error: Only project owner can invite members",
+      "method": "POST",
+      "url": "{{ base_url }}/projects/{{ project_id }}/members",
+      "headers": [
+        {"name": "Authorization", "value": "Bearer {{ access_token_2 }}"},
+        {"name": "Content-Type", "value": "application/json"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"targetEmail\": \"test_another@example.com\",\n  \"role\": \"EDITOR\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 6,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_projects_members_add_no_auth",
+      "_type": "request",
+      "parentId": "fld_projects_members",
+      "name": "2.7.7 - Add without auth (401)",
+      "description": "Attempts to add a member without authorization\n\nExpected:\n- Code: 401\n- Error: unauthorized",
+      "method": "POST",
+      "url": "{{ base_url }}/projects/{{ project_id }}/members",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"targetEmail\": \"test_another@example.com\",\n  \"role\": \"EDITOR\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 7,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_projects_members_remove",
+      "_type": "request_group",
+      "parentId": "fld_projects_main",
+      "name": "2.8 - Remove Members",
+      "description": "Test removing members from projects with role-based access control",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 8
+    },
+    {
+      "_id": "req_projects_members_remove_success",
+      "_type": "request",
+      "parentId": "fld_projects_members_remove",
+      "name": "2.8.1 - Remove member (200)",
+      "description": "Removes a member from a project\n\nExpected:\n- Code: 200\n- JSON response with updated project\n- Member no longer appears in members array",
+      "method": "DELETE",
+      "url": "{{ base_url }}/projects/{{ project_id }}/members/{{ target_user_id }}",
+      "headers": [
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {},
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_projects_members_remove_not_member",
+      "_type": "request",
+      "parentId": "fld_projects_members_remove",
+      "name": "2.8.2 - Remove non-member (404)",
+      "description": "Attempts to remove a user who isn't a member of the project\n\nExpected:\n- Code: 404\n- Error: Member not found in project",
+      "method": "DELETE",
+      "url": "{{ base_url }}/projects/{{ project_id }}/members/000000000000000000000000",
+      "headers": [
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {},
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_projects_members_remove_last_owner",
+      "_type": "request",
+      "parentId": "fld_projects_members_remove",
+      "name": "2.8.3 - Remove last owner (400)",
+      "description": "Attempts to remove the last owner of a project\n\nExpected:\n- Code: 400\n- Error: Cannot remove the last owner of a project",
+      "method": "DELETE",
+      "url": "{{ base_url }}/projects/{{ project_id }}/members/69c0213ae6fbeaddaf048999",
+      "headers": [
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {},
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_projects_members_remove_not_owner",
+      "_type": "request",
+      "parentId": "fld_projects_members_remove",
+      "name": "2.8.4 - Remove as non-owner (403)",
+      "description": "Attempts to remove a member without being the project owner\n\nExpected:\n- Code: 403\n- Error: Only project owner can remove members",
+      "method": "DELETE",
+      "url": "{{ base_url }}/projects/{{ project_id }}/members/{{ target_user_id }}",
+      "headers": [
+        {"name": "Authorization", "value": "Bearer {{ access_token_2 }}"}
+      ],
+      "parameters": [],
+      "body": {},
+      "authentication": {},
+      "metaSortKey": 4,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_projects_members_remove_no_auth",
+      "_type": "request",
+      "parentId": "fld_projects_members_remove",
+      "name": "2.8.5 - Remove without auth (401)",
+      "description": "Attempts to remove a member without authorization\n\nExpected:\n- Code: 401\n- Error: unauthorized",
+      "method": "DELETE",
+      "url": "{{ base_url }}/projects/{{ project_id }}/members/{{ target_user_id }}",
+      "headers": [],
+      "parameters": [],
+      "body": {},
+      "authentication": {},
+      "metaSortKey": 5,
+      "isPrivate": false
     }
   ]
 }

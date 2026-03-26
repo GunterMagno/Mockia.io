@@ -1,5 +1,5 @@
 import Joi from 'joi';
-import type { CreateProjectRequest } from '@mockia/shared';
+import type { CreateProjectRequest, ProjectRole } from '@mockia/shared';
 
 /**
  * Validation schema for creating a project
@@ -47,5 +47,31 @@ export const updateProjectSchema = Joi.object({
     .allow('')
     .messages({
       'string.max': 'Project description cannot exceed 500 characters',
+    }),
+});
+
+/**
+ * Validation schema for adding a project member
+ * Validates email and role are present
+ */
+export const addProjectMemberSchema = Joi.object<{
+  targetEmail: string;
+  role: ProjectRole;
+}>({
+  targetEmail: Joi.string()
+    .email()
+    .required()
+    .lowercase()
+    .trim()
+    .messages({
+      'string.email': 'Invalid email format',
+      'any.required': 'Target email is required',
+    }),
+  role: Joi.string()
+    .valid('OWNER', 'EDITOR', 'VIEWER')
+    .required()
+    .messages({
+      'any.only': 'Role must be OWNER, EDITOR, or VIEWER',
+      'any.required': 'Role is required',
     }),
 });

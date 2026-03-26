@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/authenticateToken';
 import { asyncHandler } from '../middlewares/errorHandler';
-import { createProject, getUserProjects, getProjectById, updateProject, archiveProject, cleanupArchivedProjects } from '../services/project.service';
+import { createProject, getUserProjects, getProjectById, updateProject, archiveProject, cleanupArchivedProjects, addProjectMember, removeProjectMember } from '../services/project.service';
 import type { CreateProjectRequest } from '@mockia/shared';
 
 /**
@@ -168,6 +168,73 @@ export const cleanupArchivedProjectsHandler = asyncHandler(
         deletedCount,
         message: `${deletedCount} archived project(s) permanently deleted`,
       },
+      timestamp: new Date().toISOString(),
+    });
+  }
+);
+
+/**
+ * POST /api/projects/:id/members
+ * Adds a new member to a project with specified role
+ * Only the project owner can invite members
+ *
+ * Body parameters:
+ * - targetEmail (required): Email of user to invite
+ * - role (required): Member role (OWNER, EDITOR, VIEWER)
+ *
+ * @param req - Authenticated request with user info and params
+ * @param res - Express response
+ * @returns 201 with updated project
+ * @throws 400 if validation fails or user already member
+ * @throws 403 if user is not the owner
+ * @throws 404 if project or target user not found
+ */
+export const addProjectMemberHandler = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new Error('User ID not found in request');
+    }
+
+    const { id } = req.params;
+    const { targetEmail, role } = req.body;
+
+    const project = await addProjectMember(id, userId, targetEmail, role);
+
+    res.status(201).json({
+      success: true,
+      data: project,
+      timestamp: new Date().toISOString(),
+    });
+  }
+);
+
+/**
+ * DELETE /api/projects/:id/members/:targetUserId
+ * Removes a member from a project
+ * Only the project owner can remove members
+ * Cannot remove the last owner of a project
+ *
+ * @param req - Authenticated request with user info and params
+ * @param res - Express response
+ * @returns 200 with updated project
+ * @throws 400 if trying to remove last owner
+ * @throws 403 if user is not the owner
+ * @throws 404 if project or member not found
+ */
+export const removeProjectMemberHandler = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new Error('User ID not found in request');
+    }
+
+    const { id, targetUserId } = req.params;
+    const project = await removeProjectMember(id, userId, targetUserId);
+
+    res.status(200).json({
+      success: true,
+      data: project,
       timestamp: new Date().toISOString(),
     });
   }

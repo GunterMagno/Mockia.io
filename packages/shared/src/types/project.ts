@@ -3,14 +3,7 @@
  * Defines the DTO and request structures for projects
  */
 
-/**
- * Project Role enum for members
- */
-export enum ProjectRole {
-  OWNER = 'owner',
-  EDITOR = 'editor',
-  VIEWER = 'viewer',
-}
+import type { ProjectRole } from './permissions';
 
 /**
  * Project member structure

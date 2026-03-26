@@ -1,8 +1,9 @@
 import { ProjectModel } from '../models/Project';
+import { UserModel } from '../models/User';
 import { generateUniqueSlug } from '../utils/slugGenerator';
 import { AppError } from '../middlewares/errorHandler';
 import { ErrorCode } from '@mockia/shared';
-import type { Project as ProjectDTO, CreateProjectRequest, ProjectMember } from '@mockia/shared';
+import type { Project as ProjectDTO, CreateProjectRequest, ProjectMember, ProjectRole } from '@mockia/shared';
 import { ProjectRoleEnum } from '../models/Project';
 
 /**
@@ -409,6 +410,168 @@ export async function cleanupArchivedProjects(): Promise<number> {
     console.error('Error cleaning up archived projects:', error);
     throw new AppError(
       'Failed to cleanup archived projects',
+      ErrorCode.INTERNAL_SERVER_ERROR,
+      500
+    );
+  }
+}
+
+/**
+ * Add a member to a project
+ * Only owner can invite new members
+ */
+export async function addProjectMember(
+  projectId: string,
+  inviterUserId: string,
+  targetEmail: string,
+  role: ProjectRole
+): Promise<ProjectDTO> {
+  try {
+    // Find the project
+    const project = await ProjectModel.findById(projectId);
+    if (!project) {
+      throw new AppError(
+        'Project not found',
+        ErrorCode.NOT_FOUND,
+        404
+      );
+    }
+
+    // Check if inviter is owner
+    const inviterMember = project.members.find(
+      (m) => m.userId.toString() === inviterUserId
+    );
+
+    if (!inviterMember || String(inviterMember.role).toUpperCase() !== 'OWNER') {
+      throw new AppError(
+        'Only project owner can invite members',
+        ErrorCode.FORBIDDEN,
+        403
+      );
+    }
+
+    // Find user by email
+    const targetUser = await UserModel.findOne({ email: targetEmail });
+    if (!targetUser) {
+      throw new AppError(
+        'User not found',
+        ErrorCode.NOT_FOUND,
+        404
+      );
+    }
+
+    // Check if user is already a member
+    const isAlreadyMember = project.members.some(
+      (m) => m.userId.toString() === targetUser._id.toString()
+    );
+
+    if (isAlreadyMember) {
+      throw new AppError(
+        'User is already a member of this project',
+        ErrorCode.VALIDATION_ERROR,
+        400
+      );
+    }
+
+    // Add new member
+    project.members.push({
+      userId: targetUser._id,
+      role: String(role).toLowerCase() as any,
+      addedAt: new Date(),
+    });
+
+    // Save project
+    await project.save();
+
+    return mapProjectToDTO(project);
+  } catch (error) {
+    if (error instanceof AppError) {
+      throw error;
+    }
+
+    console.error('Error adding project member:', error);
+    throw new AppError(
+      'Failed to add project member',
+      ErrorCode.INTERNAL_SERVER_ERROR,
+      500
+    );
+  }
+}
+
+/**
+ * Remove a member from a project
+ * Only owner can remove members
+ */
+export async function removeProjectMember(
+  projectId: string,
+  removerUserId: string,
+  targetUserId: string
+): Promise<ProjectDTO> {
+  try {
+    // Find the project
+    const project = await ProjectModel.findById(projectId);
+    if (!project) {
+      throw new AppError(
+        'Project not found',
+        ErrorCode.NOT_FOUND,
+        404
+      );
+    }
+
+    // Check if remover is owner
+    const removerMember = project.members.find(
+      (m) => m.userId.toString() === removerUserId
+    );
+
+    if (!removerMember || String(removerMember.role).toUpperCase() !== 'OWNER') {
+      throw new AppError(
+        'Only project owner can remove members',
+        ErrorCode.FORBIDDEN,
+        403
+      );
+    }
+
+    // Find member to remove
+    const targetMemberIndex = project.members.findIndex(
+      (m) => m.userId.toString() === targetUserId
+    );
+
+    if (targetMemberIndex === -1) {
+      throw new AppError(
+        'Member not found in project',
+        ErrorCode.NOT_FOUND,
+        404
+      );
+    }
+
+    // Check if trying to remove the last owner
+    const targetMember = project.members[targetMemberIndex];
+    if (String(targetMember.role).toUpperCase() === 'OWNER') {
+      const ownerCount = project.members.filter((m) => String(m.role).toUpperCase() === 'OWNER').length;
+      if (ownerCount === 1) {
+        throw new AppError(
+          'Cannot remove the last owner of a project',
+          ErrorCode.VALIDATION_ERROR,
+          400
+        );
+      }
+    }
+
+    // Remove member
+    project.members.splice(targetMemberIndex, 1);
+
+    // Save project
+    await project.save();
+
+    return mapProjectToDTO(project);
+  } catch (error) {
+    if (error instanceof AppError) {
+      throw error;
+    }
+
+    console.error('Error removing project member:', error);
+    throw new AppError(
+      'Failed to remove project member',
       ErrorCode.INTERNAL_SERVER_ERROR,
       500
     );

@@ -6,10 +6,14 @@ import {
   updateProjectHandler,
   archiveProjectHandler,
   cleanupArchivedProjectsHandler,
+  addProjectMemberHandler,
+  removeProjectMemberHandler,
 } from './projects.controller';
 import { authenticateToken } from '../middlewares/authenticateToken';
+import { authorizeRole } from '../middlewares/authorizeRole';
 import { validate } from '../middlewares/validateRequest';
-import { createProjectSchema, updateProjectSchema } from './projects.validation';
+import { createProjectSchema, updateProjectSchema, addProjectMemberSchema } from './projects.validation';
+import type { ProjectRole } from '@mockia/shared';
 
 /**
  * Projects router
@@ -180,6 +184,73 @@ projectsRouter.delete(
   '/:id',
   authenticateToken,
   archiveProjectHandler
+);
+
+/**
+ * POST /api/projects/:id/members
+ * Adds a new member to a project with specified role
+ *
+ * Authentication: Required (JWT Bearer token)
+ * Authorization: User must be the project owner
+ *
+ * Middleware stack:
+ * 1. authenticateToken - Verifies JWT and attaches user info
+ * 2. authorizeRole(['OWNER']) - Checks if user is project owner
+ * 3. validate - Validates request body against schema
+ * 4. addProjectMemberHandler - Controller
+ *
+ * URL parameters:
+ * - id: Project ID (MongoDB ObjectId)
+ *
+ * Request body:
+ * {
+ *   "targetEmail": "user@example.com",
+ *   "role": "EDITOR"
+ * }
+ *
+ * Responses:
+ * - 201: Member added successfully
+ * - 400: Validation error or user already member
+ * - 401: Missing or invalid token
+ * - 403: User is not the project owner
+ * - 404: Project or user not found
+ */
+projectsRouter.post(
+  '/:id/members',
+  authenticateToken,
+  authorizeRole(['OWNER'] as unknown as ProjectRole[]),
+  validate({ body: addProjectMemberSchema }),
+  addProjectMemberHandler
+);
+
+/**
+ * DELETE /api/projects/:id/members/:targetUserId
+ * Removes a member from a project
+ *
+ * Authentication: Required (JWT Bearer token)
+ * Authorization: User must be the project owner
+ *
+ * Middleware stack:
+ * 1. authenticateToken - Verifies JWT and attaches user info
+ * 2. authorizeRole(['OWNER']) - Checks if user is project owner
+ * 3. removeProjectMemberHandler - Controller
+ *
+ * URL parameters:
+ * - id: Project ID (MongoDB ObjectId)
+ * - targetUserId: ID of member to remove
+ *
+ * Responses:
+ * - 200: Member removed successfully
+ * - 400: Cannot remove last owner
+ * - 401: Missing or invalid token
+ * - 403: User is not the project owner
+ * - 404: Project or member not found
+ */
+projectsRouter.delete(
+  '/:id/members/:targetUserId',
+  authenticateToken,
+  authorizeRole(['OWNER'] as unknown as ProjectRole[]),
+  removeProjectMemberHandler
 );
 
 export default projectsRouter;
