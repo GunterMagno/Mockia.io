@@ -243,10 +243,16 @@ export async function updateProject(
       );
     }
 
-    // Verify user is the owner
-    if (project.ownerId.toString() !== userId) {
+    // Verify user is the owner or editor
+    const isOwner = project.ownerId.toString() === userId;
+    const memberRole = project.members.find(
+      (m) => m.userId.toString() === userId
+    )?.role;
+    const canEdit = isOwner || memberRole === 'editor' || memberRole === 'owner';
+
+    if (!canEdit) {
       throw new AppError(
-        'Only the project owner can update this project',
+        'Only the project owner and editors can update this project',
         ErrorCode.FORBIDDEN,
         403
       );
