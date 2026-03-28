@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt';
 import { UserModel } from '../models/User';
-import { DuplicateUserError } from './errors';
+import { DuplicateUserError } from '../models/errors';
 import type { 
   CreateUserRequest, 
   User as UserDTO,

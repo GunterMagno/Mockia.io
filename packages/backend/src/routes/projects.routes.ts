@@ -8,11 +8,11 @@ import {
   cleanupArchivedProjectsHandler,
   addProjectMemberHandler,
   removeProjectMemberHandler,
-} from './projects.controller';
+} from '../controllers/projects.controller';
 import { authenticateToken } from '../middlewares/authenticateToken';
 import { authorizeRole } from '../middlewares/authorizeRole';
 import { validate } from '../middlewares/validateRequest';
-import { createProjectSchema, updateProjectSchema, addProjectMemberSchema } from './projects.validation';
+import { createProjectSchema, updateProjectSchema, addProjectMemberSchema } from '../validation/projects.validation';
 import type { ProjectRole } from '@mockia/shared';
 
 /**

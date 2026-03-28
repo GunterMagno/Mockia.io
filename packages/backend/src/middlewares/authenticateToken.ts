@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { verifyAccessToken } from '../auth/jwt.service';
+import { verifyAccessToken } from '../services/jwt.service';
 import { AppError } from './errorHandler';
 import { ErrorCode } from '@mockia/shared';
 

@@ -5,8 +5,9 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import { connectDB, disconnectDB, getConnectionStatus } from './config/connection';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
-import { authRouter } from './auth/auth.routes';
-import { projectsRouter } from './projects/projects.routes';
+import { authRouter } from './routes/auth.routes';
+import { projectsRouter } from './routes/projects.routes';
+import { userRouter } from './routes/user.routes';
 import { startProjectCleanupScheduler } from './scheduler/projectCleanup';
 
 dotenv.config();
@@ -81,11 +82,13 @@ app.get('/api', (req: Request, res: Response) => {
 // Authentication routes
 app.use('/api/auth', authRouter);
 
+// Users routes (protected)
+app.use('/api/users', userRouter);
+
 // Projects routes (protected)
 app.use('/api/projects', projectsRouter);
 
 // TODO: Add more application routes here
-// app.use('/api/users', userRoutes);
 // app.use('/api/mocks', mockRoutes);
 // etc.
 

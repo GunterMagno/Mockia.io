@@ -1291,6 +1291,223 @@
       "authentication": {},
       "metaSortKey": 5,
       "isPrivate": false
+    },
+    {
+      "_id": "fld_users_main",
+      "_type": "request_group",
+      "parentId": "wrk_mockia_complete",
+      "name": "3 - Users",
+      "description": "User profile management endpoints including profile retrieval, updates, and password changes",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 3
+    },
+    {
+      "_id": "fld_users_profile",
+      "_type": "request_group",
+      "parentId": "fld_users_main",
+      "name": "3.1 - Get Profile",
+      "description": "Retrieve authenticated user's profile",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 1
+    },
+    {
+      "_id": "req_users_profile_get_ok",
+      "_type": "request",
+      "parentId": "fld_users_profile",
+      "name": "3.1.1 - Get profile (200)",
+      "description": "Gets authenticated user's profile\n\nExpected:\n- Code: 200\n- Body with id, email, username, createdAt, updatedAt\n- WITHOUT password or passwordHash",
+      "method": "GET",
+      "url": "{{ base_url }}/users/profile",
+      "headers": [
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {},
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_users_profile_get_no_auth",
+      "_type": "request",
+      "parentId": "fld_users_profile",
+      "name": "3.1.2 - Get profile without auth (401)",
+      "description": "Attempts to get profile without authorization token\n\nExpected:\n- Code: 401\n- Error: Unauthorized",
+      "method": "GET",
+      "url": "{{ base_url }}/users/profile",
+      "headers": [],
+      "parameters": [],
+      "body": {},
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_users_update",
+      "_type": "request_group",
+      "parentId": "fld_users_main",
+      "name": "3.2 - Update Profile",
+      "description": "Update user profile (username only)",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 2
+    },
+    {
+      "_id": "req_users_profile_update_ok",
+      "_type": "request",
+      "parentId": "fld_users_update",
+      "name": "3.2.1 - Update profile (200)",
+      "description": "Updates authenticated user's username\n\nExpected:\n- Code: 200\n- Body with updated profile data\n- Username changed to new value",
+      "method": "PUT",
+      "url": "{{ base_url }}/users/profile",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"username\": \"updated_username_123\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_users_profile_update_invalid_username",
+      "_type": "request",
+      "parentId": "fld_users_update",
+      "name": "3.2.2 - Update with invalid username (400)",
+      "description": "Attempts to update profile with invalid username (too short)\n\nExpected:\n- Code: 400\n- Error: validation error",
+      "method": "PUT",
+      "url": "{{ base_url }}/users/profile",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"username\": \"a\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_users_profile_update_no_auth",
+      "_type": "request",
+      "parentId": "fld_users_update",
+      "name": "3.2.3 - Update without auth (401)",
+      "description": "Attempts to update profile without authorization token\n\nExpected:\n- Code: 401\n- Error: Unauthorized",
+      "method": "PUT",
+      "url": "{{ base_url }}/users/profile",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"username\": \"newusername\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_users_password",
+      "_type": "request_group",
+      "parentId": "fld_users_main",
+      "name": "3.3 - Change Password",
+      "description": "Change user password with current password verification",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 3
+    },
+    {
+      "_id": "req_users_password_change_ok",
+      "_type": "request",
+      "parentId": "fld_users_password",
+      "name": "3.3.1 - Change password (204)",
+      "description": "Changes authenticated user's password\n\nExpected:\n- Code: 204\n- No body content\n- Password successfully updated",
+      "method": "POST",
+      "url": "{{ base_url }}/users/change-password",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"currentPassword\": \"{{ test_password }}\",\n  \"newPassword\": \"newPassword123!\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_users_password_change_wrong_current",
+      "_type": "request",
+      "parentId": "fld_users_password",
+      "name": "3.3.2 - Change password with wrong current (400)",
+      "description": "Attempts to change password with incorrect current password\n\nExpected:\n- Code: 400\n- Error: Current password is invalid",
+      "method": "POST",
+      "url": "{{ base_url }}/users/change-password",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"currentPassword\": \"wrongPassword123\",\n  \"newPassword\": \"anotherNewPassword123!\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_users_password_change_short_new",
+      "_type": "request",
+      "parentId": "fld_users_password",
+      "name": "3.3.3 - Change password with short new password (400)",
+      "description": "Attempts to change password with new password less than 8 characters\n\nExpected:\n- Code: 400\n- Error: validation error",
+      "method": "POST",
+      "url": "{{ base_url }}/users/change-password",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"currentPassword\": \"{{ test_password }}\",\n  \"newPassword\": \"short\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_users_password_change_no_auth",
+      "_type": "request",
+      "parentId": "fld_users_password",
+      "name": "3.3.4 - Change password without auth (401)",
+      "description": "Attempts to change password without authorization token\n\nExpected:\n- Code: 401\n- Error: Unauthorized",
+      "method": "POST",
+      "url": "{{ base_url }}/users/change-password",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"currentPassword\": \"{{ test_password }}\",\n  \"newPassword\": \"newPassword123!\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 4,
+      "isPrivate": false
     }
   ]
 }
