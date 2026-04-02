@@ -3,7 +3,8 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install development dependencies
+# Install git and development dependencies
+RUN apk add --no-cache git
 RUN npm install -g npm@latest
 
 # Copy root package files and workspace structure

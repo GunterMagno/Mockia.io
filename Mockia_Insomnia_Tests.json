@@ -29,13 +29,13 @@
         "test_username": "testuser",
         "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OWMwMjEzNmU2ZmJlYWRkYWQwNDk5ZWEiLCJpYXQiOjE3NzQ1MjQxMTAsImV4cCI6MTc3NDUyNTAxMH0.zy7_WbZx8olD3WXwRn22v5kA09lwtxIKCqr4_R_8YYQ",
         "access_token_2": "",
-        "owner_access_token": "",
-        "editor_access_token": "",
-        "viewer_access_token": "",
+        "owner_access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OWM5NTY4ZjQyZjFjMWExNzZmNDdjMzYiLCJpYXQiOjE3NzQ4MDI4MDIsImV4cCI6MTc3NDgwMzcwMn0.B2xBNh81ckzegGhKKMZhgflshjlo5C_oPCiLQDSc0Zc",
+        "editor_access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OWM5NTY5NjQyZjFjMWExNzZmNDdjMzkvLCJpYXQiOjE3NzQ4MDI4MTQsImV4cCI6MTc3NDgwMzcxNH0.evd4IMabq6DOj2AGRzRlBamgzGUzfH7YbHdz6ULrqzk",
+        "viewer_access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OWM5NTY5ODQyZjFjMWExNzZmNDdjM2MiLCJpYXQiOjE3NzQ4MDI4MjYsImV4cCI6MTc3NDgwMzcyNn0.qvsOas9OM8wCHl1d9lv4uGjXWKNgEba0sm77Nhl89CU",
         "refresh_token": "",
         "project_id": "69c516dd8709ec20e9553862",
-        "rbac_project_id": "",
-        "project_slug": "",
+        "rbac_project_id": "69c9579942f1c1a176f47c4a",
+        "project_slug": "rbac-test-project-1",
         "project_id_2": "69c516dd8709ec20e9553862"
       },
       "isPrivate": false,
@@ -1661,7 +1661,7 @@
       "url": "{{ base_url }}/projects/{{ rbac_project_id }}/members",
       "headers": [{"name": "Content-Type", "value": "application/json"}, {"name": "Authorization", "value": "Bearer {{ owner_access_token }}"}],
       "parameters": [],
-      "body": {"mimeType": "application/json", "text": "{\n  \"email\": \"{{ test_email_rbac_editor }}\",\n  \"role\": \"editor\"\n}"},
+      "body": {"mimeType": "application/json", "text": "{\n  \"targetEmail\": \"{{ test_email_rbac_editor }}\",\n  \"role\": \"EDITOR\"\n}"},
       "authentication": {},
       "metaSortKey": 2,
       "isPrivate": false
@@ -1676,7 +1676,7 @@
       "url": "{{ base_url }}/projects/{{ rbac_project_id }}/members",
       "headers": [{"name": "Content-Type", "value": "application/json"}, {"name": "Authorization", "value": "Bearer {{ owner_access_token }}"}],
       "parameters": [],
-      "body": {"mimeType": "application/json", "text": "{\n  \"email\": \"{{ test_email_rbac_viewer }}\",\n  \"role\": \"viewer\"\n}"},
+      "body": {"mimeType": "application/json", "text": "{\n  \"targetEmail\": \"{{ test_email_rbac_viewer }}\",\n  \"role\": \"VIEWER\"\n}"},
       "authentication": {},
       "metaSortKey": 3,
       "isPrivate": false
@@ -1746,7 +1746,7 @@
       "url": "{{ base_url }}/projects/{{ rbac_project_id }}/members",
       "headers": [{"name": "Content-Type", "value": "application/json"}, {"name": "Authorization", "value": "Bearer {{ editor_access_token }}"}],
       "parameters": [],
-      "body": {"mimeType": "application/json", "text": "{\n  \"email\": \"newuser@example.com\",\n  \"role\": \"viewer\"\n}"},
+      "body": {"mimeType": "application/json", "text": "{\n  \"targetEmail\": \"newuser@example.com\",\n  \"role\": \"VIEWER\"\n}"},
       "authentication": {},
       "metaSortKey": 3,
       "isPrivate": false
@@ -1846,7 +1846,7 @@
       "url": "{{ base_url }}/projects/{{ rbac_project_id }}/members",
       "headers": [{"name": "Content-Type", "value": "application/json"}, {"name": "Authorization", "value": "Bearer {{ viewer_access_token }}"}],
       "parameters": [],
-      "body": {"mimeType": "application/json", "text": "{\n  \"email\": \"newuser@example.com\",\n  \"role\": \"viewer\"\n}"},
+      "body": {"mimeType": "application/json", "text": "{\n  \"targetEmail\": \"newuser@example.com\",\n  \"role\": \"VIEWER\"\n}"},
       "authentication": {},
       "metaSortKey": 5,
       "isPrivate": false
@@ -1904,6 +1904,292 @@
       "body": {},
       "authentication": {},
       "metaSortKey": 3,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_github_main",
+      "_type": "request_group",
+      "parentId": "wrk_mockia_complete",
+      "name": "5 - GitHub",
+      "description": "GitHub repository ingestion endpoints for cloning and analyzing repositories",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 5
+    },
+    {
+      "_id": "fld_github_parse",
+      "_type": "request_group",
+      "parentId": "fld_github_main",
+      "name": "5.1 - Parse URL",
+      "description": "Parse and validate GitHub URLs without cloning",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 1
+    },
+    {
+      "_id": "fld_github_parse_ok",
+      "_type": "request_group",
+      "parentId": "fld_github_parse",
+      "name": "5.1.1 - Successful parse (200)",
+      "description": "Successful URL parsing - Expected: 200",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 1
+    },
+    {
+      "_id": "req_github_parse_simple",
+      "_type": "request",
+      "parentId": "fld_github_parse_ok",
+      "name": "5.1.1.1 - Parse simple GitHub URL",
+      "description": "Parses a simple GitHub URL\n\nExpected:\n- Code: 200\n- Body with owner, repo properties",
+      "method": "POST",
+      "url": "{{ base_url }}/github/parse",
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"url\": \"https://github.com/facebook/react\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_github_parse_git_suffix",
+      "_type": "request",
+      "parentId": "fld_github_parse_ok",
+      "name": "5.1.1.2 - Parse URL with .git suffix",
+      "description": "Parses GitHub URL ending with .git\n\nExpected:\n- Code: 200\n- Body with owner=torvalds, repo=linux",
+      "method": "POST",
+      "url": "{{ base_url }}/github/parse",
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"url\": \"https://github.com/torvalds/linux.git\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_github_parse_branch",
+      "_type": "request",
+      "parentId": "fld_github_parse_ok",
+      "name": "5.1.1.3 - Parse URL with branch",
+      "description": "Parses GitHub URL with branch information\n\nExpected:\n- Code: 200\n- Body with owner, repo, and branch=main",
+      "method": "POST",
+      "url": "{{ base_url }}/github/parse",
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"url\": \"https://github.com/vuejs/vue/tree/main\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_github_parse_error",
+      "_type": "request_group",
+      "parentId": "fld_github_parse",
+      "name": "5.1.2 - Invalid parse (400/500)",
+      "description": "Invalid URL parsing - Expected: 400 or 500",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 2
+    },
+    {
+      "_id": "req_github_parse_missing_url",
+      "_type": "request",
+      "parentId": "fld_github_parse_error",
+      "name": "5.1.2.1 - Parse without URL (400)",
+      "description": "Missing URL in request body\n\nExpected:\n- Code: 400\n- Error message about missing URL",
+      "method": "POST",
+      "url": "{{ base_url }}/github/parse",
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{}"
+      },
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_github_parse_invalid_url",
+      "_type": "request",
+      "parentId": "fld_github_parse_error",
+      "name": "5.1.2.2 - Parse with invalid URL format (400)",
+      "description": "Invalid URL format\n\nExpected:\n- Code: 400\n- Error message about invalid URL",
+      "method": "POST",
+      "url": "{{ base_url }}/github/parse",
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"url\": \"not-a-valid-url\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_github_parse_non_github",
+      "_type": "request",
+      "parentId": "fld_github_parse_error",
+      "name": "5.1.2.3 - Parse non-GitHub URL (500)",
+      "description": "URL from different provider (GitLab)\n\nExpected:\n- Code: 500\n- Error message about invalid GitHub URL",
+      "method": "POST",
+      "url": "{{ base_url }}/github/parse",
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"url\": \"https://gitlab.com/owner/repo\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_github_ingest",
+      "_type": "request_group",
+      "parentId": "fld_github_main",
+      "name": "5.2 - Ingest Repository",
+      "description": "Clone and analyze GitHub repositories",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 2
+    },
+    {
+      "_id": "fld_github_ingest_ok",
+      "_type": "request_group",
+      "parentId": "fld_github_ingest",
+      "name": "5.2.1 - Successful ingest (200)",
+      "description": "Successful repository ingestion - Expected: 200",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 1
+    },
+    {
+      "_id": "req_github_ingest_simple",
+      "_type": "request",
+      "parentId": "fld_github_ingest_ok",
+      "name": "5.2.1.1 - Ingest public repository",
+      "description": "Clones and analyzes a small public repository\n\nExpected:\n- Code: 200\n- Body with owner, repo, fileCount, files array, analysisTime",
+      "method": "POST",
+      "url": "{{ base_url }}/github/ingest",
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"url\": \"https://github.com/octocat/Hello-World\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_github_ingest_with_branch",
+      "_type": "request",
+      "parentId": "fld_github_ingest_ok",
+      "name": "5.2.1.2 - Ingest with branch parameter",
+      "description": "Clones and analyzes repository from specific branch\n\nExpected:\n- Code: 200\n- Body with owner, repo, branch=master, files analyzed",
+      "method": "POST",
+      "url": "{{ base_url }}/github/ingest",
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"url\": \"https://github.com/octocat/Hello-World.git\",\n  \"branch\": \"master\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_github_ingest_error",
+      "_type": "request_group",
+      "parentId": "fld_github_ingest",
+      "name": "5.2.2 - Invalid ingest (400/500)",
+      "description": "Invalid repository ingestion - Expected: 400 or 500",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 2
+    },
+    {
+      "_id": "req_github_ingest_missing_url",
+      "_type": "request",
+      "parentId": "fld_github_ingest_error",
+      "name": "5.2.2.1 - Ingest without URL (400)",
+      "description": "Missing URL in request body\n\nExpected:\n- Code: 400\n- Error about missing URL",
+      "method": "POST",
+      "url": "{{ base_url }}/github/ingest",
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{}"
+      },
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_github_ingest_invalid_url",
+      "_type": "request",
+      "parentId": "fld_github_ingest_error",
+      "name": "5.2.2.2 - Ingest with invalid URL (400)",
+      "description": "Invalid URL format\n\nExpected:\n- Code: 400\n- Error about invalid URL",
+      "method": "POST",
+      "url": "{{ base_url }}/github/ingest",
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"url\": \"not-a-valid-url\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_github_ingest_nonexistent",
+      "_type": "request",
+      "parentId": "fld_github_ingest_error",
+      "name": "5.2.2.3 - Ingest non-existent repository (500)",
+      "description": "Repository does not exist\n\nExpected:\n- Code: 500\n- Error 'Repositorio no encontrado'",
+      "method": "POST",
+      "url": "{{ base_url }}/github/ingest",
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"url\": \"https://github.com/non-existent-user-12345/non-existent-repo-12345\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_github_ingest_non_github",
+      "_type": "request",
+      "parentId": "fld_github_ingest_error",
+      "name": "5.2.2.4 - Ingest from non-GitHub URL (500)",
+      "description": "URL from different provider (GitLab)\n\nExpected:\n- Code: 500\n- Error about invalid GitHub URL",
+      "method": "POST",
+      "url": "{{ base_url }}/github/ingest",
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"url\": \"https://gitlab.com/owner/repo\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 4,
       "isPrivate": false
     }
   ]

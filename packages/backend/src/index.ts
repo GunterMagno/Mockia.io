@@ -8,6 +8,7 @@ import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
 import { authRouter } from './routes/auth.routes';
 import { projectsRouter } from './routes/projects.routes';
 import { userRouter } from './routes/user.routes';
+import { githubRouter } from './routes/github.routes';
 import { startProjectCleanupScheduler } from './scheduler/projectCleanup';
 
 dotenv.config();
@@ -87,6 +88,9 @@ app.use('/api/users', userRouter);
 
 // Projects routes (protected)
 app.use('/api/projects', projectsRouter);
+
+// GitHub ingestion routes
+app.use('/api/github', githubRouter);
 
 // TODO: Add more application routes here
 // app.use('/api/mocks', mockRoutes);
