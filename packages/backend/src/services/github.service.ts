@@ -282,3 +282,13 @@ export async function cleanupRepository(repoPath: string): Promise<void> {
     // Don't throw error, just log
   }
 }
+
+/**
+ * Extract files of a given type from the analyzed results
+ */
+export function getFilesByType(
+  files: AnalyzedFile[],
+  type: 'ts' | 'js' | 'json' | 'yaml' | 'yml' | 'md'
+): AnalyzedFile[] {
+  return files.filter((f) => f.type === type);
+}

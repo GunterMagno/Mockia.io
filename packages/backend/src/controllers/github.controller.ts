@@ -104,3 +104,163 @@ export const ingestGithubRepo = asyncHandler(
     }
   }
 );
+
+/**
+ * POST /api/projects/:id/import/github
+ * Import GitHub repository context and store analysis in database
+ *
+ * Body parameters:
+ * - repoUrl (required): GitHub repository URL
+ * - branch (optional): Git branch to analyze
+ *
+ * @returns 201 with context summary
+ */
+export const importFromGitHub = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+  const { id: projectId } = req.params;
+  const { repoUrl, branch } = req.body;
+
+  if (!repoUrl || typeof repoUrl !== 'string') {
+    res.status(400).json({
+      success: false,
+      error: 'Repository URL is required',
+    });
+    return;
+  }
+
+  let repoPath: string | null = null;
+
+  try {
+    // Import context extraction functions
+    const { extractContextForProject } = await import('../services/contextExtractor');
+    const { ProjectModel } = await import('../models/Project');
+
+    // Verify project exists
+    const project = await ProjectModel.findById(projectId).exec();
+    if (!project) {
+      res.status(404).json({
+        success: false,
+        error: 'Project not found',
+      });
+      return;
+    }
+
+    // Parse repository URL
+    const { owner, repo } = parseGitHubUrl(repoUrl);
+
+    // Clone repository
+    console.log(`Cloning repository ${owner}/${repo}...`);
+    repoPath = await cloneRepository(owner, repo, branch);
+
+    // Extract context
+    console.log(`Extracting context from ${owner}/${repo}...`);
+    const context = await extractContextForProject(projectId, repoPath, repoUrl);
+
+    res.status(201).json({
+      success: true,
+      message: 'GitHub context imported successfully',
+      data: {
+        contextId: context._id,
+        projectId: context.projectId,
+        repoUrl: context.repoUrl,
+        summary: context.summary,
+        stats: context.stats,
+        filesAnalyzed: context.files.length,
+      },
+    });
+  } catch (error) {
+    throw error;
+  } finally {
+    // Always clean up the cloned repository after processing
+    if (repoPath) {
+      await cleanupRepository(repoPath);
+    }
+  }
+});
+
+/**
+ * GET /api/projects/:id/context
+ * Retrieve stored GitHub context for a project
+ *
+ * @returns 200 with context data
+ */
+export const getProjectContextHandler = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+  const { id: projectId } = req.params;
+
+  try {
+    const { getProjectContext } = await import('../services/contextExtractor');
+    const { ProjectModel } = await import('../models/Project');
+
+    // Verify project exists
+    const project = await ProjectModel.findById(projectId).exec();
+    if (!project) {
+      res.status(404).json({
+        success: false,
+        error: 'Project not found',
+      });
+      return;
+    }
+
+    // Get context
+    const context = await getProjectContext(projectId);
+    if (!context) {
+      res.status(404).json({
+        success: false,
+        error: 'No context found for this project',
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      data: {
+        contextId: context._id,
+        projectId: context.projectId,
+        repoUrl: context.repoUrl,
+        repoOwner: context.repoOwner,
+        repoName: context.repoName,
+        summary: context.summary,
+        stats: context.stats,
+        files: context.files,
+        createdAt: context.createdAt,
+        updatedAt: context.updatedAt,
+      },
+    });
+  } catch (error) {
+    throw error;
+  }
+});
+
+/**
+ * DELETE /api/projects/:id/context
+ * Delete stored GitHub context for a project
+ *
+ * @returns 200 success
+ */
+export const deleteProjectContextHandler = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+  const { id: projectId } = req.params;
+
+  try {
+    const { deleteProjectContext } = await import('../services/contextExtractor');
+    const { ProjectModel } = await import('../models/Project');
+
+    // Verify project exists
+    const project = await ProjectModel.findById(projectId).exec();
+    if (!project) {
+      res.status(404).json({
+        success: false,
+        error: 'Project not found',
+      });
+      return;
+    }
+
+    // Delete context
+    await deleteProjectContext(projectId);
+
+    res.json({
+      success: true,
+      message: 'Context deleted successfully',
+    });
+  } catch (error) {
+    throw error;
+  }
+});
