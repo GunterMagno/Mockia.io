@@ -2191,6 +2191,230 @@
       "authentication": {},
       "metaSortKey": 4,
       "isPrivate": false
+    },
+    {
+      "_id": "fld_github_import",
+      "_type": "request_group",
+      "parentId": "fld_github_main",
+      "name": "5.3 - Import GitHub to Project",
+      "description": "Import GitHub repository context and store analysis in project",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 3
+    },
+    {
+      "_id": "fld_github_import_success",
+      "_type": "request_group",
+      "parentId": "fld_github_import",
+      "name": "5.3.1 - Successful import (201)",
+      "description": "Valid repository import - Expected: 201",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 1
+    },
+    {
+      "_id": "req_github_import_success",
+      "_type": "request",
+      "parentId": "fld_github_import_success",
+      "name": "5.3.1.1 - Import GitHub repo to project",
+      "description": "Imports a GitHub repository context to a project and stores analysis in database\n\nExpected:\n- Code: 201\n- Body with contextId, projectId, repoUrl, summary, stats, filesAnalyzed",
+      "method": "POST",
+      "url": "{{ base_url }}/projects/{{ rbac_project_id }}/import/github",
+      "headers": [{"name": "Content-Type", "value": "application/json"}, {"name": "Authorization", "value": "Bearer {{ owner_access_token }}"}],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"repoUrl\": \"https://github.com/octocat/Hello-World\",\n  \"branch\": \"master\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_github_import_error",
+      "_type": "request_group",
+      "parentId": "fld_github_import",
+      "name": "5.3.2 - Import errors (400/401/403/404)",
+      "description": "Invalid import requests - Expected: 400, 401, 403, or 404",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 2
+    },
+    {
+      "_id": "req_github_import_no_auth",
+      "_type": "request",
+      "parentId": "fld_github_import_error",
+      "name": "5.3.2.1 - Import without authentication (401)",
+      "description": "Missing authentication token\n\nExpected:\n- Code: 401\n- Error about authentication required",
+      "method": "POST",
+      "url": "{{ base_url }}/projects/{{ rbac_project_id }}/import/github",
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"repoUrl\": \"https://github.com/octocat/Hello-World\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_github_import_no_permission",
+      "_type": "request",
+      "parentId": "fld_github_import_error",
+      "name": "5.3.2.2 - Import without permission (403)",
+      "description": "User is VIEWER (insufficient permissions to import)\n\nExpected:\n- Code: 403\n- Error about insufficient permissions",
+      "method": "POST",
+      "url": "{{ base_url }}/projects/{{ rbac_project_id }}/import/github",
+      "headers": [{"name": "Content-Type", "value": "application/json"}, {"name": "Authorization", "value": "Bearer {{ viewer_access_token }}"}],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"repoUrl\": \"https://github.com/octocat/Hello-World\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_github_import_invalid_url",
+      "_type": "request",
+      "parentId": "fld_github_import_error",
+      "name": "5.3.2.3 - Import with invalid URL (400)",
+      "description": "Invalid GitHub URL format\n\nExpected:\n- Code: 400\n- Error about invalid GitHub URL",
+      "method": "POST",
+      "url": "{{ base_url }}/projects/{{ rbac_project_id }}/import/github",
+      "headers": [{"name": "Content-Type", "value": "application/json"}, {"name": "Authorization", "value": "Bearer {{ owner_access_token }}"}],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"repoUrl\": \"not-a-valid-url\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_github_import_project_not_found",
+      "_type": "request",
+      "parentId": "fld_github_import_error",
+      "name": "5.3.2.4 - Import to non-existent project (404)",
+      "description": "Project does not exist\n\nExpected:\n- Code: 404\n- Error 'Project not found'",
+      "method": "POST",
+      "url": "{{ base_url }}/projects/000000000000000000000000/import/github",
+      "headers": [{"name": "Content-Type", "value": "application/json"}, {"name": "Authorization", "value": "Bearer {{ owner_access_token }}"}],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"repoUrl\": \"https://github.com/octocat/Hello-World\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 4,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_github_context_get",
+      "_type": "request_group",
+      "parentId": "fld_github_import",
+      "name": "5.3.3 - Get context (200/404)",
+      "description": "Retrieve stored GitHub context - Expected: 200 or 404",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 3
+    },
+    {
+      "_id": "req_github_context_get_success",
+      "_type": "request",
+      "parentId": "fld_github_context_get",
+      "name": "5.3.3.1 - Get project context (200)",
+      "description": "Retrieves stored GitHub context for a project\n\nExpected:\n- Code: 200\n- Body with contextId, projectId, repoUrl, summary, stats, files, createdAt, updatedAt",
+      "method": "GET",
+      "url": "{{ base_url }}/projects/{{ rbac_project_id }}/context",
+      "headers": [{"name": "Authorization", "value": "Bearer {{ owner_access_token }}"}],
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_github_context_get_not_found",
+      "_type": "request",
+      "parentId": "fld_github_context_get",
+      "name": "5.3.3.2 - Get context for project without import (404)",
+      "description": "Project exists but has no imported context\n\nExpected:\n- Code: 404\n- Error 'No context found for this project'",
+      "method": "GET",
+      "url": "{{ base_url }}/projects/{{ project_id }}/context",
+      "headers": [{"name": "Authorization", "value": "Bearer {{ owner_access_token }}"}],
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_github_context_delete",
+      "_type": "request_group",
+      "parentId": "fld_github_import",
+      "name": "5.3.4 - Delete context (200/401/403/404)",
+      "description": "Delete stored GitHub context - Expected: 200, 401, 403, or 404",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 4
+    },
+    {
+      "_id": "req_github_context_delete_success",
+      "_type": "request",
+      "parentId": "fld_github_context_delete",
+      "name": "5.3.4.1 - Delete context (200)",
+      "description": "Deletes stored GitHub context from a project (requires OWNER or EDITOR role)\n\nExpected:\n- Code: 200\n- Message 'Context deleted successfully'",
+      "method": "DELETE",
+      "url": "{{ base_url }}/projects/{{ rbac_project_id }}/context",
+      "headers": [{"name": "Authorization", "value": "Bearer {{ owner_access_token }}"}],
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_github_context_delete_no_auth",
+      "_type": "request",
+      "parentId": "fld_github_context_delete",
+      "name": "5.3.4.2 - Delete without authentication (401)",
+      "description": "Missing authentication token\n\nExpected:\n- Code: 401\n- Error about authentication required",
+      "method": "DELETE",
+      "url": "{{ base_url }}/projects/{{ rbac_project_id }}/context",
+      "headers": [],
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_github_context_delete_no_permission",
+      "_type": "request",
+      "parentId": "fld_github_context_delete",
+      "name": "5.3.4.3 - Delete without permission (403)",
+      "description": "User is VIEWER (insufficient permissions to delete)\n\nExpected:\n- Code: 403\n- Error about insufficient permissions",
+      "method": "DELETE",
+      "url": "{{ base_url }}/projects/{{ rbac_project_id }}/context",
+      "headers": [{"name": "Authorization", "value": "Bearer {{ viewer_access_token }}"}],
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_github_context_delete_not_found",
+      "_type": "request",
+      "parentId": "fld_github_context_delete",
+      "name": "5.3.4.4 - Delete context not found (404)",
+      "description": "Project exists but has no imported context to delete\n\nExpected:\n- Code: 404\n- Error 'No context found for this project'",
+      "method": "DELETE",
+      "url": "{{ base_url }}/projects/{{ project_id }}/context",
+      "headers": [{"name": "Authorization", "value": "Bearer {{ owner_access_token }}"}],
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 4,
+      "isPrivate": false
     }
   ]
 }
