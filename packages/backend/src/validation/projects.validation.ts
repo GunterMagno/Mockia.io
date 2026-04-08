@@ -1,5 +1,5 @@
 import Joi from 'joi';
-import type { CreateProjectRequest, ProjectRole } from '@mockia/shared';
+import type { CreateProjectRequest, ImportGitHubRequest, ProjectRole } from '@mockia/shared';
 
 /**
  * Validation schema for creating a project
@@ -73,5 +73,28 @@ export const addProjectMemberSchema = Joi.object<{
     .messages({
       'any.only': 'Role must be OWNER, EDITOR, or VIEWER',
       'any.required': 'Role is required',
+    }),
+});
+
+/**
+ * Validation schema for importing a GitHub repository
+ * Validates that a valid GitHub URL is provided
+ */
+export const importGitHubSchema = Joi.object<ImportGitHubRequest>({
+  repoUrl: Joi.string()
+    .uri()
+    .required()
+    .trim()
+    .pattern(/github\.com/)
+    .messages({
+      'string.uri': 'Invalid URL format',
+      'string.pattern.base': 'URL must be a valid GitHub repository URL',
+      'any.required': 'GitHub URL is required',
+    }),
+  branch: Joi.string()
+    .optional()
+    .trim()
+    .messages({
+      'string.empty': 'Branch name cannot be empty',
     }),
 });

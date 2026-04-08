@@ -1,8 +1,9 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/authenticateToken';
 import { asyncHandler } from '../middlewares/errorHandler';
-import { createProject, getUserProjects, getProjectById, updateProject, archiveProject, cleanupArchivedProjects, addProjectMember, removeProjectMember } from '../services/project.service';
-import type { CreateProjectRequest } from '@mockia/shared';
+import { createProject, getUserProjects, getProjectById, updateProject, archiveProject, cleanupArchivedProjects, addProjectMember, removeProjectMember, importGitHubRepository } from '../services/project.service';
+import { getProjectContext, deleteProjectContext } from '../services/github-context.service';
+import type { CreateProjectRequest, ImportGitHubRequest } from '@mockia/shared';
 
 /**
  * Controller for projects
@@ -235,6 +236,114 @@ export const removeProjectMemberHandler = asyncHandler(
     res.status(200).json({
       success: true,
       data: project,
+      timestamp: new Date().toISOString(),
+    });
+  }
+);
+
+/**
+ * POST /api/projects/:id/import/github
+ * Imports a GitHub repository to a project
+ * Only the project owner can import repositories
+ *
+ * Body parameters:
+ * - url (required): GitHub repository URL
+ * - branch (optional): Specific branch to use
+ *
+ * @param req - Authenticated request with user info and params
+ * @param res - Express response
+ * @returns 200 with updated project containing GitHub repository information
+ * @throws 400 if validation fails or invalid GitHub URL
+ * @throws 403 if user is not the owner
+ * @throws 404 if project not found
+ */
+export const importGitHubRepositoryHandler = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new Error('User ID not found in request');
+    }
+
+    const { id } = req.params;
+    const importRequest: ImportGitHubRequest = req.body;
+    const project = await importGitHubRepository(id, userId, importRequest);
+
+    res.status(200).json({
+      success: true,
+      data: project,
+      timestamp: new Date().toISOString(),
+    });
+  }
+);
+
+/**
+ * GET /api/projects/:id/context
+ * Retrieves the GitHub context for a project
+ * User must be a member of the project to access it
+ *
+ * @param req - Authenticated request with user info and params
+ * @param res - Express response
+ * @returns 200 with GitHub context details
+ * @throws 401 if not authenticated
+ * @throws 403 if user is not a member of the project
+ * @throws 404 if project not found or no context imported
+ */
+export const getProjectContextHandler = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new Error('User ID not found in request');
+    }
+
+    const { id } = req.params;
+
+    // Verify user has access to the project
+    await getProjectById(id, userId);
+
+    // Get the context
+    const context = await getProjectContext(id);
+
+    res.status(200).json({
+      success: true,
+      data: context,
+      timestamp: new Date().toISOString(),
+    });
+  }
+);
+
+/**
+ * DELETE /api/projects/:id/context
+ * Deletes the GitHub context for a project
+ * Only the project owner can delete context
+ *
+ * @param req - Authenticated request with user info and params
+ * @param res - Express response
+ * @returns 200 with deleted context details
+ * @throws 401 if not authenticated
+ * @throws 403 if user is not the project owner
+ * @throws 404 if project not found or no context exists
+ */
+export const deleteProjectContextHandler = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new Error('User ID not found in request');
+    }
+
+    const { id } = req.params;
+
+    // Verify user is the project owner
+    const project = await getProjectById(id, userId);
+    if (project.ownerId !== userId) {
+      throw new Error('Only project owner can delete context');
+    }
+
+    // Delete the context
+    const context = await deleteProjectContext(id);
+
+    res.status(200).json({
+      success: true,
+      data: context,
       timestamp: new Date().toISOString(),
     });
   }

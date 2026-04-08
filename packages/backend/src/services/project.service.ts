@@ -3,8 +3,10 @@ import { UserModel } from '../models/User';
 import { generateUniqueSlug } from '../utils/slugGenerator';
 import { AppError } from '../middlewares/errorHandler';
 import { ErrorCode } from '@mockia/shared';
-import type { Project as ProjectDTO, CreateProjectRequest, ProjectMember, ProjectRole } from '@mockia/shared';
+import type { Project as ProjectDTO, CreateProjectRequest, ImportGitHubRequest, ProjectMember, ProjectRole } from '@mockia/shared';
 import { ProjectRoleEnum } from '../models/Project';
+import { parseGitHubUrl } from './github.service';
+import { importAndAnalyzeRepository } from './github-context.service';
 
 /**
  * Maps a MongoDB ProjectDocument to a ProjectDTO
@@ -24,6 +26,13 @@ function mapProjectToDTO(doc: any): ProjectDTO {
         addedAt: m.addedAt.toISOString(),
       })
     ),
+    gitHubRepo: doc.gitHubRepo ? {
+      owner: doc.gitHubRepo.owner,
+      repo: doc.gitHubRepo.repo,
+      branch: doc.gitHubRepo.branch,
+      url: doc.gitHubRepo.url,
+      importedAt: doc.gitHubRepo.importedAt.toISOString(),
+    } : undefined,
     isArchived: doc.isArchived,
     archivedAt: doc.archivedAt ? doc.archivedAt.toISOString() : undefined,
     createdAt: doc.createdAt.toISOString(),
@@ -578,6 +587,88 @@ export async function removeProjectMember(
     console.error('Error removing project member:', error);
     throw new AppError(
       'Failed to remove project member',
+      ErrorCode.INTERNAL_SERVER_ERROR,
+      500
+    );
+  }
+}
+
+/**
+ * Imports a GitHub repository to a project
+ * Only the project owner can import repositories
+ * 
+ * Flow:
+ * 1. Find project by ID
+ * 2. Verify user is project owner
+ * 3. Parse and validate GitHub URL
+ * 4. Store repository information in project
+ * 5. Save and return updated project
+ * 
+ * @param projectId - Project ID to import repository into
+ * @param userId - User ID requesting import (must be owner)
+ * @param importRequest - DTO with GitHub URL and optional branch
+ * @returns Updated project with GitHub repository information
+ * @throws AppError 404 if project not found
+ * @throws AppError 403 if user is not the owner
+ * @throws AppError 400 if GitHub URL is invalid
+ */
+export async function importGitHubRepository(
+  projectId: string,
+  userId: string,
+  importRequest: ImportGitHubRequest
+): Promise<ProjectDTO> {
+  try {
+    // Find project by ID
+    const project = await ProjectModel.findById(projectId);
+
+    // Check if project exists
+    if (!project) {
+      throw new AppError(
+        'Project not found',
+        ErrorCode.NOT_FOUND,
+        404
+      );
+    }
+
+    // Verify user is the owner
+    if (project.ownerId.toString() !== userId) {
+      throw new AppError(
+        'Only the project owner can import repositories',
+        ErrorCode.FORBIDDEN,
+        403
+      );
+    }
+
+    // Parse and validate GitHub URL
+    const parsedUrl = parseGitHubUrl(importRequest.repoUrl);
+
+    // Clone, analyze, and store context in one operation
+    console.log(`Starting GitHub repository import process...`);
+    await importAndAnalyzeRepository(projectId, importRequest.repoUrl, importRequest.branch);
+
+    // Store GitHub repository reference in project
+    project.gitHubRepo = {
+      owner: parsedUrl.owner,
+      repo: parsedUrl.repo,
+      branch: importRequest.branch || parsedUrl.branch,
+      url: importRequest.repoUrl,
+      importedAt: new Date(),
+    };
+
+    // Save and return
+    const savedProject = await project.save();
+    console.log(`Repository imported and project updated`);
+    return mapProjectToDTO(savedProject);
+  } catch (error) {
+    // If it's already an AppError, rethrow it
+    if (error instanceof AppError) {
+      throw error;
+    }
+
+    // For any other error, wrap it
+    console.error('Error importing GitHub repository:', error);
+    throw new AppError(
+      'Failed to import GitHub repository',
       ErrorCode.INTERNAL_SERVER_ERROR,
       500
     );

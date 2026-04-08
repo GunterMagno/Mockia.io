@@ -135,39 +135,3 @@ export async function extractContextForProject(
 
   return githubContext;
 }
-
-/**
- * Get stored context for a project
- *
- * @param projectId - MongoDB project ID
- * @returns GitHub context document or null if not found
- */
-export async function getProjectContext(projectId: string): Promise<GitHubContextDocument | null> {
-  return GitHubContextModel.findOne({ projectId }).exec();
-}
-
-/**
- * Delete stored context for a project
- *
- * @param projectId - MongoDB project ID
- */
-export async function deleteProjectContext(projectId: string): Promise<void> {
-  await GitHubContextModel.deleteOne({ projectId }).exec();
-}
-
-/**
- * Update context for a project
- *
- * @param projectId - MongoDB project ID
- * @param repoPath - Local path to cloned repository
- * @param repoUrl - Original repository URL
- * @returns Updated GitHub context document
- */
-export async function updateProjectContext(
-  projectId: string,
-  repoPath: string,
-  repoUrl: string
-): Promise<GitHubContextDocument> {
-  // Simply re-extract the context (it will override existing)
-  return extractContextForProject(projectId, repoPath, repoUrl);
-}

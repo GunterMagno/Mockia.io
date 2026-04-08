@@ -8,11 +8,14 @@ import {
   cleanupArchivedProjectsHandler,
   addProjectMemberHandler,
   removeProjectMemberHandler,
+  importGitHubRepositoryHandler,
+  getProjectContextHandler,
+  deleteProjectContextHandler,
 } from '../controllers/projects.controller';
 import { authenticateToken } from '../middlewares/authenticateToken';
 import { authorizeRole } from '../middlewares/authorizeRole';
 import { validate } from '../middlewares/validateRequest';
-import { createProjectSchema, updateProjectSchema, addProjectMemberSchema } from '../validation/projects.validation';
+import { createProjectSchema, updateProjectSchema, addProjectMemberSchema, importGitHubSchema } from '../validation/projects.validation';
 import type { ProjectRole } from '@mockia/shared';
 
 /**
@@ -251,6 +254,93 @@ projectsRouter.delete(
   authenticateToken,
   authorizeRole(['OWNER'] as unknown as ProjectRole[]),
   removeProjectMemberHandler
+);
+
+/**
+ * POST /api/projects/:id/import/github
+ * Imports a GitHub repository to a project
+ *
+ * Authentication: Required (JWT Bearer token)
+ * Authorization: User must be the project owner
+ *
+ * Middleware stack:
+ * 1. authenticateToken - Verifies JWT and attaches user info
+ * 2. validate - Validates request body against schema
+ * 3. importGitHubRepositoryHandler - Controller
+ *
+ * URL parameters:
+ * - id: Project ID (MongoDB ObjectId)
+ *
+ * Request body:
+ * {
+ *   "repoUrl": "https://github.com/owner/repo",
+ *   "branch": "main" (optional)
+ * }
+ *
+ * Responses:
+ * - 200: Repository imported successfully
+ * - 400: Invalid GitHub URL or validation error
+ * - 401: Missing or invalid token
+ * - 403: User is not the project owner
+ * - 404: Project not found
+ */
+projectsRouter.post(
+  '/:id/import/github',
+  authenticateToken,
+  validate({ body: importGitHubSchema }),
+  importGitHubRepositoryHandler
+);
+
+/**
+ * GET /api/projects/:id/context
+ * Retrieves the GitHub context for a project
+ *
+ * Authentication: Required (JWT Bearer token)
+ * Authorization: User must be a member of the project
+ *
+ * Middleware stack:
+ * 1. authenticateToken - Verifies JWT and attaches user info
+ * 2. getProjectContextHandler - Controller
+ *
+ * URL parameters:
+ * - id: Project ID (MongoDB ObjectId)
+ *
+ * Responses:
+ * - 200: GitHub context with analysis
+ * - 401: Missing or invalid token
+ * - 403: User is not a member of the project
+ * - 404: Project not found or no context imported
+ */
+projectsRouter.get(
+  '/:id/context',
+  authenticateToken,
+  getProjectContextHandler
+);
+
+/**
+ * DELETE /api/projects/:id/context
+ * Deletes the GitHub context for a project
+ *
+ * Authentication: Required (JWT Bearer token)
+ * Authorization: User must be the project owner
+ *
+ * Middleware stack:
+ * 1. authenticateToken - Verifies JWT and attaches user info
+ * 2. deleteProjectContextHandler - Controller
+ *
+ * URL parameters:
+ * - id: Project ID (MongoDB ObjectId)
+ *
+ * Responses:
+ * - 200: Context deleted successfully
+ * - 401: Missing or invalid token
+ * - 403: User is not the project owner
+ * - 404: Project not found or no context exists
+ */
+projectsRouter.delete(
+  '/:id/context',
+  authenticateToken,
+  deleteProjectContextHandler
 );
 
 export default projectsRouter;

@@ -15,6 +15,17 @@ export interface ProjectMember {
 }
 
 /**
+ * GitHub repository information stored in project
+ */
+export interface GitHubRepo {
+  owner: string;
+  repo: string;
+  branch?: string;
+  url: string;
+  importedAt: string;
+}
+
+/**
  * Project DTO - returned from API
  */
 export interface Project {
@@ -24,6 +35,7 @@ export interface Project {
   slug: string;
   ownerId: string;
   members: ProjectMember[];
+  gitHubRepo?: GitHubRepo;
   isArchived: boolean;
   archivedAt?: string;
   createdAt: string;
@@ -36,4 +48,12 @@ export interface Project {
 export interface CreateProjectRequest {
   title: string;
   description?: string;
+}
+
+/**
+ * Request DTO for importing a GitHub repository to a project
+ */
+export interface ImportGitHubRequest {
+  repoUrl: string;
+  branch?: string;
 }
