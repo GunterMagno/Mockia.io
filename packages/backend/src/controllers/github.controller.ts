@@ -66,14 +66,14 @@ export const ingestGithubRepo = asyncHandler(
       const targetBranch = branch || parsedUrl.branch;
 
       // Clone repository
-      console.log(`Clonando repositorio ${owner}/${repo}...`);
+      console.log(`Cloning repository ${owner}/${repo}...`);
       repoPath = await cloneRepository(owner, repo, targetBranch);
-      console.log(`Repositorio clonado en: ${repoPath}`);
+      console.log(`Repository cloned at: ${repoPath}`);
 
       // Analyze structure
-      console.log(`Analizando estructura del código...`);
+      console.log(`Analyzing code structure...`);
       const files = await codeAnalyzer(repoPath);
-      console.log(`Análisis completado: ${files.length} archivos encontrados`);
+      console.log(`Analysis completed: ${files.length} files found`);
 
       // Calculate time
       const analysisTime = Date.now() - startTime;
@@ -97,9 +97,9 @@ export const ingestGithubRepo = asyncHandler(
     } finally {
       // Clean temporary repository
       if (repoPath) {
-        console.log(`Limpiando repositorio temporal...`);
+        console.log(`Cleaning temporary repository...`);
         await cleanupRepository(repoPath);
-        console.log(`Limpieza completada`);
+        console.log(`Cleanup completed`);
       }
     }
   }

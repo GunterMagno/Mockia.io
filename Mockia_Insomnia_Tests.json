@@ -2040,8 +2040,8 @@
       "_id": "req_github_parse_non_github",
       "_type": "request",
       "parentId": "fld_github_parse_error",
-      "name": "5.1.2.3 - Parse non-GitHub URL (500)",
-      "description": "URL from different provider (GitLab)\n\nExpected:\n- Code: 500\n- Error message about invalid GitHub URL",
+      "name": "5.1.2.3 - Parse non-GitHub URL (400)",
+      "description": "URL from different provider (GitLab)\n\nExpected:\n- Code: 400\n- Error: 'URL must be from github.com'",
       "method": "POST",
       "url": "{{ base_url }}/github/parse",
       "headers": [{"name": "Content-Type", "value": "application/json"}],
@@ -2160,8 +2160,8 @@
       "_id": "req_github_ingest_nonexistent",
       "_type": "request",
       "parentId": "fld_github_ingest_error",
-      "name": "5.2.2.3 - Ingest non-existent repository (500)",
-      "description": "Repository does not exist\n\nExpected:\n- Code: 500\n- Error 'Repositorio no encontrado'",
+      "name": "5.2.2.3 - Ingest non-existent repository (404)",
+      "description": "Repository does not exist\n\nExpected:\n- Code: 404\n- Error: 'Repository not found: owner/repo'",
       "method": "POST",
       "url": "{{ base_url }}/github/ingest",
       "headers": [{"name": "Content-Type", "value": "application/json"}],
@@ -2178,8 +2178,8 @@
       "_id": "req_github_ingest_non_github",
       "_type": "request",
       "parentId": "fld_github_ingest_error",
-      "name": "5.2.2.4 - Ingest from non-GitHub URL (500)",
-      "description": "URL from different provider (GitLab)\n\nExpected:\n- Code: 500\n- Error about invalid GitHub URL",
+      "name": "5.2.2.4 - Ingest from non-GitHub URL (400)",
+      "description": "URL from different provider (GitLab)\n\nExpected:\n- Code: 400\n- Error: 'URL must be from github.com'",
       "method": "POST",
       "url": "{{ base_url }}/github/ingest",
       "headers": [{"name": "Content-Type", "value": "application/json"}],
@@ -2414,6 +2414,190 @@
       "parameters": [],
       "authentication": {},
       "metaSortKey": 4,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_github_error_handling",
+      "_type": "request_group",
+      "parentId": "fld_github_main",
+      "name": "5.4 - Error Handling",
+      "description": "Enhanced error handling tests for GitHub endpoints (cleanup and validation)",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 4
+    },
+    {
+      "_id": "fld_github_parse_errors_enhanced",
+      "_type": "request_group",
+      "parentId": "fld_github_error_handling",
+      "name": "5.4.1 - Parse URL Validation",
+      "description": "Enhanced URL validation and error messages",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 1
+    },
+    {
+      "_id": "req_github_parse_empty_url",
+      "_type": "request",
+      "parentId": "fld_github_parse_errors_enhanced",
+      "name": "5.4.1.1 - Parse empty URL (400)",
+      "description": "Empty URL string\n\nExpected:\n- Code: 400\n- Error: 'GitHub URL is required and cannot be empty'",
+      "method": "POST",
+      "url": "{{ base_url }}/github/parse",
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"url\": \"\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_github_parse_invalid_hostname",
+      "_type": "request",
+      "parentId": "fld_github_parse_errors_enhanced",
+      "name": "5.4.1.2 - Parse non-GitHub URL (400)",
+      "description": "URL from different provider (GitLab)\n\nExpected:\n- Code: 400\n- Error: 'URL must be from github.com'",
+      "method": "POST",
+      "url": "{{ base_url }}/github/parse",
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"url\": \"https://gitlab.com/owner/repo\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_github_parse_missing_owner",
+      "_type": "request",
+      "parentId": "fld_github_parse_errors_enhanced",
+      "name": "5.4.1.3 - Parse URL without owner/repo (400)",
+      "description": "URL missing owner or repo path\n\nExpected:\n- Code: 400\n- Error: 'URL must contain owner/repo'",
+      "method": "POST",
+      "url": "{{ base_url }}/github/parse",
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"url\": \"https://github.com\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_github_ingest_errors_enhanced",
+      "_type": "request_group",
+      "parentId": "fld_github_error_handling",
+      "name": "5.4.2 - Ingest - Repository Errors",
+      "description": "Enhanced error messages for repository cloning and cleanup",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 2
+    },
+    {
+      "_id": "req_github_ingest_repo_not_found",
+      "_type": "request",
+      "parentId": "fld_github_ingest_errors_enhanced",
+      "name": "5.4.2.1 - Ingest repository not found (403 or 404)",
+      "description": "Repository does not exist or is private/inaccessible on GitHub\n\nExpected:\n- Code: 403 or 404\n- Error: 'Repository not found' or 'Access denied'\n- Temporary files cleaned up",
+      "method": "POST",
+      "url": "{{ base_url }}/github/ingest",
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"url\": \"https://github.com/thisuserdefinitelydoesnotexist12345/thisreposhouldneverexist67890\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_github_ingest_branch_not_found",
+      "_type": "request",
+      "parentId": "fld_github_ingest_errors_enhanced",
+      "name": "5.4.2.2 - Ingest branch not found (400)",
+      "description": "Repository exists but specified branch does not\n\nExpected:\n- Code: 400\n- Error: 'Branch not found: nonexistent-branch'\n- Temporary files cleaned up",
+      "method": "POST",
+      "url": "{{ base_url }}/github/ingest",
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"url\": \"https://github.com/torvalds/linux\",\n  \"branch\": \"this-branch-does-not-exist-xyz-12345\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_github_ingest_private_repo",
+      "_type": "request",
+      "parentId": "fld_github_ingest_errors_enhanced",
+      "name": "5.4.2.3 - Ingest with invalid URL (400)",
+      "description": "Invalid URL format that fails validation\n\nExpected:\n- Code: 400\n- Error: 'URL must contain owner/repo' or similar validation error\n- Temporary files cleaned up",
+      "method": "POST",
+      "url": "{{ base_url }}/github/ingest",
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"url\": \"https://github.com\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_github_cleanup_verification",
+      "_type": "request_group",
+      "parentId": "fld_github_error_handling",
+      "name": "5.4.3 - Cleanup Verification",
+      "description": "Tests to verify that temporary files are cleaned up properly even after errors",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 3
+    },
+    {
+      "_id": "req_github_cleanup_success",
+      "_type": "request",
+      "parentId": "fld_github_cleanup_verification",
+      "name": "5.4.3.1 - Verify cleanup after successful ingest",
+      "description": "After successful repository ingestion, temporary directory should be removed\n\nTest procedure:\n1. Make ingest request with valid repository\n2. Check that response is 200 with analysis results\n3. Verify no .tmp-repos directory remains in the filesystem",
+      "method": "POST",
+      "url": "{{ base_url }}/github/ingest",
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"url\": \"https://github.com/octocat/Hello-World\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_github_cleanup_error",
+      "_type": "request",
+      "parentId": "fld_github_cleanup_verification",
+      "name": "5.4.3.2 - Verify cleanup after error",
+      "description": "After error during repository ingestion, temporary directory should still be removed in finally block\n\nTest procedure:\n1. Make ingest request with valid URL but non-existent branch\n2. Check that response is 400 (branch not found)\n3. Verify no .tmp-repos directory remains in the filesystem\n\nNote: This ensures that cleanup happens even when exceptions occur during cloning",
+      "method": "POST",
+      "url": "{{ base_url }}/github/ingest",
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"url\": \"https://github.com/octocat/Hello-World\",\n  \"branch\": \"this-branch-definitely-does-not-exist-error-test\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 2,
       "isPrivate": false
     }
   ]

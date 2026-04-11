@@ -77,6 +77,8 @@ const fileInfoSchema = new Schema<FileInfoDocument>(
 /**
  * GitHub context schema
  * Stores parsed context from a GitHub repository linked to a project
+ * 
+ * Note: Documents are automatically deleted 30 days after creation via TTL index on createdAt
  */
 const githubContextSchema = new Schema<GitHubContextDocument>(
   {
@@ -133,6 +135,9 @@ const githubContextSchema = new Schema<GitHubContextDocument>(
     timestamps: true,
   }
 );
+
+// TTL Index: automatically delete documents 30 days (2592000 seconds) after creation
+githubContextSchema.index({ createdAt: 1 }, { expireAfterSeconds: 2592000 });
 
 /**
  * GitHub context model for CRUD operations in MongoDB

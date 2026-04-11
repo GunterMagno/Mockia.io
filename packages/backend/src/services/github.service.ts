@@ -1,6 +1,9 @@
 import { simpleGit, SimpleGit } from 'simple-git';
 import fs from 'fs/promises';
 import path from 'path';
+import { AppError } from '../middlewares/errorHandler';
+import { ErrorCode } from '@mockia/shared';
+import { removeDirectory } from '../utils/cleanupUtil';
 
 /**
  * Interface for the result of parseGitHubUrl
@@ -30,10 +33,19 @@ export interface AnalyzedFile {
  *
  * @param url - GitHub URL to parse
  * @returns Object with owner, repo and optionally branch
- * @throws Error if the URL is invalid
+ * @throws AppError with statusCode 400 if the URL is invalid
  */
 export function parseGitHubUrl(url: string): GitHubUrlParsed {
   try {
+    // Validate input
+    if (!url || typeof url !== 'string' || url.trim().length === 0) {
+      throw new AppError(
+        'GitHub URL is required and cannot be empty',
+        ErrorCode.VALIDATION_ERROR,
+        400
+      );
+    }
+
     // Remove trailing slash and .git
     const cleanUrl = url.replace(/\/$/, '').replace(/\.git$/, '');
 
@@ -42,7 +54,11 @@ export function parseGitHubUrl(url: string): GitHubUrlParsed {
 
     // Validate that it's GitHub
     if (!urlObj.hostname.includes('github.com')) {
-      throw new Error('URL debe ser de github.com');
+      throw new AppError(
+        'URL must be from github.com',
+        ErrorCode.VALIDATION_ERROR,
+        400
+      );
     }
 
     // Extract path and split by /
@@ -50,7 +66,11 @@ export function parseGitHubUrl(url: string): GitHubUrlParsed {
 
     // We need at least owner/repo
     if (pathParts.length < 2) {
-      throw new Error('URL debe contener owner/repo');
+      throw new AppError(
+        'URL must contain owner/repo',
+        ErrorCode.VALIDATION_ERROR,
+        400
+      );
     }
 
     const owner = pathParts[0];
@@ -63,15 +83,43 @@ export function parseGitHubUrl(url: string): GitHubUrlParsed {
     }
 
     if (!owner || !repo) {
-      throw new Error('No se pudo extraer owner/repo de la URL');
+      throw new AppError(
+        'Could not extract owner/repo from the URL',
+        ErrorCode.VALIDATION_ERROR,
+        400
+      );
     }
 
     return { owner, repo, branch };
   } catch (error) {
-    if (error instanceof Error) {
-      throw new Error(`URL de GitHub inválida: ${error.message}`);
+    // If it's already an AppError, re-throw it
+    if (error instanceof AppError) {
+      throw error;
     }
-    throw new Error('URL de GitHub inválida');
+    
+    // Handle URL parsing errors
+    if (error instanceof TypeError) {
+      throw new AppError(
+        'Invalid GitHub URL format',
+        ErrorCode.VALIDATION_ERROR,
+        400
+      );
+    }
+
+    // Fallback for unknown errors
+    if (error instanceof Error) {
+      throw new AppError(
+        `Invalid GitHub URL: ${error.message}`,
+        ErrorCode.VALIDATION_ERROR,
+        400
+      );
+    }
+    
+    throw new AppError(
+      'Invalid GitHub URL',
+      ErrorCode.VALIDATION_ERROR,
+      400
+    );
   }
 }
 
@@ -82,7 +130,10 @@ export function parseGitHubUrl(url: string): GitHubUrlParsed {
  * @param repo - Repository name
  * @param branch - (Optional) Branch to clone
  * @returns Local path where the repository has been cloned
- * @throws Error if cloning fails
+ * @throws AppError with appropriate status codes:
+ *   - 400: Repository not found or invalid branch
+ *   - 403: Authentication failed (private repository)
+ *   - 500: Unexpected cloning errors
  */
 export async function cloneRepository(
   owner: string,
@@ -107,17 +158,71 @@ export async function cloneRepository(
 
     return tempDir;
   } catch (error) {
-    if (error instanceof Error) {
-      // Improve common error messages
-      if (error.message.includes('not found') || error.message.includes('Repository not found')) {
-        throw new Error(`Repositorio no encontrado: ${owner}/${repo}`);
-      }
-      if (error.message.includes('Authentication failed')) {
-        throw new Error('Autenticación fallida. El repositorio puede ser privado');
-      }
-      throw new Error(`Error al clonar repositorio: ${error.message}`);
+    // If it's already an AppError, re-throw it
+    if (error instanceof AppError) {
+      throw error;
     }
-    throw new Error('Error desconocido al clonar repositorio');
+
+    if (error instanceof Error) {
+      const errorMsg = error.message.toLowerCase();
+
+      // Repository not found (404)
+      if (errorMsg.includes('not found') || errorMsg.includes('does not appear to be a git repository')) {
+        throw new AppError(
+          `Repository not found: ${owner}/${repo}`,
+          ErrorCode.NOT_FOUND,
+          404
+        );
+      }
+
+      // Branch not found (400)
+      if (errorMsg.includes('remote: not found') || errorMsg.includes('no such file or directory')) {
+        throw new AppError(
+          `Branch not found: ${branch || 'default'}`,
+          ErrorCode.VALIDATION_ERROR,
+          400
+        );
+      }
+
+      // Authentication failed - private repository (403)
+      if (
+        errorMsg.includes('permission denied') ||
+        errorMsg.includes('authentication failed') ||
+        errorMsg.includes('fatal: could not read username')
+      ) {
+        throw new AppError(
+          'Access denied. The repository may be private or credentials are invalid',
+          ErrorCode.FORBIDDEN,
+          403
+        );
+      }
+
+      // Network/connectivity issues (500)
+      if (
+        errorMsg.includes('network') ||
+        errorMsg.includes('connection') ||
+        errorMsg.includes('unable to access')
+      ) {
+        throw new AppError(
+          'Network connectivity error while accessing repository',
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500
+        );
+      }
+
+      // Default error handling (500)
+      throw new AppError(
+        `Error cloning repository: ${error.message}`,
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500
+      );
+    }
+
+    throw new AppError(
+      'Unknown error occurred while cloning repository',
+      ErrorCode.INTERNAL_SERVER_ERROR,
+      500
+    );
   }
 }
 
@@ -246,7 +351,11 @@ export async function codeAnalyzer(repoPath: string): Promise<AnalyzedFile[]> {
     // Validate that the directory exists
     const stats = await fs.stat(repoPath);
     if (!stats.isDirectory()) {
-      throw new Error('La ruta proporcionada no es un directorio');
+      throw new AppError(
+        'The provided path is not a directory',
+        ErrorCode.VALIDATION_ERROR,
+        400
+      );
     }
 
     // Start analysis
@@ -262,25 +371,35 @@ export async function codeAnalyzer(repoPath: string): Promise<AnalyzedFile[]> {
 
     return results;
   } catch (error) {
-    if (error instanceof Error) {
-      throw new Error(`Error al analizar repositorio: ${error.message}`);
+    // If it's already an AppError, re-throw it
+    if (error instanceof AppError) {
+      throw error;
     }
-    throw new Error('Error desconocido al analizar repositorio');
+
+    if (error instanceof Error) {
+      throw new AppError(
+        `Error analyzing repository: ${error.message}`,
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500
+      );
+    }
+    
+    throw new AppError(
+      'Unknown error occurred while analyzing repository',
+      ErrorCode.INTERNAL_SERVER_ERROR,
+      500
+    );
   }
 }
 
 /**
  * Cleans a temporary repository (removes the directory)
+ * Uses the centralized removeDirectory utility from cleanupUtil
  *
  * @param repoPath - Path of the repository to clean
  */
 export async function cleanupRepository(repoPath: string): Promise<void> {
-  try {
-    await fs.rm(repoPath, { recursive: true, force: true });
-  } catch (error) {
-    console.error(`Error al limpiar repositorio ${repoPath}:`, error);
-    // Don't throw error, just log
-  }
+  await removeDirectory(repoPath);
 }
 
 /**
