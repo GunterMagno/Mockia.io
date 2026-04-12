@@ -1,53 +1,15 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'js-yaml';
-
-export interface PathItem {
-  path: string;
-  methods: MethodInfo[];
-}
-
-export interface MethodInfo {
-  method: 'get' | 'post' | 'put' | 'delete' | 'patch' | 'options' | 'head';
-  summary?: string;
-  description?: string;
-  parameters?: ParameterSchema[];
-  requestBody?: SchemaReference;
-  responses: ResponseSchema[];
-}
-
-export interface ParameterSchema {
-  name: string;
-  in: 'query' | 'path' | 'header' | 'cookie';
-  required: boolean;
-  schema?: unknown;
-  description?: string;
-}
-
-export interface SchemaReference {
-  contentType?: string;
-  schema?: unknown;
-}
-
-export interface ResponseSchema {
-  statusCode: string;
-  description?: string;
-  schema?: unknown;
-}
-
-export interface ComponentSchema {
-  name: string;
-  schema: unknown;
-}
-
-export interface ParsedSwaggerFile {
-  version: string;
-  title?: string;
-  description?: string;
-  paths: PathItem[];
-  components: ComponentSchema[];
-  filePath: string;
-}
+import type {
+  PathItem,
+  MethodInfo,
+  ParameterSchema,
+  SchemaReference,
+  ResponseSchema,
+  ComponentSchema,
+  ParsedSwaggerFile,
+} from '../../types/swaggerParser';
 
 /**
  * Parses a Swagger/OpenAPI file (YAML or JSON) and extracts relevant information

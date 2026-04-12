@@ -1,51 +1,15 @@
 import * as ts from 'typescript';
 import * as fs from 'fs';
 import * as path from 'path';
-
-export interface InterfaceInfo {
-  name: string;
-  properties: PropertyInfo[];
-  isExported: boolean;
-}
-
-export interface PropertyInfo {
-  name: string;
-  type: string;
-  optional: boolean;
-}
-
-export interface TypeAliasInfo {
-  name: string;
-  type: string;
-  isExported: boolean;
-}
-
-export interface EnumInfo {
-  name: string;
-  members: string[];
-  isExported: boolean;
-}
-
-export interface FunctionSignature {
-  name: string;
-  parameters: ParameterInfo[];
-  returnType: string;
-  isExported: boolean;
-}
-
-export interface ParameterInfo {
-  name: string;
-  type: string;
-  optional: boolean;
-}
-
-export interface ParsedTypeScriptFile {
-  interfaces: InterfaceInfo[];
-  typeAliases: TypeAliasInfo[];
-  enums: EnumInfo[];
-  functions: FunctionSignature[];
-  filePath: string;
-}
+import type {
+  InterfaceInfo,
+  PropertyInfo,
+  TypeAliasInfo,
+  EnumInfo,
+  FunctionSignature,
+  ParameterInfo,
+  ParsedTypeScriptFile,
+} from '../../types/tsParser';
 
 /**
  * Parses a TypeScript file and extracts interfaces, types, enums, and exported functions
