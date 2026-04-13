@@ -5,8 +5,11 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import { connectDB, disconnectDB, getConnectionStatus } from './config/connection';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
-import { authRouter } from './auth/auth.routes';
-import { projectsRouter } from './projects/projects.routes';
+import { authRouter } from './routes/auth.routes';
+import { projectsRouter } from './routes/projects.routes';
+import { userRouter } from './routes/user.routes';
+import { githubRouter } from './routes/github.routes';
+import { startProjectCleanupScheduler } from './scheduler/projectCleanup';
 
 dotenv.config();
 
@@ -80,11 +83,16 @@ app.get('/api', (req: Request, res: Response) => {
 // Authentication routes
 app.use('/api/auth', authRouter);
 
+// Users routes (protected)
+app.use('/api/users', userRouter);
+
 // Projects routes (protected)
 app.use('/api/projects', projectsRouter);
 
+// GitHub ingestion routes
+app.use('/api/github', githubRouter);
+
 // TODO: Add more application routes here
-// app.use('/api/users', userRoutes);
 // app.use('/api/mocks', mockRoutes);
 // etc.
 
@@ -109,6 +117,9 @@ const startServer = async (): Promise<void> => {
   try {
     // Connect to MongoDB
     await connectDB();
+
+    // Start project cleanup scheduler
+    startProjectCleanupScheduler();
 
     const server = app.listen(port, () => {
       console.log(`[Backend] Server started at http://localhost:${port}/api`);
@@ -169,8 +180,11 @@ const startServer = async (): Promise<void> => {
   }
 };
 
-// Start server only if executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Start server only if NOT in test environment
+// Note: Direct execution check commented out due to ESM/CommonJS module compatibility
+// The app is exported below for testing purposes
+if (process.env.NODE_ENV !== 'test') {
+  // In production, start the server directly
   startServer();
 }
 

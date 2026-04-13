@@ -7,3 +7,9 @@ export enum PermissionLevel {
   AUTHENTICATED = 'authenticated',
   ADMIN = 'admin',
 }
+
+/**
+ * Project roles for RBAC (Role-Based Access Control)
+ * Defines user permissions within a project
+ */
+export type ProjectRole = 'OWNER' | 'EDITOR' | 'VIEWER';

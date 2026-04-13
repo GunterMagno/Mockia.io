@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { registerUser, loginUser, refreshTokens } from './auth.service';
+import { registerUser, loginUser, refreshTokens } from '../services/auth.service';
 import type { 
   CreateUserRequest,
   LoginRequest, 

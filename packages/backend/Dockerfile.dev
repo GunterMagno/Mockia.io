@@ -3,7 +3,8 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install development dependencies
+# Install git and development dependencies
+RUN apk add --no-cache git
 RUN npm install -g npm@latest
 
 # Copy root package files and workspace structure
@@ -16,14 +17,20 @@ COPY packages/shared/src ./packages/shared/src
 # Install dependencies first
 RUN npm install
 
-# Build shared package
+# Build shared package (BEFORE running backend)
 RUN npm run build --workspace=packages/shared
 
-# Create src directory structure for backend
+# Copy backend source code
+COPY packages/backend/src ./packages/backend/src
+COPY packages/backend/tsconfig.json ./packages/backend/
+COPY packages/backend/tsconfig.jest.json ./packages/backend/
+COPY packages/backend/jest.config.ts ./packages/backend/
+
+# Create src directory structure
 RUN mkdir -p src
 
 # Expose port
 EXPOSE 3000
 
-# Default command (will be overridden by docker-compose)
+# Default command
 CMD ["npm", "run", "dev", "--workspace=packages/backend"]
