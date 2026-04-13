@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@mockia/shared": "^1.0.0",
+    "axios": "^1.15.0",
     "bcrypt": "^5.1.0",
     "cors": "^2.8.6",
     "dotenv": "^16.3.0",

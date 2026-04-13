@@ -1,0 +1,152 @@
+/**
+ * AI Controller
+ * Handles HTTP requests for AI-related operations
+ */
+
+import { Response } from 'express';
+import { AuthenticatedRequest } from '../middlewares/authenticateToken';
+import { asyncHandler } from '../middlewares/errorHandler';
+import { generateWithOpenRouter } from '../services/openRouter.service';
+import { shouldRateLimit } from '../utils/openRouterUtils';
+import { AppError } from '../middlewares/errorHandler';
+import { ErrorCode } from '@mockia/shared';
+
+/**
+ * POST /api/ai/generate-description
+ * Generate a description for a mock endpoint using OpenRouter
+ *
+ * Body parameters:
+ * - prompt (required): The system prompt/context
+ * - userMessage (required): The user message to generate a response for
+ * - temperature (optional): Model temperature (0-1)
+ * - maxTokens (optional): Maximum tokens in response
+ *
+ * @param req - Authenticated request
+ * @param res - Express response
+ * @returns 200 with generated content
+ */
+export const generateDescriptionHandler = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new Error('User ID not found in request');
+    }
+
+    // Client-side rate limiting check
+    if (shouldRateLimit(60)) {
+      throw new AppError(
+        'Too many AI generation requests. Please wait a moment.',
+        ErrorCode.RATE_LIMIT_ERROR,
+        429
+      );
+    }
+
+    const { prompt, userMessage, temperature, maxTokens } = req.body;
+
+    if (!prompt || !userMessage) {
+      throw new AppError(
+        'Both prompt and userMessage are required',
+        ErrorCode.VALIDATION_ERROR,
+        400
+      );
+    }
+
+    const generatedContent = await generateWithOpenRouter(
+      prompt,
+      userMessage,
+      {
+        temperature: temperature ?? 0.7,
+        max_tokens: maxTokens ?? 1000,
+      }
+    );
+
+    res.status(200).json({
+      success: true,
+      data: {
+        generatedContent,
+        timestamp: new Date().toISOString(),
+      },
+      timestamp: new Date().toISOString(),
+    });
+  }
+);
+
+/**
+ * POST /api/ai/generate-mock-data
+ * Generate mock data for an API endpoint
+ *
+ * Body parameters:
+ * - schema (required): API schema/interface description
+ * - count (optional): Number of mock records to generate (default 1)
+ *
+ * @param req - Authenticated request
+ * @param res - Express response
+ * @returns 200 with generated mock data
+ */
+export const generateMockDataHandler = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new Error('User ID not found in request');
+    }
+
+    if (shouldRateLimit(60)) {
+      throw new AppError(
+        'Too many AI generation requests. Please wait a moment.',
+        ErrorCode.RATE_LIMIT_ERROR,
+        429
+      );
+    }
+
+    const { schema, count = 1 } = req.body;
+
+    if (!schema) {
+      throw new AppError(
+        'Schema is required',
+        ErrorCode.VALIDATION_ERROR,
+        400
+      );
+    }
+
+    const prompt = `You are an expert at generating realistic mock data. 
+    Generate ${count} JSON object(s) that match this schema. Return only valid JSON, no explanation.
+    Schema: ${JSON.stringify(schema)}`;
+
+    const userMessage = `Generate ${count} mock data object(s) for this schema.`;
+
+    const generatedData = await generateWithOpenRouter(
+      prompt,
+      userMessage,
+      {
+        temperature: 0.8, // More creative for data generation
+        max_tokens: 2000,
+      }
+    );
+
+    res.status(200).json({
+      success: true,
+      data: {
+        mockData: generatedData,
+        timestamp: new Date().toISOString(),
+      },
+      timestamp: new Date().toISOString(),
+    });
+  }
+);
+
+/**
+ * Health check for OpenRouter integration
+ * GET /api/ai/health
+ */
+export const aiHealthCheckHandler = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    res.status(200).json({
+      success: true,
+      data: {
+        status: 'available',
+        service: 'openrouter',
+        timestamp: new Date().toISOString(),
+      },
+    });
+  }
+);

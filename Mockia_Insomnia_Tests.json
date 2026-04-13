@@ -2599,6 +2599,199 @@
       "authentication": {},
       "metaSortKey": 2,
       "isPrivate": false
+    },
+    {
+      "_id": "fld_ai_main",
+      "_type": "request_group",
+      "parentId": "wrk_mockia_complete",
+      "name": "6 - AI Integration",
+      "description": "AI-powered generation endpoints using OpenRouter. Generate descriptions and mock data with exponential backoff and rate limiting",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 6
+    },
+    {
+      "_id": "fld_ai_description",
+      "_type": "request_group",
+      "parentId": "fld_ai_main",
+      "name": "6.1 - Generate Description",
+      "description": "Generate API descriptions using OpenRouter AI",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 1
+    },
+    {
+      "_id": "req_ai_description_success",
+      "_type": "request",
+      "parentId": "fld_ai_description",
+      "name": "6.1.1 - Generate description (200)",
+      "description": "Generate a description for an API endpoint using AI\n\nExpected:\n- Code: 200\n- Body with generated content\n- Requires valid access token and OpenRouter API key configured",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-description",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"prompt\": \"You are an expert API documentation writer. Write concise but informative descriptions.\",\n  \"userMessage\": \"Generate a description for a GET /users endpoint that returns a list of active users with pagination\",\n  \"temperature\": 0.7,\n  \"maxTokens\": 500\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_ai_description_no_auth",
+      "_type": "request",
+      "parentId": "fld_ai_description",
+      "name": "6.1.2 - No authentication (401)",
+      "description": "Attempt to generate description without authentication token\n\nExpected:\n- Code: 401\n- Error message about missing or invalid token",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-description",
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"prompt\": \"You are an expert API documentation writer.\",\n  \"userMessage\": \"Generate a description for a GET /users endpoint\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_ai_description_missing_fields",
+      "_type": "request",
+      "parentId": "fld_ai_description",
+      "name": "6.1.3 - Missing required fields (400)",
+      "description": "Attempt to generate description without required prompt or userMessage\n\nExpected:\n- Code: 400\n- Error message about missing required fields",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-description",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"prompt\": \"You are an expert API documentation writer.\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_ai_mock_data",
+      "_type": "request_group",
+      "parentId": "fld_ai_main",
+      "name": "6.2 - Generate Mock Data",
+      "description": "Generate realistic mock data for API schemas",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 2
+    },
+    {
+      "_id": "req_ai_mock_single",
+      "_type": "request",
+      "parentId": "fld_ai_mock_data",
+      "name": "6.2.1 - Generate single mock object (200)",
+      "description": "Generate a single mock data object matching a schema\n\nExpected:\n- Code: 200\n- Body with generated JSON mock data",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-mock-data",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"schema\": {\n    \"id\": \"string (UUID)\",\n    \"name\": \"string (user full name)\",\n    \"email\": \"string (valid email)\",\n    \"age\": \"number (18-80)\",\n    \"createdAt\": \"ISO 8601 timestamp\"\n  },\n  \"count\": 1\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_ai_mock_multiple",
+      "_type": "request",
+      "parentId": "fld_ai_mock_data",
+      "name": "6.2.2 - Generate multiple mock objects (200)",
+      "description": "Generate multiple mock data objects matching a schema\n\nExpected:\n- Code: 200\n- Body with array of generated JSON mock data",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-mock-data",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"schema\": {\n    \"id\": \"number\",\n    \"title\": \"string\",\n    \"price\": \"number (decimal)\",\n    \"inStock\": \"boolean\",\n    \"category\": \"string (one of: electronics, books, clothing)\"\n  },\n  \"count\": 5\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_ai_mock_no_schema",
+      "_type": "request",
+      "parentId": "fld_ai_mock_data",
+      "name": "6.2.3 - Missing schema (400)",
+      "description": "Attempt to generate mock data without providing schema\n\nExpected:\n- Code: 400\n- Error message about missing schema",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-mock-data",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{}"
+      },
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_ai_health",
+      "_type": "request_group",
+      "parentId": "fld_ai_main",
+      "name": "6.3 - Health Check",
+      "description": "Check AI service health and availability",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 3
+    },
+    {
+      "_id": "req_ai_health_check",
+      "_type": "request",
+      "parentId": "fld_ai_health",
+      "name": "6.3.1 - AI service health (200)",
+      "description": "Check if OpenRouter AI service is available and configured\n\nExpected:\n- Code: 200\n- Body with status: 'available' and service: 'openrouter'",
+      "method": "GET",
+      "url": "{{ base_url }}/ai/health",
+      "headers": [{"name": "Authorization", "value": "Bearer {{ access_token }}"}],
+      "parameters": [],
+      "body": {},
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_ai_health_no_auth",
+      "_type": "request",
+      "parentId": "fld_ai_health",
+      "name": "6.3.2 - Health check without auth (401)",
+      "description": "Attempt to check health without authentication\n\nExpected:\n- Code: 401\n- Error about missing authentication",
+      "method": "GET",
+      "url": "{{ base_url }}/ai/health",
+      "headers": [],
+      "parameters": [],
+      "body": {},
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false
     }
   ]
 }

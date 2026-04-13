@@ -9,6 +9,7 @@ import { authRouter } from './routes/auth.routes';
 import { projectsRouter } from './routes/projects.routes';
 import { userRouter } from './routes/user.routes';
 import { githubRouter } from './routes/github.routes';
+import aiRouter from './routes/ai.routes';
 import { startProjectCleanupScheduler } from './scheduler/projectCleanup';
 
 dotenv.config();
@@ -91,6 +92,9 @@ app.use('/api/projects', projectsRouter);
 
 // GitHub ingestion routes
 app.use('/api/github', githubRouter);
+
+// AI generation routes (protected)
+app.use('/api/ai', aiRouter);
 
 // TODO: Add more application routes here
 // app.use('/api/mocks', mockRoutes);
