@@ -6,10 +6,14 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/authenticateToken';
 import { asyncHandler } from '../middlewares/errorHandler';
-import { generateWithOpenRouter } from '../services/openRouter.service';
+import { generateWithOpenRouter, callOpenRouterWithRetry } from '../services/openRouter.service';
 import { shouldRateLimit } from '../utils/openRouterUtils';
 import { AppError } from '../middlewares/errorHandler';
 import { ErrorCode } from '@mockia/shared';
+import {
+  buildPrompt,
+  extractMockAPIFromResponse,
+} from '../modules/ai';
 
 /**
  * POST /api/ai/generate-description
@@ -127,6 +131,100 @@ export const generateMockDataHandler = asyncHandler(
       success: true,
       data: {
         mockData: generatedData,
+        timestamp: new Date().toISOString(),
+      },
+      timestamp: new Date().toISOString(),
+    });
+  }
+);
+
+/**
+ * POST /api/ai/generate-mock-api-spec
+ * Generate a complete mock API specification based on project context
+ * Uses Sprint 5: Prompt Engineering and Context Formatting
+ *
+ * Body parameters:
+ * - projectId (required): The project ID to load GitHub context from
+ * - requirement (required): Description of what the mock API should do
+ * - temperature (optional): Model temperature (0-1), default 0.7
+ * - maxTokens (optional): Maximum tokens in response, default 4000
+ *
+ * Response:
+ * - apiVersion, title, description
+ * - endpoints: Array of API endpoints with methods, paths, schemas, examples
+ * - dataModels: Array of data models/interfaces
+ *
+ * @param req - Authenticated request with projectId in URL or body
+ * @param res - Express response
+ * @returns 200 with generated mock API specification (JSON)
+ */
+export const generateMockAPISpecHandler = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new Error('User ID not found in request');
+    }
+
+    // Rate limiting check
+    if (shouldRateLimit(60)) {
+      throw new AppError(
+        'Too many AI generation requests. Please wait a moment.',
+        ErrorCode.RATE_LIMIT_ERROR,
+        429
+      );
+    }
+
+    const { projectId, requirement } = req.body;
+
+    // Validation
+    if (!projectId) {
+      throw new AppError(
+        'projectId is required',
+        ErrorCode.VALIDATION_ERROR,
+        400
+      );
+    }
+
+    if (!requirement) {
+      throw new AppError(
+        'requirement is required (description of what the mock API should do)',
+        ErrorCode.VALIDATION_ERROR,
+        400
+      );
+    }
+
+    // Build prompt from project context and user requirement
+    const messages = await buildPrompt(projectId, requirement);
+
+    // Call OpenRouter API with structured messages
+    const openRouterResponse = await callOpenRouterWithRetry(messages, {
+      temperature: req.body.temperature ?? 0.7,
+      max_tokens: req.body.maxTokens ?? 4000,
+    });
+
+    // Extract the generated content from response
+    const responseContent = openRouterResponse.choices[0]?.message.content;
+    if (!responseContent) {
+      throw new AppError(
+        'No response content from AI service',
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500
+      );
+    }
+
+    // Validate and extract the mock API specification
+    const mockAPISpec = extractMockAPIFromResponse(responseContent);
+
+    // Return the generated specification
+    res.status(200).json({
+      success: true,
+      data: {
+        specification: mockAPISpec,
+        usage: {
+          promptTokens: openRouterResponse.usage.prompt_tokens,
+          completionTokens: openRouterResponse.usage.completion_tokens,
+          totalTokens: openRouterResponse.usage.total_tokens,
+        },
         timestamp: new Date().toISOString(),
       },
       timestamp: new Date().toISOString(),

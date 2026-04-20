@@ -2754,20 +2754,132 @@
       "isPrivate": false
     },
     {
-      "_id": "fld_ai_health",
+      "_id": "fld_ai_mock_api_spec",
       "_type": "request_group",
       "parentId": "fld_ai_main",
-      "name": "6.3 - Health Check",
-      "description": "Check AI service health and availability",
+      "name": "6.3 - Generate Mock API Spec",
+      "description": "Generate complete mock API specifications based on project GitHub context using Sprint 5 Prompt Engineering",
       "environment": {},
       "environmentPropertyOrder": null,
       "metaSortKey": 3
     },
     {
+      "_id": "req_ai_mock_api_spec_success",
+      "_type": "request",
+      "parentId": "fld_ai_mock_api_spec",
+      "name": "6.3.1 - Generate complete spec (200)",
+      "description": "Generate a complete mock API specification based on project context\n\nExpected:\n- Code: 200\n- Body with apiVersion, title, description, endpoints array, and dataModels\n- Includes token usage statistics\n- Requires valid project with GitHub context loaded",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-mock-api-spec",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectId\": \"{{ project_id }}\",\n  \"requirement\": \"Create a user management API with CRUD operations, including user registration, profile updates, and role-based access control. Include endpoints for listing users with pagination, creating new users, updating user profiles, and deleting users.\",\n  \"temperature\": 0.7,\n  \"maxTokens\": 4000\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_ai_mock_api_spec_no_auth",
+      "_type": "request",
+      "parentId": "fld_ai_mock_api_spec",
+      "name": "6.3.2 - No authentication (401)",
+      "description": "Attempt to generate mock API spec without authentication token\n\nExpected:\n- Code: 401\n- Error message about missing or invalid token",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-mock-api-spec",
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectId\": \"{{ project_id }}\",\n  \"requirement\": \"Create a user management API with CRUD operations\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_ai_mock_api_spec_missing_project",
+      "_type": "request",
+      "parentId": "fld_ai_mock_api_spec",
+      "name": "6.3.3 - Missing projectId (400)",
+      "description": "Attempt to generate spec without providing projectId\n\nExpected:\n- Code: 400\n- Error message about missing projectId",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-mock-api-spec",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"requirement\": \"Create a user management API with CRUD operations\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_ai_mock_api_spec_missing_requirement",
+      "_type": "request",
+      "parentId": "fld_ai_mock_api_spec",
+      "name": "6.3.4 - Missing requirement (400)",
+      "description": "Attempt to generate spec without providing requirement\n\nExpected:\n- Code: 400\n- Error message about missing requirement",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-mock-api-spec",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectId\": \"{{ project_id }}\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 4,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_ai_mock_api_spec_invalid_project",
+      "_type": "request",
+      "parentId": "fld_ai_mock_api_spec",
+      "name": "6.3.5 - Invalid projectId (404)",
+      "description": "Attempt to generate spec with non-existent project ID\n\nExpected:\n- Code: 404\n- Error message about project not found",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-mock-api-spec",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectId\": \"000000000000000000000000\",\n  \"requirement\": \"Create a user management API with CRUD operations\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 5,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_ai_health",
+      "_type": "request_group",
+      "parentId": "fld_ai_main",
+      "name": "6.4 - Health Check",
+      "description": "Check AI service health and availability",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 4
+    },
+    {
       "_id": "req_ai_health_check",
       "_type": "request",
       "parentId": "fld_ai_health",
-      "name": "6.3.1 - AI service health (200)",
+      "name": "6.4.1 - AI service health (200)",
       "description": "Check if OpenRouter AI service is available and configured\n\nExpected:\n- Code: 200\n- Body with status: 'available' and service: 'openrouter'",
       "method": "GET",
       "url": "{{ base_url }}/ai/health",
@@ -2782,7 +2894,7 @@
       "_id": "req_ai_health_no_auth",
       "_type": "request",
       "parentId": "fld_ai_health",
-      "name": "6.3.2 - Health check without auth (401)",
+      "name": "6.4.2 - Health check without auth (401)",
       "description": "Attempt to check health without authentication\n\nExpected:\n- Code: 401\n- Error about missing authentication",
       "method": "GET",
       "url": "{{ base_url }}/ai/health",
