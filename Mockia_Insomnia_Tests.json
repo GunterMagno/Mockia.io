@@ -2866,20 +2866,132 @@
       "isPrivate": false
     },
     {
-      "_id": "fld_ai_health",
+      "_id": "fld_ai_generate_and_save",
       "_type": "request_group",
       "parentId": "fld_ai_main",
-      "name": "6.4 - Health Check",
-      "description": "Check AI service health and availability",
+      "name": "6.4 - Generate and Save to Database",
+      "description": "Generate complete mock API specification and save endpoints to database (end-to-end pipeline)",
       "environment": {},
       "environmentPropertyOrder": null,
       "metaSortKey": 4
     },
     {
+      "_id": "req_ai_generate_and_save_success",
+      "_type": "request",
+      "parentId": "fld_ai_generate_and_save",
+      "name": "6.4.1 - Generate and save (200)",
+      "description": "Generate a complete mock API specification and save all endpoints to the database\n\nExpected:\n- Code: 200\n- Body with specification, database creation info, and token usage\n- Endpoints should be saved in MongoDB",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-and-save",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectId\": \"{{ project_id }}\",\n  \"requirement\": \"Create a product catalog API with search and filtering capabilities. Include endpoints for listing products with pagination, getting a single product by ID, and advanced search with filters for categories and price range.\",\n  \"temperature\": 0.7,\n  \"maxTokens\": 4000\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_ai_generate_and_save_no_auth",
+      "_type": "request",
+      "parentId": "fld_ai_generate_and_save",
+      "name": "6.4.2 - No authentication (401)",
+      "description": "Attempt to generate and save without authentication token\n\nExpected:\n- Code: 401\n- Error message about missing or invalid token",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-and-save",
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectId\": \"{{ project_id }}\",\n  \"requirement\": \"Create a product catalog API with CRUD operations\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_ai_generate_and_save_missing_project",
+      "_type": "request",
+      "parentId": "fld_ai_generate_and_save",
+      "name": "6.4.3 - Missing projectId (400)",
+      "description": "Attempt to generate without providing projectId\n\nExpected:\n- Code: 400\n- Error message about missing projectId",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-and-save",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"requirement\": \"Create a product catalog API with CRUD operations\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_ai_generate_and_save_missing_requirement",
+      "_type": "request",
+      "parentId": "fld_ai_generate_and_save",
+      "name": "6.4.4 - Missing requirement (400)",
+      "description": "Attempt to generate without providing requirement\n\nExpected:\n- Code: 400\n- Error message about missing requirement",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-and-save",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectId\": \"{{ project_id }}\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 4,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_ai_generate_and_save_invalid_project",
+      "_type": "request",
+      "parentId": "fld_ai_generate_and_save",
+      "name": "6.4.5 - Invalid projectId (404)",
+      "description": "Attempt to generate with non-existent project ID\n\nExpected:\n- Code: 404\n- Error message about project not found",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-and-save",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectId\": \"000000000000000000000000\",\n  \"requirement\": \"Create a product catalog API with CRUD operations\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 5,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_ai_health",
+      "_type": "request_group",
+      "parentId": "fld_ai_main",
+      "name": "6.5 - Health Check",
+      "description": "Check AI service health and availability",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 5
+    },
+    {
       "_id": "req_ai_health_check",
       "_type": "request",
       "parentId": "fld_ai_health",
-      "name": "6.4.1 - AI service health (200)",
+      "name": "6.5.1 - AI service health (200)",
       "description": "Check if OpenRouter AI service is available and configured\n\nExpected:\n- Code: 200\n- Body with status: 'available' and service: 'openrouter'",
       "method": "GET",
       "url": "{{ base_url }}/ai/health",
@@ -2894,7 +3006,7 @@
       "_id": "req_ai_health_no_auth",
       "_type": "request",
       "parentId": "fld_ai_health",
-      "name": "6.4.2 - Health check without auth (401)",
+      "name": "6.5.2 - Health check without auth (401)",
       "description": "Attempt to check health without authentication\n\nExpected:\n- Code: 401\n- Error about missing authentication",
       "method": "GET",
       "url": "{{ base_url }}/ai/health",

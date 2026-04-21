@@ -13,6 +13,7 @@ import { ErrorCode } from '@mockia/shared';
 import {
   buildPrompt,
   extractMockAPIFromResponse,
+  runAIGenerationPipeline,
 } from '../modules/ai';
 
 /**
@@ -68,7 +69,6 @@ export const generateDescriptionHandler = asyncHandler(
       success: true,
       data: {
         generatedContent,
-        timestamp: new Date().toISOString(),
       },
       timestamp: new Date().toISOString(),
     });
@@ -127,11 +127,22 @@ export const generateMockDataHandler = asyncHandler(
       }
     );
 
+    // Parse the JSON response from the AI
+    let parsedMockData;
+    try {
+      parsedMockData = JSON.parse(generatedData);
+    } catch (error) {
+      throw new AppError(
+        'Generated data is not valid JSON',
+        ErrorCode.VALIDATION_ERROR,
+        400
+      );
+    }
+
     res.status(200).json({
       success: true,
       data: {
-        mockData: generatedData,
-        timestamp: new Date().toISOString(),
+        mockData: parsedMockData,
       },
       timestamp: new Date().toISOString(),
     });
@@ -187,7 +198,7 @@ export const generateMockAPISpecHandler = asyncHandler(
 
     if (!requirement) {
       throw new AppError(
-        'requirement is required (description of what the mock API should do)',
+        'Requirement is required (description of what the mock API should do)',
         ErrorCode.VALIDATION_ERROR,
         400
       );
@@ -225,7 +236,110 @@ export const generateMockAPISpecHandler = asyncHandler(
           completionTokens: openRouterResponse.usage.completion_tokens,
           totalTokens: openRouterResponse.usage.total_tokens,
         },
-        timestamp: new Date().toISOString(),
+      },
+      timestamp: new Date().toISOString(),
+    });
+  }
+);
+
+/**
+ * POST /api/ai/generate-and-save
+ * Generate a complete mock API specification and save endpoints to database
+ * Full end-to-end pipeline: generate -> parse -> validate -> save
+ *
+ * Body parameters:
+ * - projectId (required): The project ID to load GitHub context from
+ * - requirement (required): Description of what the mock API should do
+ * - temperature (optional): Model temperature (0-1), default 0.7
+ * - maxTokens (optional): Maximum tokens in response, default 4000
+ *
+ * Response:
+ * - specification: Complete mock API specification
+ * - databaseResult: Info about created endpoints and responses
+ * - totalTokens: Token usage from OpenRouter
+ *
+ * @param req - Authenticated request
+ * @param res - Express response
+ * @returns 200 with generated specification and database info
+ */
+export const generateAndSaveHandler = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new Error('User ID not found in request');
+    }
+
+    // Rate limiting check
+    if (shouldRateLimit(60)) {
+      throw new AppError(
+        'Too many AI generation requests. Please wait a moment.',
+        ErrorCode.RATE_LIMIT_ERROR,
+        429
+      );
+    }
+
+    const { projectId, requirement } = req.body;
+
+    // Validation
+    if (!projectId) {
+      throw new AppError(
+        'projectId is required',
+        ErrorCode.VALIDATION_ERROR,
+        400
+      );
+    }
+
+    if (!requirement) {
+      throw new AppError(
+        'requirement is required',
+        ErrorCode.VALIDATION_ERROR,
+        400
+      );
+    }
+
+    // 1. Build prompt from project context
+    const messages = await buildPrompt(projectId, requirement);
+
+    // 2. Call OpenRouter API
+    const openRouterResponse = await callOpenRouterWithRetry(messages, {
+      temperature: req.body.temperature ?? 0.7,
+      max_tokens: req.body.maxTokens ?? 4000,
+    });
+
+    // 3. Get response content
+    const responseContent = openRouterResponse.choices[0]?.message.content;
+    if (!responseContent) {
+      throw new AppError(
+        'No response content from AI service',
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        500
+      );
+    }
+
+    // 4. Run the complete pipeline: parse -> validate -> save to database
+    const pipelineResult = await runAIGenerationPipeline(
+      projectId,
+      responseContent,
+      {
+        promptTokens: openRouterResponse.usage.prompt_tokens,
+        completionTokens: openRouterResponse.usage.completion_tokens,
+        totalTokens: openRouterResponse.usage.total_tokens,
+      }
+    );
+
+    // 5. Return complete result
+    res.status(200).json({
+      success: true,
+      data: {
+        specification: pipelineResult.specification,
+        database: {
+          mockApiId: pipelineResult.databaseResult.mockApiId,
+          endpointsCreated: pipelineResult.databaseResult.endpointsCreated,
+          responsesCreated: pipelineResult.databaseResult.responsesCreated,
+        },
+        usage: {
+          totalTokens: pipelineResult.totalTokens,
+        },
       },
       timestamp: new Date().toISOString(),
     });

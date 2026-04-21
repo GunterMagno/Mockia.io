@@ -8,6 +8,7 @@ import {
   generateDescriptionHandler,
   generateMockDataHandler,
   generateMockAPISpecHandler,
+  generateAndSaveHandler,
   aiHealthCheckHandler,
 } from '../controllers/ai.controller';
 import { authenticateToken } from '../middlewares/authenticateToken';
@@ -47,6 +48,23 @@ router.post('/generate-mock-data', authenticateToken, generateMockDataHandler);
  * Response: Complete mock API specification with endpoints and data models
  */
 router.post('/generate-mock-api-spec', authenticateToken, generateMockAPISpecHandler);
+
+/**
+ * POST /api/ai/generate-and-save
+ * Generate a complete mock API specification AND save to database
+ * End-to-end pipeline: generate -> parse -> validate -> save
+ * 
+ * Request body:
+ * {
+ *   "projectId": "mongodb-project-id",
+ *   "requirement": "Description of what the mock API should do",
+ *   "temperature": 0.7 (optional),
+ *   "maxTokens": 4000 (optional)
+ * }
+ * 
+ * Response: Specification + database creation result
+ */
+router.post('/generate-and-save', authenticateToken, generateAndSaveHandler);
 
 /**
  * GET /api/ai/health

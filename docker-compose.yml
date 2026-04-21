@@ -37,7 +37,12 @@ services:
       JWT_SECRET: ${JWT_SECRET:-your-jwt-secret-key}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-dev_access_token_secret_change_in_production}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev_refresh_token_secret_change_in_production}
-      OPENROUTER_KEY: ${OPENROUTER_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-openai/gpt-3.5-turbo}
+      OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
+      MAX_RETRIES: ${MAX_RETRIES:-3}
+      INITIAL_RETRY_DELAY_MS: ${INITIAL_RETRY_DELAY_MS:-1000}
+      MAX_RETRY_DELAY_MS: ${MAX_RETRY_DELAY_MS:-30000}
       LOG_LEVEL: ${LOG_LEVEL:-debug}
     depends_on:
       mongo:
