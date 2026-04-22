@@ -10,6 +10,14 @@ import { ErrorCode } from '@mockia/shared';
 import { Types } from 'mongoose';
 
 /**
+ * Converts OpenAPI format paths {paramName} to Express format :paramName
+ * Example: /users/{id}/posts/{postId} -> /users/:id/posts/:postId
+ */
+function convertOpenAPIPathToExpress(path: string): string {
+  return path.replace(/{([a-zA-Z_]\w*)}/g, ':$1');
+}
+
+/**
  * Population result metadata
  */
 export interface PopulationResult {
@@ -84,10 +92,13 @@ export async function populateEndpointsFromLLM(
 
     // 4. Create endpoints and their responses
     for (const endpointSpec of specification.endpoints) {
+      // Convert OpenAPI format paths {paramName} to Express format :paramName
+      const normalizedPath = convertOpenAPIPathToExpress(endpointSpec.path);
+      
       // Create endpoint
       const endpoint = new EndpointModel({
         mockApiId: mockApi._id,
-        path: endpointSpec.path,
+        path: normalizedPath,
         method: endpointSpec.method,
         description: endpointSpec.description,
         requestSchema: endpointSpec.requestSchema || {},
@@ -101,7 +112,7 @@ export async function populateEndpointsFromLLM(
         for (const example of endpointSpec.examples) {
           const response = new ResponseModel({
             statusCode: extractStatusCode(example),
-            description: `${endpointSpec.method} ${endpointSpec.path} response`,
+            description: `${endpointSpec.method} ${normalizedPath} response`,
             schema: endpointSpec.responseSchema || {},
             examples: [example.response || {}],
           });
@@ -114,7 +125,7 @@ export async function populateEndpointsFromLLM(
         // Create a default successful response
         const defaultResponse = new ResponseModel({
           statusCode: 200,
-          description: `${endpointSpec.method} ${endpointSpec.path} successful response`,
+          description: `${endpointSpec.method} ${normalizedPath} successful response`,
           schema: endpointSpec.responseSchema || {},
           examples: [{}],
         });

@@ -27,16 +27,18 @@
         "test_email_rbac_viewer": "rbac_viewer@example.com",
         "test_password": "password123",
         "test_username": "testuser",
-        "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OWMwMjEzNmU2ZmJlYWRkYWQwNDk5ZWEiLCJpYXQiOjE3NzQ1MjQxMTAsImV4cCI6MTc3NDUyNTAxMH0.zy7_WbZx8olD3WXwRn22v5kA09lwtxIKCqr4_R_8YYQ",
+        "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OWM5NTY4ZjQyZjFjMWExNzZmNDdjMzYiLCJpYXQiOjE3NzY4NDU4NDUsImV4cCI6MTc3Njg0Njc0NX0.8rw9LAwhc3_ISo3rD3V40kMMFJS0xAzCG8paj-qph0w",
         "access_token_2": "",
         "owner_access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OWM5NTY4ZjQyZjFjMWExNzZmNDdjMzYiLCJpYXQiOjE3NzQ4MDI4MDIsImV4cCI6MTc3NDgwMzcwMn0.B2xBNh81ckzegGhKKMZhgflshjlo5C_oPCiLQDSc0Zc",
         "editor_access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OWM5NTY5NjQyZjFjMWExNzZmNDdjMzkvLCJpYXQiOjE3NzQ4MDI4MTQsImV4cCI6MTc3NDgwMzcxNH0.evd4IMabq6DOj2AGRzRlBamgzGUzfH7YbHdz6ULrqzk",
         "viewer_access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OWM5NTY5ODQyZjFjMWExNzZmNDdjM2MiLCJpYXQiOjE3NzQ4MDI4MjYsImV4cCI6MTc3NDgwMzcyNn0.qvsOas9OM8wCHl1d9lv4uGjXWKNgEba0sm77Nhl89CU",
         "refresh_token": "",
-        "project_id": "69c516dd8709ec20e9553862",
-        "rbac_project_id": "69c9579942f1c1a176f47c4a",
+        "project_id": "69e883b10a3f81defbb0d623",
+        "rbac_project_id": "69e8806c0a3f81defbb0d5dc",
         "project_slug": "rbac-test-project-1",
-        "project_id_2": "69c516dd8709ec20e9553862"
+        "project_id_2": "69e883b10a3f81defbb0d623",
+        "route_project_slug": "route-resolution-test-project-2",
+        "route_project_id": "69e883b10a3f81defbb0d623"
       },
       "isPrivate": false,
       "metaSortKey": 1
@@ -3041,7 +3043,7 @@
       "_id": "req_ai_faker_prompt_test",
       "_type": "request",
       "parentId": "fld_ai_faker_prompt",
-      "name": "6.6.1.1 - Test prompt contains SAMPLE DATA (indirect)",
+      "name": "6.6.1.1 - Test prompt contains SAMPLE DATA (200)",
       "description": "Indirectly verify that sample data is injected by generating a full spec and checking LLM response quality\n\nExpected:\n- Code: 200\n- Response should contain well-formed JSON with realistic data structure\n- Token usage should show increased context from sample data\n\nNote: The prompt building service internally calls buildSampleData() and includes formatted sample data. This test verifies the end-to-end result.",
       "method": "POST",
       "url": "{{ base_url }}/ai/generate-mock-api-spec",
@@ -3149,6 +3151,282 @@
       },
       "authentication": {},
       "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_mock_routing",
+      "_type": "request_group",
+      "parentId": "wrk_mockia_complete",
+      "name": "7 - Mock Router & Route Resolution",
+      "description": "Test the Mock Router endpoints and route resolution algorithm (Sprint 6). Tests for matching static routes, parameterized routes, and route specificity precedence.",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 7
+    },
+    {
+      "_id": "fld_route_resolution_setup",
+      "_type": "request_group",
+      "parentId": "fld_mock_routing",
+      "name": "Setup - Create test project with endpoints",
+      "description": "Creates a test project and mock API endpoints for route resolution testing",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 0
+    },
+    {
+      "_id": "req_route_setup_project",
+      "_type": "request",
+      "parentId": "fld_route_resolution_setup",
+      "name": "Setup - Create test project (201)",
+      "description": "Creates a new project to use for route resolution tests",
+      "method": "POST",
+      "url": "{{ base_url }}/projects",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"Route Resolution Test Project\",\n  \"description\": \"Test project for mock router and route resolution algorithm\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false,
+      "tests": "const res = JSON.parse(responseBody); if(res && res.data && res.data.id) { insomnia.environment.set('route_project_id', res.data.id); insomnia.environment.set('route_project_slug', res.data.slug); }"
+    },
+    {
+      "_id": "req_route_setup_generate_api",
+      "_type": "request",
+      "parentId": "fld_route_resolution_setup",
+      "name": "Setup - Generate test endpoints with AI (200)",
+      "description": "Generates mock API endpoints for the test project using the AI service.\n\nIMPORTANT: Update the projectId in the body with the ID from the previous request before running this.\nYou can use the response from 'Setup - Create test project' and copy the 'id' field.\n\nThis will create:\n- GET /users (static route)\n- GET /users/:id (parameterized route)\n- GET /users/active (static route - should have higher priority than /users/:id)\n- POST /users (static route)\n- DELETE /users/:id (parameterized route)\n- GET /posts/:postId/comments/:commentId (nested parameters)\n\nExpected:\n- Code: 200\n- Response with generated MockAPI and endpoints saved to database",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-and-save",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectId\": \"{{ route_project_id }}\",\n  \"requirement\": \"Create a simple REST API with the following endpoints: GET /users (list all users), GET /users/active (get active users only), GET /users/:id (get user by ID), POST /users (create new user), DELETE /users/:id (delete user). Also include GET /posts/:postId/comments/:commentId (get a specific comment on a post). Each user should have id, name, email, and active status. Return appropriate pagination and error responses.\",\n  \"temperature\": 0.5,\n  \"maxTokens\": 2000\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_route_setup_verify_endpoints",
+      "_type": "request",
+      "parentId": "fld_route_resolution_setup",
+      "name": "Setup - Verify endpoints created (200)",
+      "description": "Lists all endpoints that were created for the test project.\n\nRun this AFTER the 'Setup - Generate test endpoints' request to verify that endpoints were created.\n\nExpected Response:\n- GET /users (static)\n- GET /users/active (static - should match before /users/:id)\n- GET /users/:id (parameterized)\n- POST /users (static)\n- DELETE /users/:id (parameterized)\n- POST /posts/:postId/comments/:commentId (nested parameters)\n\nIf the endpoints list is empty, the AI generation failed and generated endpoints were not saved.",
+      "method": "GET",
+      "url": "{{ base_url }}/mock/endpoints/{{ route_project_slug }}",
+      "headers": [
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_route_resolution_basic",
+      "_type": "request_group",
+      "parentId": "fld_mock_routing",
+      "name": "7.1 - Basic Route Resolution",
+      "description": "Test basic route resolution with static and parameterized routes",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 1
+    },
+    {
+      "_id": "req_route_static_path",
+      "_type": "request",
+      "parentId": "fld_route_resolution_basic",
+      "name": "7.1.1 - Resolve static route (200)",
+      "description": "Test resolving a static route like /users/active\n\nExpected:\n- Successfully matches the exact path\n- No path parameters extracted\n- Returns the correct endpoint",
+      "method": "POST",
+      "url": "{{ base_url }}/mock/resolve-route",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectSlug\": \"{{ route_project_slug }}\",\n  \"method\": \"GET\",\n  \"path\": \"/users/active\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_route_param_single",
+      "_type": "request",
+      "parentId": "fld_route_resolution_basic",
+      "name": "7.1.2 - Resolve route with single parameter (200)",
+      "description": "Test resolving a parameterized route like /users/:id\n\nExpected:\n- Matches the path /users/123\n- Extracts path parameter: { id: '123' }\n- Returns the correct endpoint with parameters",
+      "method": "POST",
+      "url": "{{ base_url }}/mock/resolve-route",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectSlug\": \"{{ route_project_slug }}\",\n  \"method\": \"GET\",\n  \"path\": \"/users/123\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_route_param_multiple",
+      "_type": "request",
+      "parentId": "fld_route_resolution_basic",
+      "name": "7.1.3 - Resolve route with multiple parameters (200)",
+      "description": "Test resolving a parameterized route with multiple parameters like /posts/:postId/comments/:commentId\n\nExpected:\n- Matches the path /posts/1/comments/5\n- Extracts path parameters: { postId: '1', commentId: '5' }\n- Returns the correct endpoint with all parameters",
+      "method": "POST",
+      "url": "{{ base_url }}/mock/resolve-route",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectSlug\": \"{{ route_project_slug }}\",\n  \"method\": \"GET\",\n  \"path\": \"/posts/1/comments/5\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_route_resolution_precedence",
+      "_type": "request_group",
+      "parentId": "fld_mock_routing",
+      "name": "7.2 - Route Precedence (Static vs Wildcard)",
+      "description": "Test that static routes take precedence over wildcard routes based on specificity",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 2
+    },
+    {
+      "_id": "req_route_precedence_static",
+      "_type": "request",
+      "parentId": "fld_route_resolution_precedence",
+      "name": "7.2.1 - Static route precedence over wildcard (200)",
+      "description": "When both /users/active (static) and /users/:id (wildcard) exist:\n- Request to /users/active should match the STATIC route\n- Not the wildcard route\n\nExpected:\n- Returns the static endpoint /users/active\n- Empty path parameters {}\n- Static routes have higher specificity than wildcards",
+      "method": "POST",
+      "url": "{{ base_url }}/mock/resolve-route",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectSlug\": \"{{ route_project_slug }}\",\n  \"method\": \"GET\",\n  \"path\": \"/users/active\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_route_precedence_wildcard",
+      "_type": "request",
+      "parentId": "fld_route_resolution_precedence",
+      "name": "7.2.2 - Wildcard matches when no static route exists (200)",
+      "description": "When only /users/:id (wildcard) exists:\n- Request to /users/123 should match the wildcard route\n- /users/999 should also match\n\nExpected:\n- Returns the wildcard endpoint /users/:id\n- Extracts path parameter { id: '123' } or { id: '999' }\n- Properly extracts parameter values from the URL",
+      "method": "POST",
+      "url": "{{ base_url }}/mock/resolve-route",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectSlug\": \"{{ route_project_slug }}\",\n  \"method\": \"GET\",\n  \"path\": \"/users/999\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_route_resolution_errors",
+      "_type": "request_group",
+      "parentId": "fld_mock_routing",
+      "name": "7.3 - Error Cases",
+      "description": "Test error handling in route resolution (route not found, project not found, etc.)",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 3
+    },
+    {
+      "_id": "req_route_error_not_found",
+      "_type": "request",
+      "parentId": "fld_route_resolution_errors",
+      "name": "7.3.1 - Route not found (404)",
+      "description": "Test resolving a path that doesn't match any endpoint\n\nExpected:\n- Code: 404 Not Found\n- Error message about route not found",
+      "method": "POST",
+      "url": "{{ base_url }}/mock/resolve-route",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectSlug\": \"{{ route_project_slug }}\",\n  \"method\": \"GET\",\n  \"path\": \"/nonexistent/path/123\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_route_error_project_not_found",
+      "_type": "request",
+      "parentId": "fld_route_resolution_errors",
+      "name": "7.3.2 - Project not found (404)",
+      "description": "Test resolving route for a project that doesn't exist\n\nExpected:\n- Code: 404 Not Found\n- Error message about project not found",
+      "method": "POST",
+      "url": "{{ base_url }}/mock/resolve-route",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectSlug\": \"nonexistent-project-slug\",\n  \"method\": \"GET\",\n  \"path\": \"/users/123\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_route_error_no_auth",
+      "_type": "request",
+      "parentId": "fld_route_resolution_errors",
+      "name": "7.3.3 - No authentication (401)",
+      "description": "Test resolving route without authentication token\n\nExpected:\n- Code: 401 Unauthorized\n- Error message about missing or invalid token",
+      "method": "POST",
+      "url": "{{ base_url }}/mock/resolve-route",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectSlug\": \"route-test-project\",\n  \"method\": \"GET\",\n  \"path\": \"/users/123\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 3,
       "isPrivate": false
     }
   ]
