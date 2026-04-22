@@ -17,6 +17,7 @@
     "format:check": "prettier --check \"src/**/*.{ts,js}\""
   },
   "dependencies": {
+    "@faker-js/faker": "^8.4.0",
     "@mockia/shared": "^1.0.0",
     "axios": "^1.15.0",
     "bcrypt": "^5.1.0",

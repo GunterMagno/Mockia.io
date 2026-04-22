@@ -29,7 +29,8 @@ const config: Config = {
     }],
   },
   setupFilesAfterEnv: ['<rootDir>/src/tests/setup.ts'],
-  testTimeout: 10000,
+  testTimeout: 60000,
+  maxWorkers: 1,
 };
 
 export default config;

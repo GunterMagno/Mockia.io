@@ -3016,6 +3016,140 @@
       "authentication": {},
       "metaSortKey": 2,
       "isPrivate": false
+    },
+    {
+      "_id": "fld_ai_pipeline_testing",
+      "_type": "request_group",
+      "parentId": "fld_ai_main",
+      "name": "6.6 - AI Pipeline Testing with Faker Data",
+      "description": "Sprint 5: Test the AI pipeline with injected realistic sample data (Faker.js). Verify that prompts include SAMPLE DATA FOR REFERENCE section and pipeline works end-to-end with realistic examples.",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 6
+    },
+    {
+      "_id": "fld_ai_faker_prompt",
+      "_type": "request_group",
+      "parentId": "fld_ai_pipeline_testing",
+      "name": "6.6.1 - Verify Sample Data in Prompt",
+      "description": "Verify that the prompt building service includes SAMPLE DATA section with realistic Faker.js examples",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 1
+    },
+    {
+      "_id": "req_ai_faker_prompt_test",
+      "_type": "request",
+      "parentId": "fld_ai_faker_prompt",
+      "name": "6.6.1.1 - Test prompt contains SAMPLE DATA (indirect)",
+      "description": "Indirectly verify that sample data is injected by generating a full spec and checking LLM response quality\n\nExpected:\n- Code: 200\n- Response should contain well-formed JSON with realistic data structure\n- Token usage should show increased context from sample data\n\nNote: The prompt building service internally calls buildSampleData() and includes formatted sample data. This test verifies the end-to-end result.",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-mock-api-spec",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectId\": \"{{ project_id }}\",\n  \"requirement\": \"Create a user management system with user profiles. Include fields for user ID (UUID), name, email, phone, and registration timestamp. Response format should match the realistic sample data patterns we're using as reference.\",\n  \"temperature\": 0.7,\n  \"maxTokens\": 2000\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_ai_faker_product_data",
+      "_type": "request_group",
+      "parentId": "fld_ai_pipeline_testing",
+      "name": "6.6.2 - Faker-guided Product/Catalog API",
+      "description": "Generate a product/catalog API specification with Faker sample data format (UUIDs, prices, categories)",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 2
+    },
+    {
+      "_id": "req_ai_faker_product_spec",
+      "_type": "request",
+      "parentId": "fld_ai_faker_product_data",
+      "name": "6.6.2.1 - Generate product catalog spec with Faker data (200)",
+      "description": "Generate a product catalog specification. The internal prompt will include Faker.js sample data showing realistic product objects with IDs, prices, categories, and stock status.\n\nExpected:\n- Code: 200\n- Generated endpoints should reflect the sample data format with proper UUID patterns, numeric prices, and enum values like 'inStock: true/false'\n- Products should have realistic data structure matching Faker examples",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-and-save",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectId\": \"{{ project_id }}\",\n  \"requirement\": \"Create an e-commerce product catalog API with product listing, search, and filtering. Each product should have: UUID identifier, name, description, numeric price, category (electronics, books, clothing), and availability status. Include pagination with page, limit, total, and hasMore fields. Support filtering by category and price range.\",\n  \"temperature\": 0.7,\n  \"maxTokens\": 3000\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_ai_faker_order_data",
+      "_type": "request_group",
+      "parentId": "fld_ai_pipeline_testing",
+      "name": "6.6.3 - Faker-guided Order/Transaction API",
+      "description": "Generate an order processing API specification with Faker sample data format (complex nested structures, status enums, ISO timestamps)",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 3
+    },
+    {
+      "_id": "req_ai_faker_order_spec",
+      "_type": "request",
+      "parentId": "fld_ai_faker_order_data",
+      "name": "6.6.3.1 - Generate order processing spec with Faker data (200)",
+      "description": "Generate an order processing API specification. The internal prompt will include Faker.js sample data showing realistic order objects with nested items arrays, status enums (pending, confirmed, shipped, delivered), user UUIDs, and ISO timestamps.\n\nExpected:\n- Code: 200\n- Generated endpoints should reflect the sample data structure with nested arrays (order items)\n- Status fields should use predefined enum values\n- Timestamps should be in ISO 8601 format\n- Prices should be numeric decimals",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-and-save",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectId\": \"{{ project_id }}\",\n  \"requirement\": \"Create an order management API for an e-commerce platform. Orders contain: UUID order ID, user UUID, array of order items (each with product UUID, quantity, price), total amount, status (pending/confirmed/shipped/delivered), and ISO 8601 timestamps for creation and update. Support order listing with pagination, creating new orders, and order status tracking.\",\n  \"temperature\": 0.7,\n  \"maxTokens\": 3000\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_ai_faker_validation",
+      "_type": "request_group",
+      "parentId": "fld_ai_pipeline_testing",
+      "name": "6.6.4 - Validation & Quality Checks",
+      "description": "Verify that the Faker-guided pipeline produces consistent, well-formatted responses with realistic data patterns",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 4
+    },
+    {
+      "_id": "req_ai_faker_data_quality",
+      "_type": "request",
+      "parentId": "fld_ai_faker_validation",
+      "name": "6.6.4.1 - Data Quality Validation Notes",
+      "description": "Manual validation checklist for Faker-guided data quality:\n\nAfter running the Faker-guided tests above, verify:\n1. ✓ UUIDs in responses match UUID format (8-4-4-4-12 hex pattern)\n2. ✓ Numeric prices are proper decimals (not strings like '19.99')\n3. ✓ Timestamps are ISO 8601 format (YYYY-MM-DDTHH:mm:ssZ)\n4. ✓ Boolean values (inStock, hasMore) are true/false not 'true'/'false'\n5. ✓ Enum values (status, category) match defined options\n6. ✓ Pagination metadata includes page, limit, total, hasMore\n7. ✓ Arrays are properly nested (e.g., items array within orders)\n\nSuccess indicators:\n- All generated endpoints follow the Faker sample data patterns\n- No mismatched types (numeric as string, boolean as string, etc.)\n- Complex nested structures are preserved correctly\n- Response structure consistency across all generated endpoints",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-mock-api-spec",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectId\": \"{{ project_id }}\",\n  \"requirement\": \"Generate a comprehensive API spec that showcases proper data typing: UUID identifiers, numeric prices with decimals, ISO 8601 timestamps, boolean flags, status enums, and nested array structures. This will be used to validate data quality patterns learned from Faker.js sample data.\",\n  \"temperature\": 0.7,\n  \"maxTokens\": 2500\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
     }
   ]
 }

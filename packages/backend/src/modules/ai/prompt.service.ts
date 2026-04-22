@@ -9,6 +9,7 @@
 
 import { SYSTEM_PROMPT } from './systemPrompt';
 import { getProjectContext } from '../../services/github-context.service';
+import { buildSampleData, formatSampleDataForPrompt } from './fakeDataProvider';
 import { ProjectModel } from '../../models/Project';
 import { AppError } from '../../middlewares/errorHandler';
 import { ErrorCode, type MockAPIOutput } from '@mockia/shared';
@@ -173,6 +174,14 @@ export async function buildPrompt(
     options?.contextBudgetOverride || TOKEN_LIMITS.contextBudget;
   const truncatedContext = truncateContext(contextString, contextBudget);
 
+  // Build sample data for prompt injection
+  const sampleData = buildSampleData({
+    userCount: 3,
+    productCount: 4,
+    orderCount: 2,
+  });
+  const sampleDataSection = formatSampleDataForPrompt(sampleData);
+
   // Build messages array
   const messages: OpenRouterMessage[] = [];
 
@@ -190,10 +199,16 @@ export async function buildPrompt(
     content: `## GitHub Repository Context\n\n${truncatedContext}`,
   });
 
+  // Sample data message
+  messages.push({
+    role: 'user',
+    content: sampleDataSection,
+  });
+
   // User request message
   messages.push({
     role: 'user',
-    content: `## Your Task\n\nBased on the repository context above, generate a mock API specification for the following requirement:\n\n${userInput}\n\nRemember: Return ONLY valid JSON following the expected output format. No explanations, no markdown blocks, just pure JSON.`,
+    content: `## Your Task\n\nBased on the repository context and sample data format above, generate a mock API specification for the following requirement:\n\n${userInput}\n\nRemember: Return ONLY valid JSON following the expected output format. No explanations, no markdown blocks, just pure JSON.`,
   });
 
   return messages;
