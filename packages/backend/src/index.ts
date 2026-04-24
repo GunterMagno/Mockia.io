@@ -11,6 +11,7 @@ import { userRouter } from './routes/user.routes';
 import { githubRouter } from './routes/github.routes';
 import { mockRouter } from './routes/mock.routes';
 import aiRouter from './routes/ai.routes';
+import { mockRouter as mockCatchAllRouter } from './modules/mock/mockRouter';
 import { startProjectCleanupScheduler } from './scheduler/projectCleanup';
 
 dotenv.config();
@@ -102,6 +103,14 @@ app.use('/api/ai', aiRouter);
 
 // TODO: Add more application routes here
 // etc.
+
+// ============================================================================
+// MOCK API CATCH-ALL MIDDLEWARE
+// ============================================================================
+
+// Catch-all middleware for mock API requests
+// Must be after specific routes but before error handler
+app.all('/mock/:projectSlug/*', mockCatchAllRouter);
 
 // ============================================================================
 // ERROR HANDLING

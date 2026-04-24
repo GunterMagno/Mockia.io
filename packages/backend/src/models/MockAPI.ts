@@ -14,6 +14,8 @@ interface ResponseDocument extends Document {
   description: string;
   schema: any;
   examples: any[];
+  json_body?: Record<string, any>;
+  is_default: boolean;
   createdAt: Date;
 }
 
@@ -61,15 +63,21 @@ const responseSchema = new Schema<ResponseDocument>(
       type: String,
       required: true,
     },
-    schema: {
-      type: Schema.Types.Mixed,
-      required: false,
-      default: null,
-    },
     examples: {
       type: Schema.Types.Mixed,
       required: false,
       default: null,
+    },
+    json_body: {
+      type: Schema.Types.Mixed,
+      required: false,
+      default: null,
+    },
+    is_default: {
+      type: Boolean,
+      required: true,
+      default: false,
+      index: true,
     },
   },
   { timestamps: true }
