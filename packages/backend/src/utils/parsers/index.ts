@@ -5,24 +5,10 @@
 
 export {
   parseTypeScriptFile,
-  type ParsedTypeScriptFile,
-  type InterfaceInfo,
-  type PropertyInfo,
-  type TypeAliasInfo,
-  type EnumInfo,
-  type FunctionSignature,
-  type ParameterInfo,
 } from './tsParser';
 
 export {
   parseSwaggerFile,
-  type ParsedSwaggerFile,
-  type PathItem,
-  type MethodInfo,
-  type ParameterSchema,
-  type SchemaReference,
-  type ResponseSchema,
-  type ComponentSchema,
 } from './swaggerParser';
 
 export {
@@ -35,3 +21,24 @@ export {
   isPromiseType,
   type NormalizationResult,
 } from './typeNormalizer';
+
+// Re-export types from types folder
+export type {
+  ParsedTypeScriptFile,
+  InterfaceInfo,
+  PropertyInfo,
+  TypeAliasInfo,
+  EnumInfo,
+  FunctionSignature,
+  ParameterInfo,
+} from '../../types/tsParser';
+
+export type {
+  ParsedSwaggerFile,
+  PathItem,
+  MethodInfo,
+  ParameterSchema,
+  SchemaReference,
+  ResponseSchema,
+  ComponentSchema,
+} from '../../types/swaggerParser';

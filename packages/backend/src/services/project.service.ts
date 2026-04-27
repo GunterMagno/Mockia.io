@@ -100,6 +100,16 @@ export async function createProject(
     // Save to database
     const savedProject = await projectDocument.save();
 
+    // Create empty MockAPI associated with the project
+    const { MockAPIModel } = await import('../models/MockAPI');
+    await MockAPIModel.create({
+      projectId: savedProject._id,
+      title: `${title} Mock API`,
+      description: description || '',
+      apiVersion: '1.0.0',
+      endpoints: [],
+    });
+
     // Map and return
     return mapProjectToDTO(savedProject);
   } catch (error) {

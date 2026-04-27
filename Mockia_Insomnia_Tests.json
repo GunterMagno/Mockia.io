@@ -27,16 +27,18 @@
         "test_email_rbac_viewer": "rbac_viewer@example.com",
         "test_password": "password123",
         "test_username": "testuser",
-        "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OWMwMjEzNmU2ZmJlYWRkYWQwNDk5ZWEiLCJpYXQiOjE3NzQ1MjQxMTAsImV4cCI6MTc3NDUyNTAxMH0.zy7_WbZx8olD3WXwRn22v5kA09lwtxIKCqr4_R_8YYQ",
+        "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OWM5NTY4ZjQyZjFjMWExNzZmNDdjMzYiLCJpYXQiOjE3NzY4NDU4NDUsImV4cCI6MTc3Njg0Njc0NX0.8rw9LAwhc3_ISo3rD3V40kMMFJS0xAzCG8paj-qph0w",
         "access_token_2": "",
         "owner_access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OWM5NTY4ZjQyZjFjMWExNzZmNDdjMzYiLCJpYXQiOjE3NzQ4MDI4MDIsImV4cCI6MTc3NDgwMzcwMn0.B2xBNh81ckzegGhKKMZhgflshjlo5C_oPCiLQDSc0Zc",
         "editor_access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OWM5NTY5NjQyZjFjMWExNzZmNDdjMzkvLCJpYXQiOjE3NzQ4MDI4MTQsImV4cCI6MTc3NDgwMzcxNH0.evd4IMabq6DOj2AGRzRlBamgzGUzfH7YbHdz6ULrqzk",
         "viewer_access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OWM5NTY5ODQyZjFjMWExNzZmNDdjM2MiLCJpYXQiOjE3NzQ4MDI4MjYsImV4cCI6MTc3NDgwMzcyNn0.qvsOas9OM8wCHl1d9lv4uGjXWKNgEba0sm77Nhl89CU",
         "refresh_token": "",
-        "project_id": "69c516dd8709ec20e9553862",
-        "rbac_project_id": "69c9579942f1c1a176f47c4a",
+        "project_id": "69e883b10a3f81defbb0d623",
+        "rbac_project_id": "69e8806c0a3f81defbb0d5dc",
         "project_slug": "rbac-test-project-1",
-        "project_id_2": "69c516dd8709ec20e9553862"
+        "project_id_2": "69e883b10a3f81defbb0d623",
+        "route_project_slug": "route-resolution-test-project-2",
+        "route_project_id": "69e883b10a3f81defbb0d623"
       },
       "isPrivate": false,
       "metaSortKey": 1
@@ -2598,6 +2600,833 @@
       },
       "authentication": {},
       "metaSortKey": 2,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_ai_main",
+      "_type": "request_group",
+      "parentId": "wrk_mockia_complete",
+      "name": "6 - AI Integration",
+      "description": "AI-powered generation endpoints using OpenRouter. Generate descriptions and mock data with exponential backoff and rate limiting",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 6
+    },
+    {
+      "_id": "fld_ai_description",
+      "_type": "request_group",
+      "parentId": "fld_ai_main",
+      "name": "6.1 - Generate Description",
+      "description": "Generate API descriptions using OpenRouter AI",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 1
+    },
+    {
+      "_id": "req_ai_description_success",
+      "_type": "request",
+      "parentId": "fld_ai_description",
+      "name": "6.1.1 - Generate description (200)",
+      "description": "Generate a description for an API endpoint using AI\n\nExpected:\n- Code: 200\n- Body with generated content\n- Requires valid access token and OpenRouter API key configured",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-description",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"prompt\": \"You are an expert API documentation writer. Write concise but informative descriptions.\",\n  \"userMessage\": \"Generate a description for a GET /users endpoint that returns a list of active users with pagination\",\n  \"temperature\": 0.7,\n  \"maxTokens\": 500\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_ai_description_no_auth",
+      "_type": "request",
+      "parentId": "fld_ai_description",
+      "name": "6.1.2 - No authentication (401)",
+      "description": "Attempt to generate description without authentication token\n\nExpected:\n- Code: 401\n- Error message about missing or invalid token",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-description",
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"prompt\": \"You are an expert API documentation writer.\",\n  \"userMessage\": \"Generate a description for a GET /users endpoint\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_ai_description_missing_fields",
+      "_type": "request",
+      "parentId": "fld_ai_description",
+      "name": "6.1.3 - Missing required fields (400)",
+      "description": "Attempt to generate description without required prompt or userMessage\n\nExpected:\n- Code: 400\n- Error message about missing required fields",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-description",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"prompt\": \"You are an expert API documentation writer.\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_ai_mock_data",
+      "_type": "request_group",
+      "parentId": "fld_ai_main",
+      "name": "6.2 - Generate Mock Data",
+      "description": "Generate realistic mock data for API schemas",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 2
+    },
+    {
+      "_id": "req_ai_mock_single",
+      "_type": "request",
+      "parentId": "fld_ai_mock_data",
+      "name": "6.2.1 - Generate single mock object (200)",
+      "description": "Generate a single mock data object matching a schema\n\nExpected:\n- Code: 200\n- Body with generated JSON mock data",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-mock-data",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"schema\": {\n    \"id\": \"string (UUID)\",\n    \"name\": \"string (user full name)\",\n    \"email\": \"string (valid email)\",\n    \"age\": \"number (18-80)\",\n    \"createdAt\": \"ISO 8601 timestamp\"\n  },\n  \"count\": 1\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_ai_mock_multiple",
+      "_type": "request",
+      "parentId": "fld_ai_mock_data",
+      "name": "6.2.2 - Generate multiple mock objects (200)",
+      "description": "Generate multiple mock data objects matching a schema\n\nExpected:\n- Code: 200\n- Body with array of generated JSON mock data",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-mock-data",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"schema\": {\n    \"id\": \"number\",\n    \"title\": \"string\",\n    \"price\": \"number (decimal)\",\n    \"inStock\": \"boolean\",\n    \"category\": \"string (one of: electronics, books, clothing)\"\n  },\n  \"count\": 5\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_ai_mock_no_schema",
+      "_type": "request",
+      "parentId": "fld_ai_mock_data",
+      "name": "6.2.3 - Missing schema (400)",
+      "description": "Attempt to generate mock data without providing schema\n\nExpected:\n- Code: 400\n- Error message about missing schema",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-mock-data",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{}"
+      },
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_ai_mock_api_spec",
+      "_type": "request_group",
+      "parentId": "fld_ai_main",
+      "name": "6.3 - Generate Mock API Spec",
+      "description": "Generate complete mock API specifications based on project GitHub context using Sprint 5 Prompt Engineering",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 3
+    },
+    {
+      "_id": "req_ai_mock_api_spec_success",
+      "_type": "request",
+      "parentId": "fld_ai_mock_api_spec",
+      "name": "6.3.1 - Generate complete spec (200)",
+      "description": "Generate a complete mock API specification based on project context\n\nExpected:\n- Code: 200\n- Body with apiVersion, title, description, endpoints array, and dataModels\n- Includes token usage statistics\n- Requires valid project with GitHub context loaded",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-mock-api-spec",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectId\": \"{{ project_id }}\",\n  \"requirement\": \"Create a user management API with CRUD operations, including user registration, profile updates, and role-based access control. Include endpoints for listing users with pagination, creating new users, updating user profiles, and deleting users.\",\n  \"temperature\": 0.7,\n  \"maxTokens\": 4000\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_ai_mock_api_spec_no_auth",
+      "_type": "request",
+      "parentId": "fld_ai_mock_api_spec",
+      "name": "6.3.2 - No authentication (401)",
+      "description": "Attempt to generate mock API spec without authentication token\n\nExpected:\n- Code: 401\n- Error message about missing or invalid token",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-mock-api-spec",
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectId\": \"{{ project_id }}\",\n  \"requirement\": \"Create a user management API with CRUD operations\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_ai_mock_api_spec_missing_project",
+      "_type": "request",
+      "parentId": "fld_ai_mock_api_spec",
+      "name": "6.3.3 - Missing projectId (400)",
+      "description": "Attempt to generate spec without providing projectId\n\nExpected:\n- Code: 400\n- Error message about missing projectId",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-mock-api-spec",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"requirement\": \"Create a user management API with CRUD operations\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_ai_mock_api_spec_missing_requirement",
+      "_type": "request",
+      "parentId": "fld_ai_mock_api_spec",
+      "name": "6.3.4 - Missing requirement (400)",
+      "description": "Attempt to generate spec without providing requirement\n\nExpected:\n- Code: 400\n- Error message about missing requirement",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-mock-api-spec",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectId\": \"{{ project_id }}\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 4,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_ai_mock_api_spec_invalid_project",
+      "_type": "request",
+      "parentId": "fld_ai_mock_api_spec",
+      "name": "6.3.5 - Invalid projectId (404)",
+      "description": "Attempt to generate spec with non-existent project ID\n\nExpected:\n- Code: 404\n- Error message about project not found",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-mock-api-spec",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectId\": \"000000000000000000000000\",\n  \"requirement\": \"Create a user management API with CRUD operations\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 5,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_ai_generate_and_save",
+      "_type": "request_group",
+      "parentId": "fld_ai_main",
+      "name": "6.4 - Generate and Save to Database",
+      "description": "Generate complete mock API specification and save endpoints to database (end-to-end pipeline)",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 4
+    },
+    {
+      "_id": "req_ai_generate_and_save_success",
+      "_type": "request",
+      "parentId": "fld_ai_generate_and_save",
+      "name": "6.4.1 - Generate and save (200)",
+      "description": "Generate a complete mock API specification and save all endpoints to the database\n\nExpected:\n- Code: 200\n- Body with specification, database creation info, and token usage\n- Endpoints should be saved in MongoDB",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-and-save",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectId\": \"{{ project_id }}\",\n  \"requirement\": \"Create a product catalog API with search and filtering capabilities. Include endpoints for listing products with pagination, getting a single product by ID, and advanced search with filters for categories and price range.\",\n  \"temperature\": 0.7,\n  \"maxTokens\": 4000\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_ai_generate_and_save_no_auth",
+      "_type": "request",
+      "parentId": "fld_ai_generate_and_save",
+      "name": "6.4.2 - No authentication (401)",
+      "description": "Attempt to generate and save without authentication token\n\nExpected:\n- Code: 401\n- Error message about missing or invalid token",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-and-save",
+      "headers": [{"name": "Content-Type", "value": "application/json"}],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectId\": \"{{ project_id }}\",\n  \"requirement\": \"Create a product catalog API with CRUD operations\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_ai_generate_and_save_missing_project",
+      "_type": "request",
+      "parentId": "fld_ai_generate_and_save",
+      "name": "6.4.3 - Missing projectId (400)",
+      "description": "Attempt to generate without providing projectId\n\nExpected:\n- Code: 400\n- Error message about missing projectId",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-and-save",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"requirement\": \"Create a product catalog API with CRUD operations\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_ai_generate_and_save_missing_requirement",
+      "_type": "request",
+      "parentId": "fld_ai_generate_and_save",
+      "name": "6.4.4 - Missing requirement (400)",
+      "description": "Attempt to generate without providing requirement\n\nExpected:\n- Code: 400\n- Error message about missing requirement",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-and-save",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectId\": \"{{ project_id }}\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 4,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_ai_generate_and_save_invalid_project",
+      "_type": "request",
+      "parentId": "fld_ai_generate_and_save",
+      "name": "6.4.5 - Invalid projectId (404)",
+      "description": "Attempt to generate with non-existent project ID\n\nExpected:\n- Code: 404\n- Error message about project not found",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-and-save",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectId\": \"000000000000000000000000\",\n  \"requirement\": \"Create a product catalog API with CRUD operations\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 5,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_ai_health",
+      "_type": "request_group",
+      "parentId": "fld_ai_main",
+      "name": "6.5 - Health Check",
+      "description": "Check AI service health and availability",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 5
+    },
+    {
+      "_id": "req_ai_health_check",
+      "_type": "request",
+      "parentId": "fld_ai_health",
+      "name": "6.5.1 - AI service health (200)",
+      "description": "Check if OpenRouter AI service is available and configured\n\nExpected:\n- Code: 200\n- Body with status: 'available' and service: 'openrouter'",
+      "method": "GET",
+      "url": "{{ base_url }}/ai/health",
+      "headers": [{"name": "Authorization", "value": "Bearer {{ access_token }}"}],
+      "parameters": [],
+      "body": {},
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_ai_health_no_auth",
+      "_type": "request",
+      "parentId": "fld_ai_health",
+      "name": "6.5.2 - Health check without auth (401)",
+      "description": "Attempt to check health without authentication\n\nExpected:\n- Code: 401\n- Error about missing authentication",
+      "method": "GET",
+      "url": "{{ base_url }}/ai/health",
+      "headers": [],
+      "parameters": [],
+      "body": {},
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_ai_pipeline_testing",
+      "_type": "request_group",
+      "parentId": "fld_ai_main",
+      "name": "6.6 - AI Pipeline Testing with Faker Data",
+      "description": "Sprint 5: Test the AI pipeline with injected realistic sample data (Faker.js). Verify that prompts include SAMPLE DATA FOR REFERENCE section and pipeline works end-to-end with realistic examples.",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 6
+    },
+    {
+      "_id": "fld_ai_faker_prompt",
+      "_type": "request_group",
+      "parentId": "fld_ai_pipeline_testing",
+      "name": "6.6.1 - Verify Sample Data in Prompt",
+      "description": "Verify that the prompt building service includes SAMPLE DATA section with realistic Faker.js examples",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 1
+    },
+    {
+      "_id": "req_ai_faker_prompt_test",
+      "_type": "request",
+      "parentId": "fld_ai_faker_prompt",
+      "name": "6.6.1.1 - Test prompt contains SAMPLE DATA (200)",
+      "description": "Indirectly verify that sample data is injected by generating a full spec and checking LLM response quality\n\nExpected:\n- Code: 200\n- Response should contain well-formed JSON with realistic data structure\n- Token usage should show increased context from sample data\n\nNote: The prompt building service internally calls buildSampleData() and includes formatted sample data. This test verifies the end-to-end result.",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-mock-api-spec",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectId\": \"{{ project_id }}\",\n  \"requirement\": \"Create a user management system with user profiles. Include fields for user ID (UUID), name, email, phone, and registration timestamp. Response format should match the realistic sample data patterns we're using as reference.\",\n  \"temperature\": 0.7,\n  \"maxTokens\": 2000\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_ai_faker_product_data",
+      "_type": "request_group",
+      "parentId": "fld_ai_pipeline_testing",
+      "name": "6.6.2 - Faker-guided Product/Catalog API",
+      "description": "Generate a product/catalog API specification with Faker sample data format (UUIDs, prices, categories)",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 2
+    },
+    {
+      "_id": "req_ai_faker_product_spec",
+      "_type": "request",
+      "parentId": "fld_ai_faker_product_data",
+      "name": "6.6.2.1 - Generate product catalog spec with Faker data (200)",
+      "description": "Generate a product catalog specification. The internal prompt will include Faker.js sample data showing realistic product objects with IDs, prices, categories, and stock status.\n\nExpected:\n- Code: 200\n- Generated endpoints should reflect the sample data format with proper UUID patterns, numeric prices, and enum values like 'inStock: true/false'\n- Products should have realistic data structure matching Faker examples",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-and-save",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectId\": \"{{ project_id }}\",\n  \"requirement\": \"Create an e-commerce product catalog API with product listing, search, and filtering. Each product should have: UUID identifier, name, description, numeric price, category (electronics, books, clothing), and availability status. Include pagination with page, limit, total, and hasMore fields. Support filtering by category and price range.\",\n  \"temperature\": 0.7,\n  \"maxTokens\": 3000\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_ai_faker_order_data",
+      "_type": "request_group",
+      "parentId": "fld_ai_pipeline_testing",
+      "name": "6.6.3 - Faker-guided Order/Transaction API",
+      "description": "Generate an order processing API specification with Faker sample data format (complex nested structures, status enums, ISO timestamps)",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 3
+    },
+    {
+      "_id": "req_ai_faker_order_spec",
+      "_type": "request",
+      "parentId": "fld_ai_faker_order_data",
+      "name": "6.6.3.1 - Generate order processing spec with Faker data (200)",
+      "description": "Generate an order processing API specification. The internal prompt will include Faker.js sample data showing realistic order objects with nested items arrays, status enums (pending, confirmed, shipped, delivered), user UUIDs, and ISO timestamps.\n\nExpected:\n- Code: 200\n- Generated endpoints should reflect the sample data structure with nested arrays (order items)\n- Status fields should use predefined enum values\n- Timestamps should be in ISO 8601 format\n- Prices should be numeric decimals",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-and-save",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectId\": \"{{ project_id }}\",\n  \"requirement\": \"Create an order management API for an e-commerce platform. Orders contain: UUID order ID, user UUID, array of order items (each with product UUID, quantity, price), total amount, status (pending/confirmed/shipped/delivered), and ISO 8601 timestamps for creation and update. Support order listing with pagination, creating new orders, and order status tracking.\",\n  \"temperature\": 0.7,\n  \"maxTokens\": 3000\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_ai_faker_validation",
+      "_type": "request_group",
+      "parentId": "fld_ai_pipeline_testing",
+      "name": "6.6.4 - Validation & Quality Checks",
+      "description": "Verify that the Faker-guided pipeline produces consistent, well-formatted responses with realistic data patterns",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 4
+    },
+    {
+      "_id": "req_ai_faker_data_quality",
+      "_type": "request",
+      "parentId": "fld_ai_faker_validation",
+      "name": "6.6.4.1 - Data Quality Validation Notes",
+      "description": "Manual validation checklist for Faker-guided data quality:\n\nAfter running the Faker-guided tests above, verify:\n1. ✓ UUIDs in responses match UUID format (8-4-4-4-12 hex pattern)\n2. ✓ Numeric prices are proper decimals (not strings like '19.99')\n3. ✓ Timestamps are ISO 8601 format (YYYY-MM-DDTHH:mm:ssZ)\n4. ✓ Boolean values (inStock, hasMore) are true/false not 'true'/'false'\n5. ✓ Enum values (status, category) match defined options\n6. ✓ Pagination metadata includes page, limit, total, hasMore\n7. ✓ Arrays are properly nested (e.g., items array within orders)\n\nSuccess indicators:\n- All generated endpoints follow the Faker sample data patterns\n- No mismatched types (numeric as string, boolean as string, etc.)\n- Complex nested structures are preserved correctly\n- Response structure consistency across all generated endpoints",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-mock-api-spec",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectId\": \"{{ project_id }}\",\n  \"requirement\": \"Generate a comprehensive API spec that showcases proper data typing: UUID identifiers, numeric prices with decimals, ISO 8601 timestamps, boolean flags, status enums, and nested array structures. This will be used to validate data quality patterns learned from Faker.js sample data.\",\n  \"temperature\": 0.7,\n  \"maxTokens\": 2500\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_mock_routing",
+      "_type": "request_group",
+      "parentId": "wrk_mockia_complete",
+      "name": "7 - Mock Router & Route Resolution",
+      "description": "Test the Mock Router endpoints and route resolution algorithm (Sprint 6). Tests for matching static routes, parameterized routes, and route specificity precedence.",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 7
+    },
+    {
+      "_id": "fld_route_resolution_setup",
+      "_type": "request_group",
+      "parentId": "fld_mock_routing",
+      "name": "Setup - Create test project with endpoints",
+      "description": "Creates a test project and mock API endpoints for route resolution testing",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 0
+    },
+    {
+      "_id": "req_route_setup_project",
+      "_type": "request",
+      "parentId": "fld_route_resolution_setup",
+      "name": "Setup - Create test project (201)",
+      "description": "Creates a new project to use for route resolution tests",
+      "method": "POST",
+      "url": "{{ base_url }}/projects",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"Route Resolution Test Project\",\n  \"description\": \"Test project for mock router and route resolution algorithm\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false,
+      "tests": "const res = JSON.parse(responseBody); if(res && res.data && res.data.id) { insomnia.environment.set('route_project_id', res.data.id); insomnia.environment.set('route_project_slug', res.data.slug); }"
+    },
+    {
+      "_id": "req_route_setup_generate_api",
+      "_type": "request",
+      "parentId": "fld_route_resolution_setup",
+      "name": "Setup - Generate test endpoints with AI (200)",
+      "description": "Generates mock API endpoints for the test project using the AI service.\n\nIMPORTANT: Update the projectId in the body with the ID from the previous request before running this.\nYou can use the response from 'Setup - Create test project' and copy the 'id' field.\n\nThis will create:\n- GET /users (static route)\n- GET /users/:id (parameterized route)\n- GET /users/active (static route - should have higher priority than /users/:id)\n- POST /users (static route)\n- DELETE /users/:id (parameterized route)\n- GET /posts/:postId/comments/:commentId (nested parameters)\n\nExpected:\n- Code: 200\n- Response with generated MockAPI and endpoints saved to database",
+      "method": "POST",
+      "url": "{{ base_url }}/ai/generate-and-save",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectId\": \"{{ route_project_id }}\",\n  \"requirement\": \"Create a simple REST API with the following endpoints: GET /users (list all users), GET /users/active (get active users only), GET /users/:id (get user by ID), POST /users (create new user), DELETE /users/:id (delete user). Also include GET /posts/:postId/comments/:commentId (get a specific comment on a post). Each user should have id, name, email, and active status. Return appropriate pagination and error responses.\",\n  \"temperature\": 0.5,\n  \"maxTokens\": 2000\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_route_setup_verify_endpoints",
+      "_type": "request",
+      "parentId": "fld_route_resolution_setup",
+      "name": "Setup - Verify endpoints created (200)",
+      "description": "Lists all endpoints that were created for the test project.\n\nRun this AFTER the 'Setup - Generate test endpoints' request to verify that endpoints were created.\n\nExpected Response:\n- GET /users (static)\n- GET /users/active (static - should match before /users/:id)\n- GET /users/:id (parameterized)\n- POST /users (static)\n- DELETE /users/:id (parameterized)\n- POST /posts/:postId/comments/:commentId (nested parameters)\n\nIf the endpoints list is empty, the AI generation failed and generated endpoints were not saved.",
+      "method": "GET",
+      "url": "{{ base_url }}/mock/endpoints/{{ route_project_slug }}",
+      "headers": [
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_route_resolution_basic",
+      "_type": "request_group",
+      "parentId": "fld_mock_routing",
+      "name": "7.1 - Basic Route Resolution",
+      "description": "Test basic route resolution with static and parameterized routes",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 1
+    },
+    {
+      "_id": "req_route_static_path",
+      "_type": "request",
+      "parentId": "fld_route_resolution_basic",
+      "name": "7.1.1 - Resolve static route (200)",
+      "description": "Test resolving a static route like /users/active\n\nExpected:\n- Successfully matches the exact path\n- No path parameters extracted\n- Returns the correct endpoint",
+      "method": "POST",
+      "url": "{{ base_url }}/mock/resolve-route",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectSlug\": \"{{ route_project_slug }}\",\n  \"method\": \"GET\",\n  \"path\": \"/users/active\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_route_param_single",
+      "_type": "request",
+      "parentId": "fld_route_resolution_basic",
+      "name": "7.1.2 - Resolve route with single parameter (200)",
+      "description": "Test resolving a parameterized route like /users/:id\n\nExpected:\n- Matches the path /users/123\n- Extracts path parameter: { id: '123' }\n- Returns the correct endpoint with parameters",
+      "method": "POST",
+      "url": "{{ base_url }}/mock/resolve-route",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectSlug\": \"{{ route_project_slug }}\",\n  \"method\": \"GET\",\n  \"path\": \"/users/123\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_route_param_multiple",
+      "_type": "request",
+      "parentId": "fld_route_resolution_basic",
+      "name": "7.1.3 - Resolve route with multiple parameters (200)",
+      "description": "Test resolving a parameterized route with multiple parameters like /posts/:postId/comments/:commentId\n\nExpected:\n- Matches the path /posts/1/comments/5\n- Extracts path parameters: { postId: '1', commentId: '5' }\n- Returns the correct endpoint with all parameters",
+      "method": "POST",
+      "url": "{{ base_url }}/mock/resolve-route",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectSlug\": \"{{ route_project_slug }}\",\n  \"method\": \"GET\",\n  \"path\": \"/posts/1/comments/5\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_route_resolution_precedence",
+      "_type": "request_group",
+      "parentId": "fld_mock_routing",
+      "name": "7.2 - Route Precedence (Static vs Wildcard)",
+      "description": "Test that static routes take precedence over wildcard routes based on specificity",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 2
+    },
+    {
+      "_id": "req_route_precedence_static",
+      "_type": "request",
+      "parentId": "fld_route_resolution_precedence",
+      "name": "7.2.1 - Static route precedence over wildcard (200)",
+      "description": "When both /users/active (static) and /users/:id (wildcard) exist:\n- Request to /users/active should match the STATIC route\n- Not the wildcard route\n\nExpected:\n- Returns the static endpoint /users/active\n- Empty path parameters {}\n- Static routes have higher specificity than wildcards",
+      "method": "POST",
+      "url": "{{ base_url }}/mock/resolve-route",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectSlug\": \"{{ route_project_slug }}\",\n  \"method\": \"GET\",\n  \"path\": \"/users/active\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_route_precedence_wildcard",
+      "_type": "request",
+      "parentId": "fld_route_resolution_precedence",
+      "name": "7.2.2 - Wildcard matches when no static route exists (200)",
+      "description": "When only /users/:id (wildcard) exists:\n- Request to /users/123 should match the wildcard route\n- /users/999 should also match\n\nExpected:\n- Returns the wildcard endpoint /users/:id\n- Extracts path parameter { id: '123' } or { id: '999' }\n- Properly extracts parameter values from the URL",
+      "method": "POST",
+      "url": "{{ base_url }}/mock/resolve-route",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectSlug\": \"{{ route_project_slug }}\",\n  \"method\": \"GET\",\n  \"path\": \"/users/999\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_route_resolution_errors",
+      "_type": "request_group",
+      "parentId": "fld_mock_routing",
+      "name": "7.3 - Error Cases",
+      "description": "Test error handling in route resolution (route not found, project not found, etc.)",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 3
+    },
+    {
+      "_id": "req_route_error_not_found",
+      "_type": "request",
+      "parentId": "fld_route_resolution_errors",
+      "name": "7.3.1 - Route not found (404)",
+      "description": "Test resolving a path that doesn't match any endpoint\n\nExpected:\n- Code: 404 Not Found\n- Error message about route not found",
+      "method": "POST",
+      "url": "{{ base_url }}/mock/resolve-route",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectSlug\": \"{{ route_project_slug }}\",\n  \"method\": \"GET\",\n  \"path\": \"/nonexistent/path/123\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_route_error_project_not_found",
+      "_type": "request",
+      "parentId": "fld_route_resolution_errors",
+      "name": "7.3.2 - Project not found (404)",
+      "description": "Test resolving route for a project that doesn't exist\n\nExpected:\n- Code: 404 Not Found\n- Error message about project not found",
+      "method": "POST",
+      "url": "{{ base_url }}/mock/resolve-route",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"},
+        {"name": "Authorization", "value": "Bearer {{ access_token }}"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectSlug\": \"nonexistent-project-slug\",\n  \"method\": \"GET\",\n  \"path\": \"/users/123\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false
+    },
+    {
+      "_id": "req_route_error_no_auth",
+      "_type": "request",
+      "parentId": "fld_route_resolution_errors",
+      "name": "7.3.3 - No authentication (401)",
+      "description": "Test resolving route without authentication token\n\nExpected:\n- Code: 401 Unauthorized\n- Error message about missing or invalid token",
+      "method": "POST",
+      "url": "{{ base_url }}/mock/resolve-route",
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"}
+      ],
+      "parameters": [],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"projectSlug\": \"route-test-project\",\n  \"method\": \"GET\",\n  \"path\": \"/users/123\"\n}"
+      },
+      "authentication": {},
+      "metaSortKey": 3,
       "isPrivate": false
     }
   ]
