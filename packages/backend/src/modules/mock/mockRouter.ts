@@ -6,6 +6,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { resolveRoute } from './routeResolution.service';
 import { getDefaultResponseForEndpoint } from './response.service';
+import { getEndpointConfig } from './interceptor.service';
 
 export async function mockRouter(req: Request, res: Response, next: NextFunction) {
   const projectSlug = req.params?.projectSlug as string | undefined;
@@ -29,10 +30,22 @@ export async function mockRouter(req: Request, res: Response, next: NextFunction
     return next();
   }
 
-  const body = Array.isArray(defaultResp.examples) && defaultResp.examples.length > 0
+  let body = Array.isArray(defaultResp.examples) && defaultResp.examples.length > 0
     ? defaultResp.examples[0]
     : (defaultResp as any).body ?? {};
-  const statusCode = (defaultResp as any).statusCode ?? 200;
+  let statusCode = (defaultResp as any).statusCode ?? 200;
+
+  // Apply interceptors if configured
+  const cfg = await getEndpointConfig(resolved.endpoint._id.toString());
+  if (cfg) {
+    if (cfg.force_status_code) statusCode = cfg.force_status_code;
+    if (cfg.override_response !== undefined && cfg.override_response !== null) {
+      body = cfg.override_response;
+    }
+    if (cfg.delay_ms && cfg.delay_ms > 0) {
+      await new Promise((resolve) => setTimeout(resolve, cfg.delay_ms));
+    }
+  }
 
   res.setHeader('Content-Type', 'application/json');
   res.status(statusCode).json(body);
