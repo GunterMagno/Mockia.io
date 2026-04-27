@@ -49,29 +49,44 @@ export async function runAIGenerationPipeline(
     totalTokens: number;
   }
 ): Promise<AIGenerationPipelineResult> {
-  // Step 1: Extract JSON from raw output
-  const extractedJson = extractJsonFromLLMOutput(rawLLMOutput);
+  try {
+    // Step 1: Extract JSON from raw output
+    console.log('[Pipeline] Step 1: Extracting JSON from LLM output...');
+    const extractedJson = extractJsonFromLLMOutput(rawLLMOutput);
+    console.log('[Pipeline] ✓ JSON extracted successfully');
 
-  // Step 2: Validate the structure
-  const specification = validateGeneratedApi(extractedJson);
+    // Step 2: Validate the structure
+    console.log('[Pipeline] Step 2: Validating API specification...');
+    const specification = validateGeneratedApi(extractedJson);
+    console.log(
+      `[Pipeline] ✓ Validation passed - ${specification.endpoints.length} endpoints found`
+    );
 
-  // Step 3: Save to database
-  const databaseResult = await populateEndpointsFromLLM(
-    projectId,
-    specification
-  );
+    // Step 3: Save to database
+    console.log('[Pipeline] Step 3: Saving endpoints to database...');
+    const databaseResult = await populateEndpointsFromLLM(
+      projectId,
+      specification
+    );
+    console.log(
+      `[Pipeline] ✓ Database save successful - ${databaseResult.endpointsCreated} endpoints created`
+    );
 
-  // Return complete result
-  return {
-    specification,
-    databaseResult: {
-      mockApiId: databaseResult.mockApiId,
-      endpointsCreated: databaseResult.endpointsCreated,
-      responsesCreated: databaseResult.responsesCreated,
-    },
-    totalTokens: tokenUsage?.totalTokens,
-    timestamp: new Date().toISOString(),
-  };
+    // Return complete result
+    return {
+      specification,
+      databaseResult: {
+        mockApiId: databaseResult.mockApiId,
+        endpointsCreated: databaseResult.endpointsCreated,
+        responsesCreated: databaseResult.responsesCreated,
+      },
+      totalTokens: tokenUsage?.totalTokens,
+      timestamp: new Date().toISOString(),
+    };
+  } catch (error) {
+    console.error('[Pipeline] ✗ Pipeline failed:', error);
+    throw error;
+  }
 }
 
 /**

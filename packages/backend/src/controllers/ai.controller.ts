@@ -297,52 +297,68 @@ export const generateAndSaveHandler = asyncHandler(
       );
     }
 
-    // 1. Build prompt from project context
-    const messages = await buildPrompt(projectId, requirement);
+    try {
+      // 1. Build prompt from project context
+      console.log(`[AI] Starting generation for project ${projectId}`);
+      const messages = await buildPrompt(projectId, requirement);
+      console.log(`[AI] Prompt built with ${messages.length} messages`);
 
-    // 2. Call OpenRouter API
-    const openRouterResponse = await callOpenRouterWithRetry(messages, {
-      temperature: req.body.temperature ?? 0.7,
-      max_tokens: req.body.maxTokens ?? 4000,
-    });
+      // 2. Call OpenRouter API
+      console.log('[AI] Calling OpenRouter API...');
+      const openRouterResponse = await callOpenRouterWithRetry(messages, {
+        temperature: req.body.temperature ?? 0.7,
+        max_tokens: req.body.maxTokens ?? 4000,
+      });
 
-    // 3. Get response content
-    const responseContent = openRouterResponse.choices[0]?.message.content;
-    if (!responseContent) {
-      throw new AppError(
-        'No response content from AI service',
-        ErrorCode.INTERNAL_SERVER_ERROR,
-        500
-      );
-    }
-
-    // 4. Run the complete pipeline: parse -> validate -> save to database
-    const pipelineResult = await runAIGenerationPipeline(
-      projectId,
-      responseContent,
-      {
-        promptTokens: openRouterResponse.usage.prompt_tokens,
-        completionTokens: openRouterResponse.usage.completion_tokens,
-        totalTokens: openRouterResponse.usage.total_tokens,
+      // 3. Get response content
+      const responseContent = openRouterResponse.choices[0]?.message.content;
+      if (!responseContent) {
+        throw new AppError(
+          'No response content from AI service',
+          ErrorCode.INTERNAL_SERVER_ERROR,
+          500
+        );
       }
-    );
 
-    // 5. Return complete result
-    res.status(200).json({
-      success: true,
-      data: {
-        specification: pipelineResult.specification,
-        database: {
-          mockApiId: pipelineResult.databaseResult.mockApiId,
-          endpointsCreated: pipelineResult.databaseResult.endpointsCreated,
-          responsesCreated: pipelineResult.databaseResult.responsesCreated,
+      console.log(`[AI] Received response (${responseContent.length} chars)`);
+      console.log(`[AI] Response preview: ${responseContent.substring(0, 200)}...`);
+
+      // 4. Run the complete pipeline: parse -> validate -> save to database
+      console.log('[AI] Running generation pipeline...');
+      const pipelineResult = await runAIGenerationPipeline(
+        projectId,
+        responseContent,
+        {
+          promptTokens: openRouterResponse.usage.prompt_tokens,
+          completionTokens: openRouterResponse.usage.completion_tokens,
+          totalTokens: openRouterResponse.usage.total_tokens,
+        }
+      );
+
+      console.log(
+        `[AI] Pipeline completed: ${pipelineResult.databaseResult.endpointsCreated} endpoints created`
+      );
+
+      // 5. Return complete result
+      res.status(200).json({
+        success: true,
+        data: {
+          specification: pipelineResult.specification,
+          database: {
+            mockApiId: pipelineResult.databaseResult.mockApiId,
+            endpointsCreated: pipelineResult.databaseResult.endpointsCreated,
+            responsesCreated: pipelineResult.databaseResult.responsesCreated,
+          },
+          usage: {
+            totalTokens: pipelineResult.totalTokens,
+          },
         },
-        usage: {
-          totalTokens: pipelineResult.totalTokens,
-        },
-      },
-      timestamp: new Date().toISOString(),
-    });
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error('[AI] Error during generation:', error);
+      throw error;
+    }
   }
 );
 

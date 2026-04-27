@@ -49,7 +49,6 @@ export async function resolveRoute(
         404
       );
     }
-
     // Step 2: Find MockAPI for this project
     const mockAPI = await MockAPIModel.findOne({ projectId: project._id });
     if (!mockAPI) {
@@ -59,13 +58,11 @@ export async function resolveRoute(
         404
       );
     }
-
     // Step 3: Get all endpoints for this MockAPI and method
     const endpoints = await EndpointModel.find({
       mockApiId: mockAPI._id,
       method: method.toUpperCase(),
     });
-
     if (endpoints.length === 0) {
       return null; // No endpoints found for this method
     }
@@ -141,6 +138,7 @@ export async function getProjectEndpoints(
   method?: string
 ): Promise<EndpointDocument[]> {
   try {
+    // [RouteResolution] Get endpoints for project
     const project = await ProjectModel.findOne({ slug: projectSlug });
     if (!project) {
       throw new AppError(
@@ -149,7 +147,6 @@ export async function getProjectEndpoints(
         404
       );
     }
-
     const mockAPI = await MockAPIModel.findOne({ projectId: project._id });
     if (!mockAPI) {
       throw new AppError(
@@ -158,14 +155,14 @@ export async function getProjectEndpoints(
         404
       );
     }
-
     const query: any = { mockApiId: mockAPI._id };
     if (method) {
       query.method = method.toUpperCase();
     }
-
-    return await EndpointModel.find(query).sort({ method: 1, path: 1 });
+    const endpoints = await EndpointModel.find(query).sort({ method: 1, path: 1 });
+    return endpoints;
   } catch (error) {
+    console.error(`[RouteResolution] Error getting endpoints:`, error);
     if (error instanceof AppError) {
       throw error;
     }

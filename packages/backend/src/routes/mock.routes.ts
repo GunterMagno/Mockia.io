@@ -4,7 +4,7 @@
  */
 
 import { Router } from 'express';
-import { resolveRouteHandler, getProjectEndpointsHandler } from '../controllers/mock.controller';
+import { resolveRouteHandler, getProjectEndpointsHandler, mockProxyHandler } from '../controllers/mock.controller';
 import { authenticateToken } from '../middlewares/authenticateToken';
 import { validate } from '../middlewares/validateRequest';
 import Joi from 'joi';
@@ -107,4 +107,28 @@ mockRouter.get(
   '/endpoints/:projectSlug',
   authenticateToken,
   getProjectEndpointsHandler
+);
+
+/**
+ * Catch-all Mock Proxy Route
+ * Matches: /api/mock/:projectSlug/*
+ * Proxy handler that resolves and responds to mock API requests
+ *
+ * Authentication: Not required (public mock consumption)
+ *
+ * Examples:
+ * - GET /api/mock/my-project/users/123
+ * - POST /api/mock/my-project/users
+ * - PUT /api/mock/my-project/users/456
+ * - DELETE /api/mock/my-project/users/789
+ *
+ * Response:
+ * - Returns the mock response data for the matched endpoint
+ * - Status code is from the endpoint's response definition
+ * - Data is from the response examples or schema
+ */
+// Catch-all route using regex - must be last since it matches everything
+mockRouter.all(
+  /^\/([^\/]+)\/(.+)$/,
+  mockProxyHandler
 );

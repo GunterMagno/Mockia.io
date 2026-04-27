@@ -4,9 +4,11 @@
  */
 
 import { Response } from 'express';
+import { applyMockHeaders } from '../modules/mock/header.service';
 import { AuthenticatedRequest } from '../middlewares/authenticateToken';
 import { asyncHandler } from '../middlewares/errorHandler';
 import { resolveRoute, getProjectEndpoints } from '../modules/mock/routeResolution.service';
+import { ResponseModel } from '../models/MockAPI';
 
 /**
  * POST /api/mock/resolve-route
@@ -25,6 +27,7 @@ import { resolveRoute, getProjectEndpoints } from '../modules/mock/routeResoluti
  */
 export const resolveRouteHandler = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
+    applyMockHeaders(res);
     const { projectSlug, method, path } = req.body;
 
     // Validate required parameters
@@ -91,6 +94,7 @@ export const resolveRouteHandler = asyncHandler(
  */
 export const getProjectEndpointsHandler = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
+    applyMockHeaders(res);
     const { projectSlug } = req.params;
     const { method } = req.query;
 
@@ -127,5 +131,73 @@ export const getProjectEndpointsHandler = asyncHandler(
       },
       timestamp: new Date().toISOString(),
     });
+  }
+);
+
+/**
+ * GET /api/mock/:projectSlug/*
+ * Proxy handler for mock API requests
+ * Acts as a catch-all to resolve and respond to mock API calls
+ *
+ * Authentication: Required (JWT Bearer token)
+ *
+ * @param req - Authenticated request
+ * @param res - Express response
+ * @returns 200 with mock response data
+ * @throws 404 if route not found
+ */
+export const mockProxyHandler = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    applyMockHeaders(res);
+    const method = req.method;
+    
+    // Extract projectSlug and path from URL
+    // URL format: /api/mock/:projectSlug/path
+    const pathParts = req.path.split('/').filter(p => p); // Filter out empty strings
+    
+    if (pathParts.length < 2) {
+      res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_REQUEST',
+          message: 'Invalid mock request format. Expected: /api/mock/:projectSlug/path',
+        },
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
+    
+    const projectSlug = pathParts[0];
+    const mockPath = '/' + pathParts.slice(1).join('/');
+
+    // Resolve the route
+    const resolvedRoute = await resolveRoute(projectSlug, method, mockPath);
+
+    if (!resolvedRoute) {
+      res.status(404).json({
+        success: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: `Route not found: ${method} ${mockPath}`,
+        },
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
+
+    // Get the first response for this endpoint
+    let responseData: any = {};
+    let statusCode = 200;
+
+    if (resolvedRoute.endpoint.responses && resolvedRoute.endpoint.responses.length > 0) {
+      const response = await ResponseModel.findById(resolvedRoute.endpoint.responses[0]);
+      if (response) {
+        statusCode = response.statusCode || 200;
+        responseData = response.examples?.[0] || response.schema || {};
+      }
+    }
+
+    // Return the mock response
+    res.status(statusCode).json(responseData);
   }
 );

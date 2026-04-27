@@ -47,6 +47,7 @@ export async function populateEndpointsFromLLM(
   specification: MockAPIOutput
 ): Promise<PopulationResult> {
   try {
+
     // Validate projectId format
     if (!Types.ObjectId.isValid(projectId)) {
       throw new AppError(
@@ -58,28 +59,28 @@ export async function populateEndpointsFromLLM(
 
     const projectObjectId = new Types.ObjectId(projectId);
 
-    // 1. Create or update MockAPI document
-    const mockApi = await MockAPIModel.findOneAndUpdate(
-      {
-        projectId: projectObjectId,
-        title: specification.title,
-      },
-      {
+    // 1. Find or create MockAPI document
+    let mockApi = await MockAPIModel.findOne({ projectId: projectObjectId });
+
+    if (mockApi) {
+      // Update existing
+      mockApi.title = specification.title;
+      mockApi.description = specification.description;
+      mockApi.apiVersion = specification.apiVersion;
+      mockApi.endpoints = [];
+      await mockApi.save();
+      console.log('[PopulationService] ✓ MockAPI updated');
+    } else {
+      // Create new
+      mockApi = new MockAPIModel({
         projectId: projectObjectId,
         title: specification.title,
         description: specification.description,
         apiVersion: specification.apiVersion,
         endpoints: [],
-      },
-      { upsert: true, new: true }
-    );
-
-    if (!mockApi) {
-      throw new AppError(
-        'Failed to create MockAPI document',
-        ErrorCode.INTERNAL_SERVER_ERROR,
-        500
-      );
+      });
+      await mockApi.save();
+      console.log('[PopulationService] ✓ MockAPI created');
     }
 
     // 2. Delete existing endpoints for this MockAPI
@@ -94,7 +95,6 @@ export async function populateEndpointsFromLLM(
     for (const endpointSpec of specification.endpoints) {
       // Convert OpenAPI format paths {paramName} to Express format :paramName
       const normalizedPath = convertOpenAPIPathToExpress(endpointSpec.path);
-      
       // Create endpoint
       const endpoint = new EndpointModel({
         mockApiId: mockApi._id,
@@ -104,9 +104,7 @@ export async function populateEndpointsFromLLM(
         requestSchema: endpointSpec.requestSchema || {},
         responses: [],
       });
-
       const responseIds: Types.ObjectId[] = [];
-
       // Create responses for this endpoint
       if (endpointSpec.examples && endpointSpec.examples.length > 0) {
         for (const example of endpointSpec.examples) {
@@ -116,7 +114,6 @@ export async function populateEndpointsFromLLM(
             schema: endpointSpec.responseSchema || {},
             examples: [example.response || {}],
           });
-
           await response.save();
           responseIds.push(response._id);
           responsesCreated++;
@@ -129,12 +126,10 @@ export async function populateEndpointsFromLLM(
           schema: endpointSpec.responseSchema || {},
           examples: [{}],
         });
-
         await defaultResponse.save();
         responseIds.push(defaultResponse._id);
         responsesCreated++;
       }
-
       // Link responses to endpoint
       endpoint.responses = responseIds;
       await endpoint.save();
@@ -145,6 +140,7 @@ export async function populateEndpointsFromLLM(
     // 5. Update MockAPI with endpoint references
     mockApi.endpoints = endpointIds;
     await mockApi.save();
+    console.log(`[PopulationService] ✓ All endpoints saved (${endpointsCreated})`);
 
     return {
       mockApiId: mockApi._id.toString(),
@@ -153,11 +149,11 @@ export async function populateEndpointsFromLLM(
       timestamp: new Date().toISOString(),
     };
   } catch (error) {
+    console.error('[PopulationService] ✗ Error populating endpoints:', error);
     if (error instanceof AppError) {
       throw error;
     }
 
-    console.error('Error populating endpoints:', error);
     throw new AppError(
       `Failed to populate endpoints in database: ${error instanceof Error ? error.message : 'Unknown error'}`,
       ErrorCode.INTERNAL_SERVER_ERROR,
