@@ -17,6 +17,7 @@ import { authorizeRole } from '../middlewares/authorizeRole';
 import { validate } from '../middlewares/validateRequest';
 import { createProjectSchema, updateProjectSchema, addProjectMemberSchema, importGitHubSchema } from '../validation/projects.validation';
 import type { ProjectRole } from '@mockia/shared';
+import { getProjectSwagger } from '../modules/mock/swagger.controller';
 
 /**
  * Projects router
@@ -126,6 +127,18 @@ projectsRouter.get(
   '/:id',
   authenticateToken,
   getProjectByIdHandler
+);
+
+/**
+ * GET /api/projects/:id/swagger.json
+ * Returns the OpenAPI Swagger specification for a project
+ *
+ * Authentication: Required (JWT Bearer token)
+ */
+projectsRouter.get(
+  '/:id/swagger.json',
+  authenticateToken,
+  getProjectSwagger
 );
 
 /**
