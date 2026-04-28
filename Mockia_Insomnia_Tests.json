@@ -3428,6 +3428,34 @@
       "authentication": {},
       "metaSortKey": 3,
       "isPrivate": false
+    },
+    {
+      "_id": "fld_swagger_tests",
+      "_type": "request_group",
+      "parentId": "wrk_mockia_complete",
+      "name": "8. Swagger Tests",
+      "description": "OpenAPI Swagger dynamic tests",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 8
+    },
+    {
+      "_id": "req_swagger_test_get",
+      "_type": "request",
+      "parentId": "fld_swagger_tests",
+      "name": "8.1 - Swagger - Get dynamic OpenAPI",
+      "description": "Fetch generated OpenAPI spec for a project",
+      "method": "GET",
+      "url": "{{ base_url }}/projects/{{ project_id }}/swagger.json",
+      "headers": [
+        {"name": "Authorization", "value": "Bearer {{ access_token }}", "enabled": true},
+        {"name": "Accept", "value": "application/json", "enabled": true}
+      ],
+      "parameters": [],
+      "body": null,
+      "authentication": {},
+      "metaSortKey": 0,
+      "isPrivate": false
     }
   ]
 }
