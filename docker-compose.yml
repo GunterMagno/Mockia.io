@@ -70,6 +70,7 @@ services:
       - ./packages/frontend/src:/app/src
       - ./packages/frontend/package.json:/app/package.json
       - ./packages/frontend/vite.config.ts:/app/vite.config.ts
+      - ./packages/frontend/index.html:/app/index.html
     networks:
       - mockia-network
     depends_on:

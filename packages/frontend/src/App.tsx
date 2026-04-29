@@ -11,7 +11,7 @@ function App() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('http://localhost:3000/api/health')
+    fetch('/api/health')
       .then((res) => res.json())
       .then((data) => setHealth(data))
       .catch((err) => setError(err.message));
