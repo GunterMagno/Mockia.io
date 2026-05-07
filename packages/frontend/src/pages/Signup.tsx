@@ -28,18 +28,18 @@ const Signup: React.FC = () => {
   }
 
   return (
-    <div style={{ maxWidth: 420, margin: '4rem auto' }}>
+    <section style={{ maxWidth: 420, margin: '4rem auto' }}>
       <h2>Signup</h2>
       <form onSubmit={onSubmit}>
         <Input label="Username" value={username} onChange={(e) => setUsername(e.target.value)} />
         <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
         <Input label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-        {error && <div style={{ color: 'red', marginTop: 8 }}>{error}</div>}
-        <div style={{ marginTop: 12 }}>
+        {error && <p role="alert" style={{ color: 'var(--color-danger)', marginTop: 'var(--spacing-2)', marginBottom: 0 }}>{error}</p>}
+        <div style={{ marginTop: 'var(--spacing-3)' }}>
           <Button type="submit">Registrarse</Button>
         </div>
       </form>
-    </div>
+    </section>
   )
 }
 

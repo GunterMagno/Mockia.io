@@ -13,19 +13,19 @@ const AppShell: React.FC = () => {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '8px 12px',
-    borderBottom: '1px solid #e5e7eb',
-    marginBottom: 12,
+    padding: 'var(--spacing-2) var(--spacing-3)',
+    borderBottom: '1px solid var(--border)',
+    marginBottom: 'var(--spacing-3)',
   }
   return (
     <div className="container">
       <header style={headerStyle}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-3)' }}>
           <h1 style={{ margin: 0 }}>🚀 Mockia.io</h1>
-          <span style={{ color: '#6b7280' }}>/ Index</span>
+        <span style={{ color: 'var(--muted)' }}>/ Index</span>
         </div>
         <Link to="/" style={{ textDecoration: 'none' }}>
-          <button style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #cbd5e1', background: '#0b5ed7', color: '#fff' }}>Index</button>
+          <button style={{ padding: 'var(--spacing-2) var(--spacing-3)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-primary)', background: 'var(--color-primary)', color: 'var(--color-white)' }}>Index</button>
         </Link>
       </header>
       <main>

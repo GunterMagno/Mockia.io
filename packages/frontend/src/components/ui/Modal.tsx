@@ -12,10 +12,10 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
   if (!isOpen) return null;
   return (
     <div className={styles.overlay} onClick={onClose}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-        {title && <div className={styles.title}>{title}</div>}
-        <div className={styles.body}>{children}</div>
-      </div>
+      <dialog open className={styles.modal} onClick={(e) => e.stopPropagation()} style={{ margin: 0, padding: 0, border: 'none' }}>
+        {title && <header className={styles.title}>{title}</header>}
+        <section className={styles.body}>{children}</section>
+      </dialog>
     </div>
   );
 };

@@ -5,17 +5,17 @@
   margin-bottom: 8px;
 }
 .label {
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
   color: var(--text);
 }
 .input {
   padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 1rem;
-  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+  background: var(--bg);
 }
 .error {
-  color: #b91c1c;
-  font-size: 0.85rem;
+  color: var(--color-danger);
+  font-size: var(--text-sm);
 }
