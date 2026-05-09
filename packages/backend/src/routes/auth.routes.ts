@@ -71,4 +71,17 @@ authRouter.post(
   refresh
 );
 
+import { me } from '../controllers/auth.controller';
+import { authenticateToken } from '../middlewares/authenticateToken';
+
+/**
+ * GET /api/auth/me
+ * Gets current user info
+ */
+authRouter.get(
+  '/me',
+  authenticateToken,
+  me
+);
+
 export default authRouter;

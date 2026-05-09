@@ -5,8 +5,10 @@ import { Button } from '../components/ui/Button'
 import { getProjects } from '../services/projectService'
 import type { Project } from '../services/projectService'
 import CreateProjectModal from '../components/projects/CreateProjectModal'
+import { useNavigate } from 'react-router-dom'
 
 const Dashboard: React.FC = () => {
+  const navigate = useNavigate()
   const [projects, setProjects] = useState<Project[]>([])
   const [open, setOpen] = useState(false)
 
@@ -28,9 +30,11 @@ const Dashboard: React.FC = () => {
       </header>
       <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: 16 }}>
         {projects.map((p) => (
-          <Card key={p.id} title={p.title}>
-            <p style={{ color: 'var(--muted)', margin: 0 }}>{p.description}</p>
-          </Card>
+          <div key={p.id} onClick={() => navigate(`/editor/${p.slug}`)} style={{ cursor: 'pointer' }}>
+            <Card title={p.title}>
+              <p style={{ color: 'var(--muted)', margin: 0 }}>{p.description}</p>
+            </Card>
+          </div>
         ))}
       </section>
       <CreateProjectModal isOpen={open} onClose={() => setOpen(false)} onCreated={handleCreated} />

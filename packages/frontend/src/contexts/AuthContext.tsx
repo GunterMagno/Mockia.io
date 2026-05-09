@@ -17,6 +17,7 @@ type AuthContextType = {
   login: (credentials: Credentials) => Promise<void>
   logout: () => void
   isAuthenticated: boolean
+  isLoading: boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -27,6 +28,7 @@ const USER_KEY = 'mockia_user'
 export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [accessToken, setAccessToken] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
   // Initialize from localStorage if present
   useEffect(() => {
@@ -42,6 +44,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
     if (rawToken) {
       setAccessToken(rawToken)
     }
+    setIsLoading(false)
   }, [])
 
   // If we have a token but no user yet, try to fetch the current user on startup
@@ -65,7 +68,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
     const res = await api.post('/auth/login', credentials)
     const data = res?.data as any
     // Support multiple possible payload shapes from backend
-    const tokenFromServer: string | null = data?.token ?? data?.accessToken ?? data?.jwt ?? null
+    const tokenFromServer: string | null = data?.token ?? data?.accessToken ?? data?.jwt ?? data?.data?.accessToken ?? data?.data?.token ?? data?.data?.tokens?.accessToken ?? null
     let userFromServer: User | null = data?.user ?? data?.userInfo ?? data?.data?.user ?? null
 
     // If backend did not return user, try to fetch current user using the token
@@ -78,9 +81,6 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
       }
     }
 
-    // Debug logs (remove in prod)
-    // console.log('Login response data:', data)
-    // console.log('Parsed token:', tokenFromServer, 'Parsed user:', userFromServer)
     // Persist
     setUser(userFromServer)
     setAccessToken(tokenFromServer)
@@ -109,9 +109,21 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
     login,
     logout,
     isAuthenticated: !!user,
-  }), [user, accessToken] )
+    isLoading,
+  }), [user, accessToken, isLoading] )
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider value={value}>
+      {isLoading ? (
+        <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', color: 'var(--text)' }}>
+          <div style={{ textAlign: 'center' }}>
+            <h2 style={{ marginBottom: 'var(--spacing-2)' }}>Cargando sesión...</h2>
+            <div className="loader"></div>
+          </div>
+        </div>
+      ) : children}
+    </AuthContext.Provider>
+  )
 }
 
 export const useAuth = (): AuthContextType => {

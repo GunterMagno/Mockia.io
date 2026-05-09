@@ -24,16 +24,16 @@ export interface ImportGitHubRequest {
 }
 
 export const getProjects = async (): Promise<Project[]> => {
-  const res = await api.get<Project[]>('/projects')
-  return res.data
+  const res = await api.get<{ data: Project[] }>('/projects')
+  return res.data.data
 }
 
 export const createProject = async (payload: CreateProjectRequest): Promise<Project> => {
-  const res = await api.post<Project>('/projects', payload)
-  return res.data
+  const res = await api.post<{ data: Project }>('/projects', payload)
+  return res.data.data
 }
 
 export const importFromGitHub = async (projectId: string, payload: ImportGitHubRequest): Promise<Project> => {
-  const res = await api.post<Project>(`/projects/${projectId}/import/github`, payload)
-  return res.data
+  const res = await api.post<{ data: Project }>(`/projects/${projectId}/import/github`, payload)
+  return res.data.data
 }

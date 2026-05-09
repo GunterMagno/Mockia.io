@@ -7,6 +7,7 @@ import Signup from './pages/Signup'
 import Dashboard from './pages/Dashboard'
 import ProtectedRoute from './routes/ProtectedRoute'
 import Index from './pages/Index'
+import MockEditor from './pages/MockEditor'
 
 const AppShell: React.FC = () => {
   const headerStyle: React.CSSProperties = {
@@ -35,6 +36,7 @@ const AppShell: React.FC = () => {
           <Route path="/signup" element={<Signup />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/editor/:id" element={<MockEditor />} />
           </Route>
           <Route path="*" element={<Navigate to="/login" />} />
         </Routes>

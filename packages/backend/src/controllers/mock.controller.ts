@@ -127,6 +127,7 @@ export const getProjectEndpointsHandler = asyncHandler(
           method: ep.method,
           description: ep.description,
           requestSchema: ep.requestSchema,
+          responses: ep.responses,
         })),
       },
       timestamp: new Date().toISOString(),
