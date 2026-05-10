@@ -25,6 +25,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 const TOKEN_KEY = 'mockia_token'
 const USER_KEY = 'mockia_user'
 
+import styles from './AuthContext.module.scss'
+
 export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [accessToken, setAccessToken] = useState<string | null>(null)
@@ -115,9 +117,9 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
   return (
     <AuthContext.Provider value={value}>
       {isLoading ? (
-        <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', color: 'var(--text)' }}>
-          <div style={{ textAlign: 'center' }}>
-            <h2 style={{ marginBottom: 'var(--spacing-2)' }}>Cargando sesión...</h2>
+        <div className={styles.loadingOverlay}>
+          <div className={styles.loadingContent}>
+            <h2>Loading session...</h2>
             <div className="loader"></div>
           </div>
         </div>

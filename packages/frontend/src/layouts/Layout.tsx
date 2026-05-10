@@ -1,34 +1,69 @@
-import React from 'react'
-import { Link } from 'react-router-dom'
-import { Card } from '../components/ui/Card'
+import React, { useState } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
+import { Icon } from '../components/ui/Icon/Icon'
+import gridIcon from '../assets/grid.svg'
+import settingsIcon from '../assets/settings.svg'
+import userIcon from '../assets/user.svg'
+
+import { Footer } from '../components/ui/Footer/Footer'
+
+import styles from './Layout.module.scss'
 
 const Layout: React.FC<React.PropsWithChildren<{}>> = ({ children }) => {
+  const location = useLocation()
+  const [isCollapsed, setIsCollapsed] = useState(false)
+
+  const isProjectPage = location.pathname.startsWith('/editor/')
+
+  const navItems = [
+    { label: 'DashBoard', path: '/dashboard', icon: <Icon src={gridIcon} />, visible: true },
+    { label: 'Configuration', path: `/settings${location.pathname}`, icon: <Icon src={settingsIcon} />, visible: isProjectPage },
+    { label: 'Profile', path: '/profile', icon: <Icon src={userIcon} />, visible: true },
+  ]
+
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
-      <aside style={{ width: 240, borderRight: '1px solid var(--border)', padding: 'var(--spacing-4)' }}>
-        <nav>
-          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-            <li style={{ margin: 'var(--spacing-2) 0' }}>
-              <Link to="/">Dashboard</Link>
-            </li>
-            <li style={{ margin: 'var(--spacing-2) 0' }}>
-              <Link to="/dashboard">Dashboard</Link>
-            </li>
-            <li style={{ margin: 'var(--spacing-2) 0' }}>
-              <Link to="/settings">Settings</Link>
-            </li>
+    <div className={`${styles.layout} ${isCollapsed ? styles.collapsed : ''}`}>
+      {/* Sidebar */}
+      <aside className={styles.sidebar}>
+        {/* Toggle Button */}
+        <button 
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className={styles.toggleBtn}
+        >
+          {isCollapsed ? '→|' : '|←'}
+        </button>
+
+        <nav className={styles.nav}>
+          <ul className={styles.navList}>
+            {navItems.filter(i => i.visible).map((item) => (
+              <li key={item.path}>
+                <NavLink 
+                  to={item.path} 
+                  className={({ isActive }) => 
+                    `${styles.navLink} ${isActive ? styles.active : ''} ${isCollapsed ? styles.collapsed : ''}`
+                  }
+                  title={isCollapsed ? item.label : ''}
+                >
+                  <span className={styles.iconBox}>{item.icon}</span>
+                  {!isCollapsed && <span>{item.label}</span>}
+                </NavLink>
+              </li>
+            ))}
           </ul>
         </nav>
       </aside>
-      <main style={{ flex: 1, padding: 'var(--spacing-4)' }}>
-        <header style={{ display: 'flex', justifyContent: 'flex-end', padding: 'var(--spacing-2) 0' }}>
-          {/* Placeholder for user avatar/name */}
-          <Card style={{ padding: 'var(--spacing-2)' }} title={''}>
-            <span>Usuario</span>
-          </Card>
-        </header>
-        <section>{children}</section>
-      </main>
+
+      {/* Main Content Area */}
+      <div className={styles.mainWrapper}>
+        <main className={styles.main}>
+          <section className={styles.container}>{children}</section>
+        </main>
+      </div>
+
+      {/* Footer spans across the bottom row */}
+      <div className={styles.footerWrapper}>
+        <Footer />
+      </div>
     </div>
   )
 }

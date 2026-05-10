@@ -1,21 +1,27 @@
 import React, { useEffect, useState } from 'react'
 import Layout from '../layouts/Layout'
-import { Card } from '../components/ui/Card'
-import { Button } from '../components/ui/Button'
+import { Card } from '../components/ui/Card/Card'
+import { Button } from '../components/ui/Button/Button'
 import { getProjects } from '../services/projectService'
 import type { Project } from '../services/projectService'
 import CreateProjectModal from '../components/projects/CreateProjectModal'
 import { useNavigate } from 'react-router-dom'
+import { Icon } from '../components/ui/Icon/Icon'
+import folderIcon from '../assets/folder.svg'
+
+import styles from './Dashboard.module.scss'
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate()
   const [projects, setProjects] = useState<Project[]>([])
+  const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
     getProjects()
       .then((ps) => setProjects(ps))
       .catch(() => setProjects([]))
+      .finally(() => setLoading(false))
   }, [])
 
   const handleCreated = (p: Project) => {
@@ -24,19 +30,51 @@ const Dashboard: React.FC = () => {
 
   return (
     <Layout>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <h2>Dashboard</h2>
-        <Button onClick={() => setOpen(true)}>Create Project</Button>
+      <header className={styles.header}>
+        <div className={styles.titleSection}>
+          <h1>My Projects</h1>
+          <p>Manage your mock APIs and automations</p>
+        </div>
+        <Button size="lg" onClick={() => setOpen(true)}>
+          <span className={styles.plus}>+</span> New Project
+        </Button>
       </header>
-      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: 16 }}>
-        {projects.map((p) => (
-          <div key={p.id} onClick={() => navigate(`/editor/${p.slug}`)} style={{ cursor: 'pointer' }}>
-            <Card title={p.title}>
-              <p style={{ color: 'var(--muted)', margin: 0 }}>{p.description}</p>
-            </Card>
+
+      {loading ? (
+        <div className={styles.loadingWrapper}>
+          <div>Loading projects...</div>
+        </div>
+      ) : projects.length === 0 ? (
+        <div className={styles.emptyState}>
+          <div className={styles.iconWrapper}>
+            <Icon src={folderIcon} size={64} color="var(--muted)" />
           </div>
-        ))}
-      </section>
+          <h3>No projects yet</h3>
+          <p>Create an empty one or import from GitHub to get started.</p>
+          <Button onClick={() => setOpen(true)}>Create my first project</Button>
+        </div>
+      ) : (
+        <section className={styles.grid}>
+          {projects.map((p) => (
+            <div 
+              key={p.id} 
+              onClick={() => navigate(`/editor/${p.slug}`)} 
+              className={styles.cardWrapper}
+            >
+              <Card title={p.title} className={styles.projectCard}>
+                <p className={styles.description}>
+                  {p.description || 'No description'}
+                </p>
+                <div className={styles.cardFooter}>
+                  <span>{p.gitHubRepo ? '🔗 GitHub' : '📄 Local'}</span>
+                  <span>{new Date(p.updatedAt).toLocaleDateString()}</span>
+                </div>
+              </Card>
+            </div>
+          ))}
+        </section>
+      )}
+      
       <CreateProjectModal isOpen={open} onClose={() => setOpen(false)} onCreated={handleCreated} />
     </Layout>
   )

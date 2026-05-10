@@ -1,0 +1,21 @@
+.card {
+  border-radius: var(--radius-xl);
+  background: var(--card-bg);
+  box-shadow: var(--shadow-sm);
+  padding: 0;
+  border: 1px solid var(--border);
+  transition: box-shadow var(--transition-normal), border-color var(--transition-normal);
+}
+.card:hover {
+  box-shadow: var(--shadow-lg);
+  border-color: var(--color-primary);
+}
+.header {
+  padding: var(--spacing-4) var(--spacing-5);
+  border-bottom: 1px solid var(--border);
+  font-weight: 700;
+  font-size: var(--text-lg);
+}
+.content {
+  padding: var(--spacing-5);
+}

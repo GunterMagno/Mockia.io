@@ -1,0 +1,10 @@
+.section {
+  padding: var(--spacing-5);
+}
+
+.nav {
+  display: flex;
+  gap: var(--spacing-3);
+  flex-wrap: wrap;
+  margin-top: var(--spacing-3);
+}

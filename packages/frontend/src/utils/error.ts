@@ -1,36 +1,65 @@
-// Utility to extract the most specific error message from a backend response
 export function getBackendErrorMessage(err: any): string {
   // Axios error with response payload
   if (err?.response?.data) {
     const data = err.response.data
-    if (typeof data === 'string') return data
-    if (typeof data?.message === 'string') return data.message
+    
+    // 1. Try normalized error structure: { error: { message: "..." } }
+    if (data?.error?.message && typeof data.error.message === 'string') {
+      return data.error.message
+    }
+
+    // 2. Try simple message property: { message: "..." }
+    if (data?.message && typeof data.message === 'string') {
+      return data.message
+    }
+
+    // 3. Try legacy error property: { error: "..." }
+    if (data?.error && typeof data.error === 'string') {
+      return data.error
+    }
+
+    // 4. Try array of messages (e.g. class-validator)
     if (Array.isArray(data)) {
       const msgs = data.map((d) => (typeof d?.message === 'string' ? d.message : String(d)))
       if (msgs.length) return msgs.join('; ')
     }
-    if (typeof data?.error === 'string') return data.error
-    // Fallback: return a JSON string if backend sent an unknown structure
+
+    // 5. Try string body
+    if (typeof data === 'string' && data.length > 0 && data.length < 200) {
+      return data
+    }
+
+    // 6. Fallback for object: stringify it
     try {
-      return typeof data === 'object' ? JSON.stringify(data) : String(data)
+      if (typeof data === 'object' && Object.keys(data).length > 0) {
+        return JSON.stringify(data)
+      }
     } catch {
       // ignore
     }
   }
-  // Fallback to generic message and include status if available
+
+  // Network/Timeout errors
+  if (err?.code === 'ECONNREFUSED' || err?.code === 'ERR_NETWORK') {
+    return 'Connection refused. Please ensure the backend server is running and accessible.'
+  }
+
+  // Status-based fallbacks if no data payload
   const status = err?.response?.status
-  if (typeof status === 'number') {
-    if (status === 401) return 'No autorizado: credenciales inválidas o sesión expirada.'
-    if (status >= 400 && status < 500) return `Error ${status}: solicitud incorrecta.`
-    if (status >= 500) return 'Error del servidor. Por favor, intenta más tarde.'
+  if (status) {
+    if (status === 401) return 'Unauthorized: Your session may have expired. Please login again.'
+    if (status === 403) return 'Forbidden: You do not have permission to perform this action.'
+    if (status === 404) return 'Not Found: The requested resource does not exist.'
+    if (status >= 400 && status < 500) return `Request Error (${status}): The server rejected the request.`
+    if (status >= 500) return `Server Error (${status}): Something went wrong on our side. Please try again later.`
   }
-  // If the message mentions 401, map to user-friendly 401 message
-  if (typeof err?.message === 'string' && /401/.test(err.message)) {
-    return 'No autorizado: credenciales inválidas o sesión expirada.'
+
+  // Generic message fallback
+  if (err?.message && typeof err.message === 'string') {
+    return err.message
   }
-  // Fallback to generic message
-  if (typeof err?.message === 'string') return err.message
-  return 'Error de autenticación. Intenta de nuevo.'
+
+  return 'An unexpected error occurred. Please try again.'
 }
 
 export default getBackendErrorMessage

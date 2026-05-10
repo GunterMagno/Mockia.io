@@ -16,4 +16,23 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+// Check for HTML responses (SPA fallback) when JSON is expected
+api.interceptors.response.use(
+  (response) => {
+    const contentType = response.headers['content-type'] || ''
+    if (
+      contentType.includes('text/html') ||
+      (typeof response.data === 'string' && response.data.trim().startsWith('<!DOCTYPE html>'))
+    ) {
+      return Promise.reject({
+        message: 'Backend server is unreachable or misconfigured (received HTML instead of JSON).',
+        code: 'ERR_SPA_FALLBACK',
+        response,
+      })
+    }
+    return response
+  },
+  (error) => Promise.reject(error)
+)
+
 export default api

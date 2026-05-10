@@ -1,36 +1,30 @@
 import React from 'react'
 import type { EndpointData } from '../../services/endpointService'
-import { Input } from '../ui/Input'
+import { Input } from '../ui/Input/Input'
 
 export interface EndpointInspectorProps {
   endpoint: EndpointData
   onChangeMeta: (updates: Partial<EndpointData>) => void
 }
 
+import styles from './EndpointInspector.module.scss'
+
 export const EndpointInspector: React.FC<EndpointInspectorProps> = ({ endpoint, onChangeMeta }) => {
   return (
-    <section style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-3)' }}>
-      <header>
-        <h3 style={{ margin: 0, fontSize: 'var(--text-lg)' }}>Configuración HTTP</h3>
+    <section className={styles.inspector}>
+      <header className={styles.header}>
+        <h3>HTTP Configuration</h3>
       </header>
 
-      <fieldset style={{ border: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 'var(--spacing-2)' }}>
+      <fieldset className={styles.fieldset}>
         <div>
-          <label style={{ display: 'block', marginBottom: 'var(--spacing-1)', fontSize: 'var(--text-sm)', color: 'var(--muted)' }}>
-            Método HTTP
+          <label className={styles.label}>
+            HTTP Method
           </label>
           <select 
             value={endpoint.method} 
             onChange={(e) => onChangeMeta({ method: e.target.value })}
-            style={{
-              width: '100%',
-              padding: 'var(--spacing-2)',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--border)',
-              background: 'var(--bg-card)',
-              color: 'var(--text)',
-              fontSize: 'var(--text-base)'
-            }}
+            className={styles.select}
           >
             <option value="GET">GET</option>
             <option value="POST">POST</option>
@@ -47,7 +41,7 @@ export const EndpointInspector: React.FC<EndpointInspectorProps> = ({ endpoint, 
         />
 
         <div>
-          <label style={{ display: 'block', marginBottom: 'var(--spacing-1)', fontSize: 'var(--text-sm)', color: 'var(--muted)' }}>
+          <label className={styles.label}>
             Status Code
           </label>
           <Input 
@@ -63,7 +57,7 @@ export const EndpointInspector: React.FC<EndpointInspectorProps> = ({ endpoint, 
         </div>
 
         <Input 
-          label="Descripción" 
+          label="Description" 
           value={endpoint.description} 
           onChange={(e) => onChangeMeta({ description: e.target.value })} 
         />

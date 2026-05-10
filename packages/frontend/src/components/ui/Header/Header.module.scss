@@ -1,0 +1,116 @@
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 var(--spacing-6);
+  height: 64px;
+  background-color: var(--secondary-light-disabled);
+  color: var(--secondary-dark-off);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  z-index: 100;
+}
+
+.logo {
+  font-size: var(--text-2xl);
+  font-weight: 800;
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-8);
+}
+
+.navLink {
+  text-decoration: none;
+  color: inherit;
+  font-weight: 500;
+  font-size: var(--text-base);
+  transition: opacity var(--transition-fast);
+  
+  &:hover {
+    opacity: 0.8;
+  }
+}
+
+.centerContent {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-weight: 500;
+  font-size: var(--text-lg);
+  text-decoration: underline;
+  color: var(--support-04);
+}
+
+.rightContent {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
+}
+
+.iconButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: var(--spacing-1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  transition: transform var(--transition-fast);
+
+  &:hover {
+    transform: scale(1.1);
+  }
+}
+
+.authButtons {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+}
+
+.loginBtn {
+  background-color: var(--primary-light-disabled);
+  color: var(--support-03);
+  border: none;
+  padding: var(--spacing-2) var(--spacing-6);
+  border-radius: var(--radius-lg);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: opacity var(--transition-fast);
+
+  &:hover {
+    opacity: 0.9;
+  }
+}
+
+.signupBtn {
+  background-color: var(--tertiary-light-disabled);
+  color: var(--support-03);
+  border: none;
+  padding: var(--spacing-2) var(--spacing-6);
+  border-radius: var(--radius-lg);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: opacity var(--transition-fast);
+
+  &:hover {
+    opacity: 0.9;
+  }
+}
+
+.leftSection {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-10);
+}

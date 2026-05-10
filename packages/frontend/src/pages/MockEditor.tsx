@@ -4,9 +4,13 @@ import Layout from '../layouts/Layout'
 import EndpointTree from '../components/editor/EndpointTree'
 import JsonEditor from '../components/editor/JsonEditor'
 import EndpointInspector from '../components/editor/EndpointInspector'
-import { Button } from '../components/ui/Button'
+import { Button } from '../components/ui/Button/Button'
+import { Modal } from '../components/ui/Modal/Modal'
 import { getEndpoints, updateEndpoint, createEndpoint } from '../services/endpointService'
+import { generateAndSaveEndpoints } from '../services/aiService'
 import type { EndpointData } from '../services/endpointService'
+
+import styles from './MockEditor.module.scss'
 
 const MockEditor: React.FC = () => {
   const { id } = useParams<{ id: string }>()
@@ -23,17 +27,26 @@ const MockEditor: React.FC = () => {
   const [isDirty, setIsDirty] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
 
-  useEffect(() => {
+  // AI Generation State
+  const [showAiModal, setShowAiModal] = useState(false)
+  const [aiRequirement, setAiRequirement] = useState('')
+  const [isAiGenerating, setIsAiGenerating] = useState(false)
+
+  const fetchEndpoints = () => {
     if (id) {
       getEndpoints(id)
         .then(data => {
           setEndpoints(data)
-          if (data.length > 0) {
+          if (data.length > 0 && !selectedId) {
             handleSelectEndpoint(data[0])
           }
         })
         .catch(err => console.error("Error fetching endpoints:", err))
     }
+  }
+
+  useEffect(() => {
+    fetchEndpoints()
   }, [id])
 
   const handleSelectEndpoint = (ep: EndpointData) => {
@@ -69,6 +82,23 @@ const MockEditor: React.FC = () => {
     } catch (error) {
       console.error("Error creating endpoint:", error)
       alert("Failed to create endpoint.")
+    }
+  }
+
+  const handleAiGenerate = async () => {
+    if (!id || !aiRequirement) return
+    setIsAiGenerating(true)
+    try {
+      await generateAndSaveEndpoints(id, aiRequirement)
+      await fetchEndpoints()
+      setShowAiModal(false)
+      setAiRequirement('')
+      alert("Endpoints generated successfully!")
+    } catch (error) {
+      console.error("AI Generation failed:", error)
+      alert("AI Generation failed. Please check the backend connection.")
+    } finally {
+      setIsAiGenerating(false)
     }
   }
 
@@ -123,24 +153,31 @@ const MockEditor: React.FC = () => {
 
   return (
     <Layout>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-4)', paddingBottom: 'var(--spacing-3)', borderBottom: '1px solid var(--border)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-3)' }}>
-          <Button onClick={() => navigate('/dashboard')} style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text)' }}>
+      <header className={styles.header}>
+        <div className={styles.leftHeader}>
+          <Button onClick={() => navigate('/dashboard')} className={styles.backBtn}>
             &larr; Back
           </Button>
-          <h2 style={{ margin: 0 }}>Mock Editor</h2>
-          {isDirty && <span style={{ color: 'var(--color-warning, #f59e0b)', fontSize: 'var(--text-sm)', fontWeight: 'bold' }}>• Unsaved changes</span>}
+          <h2>Mock Editor</h2>
+          {isDirty && <span className={styles.unsaved}>• Unsaved changes</span>}
         </div>
-        <div>
+        <div className={styles.rightHeader}>
+          <Button 
+            variant="secondary" 
+            onClick={() => setShowAiModal(true)}
+            className={styles.aiBtn}
+          >
+            ✨ Generate more with AI
+          </Button>
           <Button onClick={handleSave} disabled={!isDirty || isSaving}>
             {isSaving ? 'Saving...' : 'Save Changes'}
           </Button>
         </div>
       </header>
 
-      <div style={{ display: 'flex', gap: 'var(--spacing-4)', height: 'calc(100vh - 140px)' }}>
+      <div className={styles.editorLayout}>
         {/* Left Sidebar: Endpoint Tree */}
-        <aside style={{ width: '280px', borderRight: '1px solid var(--border)', paddingRight: 'var(--spacing-3)', overflowY: 'auto' }}>
+        <aside className={styles.treeSidebar}>
           <EndpointTree 
             endpoints={endpoints} 
             selectedId={selectedId} 
@@ -153,23 +190,23 @@ const MockEditor: React.FC = () => {
         </aside>
 
         {/* Center: JSON Editor */}
-        <section style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <section className={styles.jsonEditorSection}>
           {activeEndpoint ? (
             <>
-              <header style={{ marginBottom: 'var(--spacing-2)' }}>
-                <h3 style={{ margin: 0, fontSize: 'var(--text-lg)' }}>Response Data (JSON)</h3>
+              <header>
+                <h3>Response Data (JSON)</h3>
               </header>
               <JsonEditor value={jsonContent} onChange={handleJsonChange} />
             </>
           ) : (
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)' }}>
+            <div className={styles.emptyState}>
               Select an endpoint from the left to edit.
             </div>
           )}
         </section>
 
         {/* Right Sidebar: Inspector */}
-        <aside style={{ width: '320px', borderLeft: '1px solid var(--border)', paddingLeft: 'var(--spacing-3)', overflowY: 'auto' }}>
+        <aside className={styles.inspectorSidebar}>
           {activeEndpoint && (
             <EndpointInspector 
               endpoint={activeEndpoint} 
@@ -178,8 +215,32 @@ const MockEditor: React.FC = () => {
           )}
         </aside>
       </div>
+
+      {/* AI Generation Modal */}
+      <Modal isOpen={showAiModal} onClose={() => setShowAiModal(false)}>
+        <div className={styles.aiModalContent}>
+          <h3>Generate endpoints with AI</h3>
+          <p>
+            Tell Mockia AI what endpoints you want to create. You can describe the business logic, 
+            data models, or specific routes you need.
+          </p>
+          <textarea
+            value={aiRequirement}
+            onChange={(e) => setAiRequirement(e.target.value)}
+            placeholder="e.g. Create endpoints for a shopping cart with add, remove, and checkout functionality..."
+            className={styles.aiTextarea}
+          />
+          <div className={styles.modalActions}>
+            <Button variant="ghost" onClick={() => setShowAiModal(false)} disabled={isAiGenerating}>Cancel</Button>
+            <Button onClick={handleAiGenerate} isLoading={isAiGenerating} disabled={!aiRequirement || isAiGenerating}>
+              Generate
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </Layout>
   )
 }
 
 export default MockEditor
+

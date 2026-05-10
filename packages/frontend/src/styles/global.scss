@@ -2,33 +2,43 @@
 
 :root {
   /* =========================================
+     Auth Pages Background
+     Usar esta variable para el fondo de login/signup
+  ========================================= */
+  --auth-bg: var(--support-04);
+  /* =========================================
      Color Tokens
   ========================================= */
-  /* Primary & Accents */
-  --color-primary: #2563eb; /* blue-600 */
-  --color-secondary: #64748b; /* slate-500 */
-  --color-gradient-start: #646cff;
-  --color-gradient-end: #05d9e5;
+  /* Primary Colors */
+  --primary-light-disabled: #9793f0;
+  --primary-light: #4f46e5;
+  --primary-light-hover: #473fce;
+  --primary-dark: #3b35ac;
+  --primary-dark-hover: #2f2a89;
+  --primary-dark-off: #241f67;
 
-  /* States & Alerts */
-  --color-danger: #dc2626;
-  --color-error: #ff6b6b;
-  --color-success: #51cf66;
+  /* Secondary Colors */
+  --secondary-light-disabled: #ababd6;
+  --secondary-light: #7170b6;
+  --secondary-light-hover: #6665a4;
+  --secondary-dark: #555489;
+  --secondary-dark-hover: #44436d;
+  --secondary-dark-off: #333252;
 
-  /* Base & Neutrals */
-  --color-white: #ffffff;
-  --bg: #f7f7fb;
-  --card-bg: #ffffff;
-  --text: #111827;
-  --muted: #6b7280;
-  --border: #e5e7eb;
-  --border-strong: #ccc;
+  /* Tertiary Colors */
+  --tertiary-light-disabled: #fc9959;
+  --tertiary-light: #a54100;
+  --tertiary-light-hover: #953b00;
+  --tertiary-dark: #7c3100;
+  --tertiary-dark-hover: #632700;
+  --tertiary-dark-off: #4a1d00;
 
-  /* Dark Theme Colors */
-  --bg-dark: #1a1a1a;
-  --card-bg-dark: #2a2a2a;
-  --text-muted-dark: #aaa;
-  --border-dark-theme: #444;
+  /* Support Colors */
+  --support-01: #60cc52;
+  --support-02: #ff0c10;
+  --support-03: #141414;
+  --support-04: #f4f4f4;
+  --support-05: #c5c5c5;
 
   /* =========================================
      Shadows & Overlays
@@ -54,27 +64,45 @@
   /* =========================================
      Border Radius
   ========================================= */
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
-  --radius-xl: 12px;
-  --radius-full: 9999px;
+   --radius-sm: 0.25rem;
+   --radius-md: 0.375rem;
+   --radius-lg: 0.5rem;
+   --radius-xl: 0.75rem;
+   --radius-full: 500px;
 
   /* =========================================
      Spacing
   ========================================= */
-  --spacing-1: 4px;
-  --spacing-2: 8px;
-  --spacing-3: 12px;
-  --spacing-4: 16px;
-  --spacing-5: 20px;
-  --spacing-6: 24px;
-  --spacing-8: 32px;
-  --spacing-10: 40px;
+   --spacing-1: 0.25rem;
+   --spacing-2: 0.5rem;
+   --spacing-3: 0.75rem;
+   --spacing-4: 1rem;
+   --spacing-5: 1.25rem;
+   --spacing-6: 1.5rem;
+   --spacing-8: 2rem;
+   --spacing-10: 2.5rem;
+
+  /* =========================================
+     Theme / Semantic Tokens
+  ========================================= */
+  --bg: var(--support-04);
+  --text: var(--support-03);
+  --card-bg: #ffffff;
+  --border: var(--support-05);
+  --muted: var(--secondary-light);
 
   /* =========================================
      Transitions
   ========================================= */
   --transition-fast: 150ms ease-in-out;
   --transition-normal: 250ms ease-in-out;
+
+  /* =========================================
+     Glassmorphism / Glass Effects
+  ========================================= */
+  --glass-bg: rgba(255, 255, 255, 0.15);
+  --glass-border-color: rgba(255, 255, 255, 0.1);
+  --glass-border: 1px solid var(--glass-border-color);
+  --sidebar-item-active: rgba(0, 0, 0, 0.1);
+  --sidebar-border-color: rgba(0, 0, 0, 0.1);
 }

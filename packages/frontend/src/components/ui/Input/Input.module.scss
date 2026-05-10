@@ -1,0 +1,32 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  margin-bottom: var(--spacing-3);
+}
+.label {
+  font-size: var(--text-sm);
+  color: var(--support-03);
+  font-weight: 500;
+}
+.input {
+  padding: var(--spacing-3) var(--spacing-4);
+  border: 1px solid var(--support-05);
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+  background: var(--support-04);
+  color: var(--support-03);
+  transition: all var(--transition-fast);
+  outline: none;
+  box-shadow: var(--shadow-sm);
+}
+.input:focus {
+  border-color: var(--primary-light);
+  box-shadow: 0 0 0 0.1875rem rgba(79, 70, 229, 0.1); /* 3px -> rem */
+  background: var(--support-04);
+}
+.error {
+  color: var(--support-02);
+  font-size: var(--text-sm);
+  margin-top: var(--spacing-1);
+}

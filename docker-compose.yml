@@ -65,7 +65,7 @@ services:
       - '${FRONTEND_PORT:-5173}:5173'
     environment:
       NODE_ENV: ${NODE_ENV:-development}
-      VITE_API_URL: http://localhost:${BACKEND_PORT:-3000}/api
+      VITE_API_URL: /api
     volumes:
       - ./packages/frontend/src:/app/src
       - ./packages/frontend/package.json:/app/package.json

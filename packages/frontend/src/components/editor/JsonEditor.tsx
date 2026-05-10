@@ -7,9 +7,11 @@ export interface JsonEditorProps {
   readOnly?: boolean
 }
 
+import styles from './JsonEditor.module.scss'
+
 export const JsonEditor: React.FC<JsonEditorProps> = ({ value, onChange, readOnly }) => {
   return (
-    <div style={{ flex: 1, minHeight: '400px', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
+    <div className={styles.editorWrapper}>
       <Editor
         height="100%"
         defaultLanguage="json"

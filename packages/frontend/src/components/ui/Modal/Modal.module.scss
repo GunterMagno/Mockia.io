@@ -8,12 +8,13 @@
   z-index: 1000;
 }
 .modal {
-  width: 90%;
-  max-width: 500px;
-  background: var(--card-bg);
-  border-radius: var(--radius-lg);
+  width: var(--modal-width, 600px);
+  max-width: 95vw;
+  min-width: min(100%, var(--modal-width, 600px));
+  border-radius: var(--radius-xl);
   overflow: hidden;
   box-shadow: var(--shadow-lg);
+  background: transparent;
 }
 .title {
   padding: var(--spacing-3) var(--spacing-4);

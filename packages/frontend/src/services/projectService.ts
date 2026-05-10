@@ -1,27 +1,11 @@
 import { api } from './api'
-export interface Project {
-  id: string
-  title: string
-  description?: string
-  slug: string
-  ownerId: string
-  members: any[]
-  gitHubRepo?: any
-  isArchived: boolean
-  archivedAt?: string
-  createdAt: string
-  updatedAt: string
-}
+import type { 
+  Project, 
+  CreateProjectRequest, 
+  ImportGitHubRequest 
+} from '@mockia/shared'
 
-export interface CreateProjectRequest {
-  title: string
-  description?: string
-}
-
-export interface ImportGitHubRequest {
-  repoUrl: string
-  branch?: string
-}
+export type { Project, CreateProjectRequest, ImportGitHubRequest }
 
 export const getProjects = async (): Promise<Project[]> => {
   const res = await api.get<{ data: Project[] }>('/projects')
