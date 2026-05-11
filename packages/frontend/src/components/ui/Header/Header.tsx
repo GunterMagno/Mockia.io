@@ -15,7 +15,6 @@ const Header: React.FC = () => {
   const isLanding = path === '/';
   const isAuthPage = path === '/login' || path === '/signup';
   const isProjectPage = path.startsWith('/editor/');
-  const isAuthenticated = path === '/dashboard' || path.startsWith('/settings') || path === '/profile';
 
   // For the project variant, we show the project ID/Name
   const projectTitle = projectId || "Title of Project";
