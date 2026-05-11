@@ -23,9 +23,8 @@ services:
         sync: false
 
   # Frontend Static Site
-  - type: web
+  - type: static_site
     name: mockia-frontend
-    env: static
     buildCommand: npm install && npm run build:frontend
     staticPublishDir: packages/frontend/dist
     envVars:
