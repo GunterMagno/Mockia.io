@@ -39,8 +39,9 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
     if (rawUser) {
       try {
         setUser(JSON.parse(rawUser))
-      } catch {
-        // ignore parse error
+      } catch (err) {
+        console.error('Failed to parse user from localStorage:', err)
+        localStorage.removeItem(USER_KEY)
       }
     }
     if (rawToken) {
@@ -59,8 +60,9 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
           const u = res?.data?.user ?? null
           setUser(u)
         })
-        .catch(() => {
-          // ignore
+        .catch((err) => {
+          console.error('Failed to fetch session:', err)
+          logout()
         })
     }
   }, [/* run once */ user])
@@ -78,8 +80,9 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
       try {
         const meRes = await api.get('/auth/me')
         userFromServer = meRes?.data?.user ?? null
-      } catch {
-        // ignore and keep userFromServer as null
+      } catch (err) {
+        console.error('Failed to fetch user info with new token:', err)
+        userFromServer = null
       }
     }
 
@@ -88,13 +91,13 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
     setAccessToken(tokenFromServer)
     try {
       localStorage.setItem(USER_KEY, JSON.stringify(userFromServer))
-    } catch {
-      // ignore
+    } catch (err) {
+      console.warn('Could not save user to localStorage (quota exceeded?):', err)
     }
     try {
       localStorage.setItem(TOKEN_KEY, tokenFromServer ?? '')
-    } catch {
-      // ignore
+    } catch (err) {
+      console.warn('Could not save token to localStorage (quota exceeded?):', err)
     }
   }
 
