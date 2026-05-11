@@ -2,7 +2,10 @@
   "compilerOptions": {
     "target": "ES2020",
     "module": "ESNext",
-    "lib": ["ES2020", "DOM"],
+    "lib": [
+      "ES2020",
+      "DOM"
+    ],
     "outDir": "./dist",
     "rootDir": "./src",
     "strict": true,
@@ -15,11 +18,18 @@
     "sourceMap": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
-    "moduleResolution": "node",
-    "ignoreDeprecations": "6.0",
-    "types": ["node", "jest"],
+    "moduleResolution": "bundler",
+    "typeRoots": [
+      "../../node_modules/@types",
+      "node_modules/@types"
+    ],
     "skipLibCheck": true
   },
-  "include": ["src"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }
