@@ -10,7 +10,9 @@ import { projectsRouter } from './routes/projects.routes';
 import { userRouter } from './routes/user.routes';
 import { githubRouter } from './routes/github.routes';
 import { mockRouter } from './routes/mock.routes';
+import mountMockDocsRoutes from './modules/mock/mock.docs.routes';
 import { mockRouter as catchAllMockRouter } from './modules/mock/mockRouter';
+import { endpointsRouter } from './routes/endpoints.routes';
 import aiRouter from './routes/ai.routes';
 import { startProjectCleanupScheduler } from './scheduler/projectCleanup';
 
@@ -97,6 +99,12 @@ app.use('/api/github', githubRouter);
 
 // Mock Router routes (protected)
 app.use('/api/mock', mockRouter);
+
+// Endpoints routes (protected)
+app.use('/api/endpoints', endpointsRouter);
+
+// Swagger Docs for Mock Router per-project (before catch-all)
+mountMockDocsRoutes(app);
 
 // Catch-all Mock Router for direct project path interception
 // Intercepts any request to /mock/:projectSlug/* and serves default responses

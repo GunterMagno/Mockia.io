@@ -1,0 +1,26 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.modal {
+  width: var(--modal-width, 600px);
+  max-width: 95vw;
+  min-width: min(100%, var(--modal-width, 600px));
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  background: transparent;
+}
+.title {
+  padding: var(--spacing-3) var(--spacing-4);
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+}
+.body {
+  padding: var(--spacing-4);
+}

@@ -1,46 +1,43 @@
-import { useState, useEffect } from 'react';
-import './App.css';
+import React from 'react'
+import './App.css'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import AuthProvider from './contexts/AuthContext'
+import Login from './pages/Login'
+import Signup from './pages/Signup'
+import Dashboard from './pages/Dashboard'
+import ProtectedRoute from './routes/ProtectedRoute'
+import Index from './pages/Index'
+import MockEditor from './pages/MockEditor'
+import Header from './components/ui/Header/Header'
 
-interface HealthResponse {
-  status: string;
-  uptime: number;
-}
-
-function App() {
-  const [health, setHealth] = useState<HealthResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch('http://localhost:3000/api/health')
-      .then((res) => res.json())
-      .then((data) => setHealth(data))
-      .catch((err) => setError(err.message));
-  }, []);
-
+const AppShell: React.FC = () => {
   return (
-    <div className="container">
-      <header>
-        <h1>🚀 Mockia.io</h1>
-        <p>Mock API Generator - MERN Stack</p>
-      </header>
-
-      <main>
-        <section className="card">
-          <h2>Backend Status</h2>
-          {error ? (
-            <p className="error">❌ {error}</p>
-          ) : health ? (
-            <div className="success">
-              <p>✅ Connected</p>
-              <p>Uptime: {health.uptime.toFixed(2)}s</p>
-            </div>
-          ) : (
-            <p>Loading...</p>
-          )}
-        </section>
+    <div className="appShell">
+      <Header />
+      <main className="mainContent">
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route element={<ProtectedRoute />}>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/editor/:id" element={<MockEditor />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/login" />} />
+        </Routes>
       </main>
     </div>
-  );
+  )
 }
 
-export default App;
+const App: React.FC = () => {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <AppShell />
+      </BrowserRouter>
+    </AuthProvider>
+  )
+}
+
+export default App

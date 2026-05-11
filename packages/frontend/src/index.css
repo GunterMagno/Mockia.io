@@ -1,6 +1,6 @@
 :root {
-  background-color: #1a1a1a;
-  color: #fff;
+  background-color: var(--bg-dark);
+  color: var(--color-white);
   font-family:
     system-ui,
     -apple-system,
@@ -23,8 +23,8 @@ body {
 
 .container {
   max-width: 600px;
-  margin: 40px auto;
-  padding: 20px;
+  margin: var(--spacing-10) auto;
+  padding: var(--spacing-5);
 }
 
 header {
@@ -33,31 +33,31 @@ header {
 }
 
 header h1 {
-  font-size: 2.5em;
+  font-size: var(--text-4xl);
   margin-bottom: 10px;
 }
 
 header p {
-  color: #aaa;
+  color: var(--text-muted-dark);
 }
 
 .card {
-  background: #2a2a2a;
-  border: 1px solid #444;
-  border-radius: 8px;
-  padding: 20px;
-  margin: 20px 0;
+  background: var(--card-bg-dark);
+  border: 1px solid var(--border-dark-theme);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-5);
+  margin: var(--spacing-5) 0;
 }
 
 .card h2 {
-  font-size: 1.3em;
+  font-size: var(--text-xl);
   margin-bottom: 15px;
 }
 
 .error {
-  color: #ff6b6b;
+  color: var(--color-error);
 }
 
 .success {
-  color: #51cf66;
+  color: var(--color-success);
 }

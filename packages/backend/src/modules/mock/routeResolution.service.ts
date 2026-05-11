@@ -159,7 +159,9 @@ export async function getProjectEndpoints(
     if (method) {
       query.method = method.toUpperCase();
     }
-    const endpoints = await EndpointModel.find(query).sort({ method: 1, path: 1 });
+    const endpoints = await EndpointModel.find(query)
+      .sort({ method: 1, path: 1 })
+      .populate('responses');
     return endpoints;
   } catch (error) {
     console.error(`[RouteResolution] Error getting endpoints:`, error);
