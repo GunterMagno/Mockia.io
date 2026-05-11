@@ -15,8 +15,9 @@
     "sourceMap": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
-    "moduleResolution": "bundler",
-    "typeRoots": ["../../node_modules/@types", "node_modules/@types"],
+    "moduleResolution": "node",
+    "ignoreDeprecations": "5.0",
+    "types": ["node", "jest"],
     "skipLibCheck": true
   },
   "include": ["src"],
