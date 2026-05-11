@@ -22,7 +22,7 @@
   position: relative;
   color: var(--support-03);
   box-shadow: var(--shadow-lg);
-  zIndex: 10;
+  z-index: 10;
 }
 
 .toggleBtn {
@@ -97,7 +97,7 @@
 }
 
 .container {
-  maxWidth: 1400px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
