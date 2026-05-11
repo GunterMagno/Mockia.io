@@ -14,7 +14,7 @@
     "docker:logs": "docker-compose logs -f",
     "docker:rebuild": "docker-compose up -d --build",
     "build": "npm run build -w @mockia/shared && npm run build -w @mockia/backend && npm run build -w @mockia/frontend",
-    "build:backend": "npm run build -w @mockia/shared && npm run build -w @mockia/backend",
+    "build:backend": "npm run build:prod -w @mockia/shared && npm run build:prod -w @mockia/backend",
     "build:frontend": "npm run build -w @mockia/shared && npm run build -w @mockia/frontend",
     "lint": "eslint . --ext .ts,.tsx,.js",
     "lint:fix": "eslint . --ext .ts,.tsx,.js --fix",
