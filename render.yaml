@@ -23,10 +23,11 @@ services:
         sync: false
 
   # Frontend Static Site
-  - type: static_site
+  - type: web
     name: mockia-frontend
+    runtime: static
     buildCommand: npm install && npm run build:frontend
-    staticPublishDir: packages/frontend/dist
+    staticPublishPath: packages/frontend/dist
     envVars:
       - key: VITE_API_URL
         value: https://mockia-backend.onrender.com/api # Replace with your backend URL
