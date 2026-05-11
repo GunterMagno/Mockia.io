@@ -5,7 +5,7 @@ services:
     env: node
     plan: free
     buildCommand: npm install && npm run build:backend
-    startCommand: npm start -w @mockia/backend
+    startCommand: node --experimental-specifier-resolution=node packages/backend/dist/index.js
     envVars:
       - key: NODE_ENV
         value: production
@@ -23,7 +23,7 @@ services:
         sync: false
 
   # Frontend Static Site
-  - type: static
+  - type: web
     name: mockia-frontend
     env: static
     buildCommand: npm install && npm run build:frontend
