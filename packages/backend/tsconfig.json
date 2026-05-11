@@ -17,7 +17,6 @@
     "strictNullChecks": true,
     "moduleResolution": "node",
     "ignoreDeprecations": "6.0",
-    "types": ["node", "jest"],
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
