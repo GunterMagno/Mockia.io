@@ -11,7 +11,7 @@ services:
         value: production
       - key: MONGODB_URI
         sync: false # User will need to provide this (e.g. from MongoDB Atlas)
-      - key: JWT_SECRET
+      - key: JWT_ACCESS_SECRET
         generateValue: true
       - key: JWT_REFRESH_SECRET
         generateValue: true
