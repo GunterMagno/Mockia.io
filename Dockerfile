@@ -11,6 +11,7 @@ COPY package.json package-lock.json ./
 # Copy package manifests for workspace resolution
 COPY packages/shared/package.json ./packages/shared/
 COPY packages/backend/package.json ./packages/backend/
+COPY packages/frontend/package.json ./packages/frontend/
 
 # Install ALL dependencies (including devDependencies for build)
 RUN npm install
