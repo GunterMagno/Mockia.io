@@ -6,7 +6,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "build:prod": "tsc --moduleResolution node --ignoreDeprecations 6.0 --typeRoots \"../../node_modules/@types,node_modules/@types\" --types \"node,jest\" --lib \"ES2020,DOM\""
+    "build:prod": "tsc"
   },
   "devDependencies": {
     "typescript": "^5.2.0",
