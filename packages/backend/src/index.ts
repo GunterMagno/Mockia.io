@@ -29,10 +29,16 @@ const isDevelopment = process.env.NODE_ENV === 'development';
 // Helmet: HTTP headers security
 app.use(helmet());
 
-// CORS: Cross-origin resource sharing control
+// Detailed request logger for debugging method conversion issues
+app.use((req: Request, _res: Response, next) => {
+  console.log(`[Incoming Request] ${req.method} ${req.url}`);
+  next();
+});
+
+// CORS: Cross-origin resource sharing control - set to '*' for debugging
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    origin: '*',
     credentials: true,
     optionsSuccessStatus: 200,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
