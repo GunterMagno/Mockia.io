@@ -8,7 +8,6 @@ const MONGODB_OPTIONS = {
   maxConnecting: 2,
   serverSelectionTimeoutMS: 5000,
   socketTimeoutMS: 45000,
-  family: 4, // Use IPv4
 };
 
 const MAX_RECONNECT_ATTEMPTS = 10;
@@ -27,7 +26,8 @@ export const connectDB = async (): Promise<Connection> => {
       return mongoose.connection;
     }
 
-    console.log('[MongoDB] Connecting to MongoDB...');
+    const maskedUri = MONGODB_URI.replace(/:([^:@]+)@/, ':****@');
+    console.log(`[MongoDB] Connecting to: ${maskedUri}`);
 
     await mongoose.connect(MONGODB_URI, MONGODB_OPTIONS);
 
