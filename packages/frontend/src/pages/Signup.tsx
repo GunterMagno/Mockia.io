@@ -6,6 +6,7 @@ import { Card } from '../components/ui/Card/Card'
 import { api } from '../services/api'
 import { useAuth } from '../contexts/AuthContext'
 import { getBackendErrorMessage } from '../utils/error'
+import { validateEmail, validatePassword, validateUsername } from '../utils/validation'
 
 import styles from './Auth.module.scss'
 
@@ -20,6 +21,17 @@ const Signup: React.FC = () => {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Frontend Validation
+    const emailError = validateEmail(email);
+    const passwordError = validatePassword(password);
+    const usernameError = validateUsername(username);
+    
+    if (emailError || passwordError || usernameError) {
+      setError(emailError || passwordError || usernameError);
+      return;
+    }
+
     setLoading(true)
     setError(null)
     try {

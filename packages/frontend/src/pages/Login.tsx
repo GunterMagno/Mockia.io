@@ -5,6 +5,7 @@ import { Button } from '../components/ui/Button/Button'
 import { Card } from '../components/ui/Card/Card'
 import { useAuth } from '../contexts/AuthContext'
 import { getBackendErrorMessage } from '../utils/error'
+import { validateEmail, validatePassword } from '../utils/validation'
 
 import styles from './Auth.module.scss'
 
@@ -18,6 +19,16 @@ const Login: React.FC = () => {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Frontend Validation
+    const emailError = validateEmail(email);
+    const passwordError = validatePassword(password);
+    
+    if (emailError || passwordError) {
+      setError(emailError || passwordError);
+      return;
+    }
+
     setLoading(true)
     setError(null)
     try {
