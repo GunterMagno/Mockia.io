@@ -38,10 +38,8 @@ COPY package.json package-lock.json ./
 COPY packages/shared/src ./packages/shared/src
 COPY packages/backend/src ./packages/backend/src
 
-# Copy built artifacts and manifests from builder
-COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
+# Copy built manifests from builder (we use manifests to ensure workspace resolution works)
 COPY --from=builder /app/packages/shared/package.json ./packages/shared/package.json
-COPY --from=builder /app/packages/backend/dist ./packages/backend/dist
 COPY --from=builder /app/packages/backend/package.json ./packages/backend/package.json
 COPY --from=builder /app/packages/frontend/package.json ./packages/frontend/package.json
 
