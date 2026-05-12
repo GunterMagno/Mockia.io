@@ -3,8 +3,16 @@ export function getBackendErrorMessage(err: any): string {
   if (err?.response?.data) {
     const data = err.response.data
     
-    // 1. Try normalized error structure: { error: { message: "..." } }
+    // 1. Try normalized error structure: { error: { message: "...", details: { ... } } }
     if (data?.error?.message && typeof data.error.message === 'string') {
+      // If it's a validation error with details, format them
+      if (data.error.details && typeof data.error.details === 'object') {
+        const details = data.error.details
+        const messages = Object.values(details).flat()
+        if (messages.length > 0) {
+          return `${data.error.message}: ${messages.join(', ')}`
+        }
+      }
       return data.error.message
     }
 
