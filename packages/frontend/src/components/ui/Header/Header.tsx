@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useLocation, useParams } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import styles from './Header.module.scss';
 import { Icon } from '../Icon/Icon';
 import userIcon from '../../../assets/user.svg';
@@ -8,7 +8,6 @@ import ProfileModal from '../../projects/ProfileModal';
 
 const Header: React.FC = () => {
   const location = useLocation();
-  const { id: projectId } = useParams();
   const path = location.pathname;
   
   const [isProfileOpen, setIsProfileOpen] = React.useState(false);
