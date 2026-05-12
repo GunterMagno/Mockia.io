@@ -131,7 +131,7 @@ const ProfileModal: React.FC<Props> = ({ isOpen, onClose }) => {
             <button 
               className={styles.saveBtn} 
               onClick={handleSave} 
-              disabled={loading || (newPassword && !currentPassword)}
+              disabled={loading || (!!newPassword && !currentPassword)}
             >
               {loading ? 'Saving...' : 'Save'}
             </button>

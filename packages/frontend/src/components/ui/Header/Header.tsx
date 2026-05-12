@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import styles from './Header.module.scss';
 import { Icon } from '../Icon/Icon';
 import userIcon from '../../../assets/user.svg';
@@ -8,7 +8,6 @@ import ProfileModal from '../../projects/ProfileModal';
 
 const Header: React.FC = () => {
   const location = useLocation();
-  const navigate = useNavigate();
   const { id: projectId } = useParams();
   const path = location.pathname;
   
@@ -19,8 +18,6 @@ const Header: React.FC = () => {
   const isAuthPage = path === '/login' || path === '/signup';
   const isProjectPage = path.startsWith('/editor/');
 
-  // For the project variant, we show the project ID/Name
-  const projectTitle = projectId || "Title of Project";
 
   // Type 4: Minimal (Logo only)
   if (isAuthPage) {

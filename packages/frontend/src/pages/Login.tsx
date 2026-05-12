@@ -5,7 +5,7 @@ import { Button } from '../components/ui/Button/Button'
 import { Card } from '../components/ui/Card/Card'
 import { useAuth } from '../contexts/AuthContext'
 import { getBackendErrorMessage } from '../utils/error'
-import { validateEmail, validatePassword } from '../utils/validation'
+import { validatePassword } from '../utils/validation'
 
 import styles from './Auth.module.scss'
 

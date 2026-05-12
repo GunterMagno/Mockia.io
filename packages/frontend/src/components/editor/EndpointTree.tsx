@@ -11,7 +11,6 @@ export interface EndpointTreeProps {
 }
 
 import styles from './EndpointTree.module.scss'
-import { Icon } from '../ui/Icon/Icon'
 
 export const EndpointTree: React.FC<EndpointTreeProps> = ({ endpoints, selectedId, onSelect, onAdd }) => {
   return (

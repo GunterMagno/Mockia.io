@@ -38,7 +38,6 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
   const [loading, setLoading] = useState(false)
   const [validating, setValidating] = useState(false)
   const [statusMessage, setStatusMessage] = useState('')
-  const [messageIndex, setMessageIndex] = useState(0)
   const [error, setError] = useState('')
 
   const reset = () => {
