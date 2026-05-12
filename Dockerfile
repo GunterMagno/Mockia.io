@@ -47,5 +47,5 @@ RUN npm install --omit=dev
 
 EXPOSE 3000
 
-# Use node with experimental resolution to handle potential ESM/CommonJS path issues in the monorepo
-CMD ["node", "--experimental-specifier-resolution=node", "packages/backend/dist/index.js"]
+# Use tsx to handle ESM module resolution (missing extensions in imports) which is no longer supported by node 20 flags
+CMD ["npx", "tsx", "packages/backend/dist/index.js"]
