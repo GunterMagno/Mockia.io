@@ -42,7 +42,6 @@ export const errorHandler = (
   }
 
   else if (err.name === 'ValidationError' || err.name === 'CastError') {
-    console.error('[Validation Error Details]:', (err as any).errors || err.message);
     appError = new AppError(
       'Validation error',
       ErrorCode.VALIDATION_ERROR,

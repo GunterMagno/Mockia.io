@@ -18,7 +18,9 @@ export const Icon: React.FC<IconProps> = ({ src, size = 24, color = 'currentColo
       style={{
         '--icon-size': iconSize,
         '--icon-color': color,
-        '--icon-url': `url(${src})`
+        '--icon-url': `url("${src}")`,
+        WebkitMaskImage: `url("${src}")`,
+        maskImage: `url("${src}")`
       } as React.CSSProperties}
     />
   )

@@ -78,7 +78,6 @@ export const validate = (options: ValidateOptions) => {
 
     // If there are errors, throw AppError
     if (Object.keys(errors).length > 0) {
-      console.error('[Validation Error Details]:', errors);
       throw new AppError(
         'Validation failed',
         ErrorCode.VALIDATION_ERROR,
