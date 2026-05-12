@@ -38,6 +38,7 @@ COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY --from=builder /app/packages/shared/package.json ./packages/shared/package.json
 COPY --from=builder /app/packages/backend/dist ./packages/backend/dist
 COPY --from=builder /app/packages/backend/package.json ./packages/backend/package.json
+COPY --from=builder /app/packages/frontend/package.json ./packages/frontend/package.json
 
 # Install only production dependencies
 # This re-resolves workspaces and installs only what's needed for runtime
