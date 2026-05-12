@@ -42,6 +42,7 @@ export const errorHandler = (
   }
 
   else if (err.name === 'ValidationError' || err.name === 'CastError') {
+    console.error('[Validation Error Details]:', (err as any).errors || err.message);
     appError = new AppError(
       'Validation error',
       ErrorCode.VALIDATION_ERROR,
@@ -71,7 +72,7 @@ export const errorHandler = (
     error: {
       code: appError.code,
       message: appError.message,
-      ...(process.env.NODE_ENV === 'development' && appError.details && { details: appError.details }),
+      ...( (process.env.NODE_ENV === 'development' || appError.code === ErrorCode.VALIDATION_ERROR) && appError.details && { details: appError.details }),
     },
     timestamp: new Date().toISOString(),
   });
