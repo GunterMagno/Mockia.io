@@ -34,6 +34,10 @@ ENV NODE_ENV=production
 
 # Copy root package files
 COPY package.json package-lock.json ./
+# Copy source code for shared and backend (enables tsx to resolve everything correctly)
+COPY packages/shared/src ./packages/shared/src
+COPY packages/backend/src ./packages/backend/src
+
 # Copy built artifacts and manifests from builder
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY --from=builder /app/packages/shared/package.json ./packages/shared/package.json
@@ -47,5 +51,5 @@ RUN npm install --omit=dev
 
 EXPOSE 3000
 
-# Use tsx to handle ESM module resolution (missing extensions in imports) which is no longer supported by node 20 flags
-CMD ["npx", "tsx", "packages/backend/dist/index.js"]
+# Use tsx to run from source, which handles ESM resolution and cross-package imports perfectly
+CMD ["npx", "tsx", "packages/backend/src/index.ts"]
