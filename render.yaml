@@ -2,10 +2,10 @@ services:
   # Backend Web Service
   - type: web
     name: mockia-backend
-    env: docker
+    runtime: docker
     plan: free
     dockerContext: .
-    dockerfile: Dockerfile
+    dockerfilePath: ./Dockerfile
     envVars:
       - key: NODE_ENV
         value: production
