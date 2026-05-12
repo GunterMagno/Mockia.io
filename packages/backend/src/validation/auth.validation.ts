@@ -37,11 +37,9 @@ export const registerSchema = Joi.object<CreateUserRequest>({
  */
 export const loginSchema = Joi.object({
   email: Joi.string()
-    .email()
     .required()
     .messages({
-      'string.email': 'Email must be valid',
-      'any.required': 'Email is required',
+      'any.required': 'Email or Username is required',
     }),
   password: Joi.string()
     .required()

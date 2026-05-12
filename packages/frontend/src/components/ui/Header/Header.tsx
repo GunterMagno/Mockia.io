@@ -4,12 +4,15 @@ import styles from './Header.module.scss';
 import { Icon } from '../Icon/Icon';
 import userIcon from '../../../assets/user.svg';
 import bellIcon from '../../../assets/bell.svg';
+import ProfileModal from '../../projects/ProfileModal';
 
 const Header: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { id: projectId } = useParams();
   const path = location.pathname;
+  
+  const [isProfileOpen, setIsProfileOpen] = React.useState(false);
 
   // Determine variant based on path
   const isLanding = path === '/';
@@ -53,17 +56,15 @@ const Header: React.FC = () => {
     return (
       <header className={styles.header}>
         <Link to="/dashboard" className={styles.logo}>Mockia.io</Link>
-        <div className={styles.centerContent}>
-          {projectTitle}
-        </div>
         <div className={styles.rightContent}>
           <button className={styles.iconButton} title="Notifications">
             <Icon src={bellIcon} />
           </button>
-          <button className={styles.iconButton} onClick={() => navigate('/profile')} title="Profile">
+          <button className={styles.iconButton} onClick={() => setIsProfileOpen(true)} title="Profile">
             <Icon src={userIcon} />
           </button>
         </div>
+        <ProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
       </header>
     );
   }
@@ -76,10 +77,11 @@ const Header: React.FC = () => {
         <button className={styles.iconButton} title="Notifications">
           <Icon src={bellIcon} />
         </button>
-        <button className={styles.iconButton} onClick={() => navigate('/profile')} title="Profile">
+        <button className={styles.iconButton} onClick={() => setIsProfileOpen(true)} title="Profile">
           <Icon src={userIcon} />
         </button>
       </div>
+      <ProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
     </header>
   );
 };

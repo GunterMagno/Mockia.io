@@ -40,11 +40,19 @@ export async function resolveRoute(
   path: string
 ): Promise<ResolvedRoute | null> {
   try {
-    // Step 1: Find project by slug
-    const project = await ProjectModel.findOne({ slug: projectSlug });
+    // Step 1: Find project by ID or Slug
+    let project;
+    const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(projectSlug);
+    if (isValidObjectId) {
+      project = await ProjectModel.findById(projectSlug);
+    }
+    if (!project) {
+      project = await ProjectModel.findOne({ slug: projectSlug });
+    }
+
     if (!project) {
       throw new AppError(
-        `Project with slug "${projectSlug}" not found`,
+        `Project "${projectSlug}" not found`,
         ErrorCode.NOT_FOUND,
         404
       );
@@ -138,11 +146,19 @@ export async function getProjectEndpoints(
   method?: string
 ): Promise<EndpointDocument[]> {
   try {
-    // [RouteResolution] Get endpoints for project
-    const project = await ProjectModel.findOne({ slug: projectSlug });
+    // [RouteResolution] Get endpoints for project (ID or Slug)
+    let project;
+    const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(projectSlug);
+    if (isValidObjectId) {
+      project = await ProjectModel.findById(projectSlug);
+    }
+    if (!project) {
+      project = await ProjectModel.findOne({ slug: projectSlug });
+    }
+
     if (!project) {
       throw new AppError(
-        `Project with slug "${projectSlug}" not found`,
+        `Project "${projectSlug}" not found`,
         ErrorCode.NOT_FOUND,
         404
       );

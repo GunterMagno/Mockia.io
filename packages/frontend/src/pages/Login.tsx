@@ -21,11 +21,15 @@ const Login: React.FC = () => {
     e.preventDefault()
 
     // Frontend Validation
-    const emailError = validateEmail(email);
     const passwordError = validatePassword(password);
     
-    if (emailError || passwordError) {
-      setError(emailError || passwordError);
+    if (!email) {
+      setError('Email or Username is required');
+      return;
+    }
+
+    if (passwordError) {
+      setError(passwordError);
       return;
     }
 
@@ -54,6 +58,8 @@ const Login: React.FC = () => {
             <Input 
               label="Email Address" 
               type="email" 
+              name="email"
+              autoComplete="email"
               placeholder="you@email.com"
               value={email} 
               onChange={(e) => setEmail(e.target.value)} 
@@ -62,6 +68,8 @@ const Login: React.FC = () => {
             <Input 
               label="Password" 
               type="password" 
+              name="password"
+              autoComplete="current-password"
               placeholder="••••••••"
               value={password} 
               onChange={(e) => setPassword(e.target.value)} 

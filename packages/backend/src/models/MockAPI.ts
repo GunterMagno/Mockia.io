@@ -72,7 +72,7 @@ const responseSchema = new Schema<ResponseDocument>(
       default: null,
     },
   },
-  { timestamps: true }
+  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
 /**
@@ -112,7 +112,7 @@ const endpointSchema = new Schema<EndpointDocument>(
       required: true,
     },
   },
-  { timestamps: true }
+  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
 /**
@@ -128,27 +128,31 @@ const mockApiSchema = new Schema<MockAPIDocument>(
     },
     title: {
       type: String,
-      required: true,
+      required: false,
+      default: '',
       trim: true,
     },
     description: {
       type: String,
-      required: true,
+      required: false,
+      default: '',
       trim: true,
     },
     apiVersion: {
       type: String,
-      required: true,
+      required: false,
       default: '1.0.0',
     },
     endpoints: [
       {
         type: Schema.Types.ObjectId,
         ref: 'Endpoint',
+        required: false,
+        default: [],
       },
     ],
   },
-  { timestamps: true }
+  { timestamps: true, minimize: false, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
 // Indexes for common queries

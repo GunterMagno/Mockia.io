@@ -234,7 +234,7 @@ projectsRouter.delete(
 projectsRouter.post(
   '/:id/members',
   authenticateToken,
-  authorizeRole(['OWNER'] as unknown as ProjectRole[]),
+  authorizeRole(['OWNER', 'EDITOR'] as unknown as ProjectRole[]),
   validate({ body: addProjectMemberSchema }),
   addProjectMemberHandler
 );
@@ -265,7 +265,7 @@ projectsRouter.post(
 projectsRouter.delete(
   '/:id/members/:targetUserId',
   authenticateToken,
-  authorizeRole(['OWNER'] as unknown as ProjectRole[]),
+  authorizeRole(['OWNER', 'EDITOR'] as unknown as ProjectRole[]),
   removeProjectMemberHandler
 );
 

@@ -53,7 +53,17 @@ export async function extractContextForProject(
 
       const interfaces = parsed.interfaces.map((i) => ({
         name: i.name,
-        properties: i.properties.length,
+        properties: i.properties.map(p => `${p.name}${p.optional ? '?' : ''}: ${p.type}`),
+      }));
+
+      const enums = parsed.enums.map((e) => ({
+        name: e.name,
+        members: e.members,
+      }));
+
+      const typeAliases = parsed.typeAliases.map((t) => ({
+        name: t.name,
+        type: t.type,
       }));
 
       totalInterfaces += interfaces.length;
@@ -63,11 +73,14 @@ export async function extractContextForProject(
         path: file.path,
         type: 'typescript' as const,
         interfaces,
+        enums,
+        typeAliases,
         functions: parsed.functions.map((f) => ({
           name: f.name,
-          params: f.parameters.length,
+          params: f.parameters.map(p => `${p.name}: ${p.type}`),
+          returnType: f.returnType,
         })),
-        summary: `${parsed.interfaces.length} interfaces, ${parsed.functions.length} functions`,
+        summary: `${parsed.interfaces.length} interfaces, ${parsed.functions.length} functions, ${parsed.enums.length} enums`,
       });
     } catch (error) {
       // Skip files that fail to parse
@@ -130,6 +143,7 @@ export async function extractContextForProject(
   await GitHubContextModel.deleteOne({ projectId }).exec();
 
   // Create and save new context
+  console.log('Context data files sample (first 3):', JSON.stringify(contextData.files.slice(0, 3), null, 2));
   const githubContext = new GitHubContextModel(contextData);
   await githubContext.save();
 

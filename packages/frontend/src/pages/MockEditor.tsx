@@ -7,16 +7,24 @@ import EndpointInspector from '../components/editor/EndpointInspector'
 import { Button } from '../components/ui/Button/Button'
 import { Modal } from '../components/ui/Modal/Modal'
 import { getEndpoints, updateEndpoint, createEndpoint } from '../services/endpointService'
+import { getProjectById, type Project } from '../services/projectService'
 import { generateAndSaveEndpoints } from '../services/aiService'
 import type { EndpointData } from '../services/endpointService'
 
+import { Icon } from '../components/ui/Icon/Icon'
+import aiSparkleIcon from '../assets/ai-sparkle.svg'
+import copyIcon from '../assets/copy.svg'
+
 import styles from './MockEditor.module.scss'
+import ProjectSettingsModal from '../components/projects/ProjectSettingsModal'
+import { getBackendErrorMessage } from '../utils/error'
 
 const MockEditor: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   
   const [endpoints, setEndpoints] = useState<EndpointData[]>([])
+  const [project, setProject] = useState<Project | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   
   // To track the working copy of the selected endpoint
@@ -29,15 +37,35 @@ const MockEditor: React.FC = () => {
 
   // AI Generation State
   const [showAiModal, setShowAiModal] = useState(false)
+  const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [aiRequirement, setAiRequirement] = useState('')
   const [isAiGenerating, setIsAiGenerating] = useState(false)
+  const [aiStatusMessage, setAiStatusMessage] = useState('')
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
-  const fetchEndpoints = () => {
+  // Get current user ID from token
+  useEffect(() => {
+    const token = localStorage.getItem('mockia_token')
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]))
+        setCurrentUserId(payload.sub)
+      } catch (e) {
+        console.error("Error decoding token:", e)
+      }
+    }
+  }, [])
+
+  const userRole = project?.members.find(m => String(m.userId) === String(currentUserId))?.role
+  const isViewer = userRole === 'VIEWER'
+
+  const fetchEndpoints = (silent = false) => {
     if (id) {
       getEndpoints(id)
         .then(data => {
+          // Only update if data is different to avoid flickering (simplified check)
           setEndpoints(data)
-          if (data.length > 0 && !selectedId) {
+          if (data.length > 0 && !selectedId && !silent) {
             handleSelectEndpoint(data[0])
           }
         })
@@ -45,8 +73,37 @@ const MockEditor: React.FC = () => {
     }
   }
 
+  // Polling for real-time updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // ONLY refresh if user is NOT editing anything to avoid losing state
+      if (!isDirty && !isSaving && !isAiGenerating) {
+        fetchEndpoints(true)
+      }
+    }, 10000) // Every 10 seconds
+
+    return () => clearInterval(interval)
+  }, [id, isDirty, isSaving, isAiGenerating])
+
+  // AUTO-SAVE logic
+  useEffect(() => {
+    if (!isDirty || isSaving || isAiGenerating || isViewer) return
+
+    const timer = setTimeout(() => {
+      console.log("Auto-saving changes...")
+      handleSave()
+    }, 1500) // Save after 1.5s of inactivity
+
+    return () => clearTimeout(timer)
+  }, [activeEndpoint, jsonContent, isDirty, isSaving, isAiGenerating, isViewer])
+
   useEffect(() => {
     fetchEndpoints()
+    if (id) {
+      getProjectById(id)
+        .then(setProject)
+        .catch(err => console.error("Error fetching project:", err))
+    }
   }, [id])
 
   const handleSelectEndpoint = (ep: EndpointData) => {
@@ -88,15 +145,36 @@ const MockEditor: React.FC = () => {
   const handleAiGenerate = async () => {
     if (!id || !aiRequirement) return
     setIsAiGenerating(true)
+    
+    const messages = [
+      'Analyzing current project structure...',
+      'Mapping repository context...',
+      'Mockia AI is designing new endpoints...',
+      'Generating realistic response data...',
+      'Validating JSON structure...',
+      'Almost there...'
+    ]
+    
+    let currentIdx = 0
+    setAiStatusMessage(messages[0])
+    
+    const interval = setInterval(() => {
+      currentIdx = (currentIdx + 1) % messages.length
+      setAiStatusMessage(messages[currentIdx])
+    }, 3000)
+
     try {
-      await generateAndSaveEndpoints(id, aiRequirement)
+      // Pass project.id instead of slug/id to backend
+      await generateAndSaveEndpoints(project!.id, aiRequirement)
+      clearInterval(interval)
+      console.log("AI Generation successful, fetching endpoints...")
       await fetchEndpoints()
       setShowAiModal(false)
       setAiRequirement('')
-      alert("Endpoints generated successfully!")
-    } catch (error) {
+    } catch (error: any) {
+      clearInterval(interval)
       console.error("AI Generation failed:", error)
-      alert("AI Generation failed. Please check the backend connection.")
+      alert(`AI Generation failed: ${getBackendErrorMessage(error)}`)
     } finally {
       setIsAiGenerating(false)
     }
@@ -152,26 +230,48 @@ const MockEditor: React.FC = () => {
   }
 
   return (
-    <Layout>
+    <Layout onOpenProjectSettings={() => setShowSettingsModal(true)}>
       <header className={styles.header}>
         <div className={styles.leftHeader}>
-          <Button onClick={() => navigate('/dashboard')} className={styles.backBtn}>
+          <Button onClick={() => navigate('/dashboard')} variant="ghost" className={styles.backBtn}>
             &larr; Back
           </Button>
-          <h2>Mock Editor</h2>
+          <div className={styles.urlSection}>
+            <span className={styles.urlLabel}>Mock Base URL:</span>
+            <code className={styles.urlDisplay}>
+              {window.location.origin}/api/mock/{project?.slug || '...'}
+            </code>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => {
+                const url = `${window.location.origin}/api/mock/${project?.slug}`;
+                navigator.clipboard.writeText(url);
+              }}
+              title="Copy URL"
+              className={styles.copyBtn}
+            >
+              <Icon src={copyIcon} size={16} />
+            </Button>
+          </div>
           {isDirty && <span className={styles.unsaved}>• Unsaved changes</span>}
         </div>
         <div className={styles.rightHeader}>
-          <Button 
-            variant="secondary" 
-            onClick={() => setShowAiModal(true)}
-            className={styles.aiBtn}
-          >
-            ✨ Generate more with AI
-          </Button>
-          <Button onClick={handleSave} disabled={!isDirty || isSaving}>
-            {isSaving ? 'Saving...' : 'Save Changes'}
-          </Button>
+          {!isViewer && (
+            <>
+              <Button 
+                variant="secondary" 
+                onClick={() => setShowAiModal(true)}
+                className={styles.aiBtn}
+              >
+                <Icon src={aiSparkleIcon} size={18} /> Generate more with AI
+              </Button>
+              <Button onClick={handleSave} disabled={!isDirty || isSaving}>
+                {isSaving ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </>
+          )}
+          {isViewer && <span className={styles.viewerBadge}>VIEW ONLY MODE</span>}
         </div>
       </header>
 
@@ -185,7 +285,7 @@ const MockEditor: React.FC = () => {
               const ep = endpoints.find(e => e.id === id)
               if (ep) handleSelectEndpoint(ep)
             }} 
-            onAdd={handleAddEndpoint}
+            onAdd={isViewer ? undefined : handleAddEndpoint}
           />
         </aside>
 
@@ -196,7 +296,7 @@ const MockEditor: React.FC = () => {
               <header>
                 <h3>Response Data (JSON)</h3>
               </header>
-              <JsonEditor value={jsonContent} onChange={handleJsonChange} />
+              <JsonEditor value={jsonContent} onChange={handleJsonChange} readOnly={isViewer} />
             </>
           ) : (
             <div className={styles.emptyState}>
@@ -211,6 +311,7 @@ const MockEditor: React.FC = () => {
             <EndpointInspector 
               endpoint={activeEndpoint} 
               onChangeMeta={handleMetaChange} 
+              readOnly={isViewer}
             />
           )}
         </aside>
@@ -233,11 +334,28 @@ const MockEditor: React.FC = () => {
           <div className={styles.modalActions}>
             <Button variant="ghost" onClick={() => setShowAiModal(false)} disabled={isAiGenerating}>Cancel</Button>
             <Button onClick={handleAiGenerate} isLoading={isAiGenerating} disabled={!aiRequirement || isAiGenerating}>
-              Generate
+              {isAiGenerating ? aiStatusMessage : 'Generate'}
             </Button>
           </div>
         </div>
       </Modal>
+      {/* Project Settings Modal */}
+      {project && (
+        <ProjectSettingsModal 
+          isOpen={showSettingsModal}
+          onClose={() => setShowSettingsModal(false)}
+          project={project}
+          isViewer={isViewer}
+          onUpdate={(updated) => {
+            setProject(updated)
+            // If slug changed, we need to update the URL
+            if (updated.slug !== project.slug) {
+              navigate(`/editor/${updated.slug}`, { replace: true })
+            }
+          }}
+          onDelete={() => navigate('/dashboard')}
+        />
+      )}
     </Layout>
   )
 }

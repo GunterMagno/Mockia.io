@@ -91,14 +91,28 @@ function formatGitHubContext(context: any): string {
           sections.push(`  Summary: ${file.summary}`);
         }
         if (file.interfaces && file.interfaces.length > 0) {
-          sections.push(
-            `  Interfaces: ${file.interfaces.map((i: any) => i.name).join(', ')}`
-          );
+          sections.push(`  Interfaces:`);
+          file.interfaces.forEach((i: any) => {
+            sections.push(`    interface ${i.name} { ${i.properties.join('; ')} }`);
+          });
+        }
+        if (file.typeAliases && file.typeAliases.length > 0) {
+          sections.push(`  Types:`);
+          file.typeAliases.forEach((t: any) => {
+            sections.push(`    type ${t.name} = ${t.type}`);
+          });
+        }
+        if (file.enums && file.enums.length > 0) {
+          sections.push(`  Enums:`);
+          file.enums.forEach((e: any) => {
+            sections.push(`    enum ${e.name} { ${e.members.join(', ')} }`);
+          });
         }
         if (file.functions && file.functions.length > 0) {
-          sections.push(
-            `  Functions: ${file.functions.map((f: any) => f.name).join(', ')}`
-          );
+          sections.push(`  Functions:`);
+          file.functions.forEach((f: any) => {
+            sections.push(`    ${f.name}(${f.params.join(', ')}): ${f.returnType}`);
+          });
         }
       });
     }
@@ -148,8 +162,18 @@ export async function buildPrompt(
     includeSystemPrompt?: boolean;
   }
 ): Promise<OpenRouterMessage[]> {
-  // Verify project exists
-  const project = await ProjectModel.findById(projectId);
+  // Verify project exists (by ID or Slug)
+  const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(projectId);
+  let project;
+  
+  if (isValidObjectId) {
+    project = await ProjectModel.findById(projectId);
+  }
+  
+  if (!project) {
+    project = await ProjectModel.findOne({ slug: projectId });
+  }
+
   if (!project) {
     throw new AppError(
       'Project not found',
@@ -158,14 +182,17 @@ export async function buildPrompt(
     );
   }
 
+  // Use the real _id for subsequent operations
+  const realProjectId = project._id.toString();
+
   // Load GitHub context
   let contextString = '';
   try {
-    const context = await getProjectContext(projectId);
+    const context = await getProjectContext(realProjectId);
     contextString = formatGitHubContext(context);
   } catch (error) {
     // Context might not exist yet, proceed with empty context
-    console.warn(`No GitHub context found for project ${projectId}`);
+    console.warn(`No GitHub context found for project ${realProjectId}`);
     contextString = `## Project: ${project.title}\nNo GitHub context available yet.`;
   }
 
@@ -174,13 +201,15 @@ export async function buildPrompt(
     options?.contextBudgetOverride || TOKEN_LIMITS.contextBudget;
   const truncatedContext = truncateContext(contextString, contextBudget);
 
-  // Build sample data for prompt injection
+  // Build sample data for prompt injection (DISABLED to avoid bias)
+  /*
   const sampleData = buildSampleData({
     userCount: 3,
     productCount: 4,
     orderCount: 2,
   });
   const sampleDataSection = formatSampleDataForPrompt(sampleData);
+  */
 
   // Build messages array
   const messages: OpenRouterMessage[] = [];
@@ -199,16 +228,18 @@ export async function buildPrompt(
     content: `## GitHub Repository Context\n\n${truncatedContext}`,
   });
 
+  /*
   // Sample data message
   messages.push({
     role: 'user',
     content: sampleDataSection,
   });
+  */
 
   // User request message
   messages.push({
     role: 'user',
-    content: `## Your Task\n\nBased on the repository context and sample data format above, generate a mock API specification for the following requirement:\n\n${userInput}\n\nRemember: Return ONLY valid JSON following the expected output format. No explanations, no markdown blocks, just pure JSON.`,
+    content: `## Your Task\n\nBased EXCLUSIVELY on the actual TypeScript interfaces, routes, and data models found in the repository context provided above, generate a comprehensive mock API specification for the following requirement:\n\n${userInput}\n\nRules for EXCELLENCE:\n1. Use the EXACT property names and types from the repository's interfaces.\n2. Generate between 5 and 10 logical endpoints. Quality over quantity.\n3. Include REALISTIC MOCK DATA in the examples (e.g., actual names, realistic IDs, valid numbers) that a frontend developer can use directly.\n4. DO NOT generate generic "orders" or "products" unless they are explicitly present in the repository context.\n5. Keep response examples realistic but concise to avoid truncation.\n6. Return ONLY valid JSON. No markdown blocks.`,
   });
 
   return messages;

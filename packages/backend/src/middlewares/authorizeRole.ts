@@ -40,8 +40,15 @@ export function authorizeRole(allowedRoles: ProjectRole[]) {
         );
       }
 
-      // Find the project
-      const project = await ProjectModel.findById(projectId);
+      // Find the project (by ID or Slug)
+      let project;
+      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(projectId);
+      if (isValidObjectId) {
+        project = await ProjectModel.findById(projectId);
+      }
+      if (!project) {
+        project = await ProjectModel.findOne({ slug: projectId });
+      }
 
       if (!project) {
         throw new AppError(

@@ -144,9 +144,13 @@ export const archiveProjectHandler = asyncHandler(
     }
 
     const { id } = req.params;
-    await archiveProject(id, userId);
+    const project = await archiveProject(id, userId);
 
-    res.status(204).send();
+    res.status(200).json({
+      success: true,
+      data: project,
+      timestamp: new Date().toISOString(),
+    });
   }
 );
 

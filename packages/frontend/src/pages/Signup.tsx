@@ -59,6 +59,8 @@ const Signup: React.FC = () => {
           <form onSubmit={onSubmit} className={styles.form}>
             <Input 
               label="Username" 
+              name="username"
+              autoComplete="username"
               placeholder="your_username"
               value={username} 
               onChange={(e) => setUsername(e.target.value)} 
@@ -67,6 +69,8 @@ const Signup: React.FC = () => {
             <Input 
               label="Email Address" 
               type="email" 
+              name="email"
+              autoComplete="email"
               placeholder="you@email.com"
               value={email} 
               onChange={(e) => setEmail(e.target.value)} 
@@ -75,6 +79,8 @@ const Signup: React.FC = () => {
             <Input 
               label="Password" 
               type="password" 
+              name="new-password"
+              autoComplete="new-password"
               placeholder="••••••••"
               value={password} 
               onChange={(e) => setPassword(e.target.value)} 

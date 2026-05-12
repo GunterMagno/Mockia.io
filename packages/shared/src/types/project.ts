@@ -10,6 +10,8 @@ import type { ProjectRole } from './permissions';
  */
 export interface ProjectMember {
   userId: string;
+  username?: string;
+  email?: string;
   role: ProjectRole;
   addedAt: string;
 }

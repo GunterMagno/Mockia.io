@@ -1,0 +1,163 @@
+.container {
+  background-color: var(--settings-modal-bg);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-10);
+  color: var(--settings-text);
+}
+
+.title {
+  font-size: 2.5rem;
+  font-weight: 500;
+  margin: 0 0 var(--spacing-10);
+}
+
+.formSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-6);
+  margin-bottom: var(--spacing-8);
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+
+  label {
+    font-size: var(--text-lg);
+    font-weight: 500;
+  }
+}
+
+.input {
+  background-color: var(--settings-input-bg);
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-4);
+  color: var(--settings-input-text);
+  font-size: var(--text-base);
+  outline: none;
+  transition: border-color var(--transition-fast);
+
+  &::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  &:focus {
+    border-color: var(--primary-light);
+  }
+
+  &.readOnly {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+}
+
+.passwordGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-6);
+}
+
+.status {
+  padding: var(--spacing-4);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-6);
+  font-weight: 600;
+  text-align: center;
+
+  &.success {
+    background-color: var(--support-01);
+    color: white;
+  }
+
+  &.error {
+    background-color: var(--support-02);
+    color: white;
+  }
+}
+
+.actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: var(--spacing-8);
+}
+
+.rightActions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-8);
+}
+
+.logoutBtn {
+  background-color: var(--support-02);
+  color: white;
+  border: none;
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-2) var(--spacing-6);
+  font-size: var(--text-base);
+  font-weight: 600;
+  cursor: pointer;
+  
+  &:hover {
+    opacity: 0.9;
+  }
+}
+
+.cancelBtn {
+  background: none;
+  border: none;
+  font-size: 1.8rem;
+  color: var(--settings-text);
+  cursor: pointer;
+  
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.saveBtn {
+  background-color: var(--settings-btn-primary);
+  border: none;
+  border-radius: var(--radius-full);
+  padding: var(--spacing-3) var(--spacing-10);
+  font-size: 1.8rem;
+  min-width: 200px;
+  cursor: pointer;
+  transition: background-color var(--transition-fast), transform 0.1s;
+
+  &:hover:not(:disabled) {
+    background-color: #7a7cc0;
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+@media (max-width: 600px) {
+  .passwordGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .actions {
+    flex-direction: column-reverse;
+    gap: var(--spacing-6);
+  }
+  
+  .rightActions {
+    width: 100%;
+    flex-direction: column-reverse;
+    gap: var(--spacing-4);
+  }
+  
+  .saveBtn {
+    width: 100%;
+  }
+}

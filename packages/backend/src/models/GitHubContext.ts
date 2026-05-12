@@ -6,8 +6,10 @@ import { Schema, model, Document, Types } from 'mongoose';
 interface FileInfoDocument {
   path: string;
   type: 'typescript' | 'swagger' | 'other';
-  interfaces?: Array<{ name: string; properties: number }>;
-  functions?: Array<{ name: string; params: number }>;
+  interfaces?: Array<{ name: string; properties: string[] }>;
+  functions?: Array<{ name: string; params: string[]; returnType?: string }>;
+  enums?: Array<{ name: string; members: string[] }>;
+  typeAliases?: Array<{ name: string; type: string }>;
   routes?: Array<{ path: string; methods: string[] }>;
   summary?: string;
 }
@@ -37,6 +39,30 @@ interface GitHubContextDocument extends Document {
 /**
  * File info subdocument schema
  */
+const interfaceSchema = new Schema({
+  name: { type: String, required: true },
+  properties: [{ type: String }],
+}, { _id: false });
+
+const functionSchema = new Schema({
+  name: { type: String, required: true },
+  params: [{ type: String }],
+  returnType: { type: String },
+}, { _id: false });
+
+const enumSchema = new Schema({
+  name: { type: String, required: true },
+  members: [{ type: String }],
+}, { _id: false });
+
+const typeAliasSchema = new Schema({
+  name: { type: String, required: true },
+  type: { type: String, required: true },
+}, { _id: false });
+
+/**
+ * File info subdocument schema
+ */
 const fileInfoSchema = new Schema<FileInfoDocument>(
   {
     path: {
@@ -48,20 +74,10 @@ const fileInfoSchema = new Schema<FileInfoDocument>(
       enum: ['typescript', 'swagger', 'other'],
       required: true,
     },
-    interfaces: [
-      {
-        _id: false,
-        name: String,
-        properties: Number,
-      },
-    ],
-    functions: [
-      {
-        _id: false,
-        name: String,
-        params: Number,
-      },
-    ],
+    interfaces: [interfaceSchema],
+    functions: [functionSchema],
+    enums: [enumSchema],
+    typeAliases: [typeAliasSchema],
     routes: [
       {
         _id: false,

@@ -14,8 +14,10 @@
   border-radius: var(--radius-xl);
   overflow: hidden;
   box-shadow: var(--shadow-lg);
-  background: transparent;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
 }
+
 .title {
   padding: var(--spacing-3) var(--spacing-4);
   border-bottom: 1px solid var(--border);

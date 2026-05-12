@@ -8,9 +8,31 @@ export const updateEndpointHandler = asyncHandler(
     const { id } = req.params;
     const { path, method, description, requestSchema, responseBody, statusCode } = req.body;
 
-    const endpoint = await EndpointModel.findById(id);
+    const endpoint = await EndpointModel.findById(id).populate({
+      path: 'mockApiId',
+      populate: { path: 'projectId' }
+    });
+    
     if (!endpoint) {
       res.status(404).json({ success: false, error: { message: 'Endpoint not found' } });
+      return;
+    }
+
+    // Check permissions
+    const mockApi = endpoint.mockApiId as any;
+    const project = mockApi?.projectId;
+    const userId = req.user?.id;
+
+    if (!project || !userId) {
+      res.status(403).json({ success: false, error: { message: 'Project context not found' } });
+      return;
+    }
+
+    const member = project.members.find((m: any) => m.userId.toString() === userId);
+    const userRole = member?.role?.toUpperCase();
+    
+    if (userRole !== 'OWNER' && userRole !== 'EDITOR') {
+      res.status(403).json({ success: false, error: { message: 'Only owners and editors can modify endpoints' } });
       return;
     }
 
@@ -60,9 +82,27 @@ export const createEndpointHandler = asyncHandler(
     const { ProjectModel } = await import('../models/Project');
     const { MockAPIModel, ResponseModel } = await import('../models/MockAPI');
 
-    const project = await ProjectModel.findOne({ slug: projectSlug });
+    let project;
+    const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(projectSlug);
+    if (isValidObjectId) {
+      project = await ProjectModel.findById(projectSlug);
+    }
+    if (!project) {
+      project = await ProjectModel.findOne({ slug: projectSlug });
+    }
+
     if (!project) {
       res.status(404).json({ success: false, error: { message: 'Project not found' } });
+      return;
+    }
+
+    // Check permissions
+    const userId = req.user?.id;
+    const member = project.members.find((m: any) => m.userId.toString() === userId);
+    const userRole = member?.role?.toUpperCase();
+
+    if (userRole !== 'OWNER' && userRole !== 'EDITOR') {
+      res.status(403).json({ success: false, error: { message: 'Only owners and editors can create endpoints' } });
       return;
     }
 

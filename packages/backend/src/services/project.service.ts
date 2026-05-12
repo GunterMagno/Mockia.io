@@ -13,31 +13,64 @@ import { importAndAnalyzeRepository } from './github-context.service';
  * Converts ObjectIds to strings and formats dates
  */
 function mapProjectToDTO(doc: any): ProjectDTO {
+  const ensureISO = (date: any) => {
+    if (!date) return undefined;
+    if (typeof date.toISOString === 'function') return date.toISOString();
+    return new Date(date).toISOString();
+  };
+
   return {
     id: doc._id.toString(),
     title: doc.title,
     description: doc.description,
     slug: doc.slug,
     ownerId: doc.ownerId.toString(),
-    members: doc.members.map(
-      (m: any): ProjectMember => ({
-        userId: m.userId.toString(),
-        role: m.role,
-        addedAt: m.addedAt.toISOString(),
-      })
+    members: (doc.members || []).map(
+      (m: any): ProjectMember => {
+        const user = m.userId;
+        const isPopulated = user && typeof user === 'object' && '_id' in user;
+        
+        return {
+          userId: isPopulated ? user._id.toString() : (user?.toString() || ''),
+          username: isPopulated ? (user.username || 'User') : 'User',
+          email: isPopulated ? (user.email || '') : '',
+          role: m.role.toUpperCase() as ProjectRole,
+          addedAt: ensureISO(m.addedAt) || new Date().toISOString(),
+        };
+      }
     ),
     gitHubRepo: doc.gitHubRepo ? {
       owner: doc.gitHubRepo.owner,
       repo: doc.gitHubRepo.repo,
       branch: doc.gitHubRepo.branch,
       url: doc.gitHubRepo.url,
-      importedAt: doc.gitHubRepo.importedAt.toISOString(),
+      importedAt: ensureISO(doc.gitHubRepo.importedAt) || new Date().toISOString(),
     } : undefined,
     isArchived: doc.isArchived,
-    archivedAt: doc.archivedAt ? doc.archivedAt.toISOString() : undefined,
-    createdAt: doc.createdAt.toISOString(),
-    updatedAt: doc.updatedAt.toISOString(),
+    archivedAt: ensureISO(doc.archivedAt),
+    createdAt: ensureISO(doc.createdAt) || new Date().toISOString(),
+    updatedAt: ensureISO(doc.updatedAt) || new Date().toISOString(),
   };
+}
+
+/**
+ * Resolves a project by ID or Slug
+ */
+async function resolveProject(idOrSlug: string) {
+  let project;
+  const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(idOrSlug);
+  const populateOptions = {
+    path: 'members.userId',
+    model: 'User'
+  };
+
+  if (isValidObjectId) {
+    project = await ProjectModel.findById(idOrSlug).populate(populateOptions);
+  }
+  if (!project) {
+    project = await ProjectModel.findOne({ slug: idOrSlug }).populate(populateOptions);
+  }
+  return project;
 }
 
 /**
@@ -99,16 +132,22 @@ export async function createProject(
 
     // Save to database
     const savedProject = await projectDocument.save();
+    await savedProject.populate('members.userId');
 
     // Create empty MockAPI associated with the project
     const { MockAPIModel } = await import('../models/MockAPI');
-    await MockAPIModel.create({
-      projectId: savedProject._id,
-      title: `${title} Mock API`,
-      description: description || '',
-      apiVersion: '1.0.0',
-      endpoints: [],
-    });
+    try {
+      await MockAPIModel.create({
+        projectId: savedProject._id,
+        title: savedProject.title,
+        description: savedProject.description || '',
+        endpoints: [],
+        apiVersion: '1.0.0',
+      });
+    } catch (mockApiError) {
+      console.error('Failed to create associated MockAPI, but project was saved:', mockApiError);
+      // We don't throw here to avoid failing project creation if only secondary document fails
+    }
 
     // Map and return
     return mapProjectToDTO(savedProject);
@@ -147,6 +186,7 @@ export async function getUserProjects(userId: string): Promise<ProjectDTO[]> {
       'members.userId': userId,
       isArchived: false,
     })
+      .populate('members.userId')
       .sort({ createdAt: -1 })
       .lean();
 
@@ -182,8 +222,7 @@ export async function getProjectById(
   userId: string
 ): Promise<ProjectDTO> {
   try {
-    // Find project by ID
-    const project = await ProjectModel.findById(projectId);
+    const project = await resolveProject(projectId);
 
     // Check if project exists
     if (!project) {
@@ -194,9 +233,14 @@ export async function getProjectById(
       );
     }
 
+    await project.populate('members.userId');
+
     // Check if user is a member
     const isMember = project.members.some(
-      (member) => member.userId.toString() === userId
+      (member: any) => {
+        const memberId = member.userId?._id ? member.userId._id.toString() : member.userId.toString();
+        return memberId === userId;
+      }
     );
 
     if (!isMember) {
@@ -210,18 +254,9 @@ export async function getProjectById(
     // Map and return
     return mapProjectToDTO(project);
   } catch (error) {
-    // If it's already an AppError, rethrow it
-    if (error instanceof AppError) {
-      throw error;
-    }
-
-    // For any other error, wrap it
+    if (error instanceof AppError) throw error;
     console.error('Error retrieving project:', error);
-    throw new AppError(
-      'Failed to retrieve project',
-      ErrorCode.INTERNAL_SERVER_ERROR,
-      500
-    );
+    throw new AppError('Failed to retrieve project', ErrorCode.INTERNAL_SERVER_ERROR, 500);
   }
 }
 
@@ -250,8 +285,7 @@ export async function updateProject(
   updateData: { title?: string; description?: string }
 ): Promise<ProjectDTO> {
   try {
-    // Find project by ID
-    const project = await ProjectModel.findById(projectId);
+    const project = await resolveProject(projectId);
 
     // Check if project exists
     if (!project) {
@@ -262,12 +296,17 @@ export async function updateProject(
       );
     }
 
+    await project.populate('members.userId');
+
     // Verify user is the owner or editor
     const isOwner = project.ownerId.toString() === userId;
-    const memberRole = project.members.find(
-      (m) => m.userId.toString() === userId
-    )?.role;
-    const canEdit = isOwner || memberRole === 'editor' || memberRole === 'owner';
+    const member = project.members.find(
+      (m: any) => {
+        const mId = (m.userId as any)._id ? (m.userId as any)._id.toString() : m.userId.toString();
+        return mId === userId;
+      }
+    );
+    const canEdit = isOwner || (member && (member.role === 'editor' || member.role === 'owner'));
 
     if (!canEdit) {
       throw new AppError(
@@ -315,6 +354,7 @@ export async function updateProject(
 
     // Save and return
     const savedProject = await project.save();
+    await savedProject.populate('members.userId');
     return mapProjectToDTO(savedProject);
   } catch (error) {
     // If it's already an AppError, rethrow it
@@ -355,8 +395,7 @@ export async function archiveProject(
   userId: string
 ): Promise<ProjectDTO> {
   try {
-    // Find project by ID
-    const project = await ProjectModel.findById(projectId);
+    const project = await resolveProject(projectId);
 
     // Check if project exists
     if (!project) {
@@ -379,8 +418,11 @@ export async function archiveProject(
     // Set archived flag and save
     project.isArchived = true;
     project.archivedAt = new Date();
-    const savedProject = await project.save();
-    return mapProjectToDTO(savedProject);
+    // Save project
+    await project.save();
+
+    const populated = await resolveProject(project._id.toString());
+    return mapProjectToDTO(populated!);
   } catch (error) {
     // If it's already an AppError, rethrow it
     if (error instanceof AppError) {
@@ -452,8 +494,7 @@ export async function addProjectMember(
   role: ProjectRole
 ): Promise<ProjectDTO> {
   try {
-    // Find the project
-    const project = await ProjectModel.findById(projectId);
+    const project = await resolveProject(projectId);
     if (!project) {
       throw new AppError(
         'Project not found',
@@ -462,14 +503,15 @@ export async function addProjectMember(
       );
     }
 
-    // Check if inviter is owner
-    const inviterMember = project.members.find(
-      (m) => m.userId.toString() === inviterUserId
-    );
-
-    if (!inviterMember || String(inviterMember.role).toUpperCase() !== 'OWNER') {
+    // Check permissions
+    const inviterMember = project.members.find(m => {
+      const mid = m.userId?._id ? m.userId._id.toString() : m.userId.toString();
+      return mid === inviterUserId;
+    });
+    const inviterRole = String(inviterMember?.role).toUpperCase();
+    if (!inviterMember || (inviterRole !== 'OWNER' && inviterRole !== 'EDITOR')) {
       throw new AppError(
-        'Only project owner can invite members',
+        'Only project owners and editors can invite members',
         ErrorCode.FORBIDDEN,
         403
       );
@@ -486,9 +528,10 @@ export async function addProjectMember(
     }
 
     // Check if user is already a member
-    const isAlreadyMember = project.members.some(
-      (m) => m.userId.toString() === targetUser._id.toString()
-    );
+    const isAlreadyMember = project.members.some(m => {
+      const mid = m.userId?._id ? m.userId._id.toString() : m.userId.toString();
+      return mid === targetUser._id.toString();
+    });
 
     if (isAlreadyMember) {
       throw new AppError(
@@ -508,7 +551,8 @@ export async function addProjectMember(
     // Save project
     await project.save();
 
-    return mapProjectToDTO(project);
+    const updatedProject = await resolveProject(project._id.toString());
+    return mapProjectToDTO(updatedProject!);
   } catch (error) {
     if (error instanceof AppError) {
       throw error;
@@ -533,8 +577,7 @@ export async function removeProjectMember(
   targetUserId: string
 ): Promise<ProjectDTO> {
   try {
-    // Find the project
-    const project = await ProjectModel.findById(projectId);
+    const project = await resolveProject(projectId);
     if (!project) {
       throw new AppError(
         'Project not found',
@@ -543,23 +586,25 @@ export async function removeProjectMember(
       );
     }
 
-    // Check if remover is owner
-    const removerMember = project.members.find(
-      (m) => m.userId.toString() === removerUserId
-    );
-
-    if (!removerMember || String(removerMember.role).toUpperCase() !== 'OWNER') {
+    // Check permissions
+    const removerMember = project.members.find(m => {
+      const mid = m.userId?._id ? m.userId._id.toString() : m.userId.toString();
+      return mid === removerUserId;
+    });
+    const removerRole = String(removerMember?.role).toUpperCase();
+    if (!removerMember || (removerRole !== 'OWNER' && removerRole !== 'EDITOR')) {
       throw new AppError(
-        'Only project owner can remove members',
+        'Only project owners and editors can remove members',
         ErrorCode.FORBIDDEN,
         403
       );
     }
 
     // Find member to remove
-    const targetMemberIndex = project.members.findIndex(
-      (m) => m.userId.toString() === targetUserId
-    );
+    const targetMemberIndex = project.members.findIndex(m => {
+      const mid = m.userId?._id ? m.userId._id.toString() : m.userId.toString();
+      return mid === targetUserId;
+    });
 
     if (targetMemberIndex === -1) {
       throw new AppError(
@@ -571,7 +616,18 @@ export async function removeProjectMember(
 
     // Check if trying to remove the last owner
     const targetMember = project.members[targetMemberIndex];
-    if (String(targetMember.role).toUpperCase() === 'OWNER') {
+    const targetRole = String(targetMember.role).toUpperCase();
+
+    // Protection: Editors cannot remove owners
+    if (removerRole === 'EDITOR' && targetRole === 'OWNER') {
+      throw new AppError(
+        'Editors cannot remove project owners',
+        ErrorCode.FORBIDDEN,
+        403
+      );
+    }
+
+    if (targetRole === 'OWNER') {
       const ownerCount = project.members.filter((m) => String(m.role).toUpperCase() === 'OWNER').length;
       if (ownerCount === 1) {
         throw new AppError(
@@ -588,7 +644,8 @@ export async function removeProjectMember(
     // Save project
     await project.save();
 
-    return mapProjectToDTO(project);
+    const updatedProject = await resolveProject(project._id.toString());
+    return mapProjectToDTO(updatedProject!);
   } catch (error) {
     if (error instanceof AppError) {
       throw error;
@@ -628,8 +685,7 @@ export async function importGitHubRepository(
   importRequest: ImportGitHubRequest
 ): Promise<ProjectDTO> {
   try {
-    // Find project by ID
-    const project = await ProjectModel.findById(projectId);
+    const project = await resolveProject(projectId);
 
     // Check if project exists
     if (!project) {
@@ -654,7 +710,7 @@ export async function importGitHubRepository(
 
     // Clone, analyze, and store context in one operation
     console.log(`Starting GitHub repository import process...`);
-    await importAndAnalyzeRepository(projectId, importRequest.repoUrl, importRequest.branch);
+    await importAndAnalyzeRepository(project._id.toString(), importRequest.repoUrl, importRequest.branch);
 
     // Store GitHub repository reference in project
     project.gitHubRepo = {

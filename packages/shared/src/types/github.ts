@@ -6,8 +6,10 @@
 export interface FileInfo {
   path: string;
   type: 'typescript' | 'swagger' | 'other';
-  interfaces?: Array<{ name: string; properties: number }>;
-  functions?: Array<{ name: string; params: number }>;
+  interfaces?: Array<{ name: string; properties: string[] }>;
+  functions?: Array<{ name: string; params: string[]; returnType?: string }>;
+  enums?: Array<{ name: string; members: string[] }>;
+  typeAliases?: Array<{ name: string; type: string }>;
   routes?: Array<{ path: string; methods: string[] }>;
   summary?: string;
 }

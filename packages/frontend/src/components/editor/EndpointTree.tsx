@@ -7,17 +7,18 @@ export interface EndpointTreeProps {
   endpoints: EndpointData[]
   selectedId: string | null
   onSelect: (id: string) => void
-  onAdd: () => void
+  onAdd?: () => void
 }
 
 import styles from './EndpointTree.module.scss'
+import { Icon } from '../ui/Icon/Icon'
 
 export const EndpointTree: React.FC<EndpointTreeProps> = ({ endpoints, selectedId, onSelect, onAdd }) => {
   return (
     <nav className={styles.nav}>
       <div className={styles.header}>
         <h4>Endpoints</h4>
-        <Button onClick={onAdd} size="sm">+ New Endpoint</Button>
+        {onAdd && <Button onClick={onAdd} size="sm">+ New Endpoint</Button>}
       </div>
       
       {endpoints.length === 0 && <p className={styles.empty}>No endpoints found.</p>}

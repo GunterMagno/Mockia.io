@@ -96,7 +96,9 @@ export async function loginUser(loginRequest: LoginRequest): Promise<LoginRespon
   const { email, password } = loginRequest;
 
   // 1. Find user by email (case-insensitive)
-  const user = await UserModel.findOne({ email: email.toLowerCase() });
+  const identifier = email.toLowerCase();
+  const user = await UserModel.findOne({ email: identifier });
+
   if (!user) {
     throw new AppError(
       'Invalid email or password',
@@ -104,7 +106,7 @@ export async function loginUser(loginRequest: LoginRequest): Promise<LoginRespon
       401
     );
   }
-
+  
   // 2. Verify password
   const isPasswordValid = await verifyPassword(password, user.passwordHash);
   if (!isPasswordValid) {

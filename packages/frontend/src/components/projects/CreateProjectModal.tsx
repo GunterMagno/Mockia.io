@@ -10,6 +10,7 @@ import { Icon } from '../ui/Icon/Icon'
 import emptyProjectIcon from '../../assets/empty-project.svg'
 import githubIcon from '../../assets/github.svg'
 import aiSparkleIcon from '../../assets/ai-sparkle.svg'
+import loaderIcon from '../../assets/loader.svg'
 
 type Props = {
   isOpen: boolean
@@ -37,6 +38,7 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
   const [loading, setLoading] = useState(false)
   const [validating, setValidating] = useState(false)
   const [statusMessage, setStatusMessage] = useState('')
+  const [messageIndex, setMessageIndex] = useState(0)
   const [error, setError] = useState('')
 
   const reset = () => {
@@ -95,32 +97,44 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
     setLoading(true)
     setError('')
     
+    const messages = mode === 'github' 
+      ? ['Analyzing repository...', 'Cloning source code...', 'Extracting interfaces and types...', 'Mockia AI is generating your endpoints...', 'Preparing your workspace...']
+      : ['Creating project structure...', 'Initializing API...', 'Mockia AI is generating your endpoints...', 'Almost ready...', 'Finalizing details...']
+
+    let currentIdx = 0
+    setStatusMessage(messages[0])
+    
+    const interval = setInterval(() => {
+      currentIdx = (currentIdx + 1) % messages.length
+      setStatusMessage(messages[currentIdx])
+    }, 3500)
+    
     try {
       let proj: Project;
 
       if (mode === 'github') {
-        setStatusMessage('Analyzing GitHub repository...')
         const info = await parseGithubUrl(repoUrl)
         proj = await createProject({ 
           title: info.repo || 'Imported Project', 
           description: `Imported from ${repoUrl}` 
         })
-        setStatusMessage('Cloning and importing data...')
-        await importFromGitHub(proj.id, { repoUrl })
+        // Update project with GitHub info and analysis
+        const updatedProj = await importFromGitHub(proj.id, { repoUrl })
+        proj = updatedProj // Capture the updated version for onCreated
       } else {
-        setStatusMessage('Creating project structure...')
         proj = await createProject({ title, description })
       }
 
       if (shouldGenerate) {
-        setStatusMessage('Mockia AI is building your API...')
         await generateAndSaveEndpoints(proj.id, aiRequirement)
       }
 
+      clearInterval(interval)
       setStatusMessage('Finishing up...')
       onCreated(proj)
       closeAndReset()
     } catch (err: any) {
+      clearInterval(interval)
       setError(getBackendErrorMessage(err))
       setLoading(false)
     }
@@ -270,7 +284,7 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
               
               {loading && (
                 <div className={styles.statusMessage}>
-                  <span className={styles.spinner}>⏳</span> {statusMessage}
+                  <Icon src={loaderIcon} size={20} className={styles.spinner} /> {statusMessage}
                 </div>
               )}
             </div>

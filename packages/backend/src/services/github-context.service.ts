@@ -39,8 +39,21 @@ export async function getProjectContext(
   projectId: string
 ): Promise<GitHubContext> {
   try {
+    // Resolve project to get real ID
+    let projectObjectId: string = projectId;
+    const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(projectId);
+    
+    if (!isValidObjectId) {
+      const { ProjectModel } = await import('../models/Project');
+      const project = await ProjectModel.findOne({ slug: projectId });
+      if (!project) {
+        throw new AppError('Project not found', ErrorCode.NOT_FOUND, 404);
+      }
+      projectObjectId = project._id.toString();
+    }
+
     const context = await GitHubContextModel.findOne({
-      projectId,
+      projectId: projectObjectId,
     });
 
     if (!context) {
@@ -122,8 +135,16 @@ export async function importAndAnalyzeRepository(
   let repoPath: string | null = null;
 
   try {
-    // Validate project exists
-    const project = await ProjectModel.findById(projectId);
+    // Validate project exists (by ID or Slug)
+    let project;
+    const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(projectId);
+    if (isValidObjectId) {
+      project = await ProjectModel.findById(projectId);
+    }
+    if (!project) {
+      project = await ProjectModel.findOne({ slug: projectId });
+    }
+
     if (!project) {
       throw new AppError(
         'Project not found',
@@ -131,6 +152,8 @@ export async function importAndAnalyzeRepository(
         404
       );
     }
+
+    const realProjectId = project._id.toString();
 
     // Parse and validate GitHub URL
     const parsedUrl = parseGitHubUrl(repoUrl);
@@ -141,8 +164,8 @@ export async function importAndAnalyzeRepository(
     repoPath = await cloneRepository(parsedUrl.owner, parsedUrl.repo, finalBranch);
 
     // Extract and analyze context
-    console.log(`Extracting context for project ${projectId}`);
-    const context = await extractContextForProject(projectId, repoPath, repoUrl);
+    console.log(`Extracting context for project ${realProjectId}`);
+    const context = await extractContextForProject(realProjectId, repoPath, repoUrl);
 
     console.log(`Repository analyzed and context saved successfully`);
     return mapContextToDTO(context);

@@ -7,12 +7,14 @@ import type { Project } from '../services/projectService'
 import CreateProjectModal from '../components/projects/CreateProjectModal'
 import { useNavigate } from 'react-router-dom'
 import { Icon } from '../components/ui/Icon/Icon'
+import { useAuth } from '../contexts/AuthContext'
 import folderIcon from '../assets/folder.svg'
 
 import styles from './Dashboard.module.scss'
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
@@ -26,6 +28,7 @@ const Dashboard: React.FC = () => {
 
   const handleCreated = (p: Project) => {
     setProjects((prev) => [p, ...prev])
+    navigate(`/editor/${p.slug}`)
   }
 
   return (
@@ -66,8 +69,13 @@ const Dashboard: React.FC = () => {
                   {p.description || 'No description'}
                 </p>
                 <div className={styles.cardFooter}>
-                  <span>{p.gitHubRepo ? '🔗 GitHub' : '📄 Local'}</span>
-                  <span>{new Date(p.updatedAt).toLocaleDateString()}</span>
+                  <div className={styles.meta}>
+                    <span>{p.gitHubRepo ? '🔗 GitHub' : '📄 Local'}</span>
+                    {p.members.some(m => m.userId === user?.id && m.role !== 'OWNER') && (
+                      <span className={styles.sharedBadge}>Shared</span>
+                    )}
+                  </div>
+                  <span>{p.updatedAt ? new Date(p.updatedAt).toLocaleDateString() : 'Recently'}</span>
                 </div>
               </Card>
             </div>

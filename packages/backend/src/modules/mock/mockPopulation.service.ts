@@ -48,16 +48,24 @@ export async function populateEndpointsFromLLM(
 ): Promise<PopulationResult> {
   try {
 
-    // Validate projectId format
-    if (!Types.ObjectId.isValid(projectId)) {
-      throw new AppError(
-        'Invalid project ID format',
-        ErrorCode.VALIDATION_ERROR,
-        400
-      );
+    // Resolve projectId if it's a slug
+    let projectObjectId: Types.ObjectId;
+    
+    if (Types.ObjectId.isValid(projectId)) {
+      projectObjectId = new Types.ObjectId(projectId);
+    } else {
+      // Try to find project by slug
+      const { ProjectModel } = await import('../../models/Project');
+      const project = await ProjectModel.findOne({ slug: projectId });
+      if (!project) {
+        throw new AppError(
+          'Project not found (invalid ID or slug)',
+          ErrorCode.NOT_FOUND,
+          404
+        );
+      }
+      projectObjectId = project._id as Types.ObjectId;
     }
-
-    const projectObjectId = new Types.ObjectId(projectId);
 
     // 1. Find or create MockAPI document
     let mockApi = await MockAPIModel.findOne({ projectId: projectObjectId });
@@ -111,7 +119,8 @@ export async function populateEndpointsFromLLM(
           const response = new ResponseModel({
             statusCode: extractStatusCode(example),
             description: `${endpointSpec.method} ${normalizedPath} response`,
-            schema: endpointSpec.responseSchema || {},
+            // Prefer the example response data over the abstract schema for usability
+            schema: example.response || endpointSpec.responseSchema || {},
             examples: [example.response || {}],
           });
           await response.save();

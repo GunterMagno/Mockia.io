@@ -103,29 +103,27 @@ export const refresh = asyncHandler(
   }
 );
 
+import { getUserProfile } from '../services/user.service';
+
 /**
  * GET /api/auth/me
- * Gets the current authenticated user's details
+ * Gets current user info
  */
 export const me = asyncHandler(
-  async (req: Request, res: Response, next: NextFunction) => {
-    // Note: since this is protected by authenticateToken, req.user will be populated
-    // We import UserModel directly or use a service
+  async (req: Request, res: Response) => {
     const authReq = req as import('../middlewares/authenticateToken').AuthenticatedRequest;
-    if (!authReq.user?.id) {
+    const userId = authReq.user?.id;
+
+    if (!userId) {
       res.status(401).json({ success: false, error: { message: 'Not authenticated' } });
       return;
     }
     
-    // Quick workaround without needing to import UserModel: just return the token's payload
-    // A proper implementation would fetch from DB, but this fixes the 404
+    const user = await getUserProfile(userId);
+
     res.status(200).json({
       success: true,
-      user: {
-        id: authReq.user.id,
-        email: (authReq.user as any).email,
-        role: (authReq.user as any).role
-      }
+      user
     });
   }
 );
