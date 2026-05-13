@@ -3,12 +3,13 @@
  * Handles HTTP requests for mock API routing and resolution
  */
 
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { applyMockHeaders } from '../modules/mock/header.service';
 import { AuthenticatedRequest } from '../middlewares/authenticateToken';
 import { asyncHandler } from '../middlewares/errorHandler';
 import { resolveRoute, getProjectEndpoints } from '../modules/mock/routeResolution.service';
-import { ResponseModel } from '../models/MockAPI';
+import { ResponseModel, EndpointModel } from '../models/MockAPI';
+import { ProjectModel } from '../models/Project';
 
 /**
  * POST /api/mock/resolve-route
@@ -140,28 +141,28 @@ export const getProjectEndpointsHandler = asyncHandler(
  * Proxy handler for mock API requests
  * Acts as a catch-all to resolve and respond to mock API calls
  *
- * Authentication: Required (JWT Bearer token)
+ * Authentication: API Key required via X-Mockia-API-Key header
  *
- * @param req - Authenticated request
+ * @param req - Request
  * @param res - Express response
  * @returns 200 with mock response data
  * @throws 404 if route not found
  */
 export const mockProxyHandler = asyncHandler(
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: Request, res: Response) => {
     applyMockHeaders(res);
     const method = req.method;
     
     // Extract projectSlug and path from URL
-    // URL format: /api/mock/:projectSlug/path
-    const pathParts = req.path.split('/').filter(p => p); // Filter out empty strings
+    // URL format: /api/mock/:projectSlug/*
+    const pathParts = req.path.split('/').filter(p => p);
     
-    if (pathParts.length < 2) {
+    if (pathParts.length < 1) {
       res.status(400).json({
         success: false,
         error: {
           code: 'INVALID_REQUEST',
-          message: 'Invalid mock request format. Expected: /api/mock/:projectSlug/path',
+          message: 'Missing project slug',
         },
         timestamp: new Date().toISOString(),
       });
@@ -169,9 +170,61 @@ export const mockProxyHandler = asyncHandler(
     }
     
     const projectSlug = pathParts[0];
-    const mockPath = '/' + pathParts.slice(1).join('/');
+    const mockPath = pathParts.length > 1 ? '/' + pathParts.slice(1).join('/') : '';
 
-    // Resolve the route
+    // 1. Authenticate with API Key
+    const apiKeyHeader = req.headers['x-mockia-api-key'] as string;
+    const project = await ProjectModel.findOne({ slug: projectSlug });
+    
+    if (!project) {
+      res.status(404).json({
+        success: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: `Project "${projectSlug}" not found`,
+        },
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
+
+    // Check API Key if project has one
+    if (project.apiKey && project.apiKey !== apiKeyHeader) {
+      res.status(401).json({
+        success: false,
+        error: {
+          code: 'UNAUTHORIZED',
+          message: 'Invalid or missing X-Mockia-API-Key header',
+        },
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
+
+    // 2. Handle Project Root (List Endpoints)
+    if (!mockPath || mockPath === '/') {
+      const endpoints = await getProjectEndpoints(projectSlug);
+      res.status(200).json({
+        success: true,
+        project: {
+          title: project.title,
+          slug: project.slug,
+          description: project.description,
+        },
+        data: {
+          endpoints: endpoints.map(ep => ({
+            method: ep.method,
+            path: ep.path,
+            description: ep.description,
+            url: `${req.protocol}://${req.get('host')}/api/mock/${projectSlug}${ep.path.startsWith('/') ? '' : '/'}${ep.path}`
+          }))
+        },
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
+
+    // 3. Resolve the route
     const resolvedRoute = await resolveRoute(projectSlug, method, mockPath);
 
     if (!resolvedRoute) {
@@ -186,19 +239,38 @@ export const mockProxyHandler = asyncHandler(
       return;
     }
 
-    // Get the first response for this endpoint
-    let responseData: any = {};
-    let statusCode = 200;
+    // 4. Select Response
+    const responseStatusHeader = req.headers['x-mockia-response-status'];
+    const responseNameHeader = req.headers['x-mockia-response-name'];
+    const responseQueryStatus = req.query._status;
 
-    if (resolvedRoute.endpoint.responses && resolvedRoute.endpoint.responses.length > 0) {
-      const response = await ResponseModel.findById(resolvedRoute.endpoint.responses[0]);
-      if (response) {
-        statusCode = response.statusCode || 200;
-        responseData = response.examples?.[0] || response.schema || {};
-      }
+    // Populate responses to find by name or status
+    const endpoint = await EndpointModel.findById(resolvedRoute.endpoint._id).populate('responses');
+    const responses = (endpoint?.responses as any[]) || [];
+    
+    let targetResponse;
+
+    if (responseStatusHeader || responseQueryStatus) {
+      const status = parseInt((responseStatusHeader || responseQueryStatus) as string);
+      targetResponse = responses.find(r => r.statusCode === status);
+    } else if (responseNameHeader) {
+      targetResponse = responses.find(r => r.name === responseNameHeader);
     }
 
-    // Return the mock response
+    // Fallback to first response if no specific selection matched
+    if (!targetResponse && responses.length > 0) {
+      targetResponse = responses[0];
+    }
+
+    if (!targetResponse) {
+      res.status(200).json({});
+      return;
+    }
+
+    // 5. Return the mock response
+    const statusCode = targetResponse.statusCode || 200;
+    const responseData = targetResponse.examples?.[0] || targetResponse.schema || {};
+
     res.status(statusCode).json(responseData);
   }
 );

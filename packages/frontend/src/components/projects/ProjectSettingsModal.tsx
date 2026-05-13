@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { Modal } from '../ui/Modal/Modal'
 import { Icon } from '../ui/Icon/Icon'
-import { updateProject, archiveProject, addProjectMember, removeProjectMember } from '../../services/projectService'
+import { updateProject, archiveProject, addProjectMember, removeProjectMember, regenerateApiKey } from '../../services/projectService'
 import type { Project } from '@mockia/shared'
 import styles from './ProjectSettingsModal.module.scss'
 import warningIcon from '../../assets/warning.svg'
+import copyIcon from '../../assets/copy.svg'
+import checkIcon from '../../assets/check.svg'
 
 type Props = {
   isOpen: boolean
@@ -15,7 +17,7 @@ type Props = {
   onDelete: () => void
 }
 
-type Tab = 'general' | 'members'
+type Tab = 'general' | 'members' | 'connection'
 
 const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isViewer = false, onUpdate, onDelete }) => {
   const [activeTab, setActiveTab] = useState<Tab>('general')
@@ -24,9 +26,11 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
   
   // Member invite state
   const [inviteEmail, setInviteEmail] = useState('')
+  const [copiedKey, setCopiedKey] = useState(false)
   const [inviteRole, setInviteRole] = useState<'EDITOR' | 'VIEWER'>('VIEWER')
   
   const [loading, setLoading] = useState(false)
+  const [isRegenerating, setIsRegenerating] = useState(false)
   const [error, setError] = useState('')
   const [showConfirmDelete, setShowConfirmDelete] = useState(false)
   
@@ -108,6 +112,22 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
     }
   }
 
+  const handleRegenerateKey = async () => {
+    if (!window.confirm("Are you sure? This will invalidate the current API Key and break any connected frontends.")) {
+      return
+    }
+    setIsRegenerating(true)
+    setError('')
+    try {
+      const updated = await regenerateApiKey(project.id)
+      onUpdate(updated)
+    } catch (err: any) {
+      setError('Failed to regenerate API Key')
+    } finally {
+      setIsRegenerating(false)
+    }
+  }
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} noPadding maxWidth="800px">
       <div className={styles.container}>
@@ -125,6 +145,12 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
               onClick={() => setActiveTab('members')}
             >
               Members
+            </button>
+            <button 
+              className={`${styles.tab} ${activeTab === 'connection' ? styles.active : ''}`}
+              onClick={() => setActiveTab('connection')}
+            >
+              Connection
             </button>
           </div>
         </header>
@@ -183,7 +209,7 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
                 </div>
               )}
             </div>
-          ) : (
+          ) : activeTab === 'members' ? (
             <div className={styles.membersTab}>
               {!isViewer && (
                 <div className={styles.inviteSection}>
@@ -241,6 +267,43 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
                   </div>
                 ))}
               </div>
+            </div>
+          ) : (
+            <div className={styles.connectionTab}>
+              <div className={styles.apiKeySection}>
+                <h4>Project API Key</h4>
+                <p>Use this key in the <code>X-Mockia-API-Key</code> header to authenticate your requests.</p>
+                <div className={styles.apiKeyDisplay}>
+                  <code>{project.apiKey || 'No API Key generated'}</code>
+                  <button 
+                    className={`${styles.copyBtn} ${copiedKey ? styles.copied : ''}`} 
+                    onClick={() => {
+                      if (project.apiKey) {
+                        navigator.clipboard.writeText(project.apiKey)
+                        setCopiedKey(true)
+                        setTimeout(() => setCopiedKey(false), 2000)
+                      }
+                    }}
+                  >
+                    <Icon src={copiedKey ? checkIcon : copyIcon} size={16} />
+                    {copiedKey ? 'Copied' : 'Copy'}
+                  </button>
+                </div>
+              </div>
+
+              {!isViewer && (
+                <div className={styles.regenerateSection}>
+                  <h4>Regenerate API Key</h4>
+                  <p>Warning: This will immediately invalidate the current key. Any frontend using the old key will lose access.</p>
+                  <button 
+                    className={styles.regenerateBtn} 
+                    onClick={handleRegenerateKey}
+                    disabled={isRegenerating}
+                  >
+                    {isRegenerating ? 'Regenerating...' : 'Regenerate API Key'}
+                  </button>
+                </div>
+              )}
             </div>
           )}
           {error && <div className={styles.error}>{error}</div>}

@@ -11,6 +11,7 @@ import { Schema, model, Document, Types } from 'mongoose';
  */
 interface ResponseDocument extends Document {
   statusCode: number;
+  name?: string;
   description: string;
   schema: any;
   examples: any[];
@@ -56,6 +57,10 @@ const responseSchema = new Schema<ResponseDocument>(
       required: true,
       min: 100,
       max: 599,
+    },
+    name: {
+      type: String,
+      trim: true,
     },
     description: {
       type: String,

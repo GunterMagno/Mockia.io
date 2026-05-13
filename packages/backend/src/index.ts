@@ -97,8 +97,12 @@ app.use('/api/projects', projectsRouter);
 // GitHub ingestion routes
 app.use('/api/github', githubRouter);
 
-// Mock Router routes (protected)
-app.use('/api/mock', mockRouter);
+// Mock Router routes (public with API Key)
+app.use('/api/mock', cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Mockia-API-Key', 'X-Mockia-Response-Status', 'X-Mockia-Response-Name'],
+}), mockRouter);
 
 // Endpoints routes (protected)
 app.use('/api/endpoints', endpointsRouter);

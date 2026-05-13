@@ -14,6 +14,7 @@ import type { EndpointData } from '../services/endpointService'
 import { Icon } from '../components/ui/Icon/Icon'
 import aiSparkleIcon from '../assets/ai-sparkle.svg'
 import copyIcon from '../assets/copy.svg'
+import checkIcon from '../assets/check.svg'
 
 import styles from './MockEditor.module.scss'
 import ProjectSettingsModal from '../components/projects/ProjectSettingsModal'
@@ -42,6 +43,7 @@ const MockEditor: React.FC = () => {
   const [isAiGenerating, setIsAiGenerating] = useState(false)
   const [aiStatusMessage, setAiStatusMessage] = useState('')
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [copiedUrl, setCopiedUrl] = useState(false)
 
   // Get current user ID from token
   useEffect(() => {
@@ -247,11 +249,13 @@ const MockEditor: React.FC = () => {
               onClick={() => {
                 const url = `${window.location.origin}/api/mock/${project?.slug}`;
                 navigator.clipboard.writeText(url);
+                setCopiedUrl(true);
+                setTimeout(() => setCopiedUrl(false), 2000);
               }}
               title="Copy URL"
-              className={styles.copyBtn}
+              className={`${styles.copyBtn} ${copiedUrl ? styles.copied : ''}`}
             >
-              <Icon src={copyIcon} size={16} />
+              <Icon src={copiedUrl ? checkIcon : copyIcon} size={16} />
             </Button>
           </div>
           {isDirty && <span className={styles.unsaved}>• Unsaved changes</span>}

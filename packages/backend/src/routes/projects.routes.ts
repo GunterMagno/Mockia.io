@@ -11,6 +11,7 @@ import {
   importGitHubRepositoryHandler,
   getProjectContextHandler,
   deleteProjectContextHandler,
+  regenerateApiKeyHandler,
 } from '../controllers/projects.controller';
 import { authenticateToken } from '../middlewares/authenticateToken';
 import { authorizeRole } from '../middlewares/authorizeRole';
@@ -139,6 +140,19 @@ projectsRouter.get(
   '/:id/swagger.json',
   authenticateToken,
   getProjectSwagger
+);
+
+/**
+ * POST /api/projects/:id/regenerate-api-key
+ * Regenerates the API Key for a project
+ *
+ * Authentication: Required (JWT Bearer token)
+ * Authorization: User must be an owner or editor
+ */
+projectsRouter.post(
+  '/:id/regenerate-api-key',
+  authenticateToken,
+  regenerateApiKeyHandler
 );
 
 /**

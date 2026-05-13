@@ -38,6 +38,7 @@ export interface Project {
   ownerId: string;
   members: ProjectMember[];
   gitHubRepo?: GitHubRepo;
+  apiKey?: string;
   isArchived: boolean;
   archivedAt?: string;
   createdAt: string;

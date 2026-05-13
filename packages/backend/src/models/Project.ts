@@ -36,6 +36,7 @@ interface ProjectDocument extends Document {
   members: ProjectMemberDocument[];
   gitHubRepo?: GitHubRepoDocument;
   isArchived: boolean;
+  apiKey?: string;
   archivedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -134,6 +135,12 @@ const projectSchema = new Schema<ProjectDocument>(
     archivedAt: {
       type: Date,
       default: null,
+      index: true,
+    },
+    apiKey: {
+      type: String,
+      unique: true,
+      sparse: true,
       index: true,
     },
   },

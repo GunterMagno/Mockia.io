@@ -1,4 +1,5 @@
 import { ProjectModel } from '../models/Project';
+import crypto from 'crypto';
 import { UserModel } from '../models/User';
 import { generateUniqueSlug } from '../utils/slugGenerator';
 import { AppError } from '../middlewares/errorHandler';
@@ -46,6 +47,7 @@ function mapProjectToDTO(doc: any): ProjectDTO {
       url: doc.gitHubRepo.url,
       importedAt: ensureISO(doc.gitHubRepo.importedAt) || new Date().toISOString(),
     } : undefined,
+    apiKey: doc.apiKey,
     isArchived: doc.isArchived,
     archivedAt: ensureISO(doc.archivedAt),
     createdAt: ensureISO(doc.createdAt) || new Date().toISOString(),
@@ -111,8 +113,9 @@ export async function createProject(
   }
 
   try {
-    // Generate unique slug
+    // Generate unique slug and API Key
     const slug = await generateUniqueSlug(title);
+    const apiKey = crypto.randomBytes(24).toString('hex');
 
     // Create project document with owner as initial member
     const projectDocument = new ProjectModel({
@@ -120,6 +123,7 @@ export async function createProject(
       description,
       slug,
       ownerId,
+      apiKey,
       members: [
         {
           userId: ownerId,
@@ -735,6 +739,54 @@ export async function importGitHubRepository(
     console.error('Error importing GitHub repository:', error);
     throw new AppError(
       'Failed to import GitHub repository',
+      ErrorCode.INTERNAL_SERVER_ERROR,
+      500
+    );
+  }
+}
+
+/**
+ * Regenerates the API Key for a project
+ * Only project owners and editors can regenerate
+ */
+export async function regenerateApiKey(
+  projectId: string,
+  userId: string
+): Promise<ProjectDTO> {
+  try {
+    const project = await resolveProject(projectId);
+    if (!project) {
+      throw new AppError('Project not found', ErrorCode.NOT_FOUND, 404);
+    }
+
+    // Check permissions (Owner or Editor)
+    const member = project.members.find(m => {
+      const mid = m.userId?._id ? m.userId._id.toString() : m.userId.toString();
+      return mid === userId;
+    });
+    
+    const role = member?.role?.toUpperCase();
+    const canRegenerate = role === 'OWNER' || role === 'EDITOR';
+
+    if (!canRegenerate) {
+      throw new AppError(
+        'Only project owners and editors can regenerate the API Key',
+        ErrorCode.FORBIDDEN,
+        403
+      );
+    }
+
+    // Generate and save new API Key
+    project.apiKey = crypto.randomBytes(24).toString('hex');
+    await project.save();
+
+    const updatedProject = await resolveProject(project._id.toString());
+    return mapProjectToDTO(updatedProject!);
+  } catch (error) {
+    if (error instanceof AppError) throw error;
+    console.error('Error regenerating API Key:', error);
+    throw new AppError(
+      'Failed to regenerate API Key',
       ErrorCode.INTERNAL_SERVER_ERROR,
       500
     );

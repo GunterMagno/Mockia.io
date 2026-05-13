@@ -183,13 +183,17 @@
 }
 
 .copyBtn {
-  padding: 4px !important;
-  color: var(--secondary-light) !important;
+  padding: 4px;
+  color: var(--secondary-light);
   transition: all var(--transition-fast);
 
   &:hover {
-    color: var(--primary-light) !important;
-    background-color: var(--sidebar-item-active) !important;
+    color: var(--primary-light);
+    background-color: var(--sidebar-item-active);
+  }
+
+  &.copied {
+    color: var(--support-01);
   }
 }
 

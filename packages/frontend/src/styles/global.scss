@@ -87,7 +87,7 @@
   ========================================= */
   --bg: var(--support-04);
   --text: var(--support-03);
-  --card-bg: #ffffff;
+  --card-bg: #f4f4f4;
   --border: var(--support-05);
   --muted: var(--secondary-light);
 
@@ -109,10 +109,11 @@
   /* Settings Theme (Purple/Lilac) */
   --settings-modal-bg: #b0b2e3;
   --settings-input-bg: #7e80c1;
-  --settings-input-text: #ffffff;
+  --settings-input-text: #f4f4f4;
   --settings-text: #141414;
   --settings-danger-bg: #ff9b6a;
   --settings-danger-border: #ff4d4d;
   --settings-btn-primary: #8a8ce0;
+  --settings-btn-hover: #7a7cc0;
   --settings-btn-secondary: #c0c2ef;
 }

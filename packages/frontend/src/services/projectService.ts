@@ -46,3 +46,8 @@ export const removeProjectMember = async (projectId: string, userId: string): Pr
   const res = await api.delete<{ data: Project }>(`/projects/${projectId}/members/${userId}`)
   return res.data.data
 }
+
+export const regenerateApiKey = async (projectId: string): Promise<Project> => {
+  const res = await api.post<{ data: Project }>(`/projects/${projectId}/regenerate-api-key`)
+  return res.data.data
+}

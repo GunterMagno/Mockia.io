@@ -127,8 +127,10 @@ mockRouter.get(
  * - Status code is from the endpoint's response definition
  * - Data is from the response examples or schema
  */
-// Catch-all route using regex - must be last since it matches everything
+// Catch-all route using regex - matches /:projectSlug and /:projectSlug/*
+// Group 1: projectSlug
+// Group 2: optional path
 mockRouter.all(
-  /^\/([^\/]+)\/(.+)$/,
+  /^\/([^\/]+)(?:\/(.*))?$/,
   mockProxyHandler
 );

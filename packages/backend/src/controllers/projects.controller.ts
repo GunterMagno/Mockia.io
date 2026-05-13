@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/authenticateToken';
 import { asyncHandler } from '../middlewares/errorHandler';
-import { createProject, getUserProjects, getProjectById, updateProject, archiveProject, cleanupArchivedProjects, addProjectMember, removeProjectMember, importGitHubRepository } from '../services/project.service';
+import { createProject, getUserProjects, getProjectById, updateProject, archiveProject, cleanupArchivedProjects, addProjectMember, removeProjectMember, importGitHubRepository, regenerateApiKey } from '../services/project.service';
 import { getProjectContext, deleteProjectContext } from '../services/github-context.service';
 import type { CreateProjectRequest, ImportGitHubRequest } from '@mockia/shared';
 
@@ -348,6 +348,37 @@ export const deleteProjectContextHandler = asyncHandler(
     res.status(200).json({
       success: true,
       data: context,
+      timestamp: new Date().toISOString(),
+    });
+  }
+);
+
+/**
+ * POST /api/projects/:id/regenerate-api-key
+ * Regenerates the API Key for a project
+ * Only project owners and editors can regenerate
+ * 
+ * @param req - Authenticated request with user info and params
+ * @param res - Express response
+ * @returns 200 with new API key
+ * @throws 401 if not authenticated
+ * @throws 403 if user is not the project owner
+ * @throws 404 if project not found or no context exists
+ */
+
+export const regenerateApiKeyHandler = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new Error('User ID not found in request');
+    }
+
+    const { id } = req.params;
+    const project = await regenerateApiKey(id, userId);
+
+    res.status(200).json({
+      success: true,
+      data: project,
       timestamp: new Date().toISOString(),
     });
   }
