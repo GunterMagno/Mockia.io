@@ -1,12 +1,15 @@
 node_modules
-npm-debug.log
+**/node_modules
 dist
+**/dist
 build
+**/build
 .DS_Store
 .env
-.env.local
+.env.*
+!.env.example
 .git
-.gitignore
+.github
 .vscode
 .idea
 *.swp
@@ -15,3 +18,5 @@ build
 coverage
 tmp
 temp
+docker-compose*.yml
+README.md

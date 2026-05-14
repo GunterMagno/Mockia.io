@@ -109,7 +109,7 @@ describe('Auth - Login (POST /api/auth/login)', () => {
     expect(response.body.error).toHaveProperty('code', 'VALIDATION_ERROR');
   });
 
-  it('should return 400 with invalid email format', async () => {
+  it('should return 401 with non-existent email/username format', async () => {
     const response = await request(app)
       .post('/api/auth/login')
       .set('Content-Type', 'application/json')
@@ -118,8 +118,8 @@ describe('Auth - Login (POST /api/auth/login)', () => {
         password: 'testpassword123',
       });
 
-    expect(response.status).toBe(400);
-    expect(response.body.error).toHaveProperty('code', 'VALIDATION_ERROR');
+    expect(response.status).toBe(401);
+    expect(response.body.error).toHaveProperty('code', 'UNAUTHORIZED');
   });
 
   it('should return tokens that are valid JWTs', async () => {

@@ -1,0 +1,43 @@
+.wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.bellBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: var(--spacing-1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  transition: transform var(--transition-fast);
+
+  &:hover {
+    transform: scale(1.1);
+  }
+}
+
+.badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background-color: var(--tertiary-light);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: bold;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border: 2px solid var(--secondary-light-disabled);
+}
+
+.hasUnread {
+  color: var(--tertiary-light);
+}

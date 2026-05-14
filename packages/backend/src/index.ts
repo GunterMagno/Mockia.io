@@ -14,6 +14,7 @@ import mountMockDocsRoutes from './modules/mock/mock.docs.routes';
 import { mockRouter as catchAllMockRouter } from './modules/mock/mockRouter';
 import { endpointsRouter } from './routes/endpoints.routes';
 import aiRouter from './routes/ai.routes';
+import notificationRouter from './routes/notification.routes';
 import { startProjectCleanupScheduler } from './scheduler/projectCleanup';
 
 dotenv.config();
@@ -117,8 +118,8 @@ app.all('/mock/:projectSlug/*', catchAllMockRouter);
 // AI generation routes (protected)
 app.use('/api/ai', aiRouter);
 
-// TODO: Add more application routes here
-// etc.
+// Notification routes (protected)
+app.use('/api/notifications', notificationRouter);
 
 
 // ============================================================================

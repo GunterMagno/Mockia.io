@@ -14,3 +14,4 @@ export * from './project';
 export * from './github';
 export * from './sample-data';
 export * from './route-resolution';
+export * from './notification';

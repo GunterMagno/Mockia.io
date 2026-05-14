@@ -1,101 +1,153 @@
-/**
- * OpenRouter Service - Unit Tests
- * Tests for exponential backoff and retry logic
- */
+import axios from 'axios';
+import { 
+  sleep, 
+  calculateBackoffDelay, 
+  callOpenRouterWithRetry, 
+  generateWithOpenRouter 
+} from '../services/openRouter.service';
+import * as aiConfig from '../config/ai';
+import { AppError } from '../middlewares/errorHandler';
 
-import { calculateBackoffDelay, sleep } from '../services/openRouter.service';
+jest.mock('axios');
+const mockedAxios = axios as jest.Mocked<typeof axios>;
 
-// These are helper functions tested implicitly through integration tests
-// Here we document the expected behavior
+describe('OpenRouter Service', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.spyOn(aiConfig, 'getOpenRouterApiKey').mockReturnValue('test-key');
+    jest.spyOn(aiConfig, 'getOpenRouterModel').mockReturnValue('test-model');
+    jest.spyOn(aiConfig, 'getOpenRouterBaseUrl').mockReturnValue('https://api.test');
+    // Speed up tests by mocking sleep
+    jest.spyOn(global, 'setTimeout').mockImplementation((cb: any) => cb());
+  });
 
-/**
- * Test case 1: Exponential backoff calculation
- * Expected exponential growth with jitter
- */
-function testBackoffCalculation() {
-  console.log('🧪 Test 1: Exponential backoff calculation');
+  describe('sleep', () => {
+    it('should resolve after timeout', async () => {
+      const promise = sleep(10);
+      await expect(promise).resolves.toBeUndefined();
+    });
+  });
 
-  const baseDelay = 1000;
-  const maxDelay = 30000;
+  describe('calculateBackoffDelay', () => {
+    it('should increase delay exponentially', () => {
+      const base = 1000;
+      const max = 30000;
+      
+      const delay0 = calculateBackoffDelay(0, base, max);
+      const delay1 = calculateBackoffDelay(1, base, max);
+      const delay2 = calculateBackoffDelay(2, base, max);
+      
+      expect(delay0).toBeGreaterThanOrEqual(1000);
+      expect(delay1).toBeGreaterThanOrEqual(2000);
+      expect(delay2).toBeGreaterThanOrEqual(4000);
+    });
 
-  // Attempt 0: 1000ms base
-  const delay0 = calculateBackoffDelay(0, baseDelay, maxDelay);
-  console.log(`  Attempt 0: ${delay0.toFixed(0)}ms (expected ~1000-1200ms)`);
+    it('should cap delay at maxDelayMs', () => {
+      const delay = calculateBackoffDelay(10, 1000, 5000);
+      expect(delay).toBeLessThanOrEqual(6000); // 5000 + 20% jitter
+    });
+  });
 
-  // Attempt 1: 2000ms base
-  const delay1 = calculateBackoffDelay(1, baseDelay, maxDelay);
-  console.log(`  Attempt 1: ${delay1.toFixed(0)}ms (expected ~2000-2400ms)`);
+  describe('callOpenRouterWithRetry', () => {
+    const mockMessages = [{ role: 'user', content: 'hello' }] as any;
 
-  // Attempt 2: 4000ms base
-  const delay2 = calculateBackoffDelay(2, baseDelay, maxDelay);
-  console.log(`  Attempt 2: ${delay2.toFixed(0)}ms (expected ~4000-4800ms)`);
+    it('should return data on successful first attempt', async () => {
+      mockedAxios.post.mockResolvedValueOnce({ data: { id: '123', choices: [] } });
 
-  // Attempt 5: Should cap at maxDelay
-  const delay5 = calculateBackoffDelay(5, baseDelay, maxDelay);
-  console.log(`  Attempt 5: ${delay5.toFixed(0)}ms (expected ~30000-36000ms, capped)`);
-}
+      const result = await callOpenRouterWithRetry(mockMessages);
 
-/**
- * Test case 2: Sleep function
- * Verify timeout works as expected
- */
-async function testSleepFunction() {
-  console.log('\n🧪 Test 2: Sleep function');
+      expect(result).toEqual({ id: '123', choices: [] });
+      expect(mockedAxios.post).toHaveBeenCalledTimes(1);
+    });
 
-  const startTime = Date.now();
-  await sleep(100);
-  const elapsed = Date.now() - startTime;
+    it('should retry on 429 error and eventually succeed', async () => {
+      const error429 = { response: { status: 429 } };
+      mockedAxios.isAxiosError.mockReturnValue(true);
+      mockedAxios.post
+        .mockRejectedValueOnce(error429)
+        .mockResolvedValueOnce({ data: { id: 'success' } });
 
-  console.log(`  Sleep(100ms): ${elapsed}ms elapsed (expected ~100ms)`);
-}
+      const result = await callOpenRouterWithRetry(mockMessages);
 
-/**
- * Test case 3: Retry logic simulation
- * Shows expected behavior with retries
- */
-async function testRetrySimulation() {
-  console.log('\n🧪 Test 3: Retry simulation (3 attempts)');
+      expect(result).toEqual({ id: 'success' });
+      expect(mockedAxios.post).toHaveBeenCalledTimes(2);
+    });
 
-  const maxRetries = 3;
-  let attempts = 0;
+    it('should throw AppError if max retries reached', async () => {
+      const error503 = { response: { status: 503 }, message: 'Unavailable' };
+      mockedAxios.isAxiosError.mockReturnValue(true);
+      mockedAxios.post.mockRejectedValue(error503);
 
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    attempts++;
-    console.log(`  Attempt ${attempt + 1}/${maxRetries}`);
+      await expect(callOpenRouterWithRetry(mockMessages)).rejects.toThrow(AppError);
+      // Default maxRetries is 3
+      expect(mockedAxios.post).toHaveBeenCalledTimes(3);
+    });
 
-    // Simulate 60% chance of 429 error on first two attempts
-    const shouldFail = attempt < 2 && Math.random() < 0.6;
+    it('should handle token limit error by reducing max_tokens', async () => {
+      const tokenError = { 
+        response: { 
+          status: 400, 
+          data: { error: { message: 'requires more credits, or fewer max_tokens. can only afford 500' } } 
+        } 
+      };
+      mockedAxios.isAxiosError.mockReturnValue(true);
+      mockedAxios.post
+        .mockRejectedValueOnce(tokenError)
+        .mockResolvedValueOnce({ data: { id: 'success' } });
 
-    if (shouldFail) {
-      console.log(`    ✗ Got 429 Rate Limited`);
-      const delay = calculateBackoffDelay(attempt, 1000, 30000);
-      console.log(`    ⏳ Waiting ${delay.toFixed(0)}ms before retry...`);
-      // Don't actually wait in test
-    } else {
-      console.log(`    ✓ Success!`);
-      break;
-    }
-  }
+      const result = await callOpenRouterWithRetry(mockMessages, { max_tokens: 1000 });
 
-  console.log(`  Total attempts: ${attempts}`);
-}
+      expect(result).toEqual({ id: 'success' });
+      // Verify second call used reduced tokens
+      expect(mockedAxios.post).toHaveBeenNthCalledWith(
+        2,
+        expect.any(String),
+        expect.objectContaining({ max_tokens: 500 }),
+        expect.any(Object)
+      );
+    });
 
-/**
- * Run all tests
- */
-export async function runOpenRouterTests() {
-  console.log('\n╔════════════════════════════════════════════════════════╗');
-  console.log('║ OpenRouter Service Tests                               ║');
-  console.log('╚════════════════════════════════════════════════════════╝\n');
+    it('should throw immediately on non-retryable error', async () => {
+      const error400 = { response: { status: 400, data: { error: { message: 'Bad request' } } } };
+      mockedAxios.isAxiosError.mockReturnValue(true);
+      mockedAxios.post.mockRejectedValue(error400);
 
-  testBackoffCalculation();
-  await testSleepFunction();
-  await testRetrySimulation();
+      await expect(callOpenRouterWithRetry(mockMessages)).rejects.toThrow('OpenRouter API error: Bad request');
+      expect(mockedAxios.post).toHaveBeenCalledTimes(1);
+    });
 
-  console.log('\n✓ All tests completed\n');
-}
+    it('should throw authentication error on 401', async () => {
+      const error401 = { response: { status: 401 } };
+      mockedAxios.isAxiosError.mockReturnValue(true);
+      mockedAxios.post.mockRejectedValue(error401);
 
-// Run tests if executed directly
-if (require.main === module) {
-  runOpenRouterTests().catch(console.error);
-}
+      await expect(callOpenRouterWithRetry(mockMessages)).rejects.toThrow('OpenRouter API authentication failed');
+    });
+
+    it('should handle generic non-axios errors', async () => {
+      mockedAxios.isAxiosError.mockReturnValue(false);
+      mockedAxios.post.mockRejectedValue(new Error('Fatal'));
+
+      await expect(callOpenRouterWithRetry(mockMessages)).rejects.toThrow('OpenRouter API error: Fatal');
+    });
+  });
+
+  describe('generateWithOpenRouter', () => {
+    it('should extract content from the first choice', async () => {
+      const mockResponse = {
+        choices: [{ message: { content: 'Generated text' } }]
+      };
+      mockedAxios.post.mockResolvedValueOnce({ data: mockResponse });
+
+      const result = await generateWithOpenRouter('system prompt', 'user message');
+
+      expect(result).toBe('Generated text');
+    });
+
+    it('should throw error if no choices returned', async () => {
+      mockedAxios.post.mockResolvedValueOnce({ data: { choices: [] } });
+
+      await expect(generateWithOpenRouter('s', 'u')).rejects.toThrow('No response received');
+    });
+  });
+});

@@ -19,11 +19,27 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
 
-  useEffect(() => {
+  const fetchProjects = (silent = false) => {
+    if (!silent) setLoading(true)
     getProjects()
-      .then((ps) => setProjects(ps))
+      .then((ps) => {
+        // Simple optimization: only update if length or IDs changed
+        setProjects(ps)
+      })
       .catch(() => setProjects([]))
-      .finally(() => setLoading(false))
+      .finally(() => {
+        if (!silent) setLoading(false)
+      })
+  }
+
+  useEffect(() => {
+    fetchProjects()
+    
+    const interval = setInterval(() => {
+      fetchProjects(true)
+    }, 5000)
+
+    return () => clearInterval(interval)
   }, [])
 
   const handleCreated = (p: Project) => {

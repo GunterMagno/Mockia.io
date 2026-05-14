@@ -65,7 +65,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
           logout()
         })
     }
-  }, [/* run once */ user])
+  }, []) // Run once on mount if token exists
 
   const login = async (credentials: Credentials) => {
     // Call backend login via API client

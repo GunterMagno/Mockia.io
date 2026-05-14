@@ -5,7 +5,7 @@ services:
     runtime: docker
     plan: free
     dockerContext: .
-    dockerfilePath: ./Dockerfile
+    dockerfilePath: packages/backend/Dockerfile.prod
     envVars:
       - key: NODE_ENV
         value: production

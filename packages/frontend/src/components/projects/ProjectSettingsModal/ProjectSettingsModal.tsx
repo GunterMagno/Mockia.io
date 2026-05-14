@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react'
-import { Modal } from '../ui/Modal/Modal'
-import { Icon } from '../ui/Icon/Icon'
-import { updateProject, archiveProject, addProjectMember, removeProjectMember, regenerateApiKey } from '../../services/projectService'
+import { Modal } from '../../ui/Modal/Modal'
+import { Icon } from '../../ui/Icon/Icon'
+import { updateProject, archiveProject, addProjectMember, removeProjectMember, regenerateApiKey } from '../../../services/projectService'
 import type { Project } from '@mockia/shared'
 import styles from './ProjectSettingsModal.module.scss'
-import warningIcon from '../../assets/warning.svg'
-import copyIcon from '../../assets/copy.svg'
-import checkIcon from '../../assets/check.svg'
+import warningIcon from '../../../assets/warning.svg'
+import copyIcon from '../../../assets/copy.svg'
+import checkIcon from '../../../assets/check.svg'
+import { playErrorSound } from '../../../utils/audio'
 
 type Props = {
   isOpen: boolean
@@ -58,6 +59,7 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
       onClose()
     } catch (err: any) {
       setError('Failed to update project')
+      playErrorSound()
     } finally {
       setLoading(false)
     }
@@ -79,6 +81,7 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
       onClose()
     } catch (err: any) {
       setError('Failed to delete project')
+      playErrorSound()
     } finally {
       setLoading(false)
       setShowConfirmDelete(false)
@@ -95,6 +98,7 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
       setInviteEmail('')
     } catch (err: any) {
       setError('Failed to invite member. Make sure the user exists.')
+      playErrorSound()
     } finally {
       setLoading(false)
     }
@@ -107,15 +111,13 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
       onUpdate(updated)
     } catch (err: any) {
       setError('Failed to remove member')
+      playErrorSound()
     } finally {
       setLoading(false)
     }
   }
 
   const handleRegenerateKey = async () => {
-    if (!window.confirm("Are you sure? This will invalidate the current API Key and break any connected frontends.")) {
-      return
-    }
     setIsRegenerating(true)
     setError('')
     try {
@@ -123,6 +125,7 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
       onUpdate(updated)
     } catch (err: any) {
       setError('Failed to regenerate API Key')
+      playErrorSound()
     } finally {
       setIsRegenerating(false)
     }
@@ -170,10 +173,10 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
               </div>
               <div className={styles.formGroup}>
                 <label>Description</label>
-                <textarea 
+                <input 
                   value={description} 
                   onChange={e => setDescription(e.target.value)} 
-                  className={styles.textarea}
+                  className={styles.input}
                   placeholder="What is this project about?"
                   disabled={isViewer}
                 />

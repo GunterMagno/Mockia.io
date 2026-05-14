@@ -66,6 +66,7 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       VITE_API_URL: /api
+      VITE_BACKEND_URL: http://mockia-backend:3000
     volumes:
       - ./packages/frontend/src:/app/src
       - ./packages/frontend/package.json:/app/package.json

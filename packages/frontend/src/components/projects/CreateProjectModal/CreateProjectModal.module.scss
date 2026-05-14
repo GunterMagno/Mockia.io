@@ -248,3 +248,135 @@
   flex-direction: column;
   gap: var(--spacing-6);
 }
+
+.successContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--spacing-6);
+  width: 100%;
+  max-width: 650px;
+  margin: 0 auto;
+}
+
+.successBadge {
+  width: 80px;
+  height: 80px;
+  background: var(--support-01);
+  color: white;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  margin: 0 auto var(--spacing-4);
+  box-shadow: 0 0 20px rgba(0, 201, 167, 0.3);
+  animation: badgePop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes badgePop {
+  from { transform: scale(0.5); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.connectionCard {
+  background: var(--glass-bg);
+  border: 1px solid var(--sidebar-border-color);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-6);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-6);
+}
+
+.infoGroup {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+
+  label {
+    font-size: var(--text-sm);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+  }
+}
+
+.copyBox {
+  display: flex;
+  gap: var(--spacing-2);
+  background: var(--sidebar-item-active);
+  padding: var(--spacing-2) var(--spacing-2) var(--spacing-2) var(--spacing-4);
+  border-radius: var(--radius-lg);
+  align-items: center;
+  border: 1px solid var(--sidebar-border-color);
+
+  code {
+    flex: 1;
+    font-family: monospace;
+    font-size: var(--text-sm);
+    word-break: break-all;
+    color: var(--primary-dark);
+  }
+
+  button {
+    background: var(--primary-light);
+    color: white;
+    border: none;
+    padding: var(--spacing-2) var(--spacing-4);
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    cursor: pointer;
+    font-size: var(--text-xs);
+    transition: all var(--transition-fast);
+
+    &:hover {
+      background: var(--primary-dark);
+    }
+
+    &.copied {
+      background: var(--support-01);
+    }
+  }
+}
+
+.instructionNote {
+  display: flex;
+  gap: var(--spacing-4);
+  background: rgba(255, 193, 7, 0.1);
+  padding: var(--spacing-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  text-align: left;
+  align-items: flex-start;
+
+  .noteIcon {
+    background: #ffc107;
+    color: #000;
+    width: 24px;
+    height: 24px;
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    flex-shrink: 0;
+  }
+
+  .noteText {
+    font-size: var(--text-sm);
+    line-height: 1.5;
+    
+    code {
+      background: rgba(0,0,0,0.1);
+      padding: 2px 4px;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+  }
+}
+

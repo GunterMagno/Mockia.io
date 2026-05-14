@@ -1,0 +1,70 @@
+services:
+  # MongoDB Database
+  mongo:
+    image: mongo:7.0
+    container_name: mockia-mongo-prod
+    restart: unless-stopped
+    ports:
+      - '27017:27017'
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:-root}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-password}
+    volumes:
+      - mongo_data_prod:/data/db
+      - mongo_config_prod:/data/configdb
+    networks:
+      - mockia-network-prod
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API Server
+  backend:
+    build:
+      context: .
+      dockerfile: packages/backend/Dockerfile.prod
+    container_name: mockia-backend-prod
+    restart: unless-stopped
+    expose:
+      - "3000" # Expose only internally, Nginx will proxy it
+    environment:
+      NODE_ENV: production
+      BACKEND_PORT: 3000
+      BACKEND_HOST: 0.0.0.0
+      MONGODB_URI: mongodb://${MONGO_INITDB_ROOT_USERNAME:-root}:${MONGO_INITDB_ROOT_PASSWORD:-password}@mongo:27017/mockia?authSource=admin
+      JWT_SECRET: ${JWT_SECRET:-production_secret_key_change_me}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-production_access_key}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-production_refresh_key}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      CORS_ORIGIN: '*'
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks:
+      - mockia-network-prod
+
+  # Frontend Static Server + Reverse Proxy (Nginx)
+  frontend:
+    build:
+      context: .
+      dockerfile: packages/frontend/Dockerfile.prod
+    container_name: mockia-frontend-prod
+    restart: unless-stopped
+    ports:
+      - '80:80'
+    depends_on:
+      - backend
+    networks:
+      - mockia-network-prod
+
+volumes:
+  mongo_data_prod:
+    driver: local
+  mongo_config_prod:
+    driver: local
+
+networks:
+  mockia-network-prod:
+    driver: bridge

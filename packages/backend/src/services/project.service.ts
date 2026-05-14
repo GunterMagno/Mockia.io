@@ -8,6 +8,8 @@ import type { Project as ProjectDTO, CreateProjectRequest, ImportGitHubRequest, 
 import { ProjectRoleEnum } from '../models/Project';
 import { parseGitHubUrl } from './github.service';
 import { importAndAnalyzeRepository } from './github-context.service';
+import { createNotification } from './notification.service';
+import { NotificationType } from '@mockia/shared';
 
 /**
  * Maps a MongoDB ProjectDocument to a ProjectDTO
@@ -320,9 +322,17 @@ export async function updateProject(
       );
     }
 
+    // Get the changer's username
+    const changer = await UserModel.findById(userId);
+    const changerName = changer ? changer.username : 'A collaborator';
+
+    const oldTitle = project.title;
+    const oldDescription = project.description;
+
     // Validate update data
     if (updateData.title !== undefined) {
-      if (!updateData.title || updateData.title.trim().length === 0) {
+      const trimmedTitle = updateData.title.trim();
+      if (!trimmedTitle) {
         throw new AppError(
           'Project title is required',
           ErrorCode.VALIDATION_ERROR,
@@ -330,7 +340,7 @@ export async function updateProject(
         );
       }
 
-      if (updateData.title.length > 100) {
+      if (trimmedTitle.length > 100) {
         throw new AppError(
           'Project title cannot exceed 100 characters',
           ErrorCode.VALIDATION_ERROR,
@@ -339,26 +349,67 @@ export async function updateProject(
       }
 
       // If title changed, regenerate slug
-      if (updateData.title !== project.title) {
-        project.slug = await generateUniqueSlug(updateData.title);
-        project.title = updateData.title;
+      if (trimmedTitle !== project.title) {
+        project.slug = await generateUniqueSlug(trimmedTitle);
+        project.title = trimmedTitle;
       }
     }
 
     if (updateData.description !== undefined) {
-      if (updateData.description && updateData.description.length > 500) {
+      const trimmedDesc = updateData.description.trim();
+      if (trimmedDesc.length > 500) {
         throw new AppError(
           'Project description cannot exceed 500 characters',
           ErrorCode.VALIDATION_ERROR,
           400
         );
       }
-      project.description = updateData.description;
+      
+      // Treat empty string same as null/undefined for comparison
+      const currentDesc = project.description || '';
+      if (trimmedDesc !== currentDesc) {
+        project.description = trimmedDesc || undefined;
+      }
     }
+
+    const titleChanged = updateData.title !== undefined && updateData.title.trim() !== oldTitle;
+    const descriptionChanged = updateData.description !== undefined && updateData.description.trim() !== (oldDescription || '');
 
     // Save and return
     const savedProject = await project.save();
     await savedProject.populate('members.userId');
+
+    // Notify other members about the update (except the one who did it)
+    if (titleChanged || descriptionChanged) {
+      for (const member of savedProject.members) {
+        const mId = (member.userId as any)._id ? (member.userId as any)._id.toString() : member.userId.toString();
+        if (mId !== userId) {
+          let title = 'Project Updated';
+          let message = '';
+
+          if (titleChanged && descriptionChanged) {
+            title = 'Project Details Updated';
+            message = `The project "${oldTitle}" has been renamed to "${project.title}" and its description was updated by ${changerName}.`;
+          } else if (titleChanged) {
+            title = 'Project Renamed';
+            message = `The project "${oldTitle}" has been renamed to "${project.title}" by ${changerName}.`;
+          } else if (descriptionChanged) {
+            title = 'Description Updated';
+            message = `${changerName} has updated the description of project "${project.title}".`;
+          }
+
+          await createNotification({
+            userId: mId,
+            type: NotificationType.PROJECT_UPDATE,
+            title,
+            message,
+            link: `/editor/${project.slug}`,
+            projectId: project._id.toString()
+          }).catch(err => console.error('Failed to send update notification:', err));
+        }
+      }
+    }
+
     return mapProjectToDTO(savedProject);
   } catch (error) {
     // If it's already an AppError, rethrow it
@@ -580,6 +631,17 @@ export async function addProjectMember(
     await project.save();
 
     const updatedProject = await resolveProject(project._id.toString());
+
+    // Send notification to the invited user
+    await createNotification({
+      userId: targetUser._id.toString(),
+      type: NotificationType.PROJECT_INVITE,
+      title: 'Project Invitation',
+      message: `You have been invited to collaborate on "${project.title}" as ${role}.`,
+      link: `/editor/${project.slug}`,
+      projectId: project._id.toString()
+    }).catch(err => console.error('Failed to send invite notification:', err));
+
     return mapProjectToDTO(updatedProject!);
   } catch (error) {
     if (error instanceof AppError) {
@@ -673,6 +735,17 @@ export async function removeProjectMember(
     await project.save();
 
     const updatedProject = await resolveProject(project._id.toString());
+
+    // Send notification to the removed user
+    await createNotification({
+      userId: targetUserId,
+      type: NotificationType.PROJECT_REMOVAL,
+      title: 'Project Removal',
+      message: `You have been removed from the project "${project.title}".`,
+      link: '/dashboard',
+      projectId: project._id.toString()
+    }).catch(err => console.error('Failed to send removal notification:', err));
+
     return mapProjectToDTO(updatedProject!);
   } catch (error) {
     if (error instanceof AppError) {
@@ -800,12 +873,42 @@ export async function regenerateApiKey(
       );
     }
 
-    // Generate and save new API Key
-    project.apiKey = crypto.randomBytes(24).toString('hex');
-    await project.save();
+    // Get the changer's username
+    const changer = await UserModel.findById(userId);
+    const changerName = changer ? changer.username : 'A collaborator';
 
-    const updatedProject = await resolveProject(project._id.toString());
-    return mapProjectToDTO(updatedProject!);
+    // Generate and save new API Key using findOneAndUpdate for atomicity and to avoid populate issues
+    const newApiKey = crypto.randomBytes(24).toString('hex');
+    
+    const updatedProject = await ProjectModel.findByIdAndUpdate(
+      projectId,
+      { $set: { apiKey: newApiKey } },
+      { new: true }
+    ).populate({
+      path: 'members.userId',
+      model: 'User'
+    });
+
+    if (!updatedProject) {
+      throw new AppError('Failed to retrieve updated project', ErrorCode.INTERNAL_SERVER_ERROR, 500);
+    }
+
+    // Notify other members about API key regeneration
+    for (const member of updatedProject.members) {
+      const mId = (member.userId as any)._id ? (member.userId as any)._id.toString() : member.userId.toString();
+      if (mId !== userId) {
+        await createNotification({
+          userId: mId,
+          type: NotificationType.PROJECT_REMOVAL, // Warning icon
+          title: 'Security: API Key Regenerated',
+          message: `${changerName} has regenerated the API Key for project "${updatedProject.title}". Update your client integrations.`,
+          link: `/editor/${updatedProject.slug}`,
+          projectId: updatedProject._id.toString()
+        }).catch(err => console.error('Failed to send API Key notification:', err));
+      }
+    }
+
+    return mapProjectToDTO(updatedProject);
   } catch (error) {
     if (error instanceof AppError) throw error;
     console.error('Error regenerating API Key:', error);

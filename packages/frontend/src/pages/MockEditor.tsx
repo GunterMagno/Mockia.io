@@ -39,12 +39,13 @@ const MockEditor: React.FC = () => {
 
   // AI Generation State
   const [showAiModal, setShowAiModal] = useState(false)
+  const [copiedUrl, setCopiedUrl] = useState(false)
+  const [copiedKey, setCopiedKey] = useState(false)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [aiRequirement, setAiRequirement] = useState('')
   const [isAiGenerating, setIsAiGenerating] = useState(false)
   const [aiStatusMessage, setAiStatusMessage] = useState('')
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
-  const [copiedUrl, setCopiedUrl] = useState(false)
   const [endpointToDelete, setEndpointToDelete] = useState<string | null>(null)
 
   // Get current user ID from token
@@ -67,8 +68,26 @@ const MockEditor: React.FC = () => {
     if (id) {
       getEndpoints(id)
         .then(data => {
-          // Only update if data is different to avoid flickering (simplified check)
           setEndpoints(data)
+          
+          // If we have an active endpoint and it's NOT dirty, update it if server version changed
+          if (activeEndpoint && !isDirty && !isSaving) {
+            const serverEp = data.find(e => e.id === activeEndpoint.id)
+            if (serverEp) {
+              const serverSchema = serverEp.responses?.[0]?.schema || {}
+              const activeSchema = activeEndpoint.responses?.[0]?.schema || {}
+              
+              const serverJson = JSON.stringify(serverSchema, null, 2)
+              const currentJson = JSON.stringify(activeSchema, null, 2)
+              
+              if (serverJson !== currentJson || serverEp.path !== activeEndpoint.path || serverEp.method !== activeEndpoint.method) {
+                console.log("Syncing active endpoint with server changes...")
+                setActiveEndpoint(serverEp)
+                setJsonContent(serverJson)
+              }
+            }
+          }
+
           if (data.length > 0 && !selectedId && !silent) {
             handleSelectEndpoint(data[0])
           }
@@ -80,14 +99,22 @@ const MockEditor: React.FC = () => {
   // Polling for real-time updates
   useEffect(() => {
     const interval = setInterval(() => {
-      // ONLY refresh if user is NOT editing anything to avoid losing state
+      // Refresh project to check for membership/access changes
+      if (id) {
+        getProjectById(id).catch(err => {
+          console.error("Access lost or project deleted:", err);
+          navigate('/dashboard');
+        });
+      }
+
+      // ONLY refresh endpoints if user is NOT editing anything to avoid losing state
       if (!isDirty && !isSaving && !isAiGenerating && !isDeleting) {
         fetchEndpoints(true)
       }
-    }, 10000) // Every 10 seconds
+    }, 2500) // Reduced to 2.5 seconds for better responsiveness
 
     return () => clearInterval(interval)
-  }, [id, isDirty, isSaving, isAiGenerating, isDeleting])
+  }, [id, isDirty, isSaving, isAiGenerating, isDeleting, activeEndpoint])
 
   // AUTO-SAVE logic
   useEffect(() => {
@@ -106,7 +133,10 @@ const MockEditor: React.FC = () => {
     if (id) {
       getProjectById(id)
         .then(setProject)
-        .catch(err => console.error("Error fetching project:", err))
+        .catch(err => {
+          console.error("Error fetching project:", err);
+          navigate('/dashboard');
+        })
     }
   }, [id])
 
@@ -211,12 +241,13 @@ const MockEditor: React.FC = () => {
   }
 
   const handleMetaChange = (updates: Partial<EndpointData>) => {
-    if (!activeEndpoint) return
+    if (!activeEndpoint || isViewer) return
     setActiveEndpoint({ ...activeEndpoint, ...updates })
     setIsDirty(true)
   }
 
   const handleJsonChange = (val: string) => {
+    if (isViewer) return
     setJsonContent(val)
     setIsDirty(true)
   }
@@ -284,6 +315,27 @@ const MockEditor: React.FC = () => {
               className={`${styles.copyBtn} ${copiedUrl ? styles.copied : ''}`}
             >
               <Icon src={copiedUrl ? checkIcon : copyIcon} size={16} />
+            </Button>
+          </div>
+
+          <div className={styles.authInfo}>
+            <span className={styles.authLabel}>Header:</span>
+            <code>X-Mockia-API-Key</code>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => {
+                if (project?.apiKey) {
+                  navigator.clipboard.writeText(project.apiKey);
+                  setCopiedKey(true);
+                  setTimeout(() => setCopiedKey(false), 2000);
+                }
+              }}
+              title="Copy API Key"
+              className={`${styles.copyBtn} ${copiedKey ? styles.copied : ''}`}
+            >
+              <Icon src={copiedKey ? checkIcon : copyIcon} size={16} />
+              {copiedKey ? 'Key Copied!' : 'Copy Key'}
             </Button>
           </div>
           {isDirty && <span className={styles.unsaved}>• Unsaved changes</span>}

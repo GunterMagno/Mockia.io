@@ -1,24 +1,22 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import styles from './Header.module.scss';
 import { Icon } from '../Icon/Icon';
 import userIcon from '../../../assets/user.svg';
-import bellIcon from '../../../assets/bell.svg';
-import ProfileModal from '../../projects/ProfileModal';
+import ProfileModal from '../../projects/ProfileModal/ProfileModal';
+import NotificationBell from '../../notifications/NotificationBell/NotificationBell';
 
 const Header: React.FC = () => {
   const location = useLocation();
   const path = location.pathname;
   
-  const [isProfileOpen, setIsProfileOpen] = React.useState(false);
-
   // Determine variant based on path
   const isLanding = path === '/';
   const isAuthPage = path === '/login' || path === '/signup';
-  const isProjectPage = path.startsWith('/editor/');
 
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
-  // Type 4: Minimal (Logo only)
+  // 1. Auth Pages Header: Minimal design (Logo only) for Login and Signup
   if (isAuthPage) {
     return (
       <header className={styles.header}>
@@ -27,7 +25,7 @@ const Header: React.FC = () => {
     );
   }
 
-  // Type 3: Landing (Logo, Links, Buttons)
+  // 2. Landing Page Header: Full marketing navigation and auth buttons
   if (isLanding) {
     return (
       <header className={styles.header}>
@@ -47,32 +45,12 @@ const Header: React.FC = () => {
     );
   }
 
-  // Type 2: Project (Logo, Title, Bell, User)
-  if (isProjectPage) {
-    return (
-      <header className={styles.header}>
-        <Link to="/dashboard" className={styles.logo}>Mockia.io</Link>
-        <div className={styles.rightContent}>
-          <button className={styles.iconButton} title="Notifications">
-            <Icon src={bellIcon} />
-          </button>
-          <button className={styles.iconButton} onClick={() => setIsProfileOpen(true)} title="Profile">
-            <Icon src={userIcon} />
-          </button>
-        </div>
-        <ProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
-      </header>
-    );
-  }
-
-  // Type 1: Authenticated (Logo, Bell, User)
+  // 3. Main App Header: Dashboard & Editor view with Notifications and Profile
   return (
     <header className={styles.header}>
       <Link to="/dashboard" className={styles.logo}>Mockia.io</Link>
       <div className={styles.rightContent}>
-        <button className={styles.iconButton} title="Notifications">
-          <Icon src={bellIcon} />
-        </button>
+        <NotificationBell />
         <button className={styles.iconButton} onClick={() => setIsProfileOpen(true)} title="Profile">
           <Icon src={userIcon} />
         </button>

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react'
-import { Modal } from '../ui/Modal/Modal'
-import { getProfile, updateProfile, changePassword } from '../../services/userService'
-import { useAuth } from '../../contexts/AuthContext'
+import { Modal } from '../../ui/Modal/Modal'
+import { getProfile, updateProfile, changePassword } from '../../../services/userService'
+import { useAuth } from '../../../contexts/AuthContext'
 import styles from './ProfileModal.module.scss'
+import { playErrorSound } from '../../../utils/audio'
 
 type Props = {
   isOpen: boolean
@@ -52,6 +53,7 @@ const ProfileModal: React.FC<Props> = ({ isOpen, onClose }) => {
       }, 1500)
     } catch (err: any) {
       setStatus({ type: 'error', message: err?.response?.data?.message || 'Failed to update profile. Check current password.' })
+      playErrorSound()
     } finally {
       setLoading(false)
     }

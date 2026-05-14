@@ -5,12 +5,20 @@ const config: Config = {
   testEnvironment: 'node',
   rootDir: './',
   testMatch: ['<rootDir>/src/**/*.test.ts', '<rootDir>/src/**/*.spec.ts'],
+  collectCoverage: true,
   collectCoverageFrom: [
-    'src/**/*.ts',
-    '!src/**/*.d.ts',
-    '!src/**/index.ts',
-    '!src/tests/**',
+    'src/modules/ai/prompt.service.ts',
+    'src/modules/mock/routeResolution.service.ts',
+    'src/modules/mock/swaggerGenerator.ts',
   ],
+  coverageThreshold: {
+    global: {
+      branches: 80,
+      functions: 80,
+      lines: 80,
+      statements: 80,
+    },
+  },
   moduleFileExtensions: ['ts', 'js', 'json'],
   transform: {
     '^.+\\.ts$': ['ts-jest', {

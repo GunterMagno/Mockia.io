@@ -95,9 +95,14 @@ export async function verifyPassword(
 export async function loginUser(loginRequest: LoginRequest): Promise<LoginResponse> {
   const { email, password } = loginRequest;
 
-  // 1. Find user by email (case-insensitive)
+  // 1. Find user by email or username (case-insensitive)
   const identifier = email.toLowerCase();
-  const user = await UserModel.findOne({ email: identifier });
+  const user = await UserModel.findOne({
+    $or: [
+      { email: identifier },
+      { username: identifier }
+    ]
+  });
 
   if (!user) {
     throw new AppError(

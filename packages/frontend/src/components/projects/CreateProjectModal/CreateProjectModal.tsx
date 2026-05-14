@@ -1,16 +1,17 @@
 import React, { useState } from 'react'
-import { Modal } from '../ui/Modal/Modal'
-import { createProject, importFromGitHub, hardDeleteProject } from '../../services/projectService'
-import { parseGithubUrl } from '../../services/githubService'
-import { generateAndSaveEndpoints } from '../../services/aiService'
-import { getBackendErrorMessage } from '../../utils/error'
-import type { Project } from '../../services/projectService'
+import { Modal } from '../../ui/Modal/Modal'
+import { createProject, importFromGitHub, hardDeleteProject } from '../../../services/projectService'
+import { parseGithubUrl } from '../../../services/githubService'
+import { generateAndSaveEndpoints } from '../../../services/aiService'
+import { getBackendErrorMessage } from '../../../utils/error'
+import type { Project } from '../../../services/projectService'
 import styles from './CreateProjectModal.module.scss'
-import { Icon } from '../ui/Icon/Icon'
-import emptyProjectIcon from '../../assets/empty-project.svg'
-import githubIcon from '../../assets/github.svg'
-import aiSparkleIcon from '../../assets/ai-sparkle.svg'
-import loaderIcon from '../../assets/loader.svg'
+import { Icon } from '../../ui/Icon/Icon'
+import emptyProjectIcon from '../../../assets/empty-project.svg'
+import githubIcon from '../../../assets/github.svg'
+import aiSparkleIcon from '../../../assets/ai-sparkle.svg'
+import loaderIcon from '../../../assets/loader.svg'
+import { playErrorSound } from '../../../utils/audio'
 
 type Props = {
   isOpen: boolean
@@ -19,7 +20,7 @@ type Props = {
 }
 
 type Mode = 'empty' | 'github'
-type Step = 'select' | 'config' | 'ai_prompt'
+type Step = 'select' | 'config' | 'ai_prompt' | 'success'
 
 const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => {
   const [step, setStep] = useState<Step>('select')
@@ -40,6 +41,9 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
   const [validating, setValidating] = useState(false)
   const [statusMessage, setStatusMessage] = useState('')
   const [error, setError] = useState('')
+  const [createdProject, setCreatedProject] = useState<Project | null>(null)
+  const [copiedUrl, setCopiedUrl] = useState(false)
+  const [copiedKey, setCopiedKey] = useState(false)
 
   const reset = () => {
     setStep('select')
@@ -53,6 +57,9 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
     setValidating(false)
     setStatusMessage('')
     setError('')
+    setCreatedProject(null)
+    setCopiedUrl(false)
+    setCopiedKey(false)
   }
 
   const closeAndReset = () => {
@@ -84,6 +91,7 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
         setShouldGenerate(true) // Ensure it's active when moving to next step
       } catch (err) {
         setError(getBackendErrorMessage(err))
+        playErrorSound()
       } finally {
         setValidating(false)
       }
@@ -146,11 +154,12 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
 
       clearInterval(interval)
       setStatusMessage('Finishing up...')
-      onCreated(proj)
-      closeAndReset()
+      setCreatedProject(proj)
+      setStep('success')
     } catch (err: any) {
       clearInterval(interval)
       setError(getBackendErrorMessage(err))
+      playErrorSound()
       setLoading(false)
     }
   }
@@ -315,6 +324,74 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
               </button>
             </div>
           </>
+        )}
+
+        {/* Step 4: Success */}
+        {step === 'success' && createdProject && (
+          <div className={styles.successContent}>
+            <header className={styles.header}>
+              <div className={styles.successBadge}>✓</div>
+              <h2>Project Ready!</h2>
+              <p>Your mock API has been created successfully.</p>
+            </header>
+
+            <div className={styles.stepContent}>
+              <div className={styles.connectionCard}>
+                <div className={styles.infoGroup}>
+                  <label>Mock Base URL</label>
+                  <div className={styles.copyBox}>
+                    <code>{window.location.origin}/api/mock/{createdProject.slug}</code>
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText(`${window.location.origin}/api/mock/${createdProject.slug}`)
+                        setCopiedUrl(true)
+                        setTimeout(() => setCopiedUrl(false), 2000)
+                      }}
+                      className={copiedUrl ? styles.copied : ''}
+                    >
+                      {copiedUrl ? 'Copied!' : 'Copy'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className={styles.infoGroup}>
+                  <label>Project API Key</label>
+                  <div className={styles.copyBox}>
+                    <code>{createdProject.apiKey}</code>
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText(createdProject.apiKey || '')
+                        setCopiedKey(true)
+                        setTimeout(() => setCopiedKey(false), 2000)
+                      }}
+                      className={copiedKey ? styles.copied : ''}
+                    >
+                      {copiedKey ? 'Copied!' : 'Copy'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className={styles.instructionNote}>
+                  <div className={styles.noteIcon}>!</div>
+                  <div className={styles.noteText}>
+                    <strong>Important:</strong> Include the <code>X-Mockia-API-Key</code> header in your requests to authenticate.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.actions}>
+              <button 
+                className={styles.primaryBtn} 
+                onClick={() => {
+                  onCreated(createdProject)
+                  closeAndReset()
+                }}
+              >
+                Go to Editor &rarr;
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </Modal>
