@@ -37,6 +37,10 @@ export const archiveProject = async (id: string): Promise<Project> => {
   return res.data.data
 }
 
+export const hardDeleteProject = async (id: string): Promise<void> => {
+  await api.delete(`/projects/${id}/hard`)
+}
+
 export const addProjectMember = async (projectId: string, targetEmail: string, role: string): Promise<Project> => {
   const res = await api.post<{ data: Project }>(`/projects/${projectId}/members`, { targetEmail, role })
   return res.data.data

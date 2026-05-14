@@ -11,6 +11,9 @@ export default defineConfig({
     server: {
         host: '0.0.0.0',
         port: 5173,
+        watch: {
+            usePolling: true,
+        },
         proxy: {
             // Proxy API requests to the backend service within Docker network
             '/api': {

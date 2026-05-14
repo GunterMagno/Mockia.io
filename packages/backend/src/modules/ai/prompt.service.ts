@@ -239,7 +239,20 @@ export async function buildPrompt(
   // User request message
   messages.push({
     role: 'user',
-    content: `## Your Task\n\nBased EXCLUSIVELY on the actual TypeScript interfaces, routes, and data models found in the repository context provided above, generate a comprehensive mock API specification for the following requirement:\n\n${userInput}\n\nRules for EXCELLENCE:\n1. Use the EXACT property names and types from the repository's interfaces.\n2. Generate between 5 and 10 logical endpoints. Quality over quantity.\n3. Include REALISTIC MOCK DATA in the examples (e.g., actual names, realistic IDs, valid numbers) that a frontend developer can use directly.\n4. DO NOT generate generic "orders" or "products" unless they are explicitly present in the repository context.\n5. Keep response examples realistic but concise to avoid truncation.\n6. Return ONLY valid JSON. No markdown blocks.`,
+    content: `## Your Task
+
+Based EXCLUSIVELY on the actual TypeScript interfaces, routes, and data models found in the repository context provided above, generate a comprehensive mock API specification for the following requirement:
+
+${userInput}
+
+Rules for EXCELLENCE:
+1. **IDENTIFY THE CORE**: First, identify the primary purpose of the application (e.g., if it's a restaurant app, the "heart" is the menu and dishes, not just users). Prioritize endpoints for these core entities.
+2. **USE EXACT TYPES**: Use the EXACT property names and types from the repository's interfaces.
+3. **LOGICAL ENDPOINTS**: Generate between 5 and 10 logical endpoints. Quality over quantity.
+4. **REALISTIC MOCK DATA**: Include RICH, REALISTIC MOCK DATA in the examples (e.g., actual dish names like "Spaghetti Carbonara", realistic prices, valid IDs) that a frontend developer can use directly.
+5. **NO GENERIC BIAS**: DO NOT generate generic "orders" or "products" unless they are explicitly present in the repository context.
+6. **RESPONSE FIDELITY**: Ensure response examples match the schema and are realistic but concise.
+7. **JSON ONLY**: Return ONLY valid JSON. No markdown blocks.`,
   });
 
   return messages;

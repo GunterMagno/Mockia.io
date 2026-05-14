@@ -8,11 +8,12 @@ export interface EndpointTreeProps {
   selectedId: string | null
   onSelect: (id: string) => void
   onAdd?: () => void
+  onDelete?: (id: string) => void
 }
 
 import styles from './EndpointTree.module.scss'
 
-export const EndpointTree: React.FC<EndpointTreeProps> = ({ endpoints, selectedId, onSelect, onAdd }) => {
+export const EndpointTree: React.FC<EndpointTreeProps> = ({ endpoints, selectedId, onSelect, onAdd, onDelete }) => {
   return (
     <nav className={styles.nav}>
       <div className={styles.header}>
@@ -23,18 +24,32 @@ export const EndpointTree: React.FC<EndpointTreeProps> = ({ endpoints, selectedI
       {endpoints.length === 0 && <p className={styles.empty}>No endpoints found.</p>}
       
       {endpoints.map(ep => (
-        <button
-          key={ep.id}
-          onClick={() => onSelect(ep.id)}
-          className={`${styles.item} ${selectedId === ep.id ? styles.selected : ''}`}
-        >
-          <span className={`${styles.method} ${styles[ep.method.toLowerCase()] || ''}`}>
-            {ep.method.toUpperCase()}
-          </span>
-          <span className={styles.path}>
-            {ep.path}
-          </span>
-        </button>
+        <div key={ep.id} className={styles.itemWrapper}>
+          <button
+            onClick={() => onSelect(ep.id)}
+            className={`${styles.item} ${selectedId === ep.id ? styles.selected : ''}`}
+          >
+            <span className={`${styles.method} ${styles[ep.method.toLowerCase()] || ''}`}>
+              {ep.method.toUpperCase()}
+            </span>
+            <span className={styles.path}>
+              {ep.path}
+            </span>
+          </button>
+          {onDelete && (
+            <button 
+              className={styles.deleteBtn}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onDelete(ep.id);
+              }}
+              title="Delete endpoint"
+            >
+              &times;
+            </button>
+          )}
+        </div>
       ))}
     </nav>
   )

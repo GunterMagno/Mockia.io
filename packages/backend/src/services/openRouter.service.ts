@@ -77,7 +77,7 @@ export async function callOpenRouterWithRetry(
     model,
     messages,
     temperature: options?.temperature ?? 0.7,
-    max_tokens: options?.max_tokens ?? 6000,
+    max_tokens: options?.max_tokens ?? 2000,
     ...options,
   };
 
@@ -109,6 +109,26 @@ export async function callOpenRouterWithRetry(
       lastError = error as AxiosError;
 
       if (!isRetryableError(error)) {
+        // Special handling for credit/token limit errors from OpenRouter
+        if (axios.isAxiosError(error) && error.response?.data) {
+          const data = error.response.data as any;
+          const errorMessage = data?.error?.message || '';
+
+          if (errorMessage.includes('requires more credits, or fewer max_tokens')) {
+            const affordMatch = errorMessage.match(/can only afford (\d+)/);
+            if (affordMatch && affordMatch[1]) {
+              const affordableTokens = parseInt(affordMatch[1], 10);
+              console.warn(
+                `[OpenRouter] ⚠ Credit limit reached. Adjusting max_tokens to ${affordableTokens} and retrying...`
+              );
+              payload.max_tokens = affordableTokens;
+              // Reset attempt counter or just continue? 
+              // Continuing is safer to prevent infinite loops if something goes wrong.
+              continue;
+            }
+          }
+        }
+
         // Non-retryable error, throw immediately
         console.error('[OpenRouter] ✗ Non-retryable error:', error);
         throw transformOpenRouterError(error);

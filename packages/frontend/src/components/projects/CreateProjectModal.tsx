@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Modal } from '../ui/Modal/Modal'
-import { createProject, importFromGitHub } from '../../services/projectService'
+import { createProject, importFromGitHub, hardDeleteProject } from '../../services/projectService'
 import { parseGithubUrl } from '../../services/githubService'
 import { generateAndSaveEndpoints } from '../../services/aiService'
 import { getBackendErrorMessage } from '../../utils/error'
@@ -29,6 +29,7 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [repoUrl, setRepoUrl] = useState('')
+  const [githubInfo, setGithubInfo] = useState<any>(null)
   
   // AI State
   const [shouldGenerate, setShouldGenerate] = useState(true)
@@ -77,11 +78,12 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
       if (!repoUrl) return
       setValidating(true)
       try {
-        await parseGithubUrl(repoUrl)
+        const info = await parseGithubUrl(repoUrl)
+        setGithubInfo(info)
         setStep('ai_prompt')
         setShouldGenerate(true) // Ensure it's active when moving to next step
       } catch (err) {
-        setError('The GitHub URL provided is not valid. Please check the format and ensure the repository is public.')
+        setError(getBackendErrorMessage(err))
       } finally {
         setValidating(false)
       }
@@ -108,24 +110,38 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
       setStatusMessage(messages[currentIdx])
     }, 3500)
     
+    
     try {
       let proj: Project;
 
       if (mode === 'github') {
-        const info = await parseGithubUrl(repoUrl)
+        const info = githubInfo || await parseGithubUrl(repoUrl)
         proj = await createProject({ 
           title: info.repo || 'Imported Project', 
           description: `Imported from ${repoUrl}` 
         })
-        // Update project with GitHub info and analysis
-        const updatedProj = await importFromGitHub(proj.id, { repoUrl })
-        proj = updatedProj // Capture the updated version for onCreated
+        
+        try {
+          // Update project with GitHub info and analysis
+          const updatedProj = await importFromGitHub(proj.id, { repoUrl })
+          proj = updatedProj // Capture the updated version for onCreated
+        } catch (githubErr) {
+          // ROLLBACK: Delete project if GitHub import fails
+          await hardDeleteProject(proj.id);
+          throw githubErr;
+        }
       } else {
         proj = await createProject({ title, description })
       }
 
       if (shouldGenerate) {
-        await generateAndSaveEndpoints(proj.id, aiRequirement)
+        try {
+          await generateAndSaveEndpoints(proj.id, aiRequirement)
+        } catch (aiErr) {
+          // ROLLBACK: Delete project if AI generation fails
+          await hardDeleteProject(proj.id);
+          throw aiErr;
+        }
       }
 
       clearInterval(interval)

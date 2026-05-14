@@ -6,7 +6,7 @@ import JsonEditor from '../components/editor/JsonEditor'
 import EndpointInspector from '../components/editor/EndpointInspector'
 import { Button } from '../components/ui/Button/Button'
 import { Modal } from '../components/ui/Modal/Modal'
-import { getEndpoints, updateEndpoint, createEndpoint } from '../services/endpointService'
+import { getEndpoints, updateEndpoint, createEndpoint, deleteEndpoint } from '../services/endpointService'
 import { getProjectById, type Project } from '../services/projectService'
 import { generateAndSaveEndpoints } from '../services/aiService'
 import type { EndpointData } from '../services/endpointService'
@@ -35,6 +35,7 @@ const MockEditor: React.FC = () => {
   // State for changes
   const [isDirty, setIsDirty] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // AI Generation State
   const [showAiModal, setShowAiModal] = useState(false)
@@ -44,6 +45,7 @@ const MockEditor: React.FC = () => {
   const [aiStatusMessage, setAiStatusMessage] = useState('')
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [copiedUrl, setCopiedUrl] = useState(false)
+  const [endpointToDelete, setEndpointToDelete] = useState<string | null>(null)
 
   // Get current user ID from token
   useEffect(() => {
@@ -58,7 +60,7 @@ const MockEditor: React.FC = () => {
     }
   }, [])
 
-  const userRole = project?.members.find(m => String(m.userId) === String(currentUserId))?.role
+  const userRole = project?.members?.find(m => String(m.userId) === String(currentUserId))?.role
   const isViewer = userRole === 'VIEWER'
 
   const fetchEndpoints = (silent = false) => {
@@ -79,17 +81,17 @@ const MockEditor: React.FC = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       // ONLY refresh if user is NOT editing anything to avoid losing state
-      if (!isDirty && !isSaving && !isAiGenerating) {
+      if (!isDirty && !isSaving && !isAiGenerating && !isDeleting) {
         fetchEndpoints(true)
       }
     }, 10000) // Every 10 seconds
 
     return () => clearInterval(interval)
-  }, [id, isDirty, isSaving, isAiGenerating])
+  }, [id, isDirty, isSaving, isAiGenerating, isDeleting])
 
   // AUTO-SAVE logic
   useEffect(() => {
-    if (!isDirty || isSaving || isAiGenerating || isViewer) return
+    if (!isDirty || isSaving || isAiGenerating || isViewer || isDeleting) return
 
     const timer = setTimeout(() => {
       console.log("Auto-saving changes...")
@@ -97,7 +99,7 @@ const MockEditor: React.FC = () => {
     }, 1500) // Save after 1.5s of inactivity
 
     return () => clearTimeout(timer)
-  }, [activeEndpoint, jsonContent, isDirty, isSaving, isAiGenerating, isViewer])
+  }, [activeEndpoint, jsonContent, isDirty, isSaving, isAiGenerating, isViewer, isDeleting])
 
   useEffect(() => {
     fetchEndpoints()
@@ -141,6 +143,32 @@ const MockEditor: React.FC = () => {
     } catch (error) {
       console.error("Error creating endpoint:", error)
       alert("Failed to create endpoint.")
+    }
+  }
+
+  const handleDeleteEndpoint = async (endpointId: string) => {
+    if (isViewer) return
+    
+    setIsDeleting(true)
+    try {
+      await deleteEndpoint(endpointId)
+      
+      // Update local state
+      setEndpoints(prev => prev.filter(ep => ep.id !== endpointId))
+      
+      // If the deleted endpoint was selected, select another one or none
+      if (selectedId === endpointId) {
+        setSelectedId(null)
+        setActiveEndpoint(null)
+        setJsonContent('{}')
+        setIsDirty(false)
+      }
+      setEndpointToDelete(null)
+    } catch (error) {
+      console.error("Error deleting endpoint:", error)
+      alert("Failed to delete endpoint.")
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -290,6 +318,7 @@ const MockEditor: React.FC = () => {
               if (ep) handleSelectEndpoint(ep)
             }} 
             onAdd={isViewer ? undefined : handleAddEndpoint}
+            onDelete={isViewer ? undefined : (id) => setEndpointToDelete(id)}
           />
         </aside>
 
@@ -360,6 +389,21 @@ const MockEditor: React.FC = () => {
           onDelete={() => navigate('/dashboard')}
         />
       )}
+      {/* Delete Confirmation Modal */}
+      <Modal isOpen={!!endpointToDelete} onClose={() => setEndpointToDelete(null)}>
+        <div className={styles.aiModalContent}>
+          <h3>Confirm deletion</h3>
+          <p>
+            Are you sure you want to delete this endpoint? This action cannot be undone.
+          </p>
+          <div className={styles.modalActions}>
+            <Button variant="ghost" onClick={() => setEndpointToDelete(null)} disabled={isDeleting}>Cancel</Button>
+            <Button variant="danger" onClick={() => endpointToDelete && handleDeleteEndpoint(endpointToDelete)} isLoading={isDeleting} disabled={isDeleting}>
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </Layout>
   )
 }

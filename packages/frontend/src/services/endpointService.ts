@@ -27,3 +27,7 @@ export const createEndpoint = async (projectSlug: string, payload: Partial<Endpo
   const res = await api.post<{ data: EndpointData }>(`/endpoints/${projectSlug}`, payload)
   return res.data.data
 }
+
+export const deleteEndpoint = async (endpointId: string): Promise<void> => {
+  await api.delete(`/endpoints/${endpointId}`)
+}

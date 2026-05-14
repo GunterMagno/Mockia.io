@@ -269,7 +269,7 @@ export const mockProxyHandler = asyncHandler(
 
     // 5. Return the mock response
     const statusCode = targetResponse.statusCode || 200;
-    const responseData = targetResponse.examples?.[0] || targetResponse.schema || {};
+    const responseData = targetResponse.schema || targetResponse.examples?.[0] || {};
 
     res.status(statusCode).json(responseData);
   }

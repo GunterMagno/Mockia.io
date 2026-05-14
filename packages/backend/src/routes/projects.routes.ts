@@ -12,6 +12,7 @@ import {
   getProjectContextHandler,
   deleteProjectContextHandler,
   regenerateApiKeyHandler,
+  hardDeleteProjectHandler,
 } from '../controllers/projects.controller';
 import { authenticateToken } from '../middlewares/authenticateToken';
 import { authorizeRole } from '../middlewares/authorizeRole';
@@ -214,6 +215,16 @@ projectsRouter.delete(
   '/:id',
   authenticateToken,
   archiveProjectHandler
+);
+
+/**
+ * DELETE /api/projects/:id/hard
+ * Permanently deletes a project
+ */
+projectsRouter.delete(
+  '/:id/hard',
+  authenticateToken,
+  hardDeleteProjectHandler
 );
 
 /**

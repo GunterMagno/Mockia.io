@@ -444,6 +444,30 @@ export async function archiveProject(
 }
 
 /**
+ * Permanently deletes a project and its associated MockAPI
+ * Used for rollbacks when creation flow fails halfway
+ */
+export async function hardDeleteProject(projectId: string, userId: string): Promise<void> {
+  try {
+    const project = await ProjectModel.findById(projectId);
+    if (!project) return;
+
+    // Verify user is the owner
+    if (project.ownerId.toString() !== userId) {
+      throw new AppError('Only project owner can delete this project', ErrorCode.FORBIDDEN, 403);
+    }
+
+    // Delete project and MockAPI
+    await ProjectModel.findByIdAndDelete(projectId);
+    const { MockAPIModel } = await import('../models/MockAPI');
+    await MockAPIModel.deleteMany({ projectId });
+  } catch (error) {
+    console.error('Error hard deleting project:', error);
+    throw new AppError('Failed to delete project', ErrorCode.INTERNAL_SERVER_ERROR, 500);
+  }
+}
+
+/**
  * Permanently deletes projects that have been archived for more than 30 days
  * This is a maintenance task that should be run periodically (e.g., daily)
  * 

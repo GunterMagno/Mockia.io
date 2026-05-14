@@ -36,6 +36,29 @@ export const updateEndpointHandler = asyncHandler(
       return;
     }
 
+    // Check for duplicates
+    if (path || method) {
+      const targetPath = path || endpoint.path;
+      const targetMethod = method || endpoint.method;
+
+      const duplicate = await EndpointModel.findOne({
+        mockApiId: endpoint.mockApiId,
+        path: targetPath,
+        method: targetMethod,
+        _id: { $ne: id } // Exclude current endpoint
+      });
+
+      if (duplicate) {
+        res.status(400).json({ 
+          success: false, 
+          error: { 
+            message: `An endpoint with path "${targetPath}" and method "${targetMethod}" already exists in this project.` 
+          } 
+        });
+        return;
+      }
+    }
+
     if (path) endpoint.path = path;
     if (method) endpoint.method = method;
     if (description !== undefined) endpoint.description = description;
@@ -60,7 +83,10 @@ export const updateEndpointHandler = asyncHandler(
         endpoint.responses = [responseDoc._id];
       } else {
         if (statusCode !== undefined) responseDoc.statusCode = statusCode;
-        if (responseBody !== undefined) responseDoc.schema = responseBody;
+        if (responseBody !== undefined) {
+          responseDoc.schema = responseBody;
+          responseDoc.examples = [responseBody];
+        }
         await responseDoc.save();
       }
     }
@@ -125,9 +151,33 @@ export const createEndpointHandler = asyncHandler(
     });
     await responseDoc.save();
 
+    const baseDefaultPath = '/new-endpoint';
+    const defaultMethod = method || 'GET';
+    let uniquePath = path || baseDefaultPath;
+    
+    // Check if we need to find a unique path
+    // We query ALL endpoints for this MockAPI to find the next available path-counter
+    const existingEndpoints = await EndpointModel.find({ 
+      mockApiId: mockAPI._id,
+      method: defaultMethod
+    });
+
+    const paths = existingEndpoints.map(e => e.path);
+    
+    if (paths.includes(uniquePath)) {
+      let counter = 1;
+      // If the path is precisely '/new-endpoint', we try '/new-endpoint-1', etc.
+      // If it's something else, we try 'path-1', etc.
+      const basePath = path || baseDefaultPath;
+      while (paths.includes(`${basePath}-${counter}`)) {
+        counter++;
+      }
+      uniquePath = `${basePath}-${counter}`;
+    }
+
     const endpoint = new EndpointModel({
-      path: path || '/new-endpoint',
-      method: method || 'GET',
+      path: uniquePath,
+      method: defaultMethod,
       description: description || '',
       requestSchema: {},
       responses: [responseDoc._id],
@@ -144,6 +194,58 @@ export const createEndpointHandler = asyncHandler(
     res.status(201).json({
       success: true,
       data: endpoint,
+    });
+  }
+);
+
+export const deleteEndpointHandler = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const { id } = req.params;
+
+    const endpoint = await EndpointModel.findById(id).populate({
+      path: 'mockApiId',
+      populate: { path: 'projectId' }
+    });
+    
+    if (!endpoint) {
+      res.status(404).json({ success: false, error: { message: 'Endpoint not found' } });
+      return;
+    }
+
+    // Check permissions
+    const mockApi = endpoint.mockApiId as any;
+    const project = mockApi?.projectId;
+    const userId = req.user?.id;
+
+    if (!project || !userId) {
+      res.status(403).json({ success: false, error: { message: 'Project context not found' } });
+      return;
+    }
+
+    const member = project.members.find((m: any) => m.userId.toString() === userId);
+    const userRole = member?.role?.toUpperCase();
+    
+    if (userRole !== 'OWNER' && userRole !== 'EDITOR') {
+      res.status(403).json({ success: false, error: { message: 'Only owners and editors can delete endpoints' } });
+      return;
+    }
+
+    // 1. Delete associated responses
+    const { ResponseModel } = await import('../models/MockAPI');
+    if (endpoint.responses && endpoint.responses.length > 0) {
+      await ResponseModel.deleteMany({ _id: { $in: endpoint.responses } });
+    }
+
+    // 2. Remove reference from MockAPI
+    mockApi.endpoints = mockApi.endpoints.filter((eId: any) => eId.toString() !== id);
+    await mockApi.save();
+
+    // 3. Delete the endpoint document
+    await EndpointModel.findByIdAndDelete(id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Endpoint deleted successfully'
     });
   }
 );

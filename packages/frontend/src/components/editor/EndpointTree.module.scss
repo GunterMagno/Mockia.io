@@ -60,10 +60,6 @@
   font-weight: normal;
   transition: all var(--transition-fast);
 
-  &:hover {
-    background: var(--sidebar-item-active);
-  }
-
   &.selected {
     background: var(--card-bg);
     color: var(--text);
@@ -88,4 +84,61 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.itemWrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  border-radius: var(--radius-md);
+  transition: background var(--transition-fast);
+
+  &:hover {
+    background: var(--sidebar-item-active);
+  }
+
+  .item {
+    flex: 1;
+    min-width: 0; // Allow truncation
+    background: transparent;
+    
+    &:hover {
+      background: transparent; // Wrapper handles hover
+    }
+  }
+
+  .deleteBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    margin-right: var(--spacing-1);
+    border: none;
+    background: var(--support-02);
+    color: white;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 18px;
+    opacity: 0;
+    visibility: hidden;
+    transform: scale(0.8);
+    transition: all var(--transition-fast);
+    box-shadow: var(--shadow-sm);
+    flex-shrink: 0;
+
+    &:hover {
+      background: #ff4d4d;
+      transform: scale(1.1);
+      box-shadow: var(--shadow-md);
+    }
+  }
+
+  &:hover {
+    .deleteBtn {
+      opacity: 1;
+      visibility: visible;
+      transform: scale(1);
+    }
+  }
 }

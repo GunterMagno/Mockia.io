@@ -124,6 +124,45 @@ export function parseGitHubUrl(url: string): GitHubUrlParsed {
 }
 
 /**
+ * Checks if a GitHub repository is public and accessible
+ *
+ * @param owner - Repository owner
+ * @param repo - Repository name
+ * @throws AppError if the repository is not found or is private
+ */
+export async function checkRepoAccessibility(owner: string, repo: string): Promise<void> {
+  const repoUrl = `https://github.com/${owner}/${repo}.git`;
+  const git: SimpleGit = simpleGit();
+  
+  try {
+    await git.listRemote([repoUrl]);
+  } catch (error) {
+    if (error instanceof Error) {
+      const errorMsg = error.message.toLowerCase();
+      if (errorMsg.includes('not found') || errorMsg.includes('does not appear to be a git repository')) {
+        throw new AppError(
+          `Repository not found: ${owner}/${repo}. Please ensure it is a public repository.`,
+          ErrorCode.NOT_FOUND,
+          404
+        );
+      }
+      if (errorMsg.includes('permission denied') || errorMsg.includes('authentication failed')) {
+        throw new AppError(
+          `Access denied for ${owner}/${repo}. Mockia only supports public repositories for now.`,
+          ErrorCode.FORBIDDEN,
+          403
+        );
+      }
+    }
+    throw new AppError(
+      `Could not access repository ${owner}/${repo}. Please check the URL and ensure it's public.`,
+      ErrorCode.VALIDATION_ERROR,
+      400
+    );
+  }
+}
+
+/**
  * Clones a GitHub repository to a temporary directory
  *
  * @param owner - Repository owner

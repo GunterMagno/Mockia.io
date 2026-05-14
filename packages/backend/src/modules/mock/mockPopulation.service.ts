@@ -75,7 +75,6 @@ export async function populateEndpointsFromLLM(
       mockApi.title = specification.title;
       mockApi.description = specification.description;
       mockApi.apiVersion = specification.apiVersion;
-      mockApi.endpoints = [];
       await mockApi.save();
       console.log('[PopulationService] ✓ MockAPI updated');
     } else {
@@ -91,13 +90,13 @@ export async function populateEndpointsFromLLM(
       console.log('[PopulationService] ✓ MockAPI created');
     }
 
-    // 2. Delete existing endpoints for this MockAPI
-    await EndpointModel.deleteMany({ mockApiId: mockApi._id });
+    // 2. [DEPRECATED] We no longer delete existing endpoints to allow appending
+    // await EndpointModel.deleteMany({ mockApiId: mockApi._id });
 
     // 3. Track what we create
     let endpointsCreated = 0;
     let responsesCreated = 0;
-    const endpointIds: Types.ObjectId[] = [];
+    const endpointIds: Types.ObjectId[] = [...(mockApi.endpoints as Types.ObjectId[])];
 
     // 4. Create endpoints and their responses
     for (const endpointSpec of specification.endpoints) {
@@ -142,11 +141,11 @@ export async function populateEndpointsFromLLM(
       // Link responses to endpoint
       endpoint.responses = responseIds;
       await endpoint.save();
-      endpointIds.push(endpoint._id);
+      endpointIds.push(endpoint._id as Types.ObjectId);
       endpointsCreated++;
     }
 
-    // 5. Update MockAPI with endpoint references
+    // 5. Update MockAPI with endpoint references (appended)
     mockApi.endpoints = endpointIds;
     await mockApi.save();
     console.log(`[PopulationService] ✓ All endpoints saved (${endpointsCreated})`);

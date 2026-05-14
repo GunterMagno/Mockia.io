@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/authenticateToken';
 import { asyncHandler } from '../middlewares/errorHandler';
-import { createProject, getUserProjects, getProjectById, updateProject, archiveProject, cleanupArchivedProjects, addProjectMember, removeProjectMember, importGitHubRepository, regenerateApiKey } from '../services/project.service';
+import { createProject, getUserProjects, getProjectById, updateProject, archiveProject, hardDeleteProject, cleanupArchivedProjects, addProjectMember, removeProjectMember, importGitHubRepository, regenerateApiKey } from '../services/project.service';
 import { getProjectContext, deleteProjectContext } from '../services/github-context.service';
 import type { CreateProjectRequest, ImportGitHubRequest } from '@mockia/shared';
 
@@ -151,6 +151,24 @@ export const archiveProjectHandler = asyncHandler(
       data: project,
       timestamp: new Date().toISOString(),
     });
+  }
+);
+
+/**
+ * DELETE /api/projects/:id/hard
+ * Permanently deletes a project
+ */
+export const hardDeleteProjectHandler = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new Error('User ID not found in request');
+    }
+
+    const { id } = req.params;
+    await hardDeleteProject(id, userId);
+
+    res.status(204).send();
   }
 );
 

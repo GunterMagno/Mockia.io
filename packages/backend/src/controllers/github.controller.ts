@@ -4,6 +4,7 @@ import {
   cloneRepository,
   codeAnalyzer,
   cleanupRepository,
+  checkRepoAccessibility,
   GitHubUrlParsed,
 } from '../services/github.service';
 import { asyncHandler } from '../middlewares/errorHandler';
@@ -25,6 +26,9 @@ export const parseGithubUrl = asyncHandler(
     const { url } = req.body;
 
     const parsed = parseGitHubUrl(url);
+    
+    // Verify accessibility
+    await checkRepoAccessibility(parsed.owner, parsed.repo);
 
     res.status(200).json({
       success: true,

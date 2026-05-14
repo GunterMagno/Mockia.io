@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { updateEndpointHandler, createEndpointHandler } from '../controllers/endpoint.controller';
+import { updateEndpointHandler, createEndpointHandler, deleteEndpointHandler } from '../controllers/endpoint.controller';
 import { authenticateToken } from '../middlewares/authenticateToken';
 
 export const endpointsRouter = Router();
@@ -9,6 +9,13 @@ endpointsRouter.put(
   '/:id',
   authenticateToken,
   updateEndpointHandler
+);
+
+// DELETE /api/endpoints/:id
+endpointsRouter.delete(
+  '/:id',
+  authenticateToken,
+  deleteEndpointHandler
 );
 
 // POST /api/endpoints/:projectSlug

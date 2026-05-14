@@ -48,6 +48,13 @@
 .ghost:hover:not(:disabled) {
   background: rgba(79, 70, 229, 0.05); /* #4f46e5, variable de la paleta */
 }
+.danger {
+  background: var(--support-02);
+  color: white;
+}
+.danger:hover:not(:disabled) {
+  background: #ff4d4d;
+}
 .sm {
   padding: var(--spacing-1) var(--spacing-3);
   font-size: var(--text-xs);
