@@ -7,7 +7,7 @@ export const ProtectedRoute: React.FC = () => {
   
   if (isLoading) return null // Or a full page loader
 
-  const isAuth = !!user || !!accessToken
+  const isAuth = !!user
   return isAuth ? <Outlet /> : <Navigate to="/login" replace />
 }
 

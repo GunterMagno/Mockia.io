@@ -32,40 +32,38 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
   const [accessToken, setAccessToken] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  // Initialize from localStorage if present
+  // Initialize from localStorage and verify session
   useEffect(() => {
-    const rawUser = localStorage.getItem(USER_KEY)
-    const rawToken = localStorage.getItem(TOKEN_KEY)
-    if (rawUser) {
-      try {
-        setUser(JSON.parse(rawUser))
-      } catch (err) {
-        console.error('Failed to parse user from localStorage:', err)
+    const initAuth = async () => {
+      const rawUser = localStorage.getItem(USER_KEY)
+      const rawToken = localStorage.getItem(TOKEN_KEY)
+
+      if (rawToken) {
+        setAccessToken(rawToken)
+        // If we have a token, we MUST verify it before finishing loading
+        try {
+          const res = await api.get('/auth/me')
+          const u = res?.data?.user ?? null
+          if (u) {
+            setUser(u)
+            localStorage.setItem(USER_KEY, JSON.stringify(u))
+          } else {
+            logout()
+          }
+        } catch (err) {
+          console.error('Failed to verify session on startup:', err)
+          logout()
+        }
+      } else if (rawUser) {
+        // No token but user in storage? This is inconsistent state, clear it
         localStorage.removeItem(USER_KEY)
       }
-    }
-    if (rawToken) {
-      setAccessToken(rawToken)
-    }
-    setIsLoading(false)
-  }, [])
 
-  // If we have a token but no user yet, try to fetch the current user on startup
-  useEffect(() => {
-    const token = typeof window !== 'undefined' ? window.localStorage.getItem(TOKEN_KEY) : null
-    if (token && !user) {
-      api
-        .get('/auth/me')
-        .then((res) => {
-          const u = res?.data?.user ?? null
-          setUser(u)
-        })
-        .catch((err) => {
-          console.error('Failed to fetch session:', err)
-          logout()
-        })
+      setIsLoading(false)
     }
-  }, []) // Run once on mount if token exists
+
+    initAuth()
+  }, [])
 
   const login = async (credentials: Credentials) => {
     // Call backend login via API client

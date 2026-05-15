@@ -37,7 +37,8 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({ children, onOp
   ]
 
   return (
-    <div className={`${styles.layout} ${isCollapsed ? styles.collapsed : ''}`}>
+    <div className={styles.layout}>
+      <div className={`${styles.layoutInner} ${isCollapsed ? styles.collapsed : ''}`}>
       {/* Sidebar */}
       <aside className={styles.sidebar}>
         {/* Toggle Button */}
@@ -86,6 +87,7 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({ children, onOp
         <main className={styles.main}>
           <section className={styles.container}>{children}</section>
         </main>
+        </div>
       </div>
 
       {/* Footer spans across the bottom row */}

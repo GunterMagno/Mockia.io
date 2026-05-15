@@ -3,56 +3,151 @@
   justify-content: space-between;
   align-items: center;
   padding: 0 var(--spacing-6);
-  height: 64px;
+  height: 80px;
   background-color: var(--secondary-light-disabled);
-  color: var(--secondary-dark-off);
+  color: var(--support-03);
   box-shadow: var(--shadow-sm);
   position: relative;
   z-index: 100;
+  transition: all var(--transition-normal);
+}
+
+.landingHeader {
+  background-color: var(--secondary-light-disabled);
+  height: 80px;
+  box-shadow: none;
+  border-bottom: 1px solid var(--sidebar-border-color);
+  
+  .navLink {
+    color: var(--support-04);
+    font-size: 1rem;
+    font-weight: 500;
+    text-decoration: underline;
+    
+    &:hover {
+      color: var(--support-03);
+      opacity: 1;
+    }
+  }
+
+  .loginBtn {
+    background: var(--secondary-light);
+    color: var(--support-03);
+    font-weight: 700;
+    border: none;
+    padding: 10px 24px;
+    border-radius: var(--radius-lg);
+    
+    &:hover {
+      background: var(--secondary-dark);
+      color: var(--support-04);
+    }
+  }
+
+  .signupBtn {
+    background: var(--tertiary-light-disabled);
+    color: var(--support-03);
+    font-weight: 700;
+    padding: 10px 24px;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    
+    &:hover {
+      transform: translateY(-1px);
+      background: var(--tertiary-light);
+      color: var(--support-04);
+    }
+  }
+}
+
+.headerContainer {
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  height: 100%;
+}
+
+.navCenter {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-10);
+
+  @media (max-width: 900px) {
+    display: none;
+  }
+}
+
+.authHeader {
+  background-color: var(--secondary-light-disabled);
+  border-bottom: none;
+  box-shadow: none;
+  justify-content: center;
+  height: 80px;
 }
 
 .logo {
-  font-size: var(--text-2xl);
-  font-weight: 800;
-  text-decoration: none;
-  color: inherit;
   display: flex;
   align-items: center;
+  gap: var(--spacing-2);
+  text-decoration: none;
   cursor: pointer;
 }
 
-.nav {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-8);
+.logoImg {
+  height: 40px;
+  width: auto;
+  object-fit: contain;
+}
+
+.logoText {
+  font-size: 1.9rem;
+  font-weight: 800;
+  color: var(--secondary-dark-off);
+  letter-spacing: -0.02em;
+}
+
+.highlight {
+  color: var(--primary-dark);
 }
 
 .navLink {
   text-decoration: none;
-  color: inherit;
+  color: var(--support-04);
   font-weight: 500;
   font-size: var(--text-base);
-  transition: opacity var(--transition-fast);
+  transition: all var(--transition-fast);
   
   &:hover {
     opacity: 0.8;
   }
 }
 
-.centerContent {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  font-weight: 500;
-  font-size: var(--text-lg);
-  text-decoration: underline;
-  color: var(--support-04);
+.authButtons {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
+}
+
+.loginBtn, .signupBtn {
+  text-decoration: none;
+  padding: 10px 24px;
+  border-radius: var(--radius-lg);
+  font-size: 1rem;
+  transition: all var(--transition-fast);
 }
 
 .rightContent {
   display: flex;
   align-items: center;
-  gap: var(--spacing-4);
+  gap: var(--spacing-6);
+  color: var(--support-03);
 }
 
 .iconButton {
@@ -71,46 +166,8 @@
   }
 }
 
-.authButtons {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-3);
-}
-
-.loginBtn {
-  background-color: var(--primary-light-disabled);
-  color: var(--support-03);
-  border: none;
-  padding: var(--spacing-2) var(--spacing-6);
-  border-radius: var(--radius-lg);
-  font-weight: 600;
-  cursor: pointer;
-  text-decoration: none;
-  transition: opacity var(--transition-fast);
-
-  &:hover {
-    opacity: 0.9;
-  }
-}
-
-.signupBtn {
-  background-color: var(--tertiary-light-disabled);
-  color: var(--support-03);
-  border: none;
-  padding: var(--spacing-2) var(--spacing-6);
-  border-radius: var(--radius-lg);
-  font-weight: 600;
-  cursor: pointer;
-  text-decoration: none;
-  transition: opacity var(--transition-fast);
-
-  &:hover {
-    opacity: 0.9;
-  }
-}
-
-.leftSection {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-10);
+.profileIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
 }
