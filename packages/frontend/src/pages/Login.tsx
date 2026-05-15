@@ -6,6 +6,7 @@ import { Card } from '../components/ui/Card/Card'
 import { useAuth } from '../contexts/AuthContext'
 import { getBackendErrorMessage } from '../utils/error'
 import { validatePassword } from '../utils/validation'
+import { playErrorSound } from '../utils/audio'
 
 import styles from './Auth.module.scss'
 
@@ -25,11 +26,13 @@ const Login: React.FC = () => {
     
     if (!email) {
       setError('Email or Username is required');
+      playErrorSound();
       return;
     }
 
     if (passwordError) {
       setError(passwordError);
+      playErrorSound();
       return;
     }
 
@@ -40,6 +43,7 @@ const Login: React.FC = () => {
       navigate('/dashboard')
     } catch (err: any) {
       setError(getBackendErrorMessage(err))
+      playErrorSound()
     } finally {
       setLoading(false)
     }

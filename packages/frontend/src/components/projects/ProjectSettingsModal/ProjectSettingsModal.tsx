@@ -7,6 +7,8 @@ import styles from './ProjectSettingsModal.module.scss'
 import warningIcon from '../../../assets/warning.svg'
 import copyIcon from '../../../assets/copy.svg'
 import checkIcon from '../../../assets/check.svg'
+import eyeIcon from '../../../assets/eye.svg'
+import eyeOffIcon from '../../../assets/eye-off.svg'
 import { playErrorSound } from '../../../utils/audio'
 
 type Props = {
@@ -28,7 +30,9 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
   // Member invite state
   const [inviteEmail, setInviteEmail] = useState('')
   const [copiedKey, setCopiedKey] = useState(false)
+  const [showApiKey, setShowApiKey] = useState(false)
   const [inviteRole, setInviteRole] = useState<'EDITOR' | 'VIEWER'>('VIEWER')
+
   
   const [loading, setLoading] = useState(false)
   const [isRegenerating, setIsRegenerating] = useState(false)
@@ -277,7 +281,20 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
                 <h4>Project API Key</h4>
                 <p>Use this key in the <code>X-Mockia-API-Key</code> header to authenticate your requests.</p>
                 <div className={styles.apiKeyDisplay}>
-                  <code>{project.apiKey || 'No API Key generated'}</code>
+                  <div className={styles.apiKeyBox}>
+                    <code>
+                      {showApiKey 
+                        ? (project.apiKey || 'No API Key generated') 
+                        : (project.apiKey ? '•'.repeat(project.apiKey.length) : 'No API Key generated')}
+                    </code>
+                    <button 
+                      className={styles.toggleBtn}
+                      onClick={() => setShowApiKey(!showApiKey)}
+                      title={showApiKey ? 'Hide API Key' : 'Show API Key'}
+                    >
+                      <Icon src={showApiKey ? eyeOffIcon : eyeIcon} size={16} />
+                    </button>
+                  </div>
                   <button 
                     className={`${styles.copyBtn} ${copiedKey ? styles.copied : ''}`} 
                     onClick={() => {

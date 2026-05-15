@@ -116,7 +116,7 @@
     margin-right: var(--spacing-1);
     border: none;
     background: var(--support-02);
-    color: white;
+    color: var(--support-04);
     border-radius: 50%;
     cursor: pointer;
     font-size: 18px;
@@ -128,7 +128,7 @@
     flex-shrink: 0;
 
     &:hover {
-      background: #ff4d4d;
+      background: var(--settings-danger-border);
       transform: scale(1.1);
       box-shadow: var(--shadow-md);
     }

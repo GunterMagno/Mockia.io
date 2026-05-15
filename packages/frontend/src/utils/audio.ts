@@ -41,26 +41,27 @@ export const playErrorSound = () => {
   try {
     const audioCtx = getAudioContext();
     
-    const playBuzz = (startTime: number, freq: number) => {
+    const playBlip = (startTime: number, freq: number) => {
       const osc = audioCtx.createOscillator();
       const g = audioCtx.createGain();
       
-      osc.type = 'sawtooth'; // Slightly harsher for error
+      osc.type = 'sine'; // Clean and professional
       osc.frequency.setValueAtTime(freq, startTime);
       
       g.gain.setValueAtTime(0, startTime);
-      g.gain.linearRampToValueAtTime(0.1, startTime + 0.01);
-      g.gain.exponentialRampToValueAtTime(0.01, startTime + 0.2);
+      g.gain.linearRampToValueAtTime(0.1, startTime + 0.005);
+      g.gain.exponentialRampToValueAtTime(0.01, startTime + 0.1);
       
       osc.connect(g);
       g.connect(audioCtx.destination);
       
       osc.start(startTime);
-      osc.stop(startTime + 0.2);
+      osc.stop(startTime + 0.1);
     };
 
-    // Low harsh sound for error
-    playBuzz(audioCtx.currentTime, 150);
+    // Two fast, subtle low-pitched blips
+    playBlip(audioCtx.currentTime, 180);
+    playBlip(audioCtx.currentTime + 0.1, 140);
     
   } catch (e) {
     console.error("Could not play error sound:", e);

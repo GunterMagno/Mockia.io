@@ -46,14 +46,14 @@
   border: 1px solid transparent;
 }
 .ghost:hover:not(:disabled) {
-  background: rgba(79, 70, 229, 0.05); /* #4f46e5, variable de la paleta */
+  background: var(--sidebar-item-active);
 }
 .danger {
   background: var(--support-02);
-  color: white;
+  color: var(--support-04);
 }
 .danger:hover:not(:disabled) {
-  background: #ff4d4d;
+  background: var(--settings-danger-border);
 }
 .sm {
   padding: var(--spacing-1) var(--spacing-3);

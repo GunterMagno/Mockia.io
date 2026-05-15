@@ -4,7 +4,7 @@
   right: 0;
   width: 350px;
   max-height: 500px;
-  background: #ffffff;
+  background: var(--support-04);
   border: 1px solid var(--support-05);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
@@ -58,7 +58,7 @@
   flex: 1;
   overflow-y: auto;
   max-height: 400px;
-  background: #ffffff;
+  background: var(--support-04);
 
   &::-webkit-scrollbar {
     width: 6px;
@@ -85,14 +85,14 @@
   transition: background 0.2s;
   border-bottom: 1px solid var(--support-05);
   position: relative;
-  background: #ffffff;
+  background: var(--support-04);
 
   &:last-child {
     border-bottom: none;
   }
 
   &:hover {
-    background: #f9f9f9;
+    background: var(--support-04);
 
     .deleteBtn {
       opacity: 1;
@@ -154,7 +154,7 @@
   height: 8px;
   border-radius: 50%;
   background: var(--support-02);
-  box-shadow: 0 0 0 2px #ffffff;
+  box-shadow: 0 0 0 2px var(--support-04);
 }
 
 .deleteBtn {
@@ -173,6 +173,6 @@
 
   &:hover {
     color: var(--support-02);
-    background: rgba(255, 12, 16, 0.1);
+    background: var(--support-04);
   }
 }

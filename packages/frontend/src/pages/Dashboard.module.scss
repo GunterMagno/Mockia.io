@@ -90,7 +90,7 @@
   align-items: center;
   margin-top: var(--spacing-6);
   padding-top: var(--spacing-4);
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  border-top: 1px solid var(--sidebar-border-color);
   color: var(--text-muted);
   font-size: var(--text-sm);
 }

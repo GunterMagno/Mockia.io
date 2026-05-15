@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Modal } from '../../ui/Modal/Modal'
 import { getProfile, updateProfile, changePassword } from '../../../services/userService'
 import { useAuth } from '../../../contexts/AuthContext'
+import { Input } from '../../ui/Input/Input'
 import styles from './ProfileModal.module.scss'
 import { playErrorSound } from '../../../utils/audio'
 
@@ -93,7 +94,7 @@ const ProfileModal: React.FC<Props> = ({ isOpen, onClose }) => {
           <div className={styles.passwordGrid}>
             <div className={styles.formGroup}>
               <label>Current Password</label>
-              <input 
+              <Input 
                 type="password"
                 value={currentPassword}
                 onChange={e => setCurrentPassword(e.target.value)}
@@ -104,7 +105,7 @@ const ProfileModal: React.FC<Props> = ({ isOpen, onClose }) => {
             </div>
             <div className={styles.formGroup}>
               <label>New Password</label>
-              <input 
+              <Input 
                 type="password"
                 value={newPassword}
                 onChange={e => setNewPassword(e.target.value)}

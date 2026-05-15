@@ -7,6 +7,7 @@ import { api } from '../services/api'
 import { useAuth } from '../contexts/AuthContext'
 import { getBackendErrorMessage } from '../utils/error'
 import { validateEmail, validatePassword, validateUsername } from '../utils/validation'
+import { playErrorSound } from '../utils/audio'
 
 import styles from './Auth.module.scss'
 
@@ -29,6 +30,7 @@ const Signup: React.FC = () => {
     
     if (emailError || passwordError || usernameError) {
       setError(emailError || passwordError || usernameError);
+      playErrorSound();
       return;
     }
 
@@ -42,6 +44,7 @@ const Signup: React.FC = () => {
       navigate('/dashboard')
     } catch (err: any) {
       setError(getBackendErrorMessage(err))
+      playErrorSound()
     } finally {
       setLoading(false)
     }

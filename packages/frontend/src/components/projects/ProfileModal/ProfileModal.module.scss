@@ -30,8 +30,9 @@
 }
 
 .input {
+  width: 96%;
   background-color: var(--settings-input-bg);
-  border: 1px solid rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: var(--spacing-4);
   color: var(--settings-input-text);
@@ -40,7 +41,7 @@
   transition: border-color var(--transition-fast);
 
   &::placeholder {
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--support-04);
   }
 
   &:focus {
@@ -51,6 +52,10 @@
     opacity: 0.7;
     cursor: not-allowed;
   }
+}
+
+.fullWidth {
+  width: 100%;
 }
 
 .passwordGrid {
@@ -68,12 +73,12 @@
 
   &.success {
     background-color: var(--support-01);
-    color: white;
+    color: var(--support-04);
   }
 
   &.error {
     background-color: var(--support-02);
-    color: white;
+    color: var(--support-04);
   }
 }
 
@@ -92,7 +97,7 @@
 
 .logoutBtn {
   background-color: var(--support-02);
-  color: white;
+  color: var(--support-04);
   border: none;
   border-radius: var(--radius-lg);
   padding: var(--spacing-2) var(--spacing-6);
@@ -128,7 +133,7 @@
   transition: background-color var(--transition-fast), transform 0.1s;
 
   &:hover:not(:disabled) {
-    background-color: #7a7cc0;
+    background-color: var(--settings-btn-hover);
   }
 
   &:active:not(:disabled) {

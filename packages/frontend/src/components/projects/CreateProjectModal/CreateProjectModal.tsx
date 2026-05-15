@@ -11,6 +11,8 @@ import emptyProjectIcon from '../../../assets/empty-project.svg'
 import githubIcon from '../../../assets/github.svg'
 import aiSparkleIcon from '../../../assets/ai-sparkle.svg'
 import loaderIcon from '../../../assets/loader.svg'
+import eyeIcon from '../../../assets/eye.svg'
+import eyeOffIcon from '../../../assets/eye-off.svg'
 import { playErrorSound } from '../../../utils/audio'
 
 type Props = {
@@ -44,6 +46,8 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
   const [createdProject, setCreatedProject] = useState<Project | null>(null)
   const [copiedUrl, setCopiedUrl] = useState(false)
   const [copiedKey, setCopiedKey] = useState(false)
+  const [showApiKey, setShowApiKey] = useState(false)
+
 
   const reset = () => {
     setStep('select')
@@ -356,15 +360,28 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
 
                 <div className={styles.infoGroup}>
                   <label>Project API Key</label>
-                  <div className={styles.copyBox}>
-                    <code>{createdProject.apiKey}</code>
+                  <div className={styles.apiKeyDisplay}>
+                    <div className={styles.apiKeyBox}>
+                      <code>
+                        {showApiKey 
+                          ? (createdProject.apiKey || '') 
+                          : (createdProject.apiKey ? '•'.repeat(createdProject.apiKey.length) : '')}
+                      </code>
+                      <button 
+                        className={styles.toggleBtn}
+                        onClick={() => setShowApiKey(!showApiKey)}
+                        title={showApiKey ? 'Hide API Key' : 'Show API Key'}
+                      >
+                        <Icon src={showApiKey ? eyeOffIcon : eyeIcon} size={16} />
+                      </button>
+                    </div>
                     <button 
                       onClick={() => {
                         navigator.clipboard.writeText(createdProject.apiKey || '')
                         setCopiedKey(true)
                         setTimeout(() => setCopiedKey(false), 2000)
                       }}
-                      className={copiedKey ? styles.copied : ''}
+                      className={`${styles.copyBtn} ${copiedKey ? styles.copied : ''}`}
                     >
                       {copiedKey ? 'Copied!' : 'Copy'}
                     </button>
