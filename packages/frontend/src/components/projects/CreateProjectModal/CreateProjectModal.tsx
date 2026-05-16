@@ -343,15 +343,17 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
               <div className={styles.connectionCard}>
                 <div className={styles.infoGroup}>
                   <label>Mock Base URL</label>
-                  <div className={styles.copyBox}>
-                    <code>{window.location.origin}/api/mock/{createdProject.slug}</code>
+                  <div className={styles.infoDisplay}>
+                    <div className={styles.infoBox}>
+                      <code>{window.location.origin}/api/mock/{createdProject.slug}</code>
+                    </div>
                     <button 
                       onClick={() => {
                         navigator.clipboard.writeText(`${window.location.origin}/api/mock/${createdProject.slug}`)
                         setCopiedUrl(true)
                         setTimeout(() => setCopiedUrl(false), 2000)
                       }}
-                      className={copiedUrl ? styles.copied : ''}
+                      className={`${styles.copyBtn} ${copiedUrl ? styles.copied : ''}`}
                     >
                       {copiedUrl ? 'Copied!' : 'Copy'}
                     </button>
@@ -360,8 +362,8 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
 
                 <div className={styles.infoGroup}>
                   <label>Project API Key</label>
-                  <div className={styles.apiKeyDisplay}>
-                    <div className={styles.apiKeyBox}>
+                  <div className={styles.infoDisplay}>
+                    <div className={styles.infoBox}>
                       <code>
                         {showApiKey 
                           ? (createdProject.apiKey || '') 
