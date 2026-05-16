@@ -19,6 +19,10 @@ const config: Config = {
       statements: 80,
     },
   },
+  moduleNameMapper: {
+    '^(\\.{1,2}/.*)\\.js$': '$1',
+    '^@mockia/shared$': '<rootDir>/../shared/src/index.ts',
+  },
   moduleFileExtensions: ['ts', 'js', 'json'],
   transform: {
     '^.+\\.ts$': ['ts-jest', {
