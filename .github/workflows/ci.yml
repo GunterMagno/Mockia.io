@@ -42,6 +42,11 @@ jobs:
   test-backend:
     name: Test - Backend
     runs-on: ubuntu-latest
+    services:
+      mongodb:
+        image: mongo:latest
+        ports:
+          - 27017:27017
 
     steps:
       - name: Checkout code
@@ -62,6 +67,9 @@ jobs:
       - name: Run tests with coverage
         working-directory: ./packages/backend
         run: npm run test:coverage
+        env:
+          MONGODB_URI: mongodb://localhost:27017/mockia-test
+          NODE_ENV: test
 
   type-check-backend:
     name: Type Check - Backend
