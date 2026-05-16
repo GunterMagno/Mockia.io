@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import { getUserProfile, updateUserProfile, changeUserPassword } from '../services/user.service';
-import { AuthRequest } from '../types/auth';
-import { asyncHandler } from '../middlewares/errorHandler';
+import { getUserProfile, updateUserProfile, changeUserPassword } from '../services/user.service.js';
+import { AuthRequest } from '../types/auth.js';
+import { asyncHandler } from '../middlewares/errorHandler.js';
 
 /**
  * GET /api/users/profile

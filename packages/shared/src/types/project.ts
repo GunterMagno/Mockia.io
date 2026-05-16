@@ -3,7 +3,7 @@
  * Defines the DTO and request structures for projects
  */
 
-import type { ProjectRole } from './permissions';
+import type { ProjectRole } from './permissions.js';
 
 /**
  * Project member structure

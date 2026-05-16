@@ -7,13 +7,13 @@
  * - User input and requirements
  */
 
-import { SYSTEM_PROMPT } from './systemPrompt';
-import { getProjectContext } from '../../services/github-context.service';
-import { buildSampleData, formatSampleDataForPrompt } from './fakeDataProvider';
-import { ProjectModel } from '../../models/Project';
-import { AppError } from '../../middlewares/errorHandler';
+import { SYSTEM_PROMPT } from './systemPrompt.js';
+import { getProjectContext } from '../../services/github-context.service.js';
+import { buildSampleData, formatSampleDataForPrompt } from './fakeDataProvider.js';
+import { ProjectModel } from '../../models/Project.js';
+import { AppError } from '../../middlewares/errorHandler.js';
 import { ErrorCode, type MockAPIOutput } from '@mockia/shared';
-import type { OpenRouterMessage } from '../../types/ai';
+import type { OpenRouterMessage } from '../../types/ai.js';
 
 /**
  * Token limit constants for prompt building

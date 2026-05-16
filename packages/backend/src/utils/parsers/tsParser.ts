@@ -9,7 +9,7 @@ import type {
   FunctionSignature,
   ParameterInfo,
   ParsedTypeScriptFile,
-} from '../../types/tsParser';
+} from '../../types/tsParser.js';
 
 /**
  * Parses a TypeScript file and extracts interfaces, types, enums, and exported functions

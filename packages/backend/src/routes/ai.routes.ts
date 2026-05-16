@@ -10,8 +10,8 @@ import {
   generateMockAPISpecHandler,
   generateAndSaveHandler,
   aiHealthCheckHandler,
-} from '../controllers/ai.controller';
-import { authenticateToken } from '../middlewares/authenticateToken';
+} from '../controllers/ai.controller.js';
+import { authenticateToken } from '../middlewares/authenticateToken.js';
 
 const router = Router();
 

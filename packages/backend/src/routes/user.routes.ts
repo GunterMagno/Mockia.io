@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { getProfile, updateProfile, changePassword } from '../controllers/user.controller';
-import { authenticateToken } from '../middlewares/authenticateToken';
-import { validate } from '../middlewares/validateRequest';
-import { updateProfileSchema, changePasswordSchema } from '../validation/user.validation';
+import { getProfile, updateProfile, changePassword } from '../controllers/user.controller.js';
+import { authenticateToken } from '../middlewares/authenticateToken.js';
+import { validate } from '../middlewares/validateRequest.js';
+import { updateProfileSchema, changePasswordSchema } from '../validation/user.validation.js';
 
 /**
  * User router

@@ -2,14 +2,14 @@ import { Router } from 'express';
 import {
   parseGithubUrl,
   ingestGithubRepo,
-} from '../controllers/github.controller';
+} from '../controllers/github.controller.js';
 import {
   parseGithubUrlSchema,
   ingestGithubRepoSchema,
-} from '../validation/github.validation';
-import { validate } from '../middlewares/validateRequest';
-import { authenticateToken } from '../middlewares/authenticateToken';
-import { authorizeRole } from '../middlewares/authorizeRole';
+} from '../validation/github.validation.js';
+import { validate } from '../middlewares/validateRequest.js';
+import { authenticateToken } from '../middlewares/authenticateToken.js';
+import { authorizeRole } from '../middlewares/authorizeRole.js';
 
 /**
  * GitHub router

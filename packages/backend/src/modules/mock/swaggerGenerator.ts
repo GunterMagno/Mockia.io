@@ -1,6 +1,6 @@
-import { MockAPIModel } from '../../models/MockAPI';
-import { ProjectModel } from '../../models/Project';
-import { getEndpointsForMockAPI } from './mockPopulation.service';
+import { MockAPIModel } from '../../models/MockAPI.js';
+import { ProjectModel } from '../../models/Project.js';
+import { getEndpointsForMockAPI } from './mockPopulation.service.js';
 import { Types } from 'mongoose';
 
 /**

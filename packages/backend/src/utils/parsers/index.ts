@@ -5,11 +5,11 @@
 
 export {
   parseTypeScriptFile,
-} from './tsParser';
+} from './tsParser.js';
 
 export {
   parseSwaggerFile,
-} from './swaggerParser';
+} from './swaggerParser.js';
 
 export {
   normalizeType,
@@ -20,7 +20,7 @@ export {
   isArrayType,
   isPromiseType,
   type NormalizationResult,
-} from './typeNormalizer';
+} from './typeNormalizer.js';
 
 // Re-export types from types folder
 export type {
@@ -31,7 +31,7 @@ export type {
   EnumInfo,
   FunctionSignature,
   ParameterInfo,
-} from '../../types/tsParser';
+} from '../../types/tsParser.js';
 
 export type {
   ParsedSwaggerFile,
@@ -41,4 +41,4 @@ export type {
   SchemaReference,
   ResponseSchema,
   ComponentSchema,
-} from '../../types/swaggerParser';
+} from '../../types/swaggerParser.js';

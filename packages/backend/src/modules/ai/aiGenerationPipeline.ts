@@ -6,11 +6,11 @@
 import {
   extractJsonFromLLMOutput,
   tryExtractJsonFromLLMOutput,
-} from './llmOutputParser';
-import { validateGeneratedApi } from './llmOutputValidator';
-import { populateEndpointsFromLLM } from '../mock/mockPopulation.service';
+} from './llmOutputParser.js';
+import { validateGeneratedApi } from './llmOutputValidator.js';
+import { populateEndpointsFromLLM } from '../mock/mockPopulation.service.js';
 import { MockAPIOutput } from '@mockia/shared';
-import { AppError } from '../../middlewares/errorHandler';
+import { AppError } from '../../middlewares/errorHandler.js';
 import { ErrorCode } from '@mockia/shared';
 
 /**

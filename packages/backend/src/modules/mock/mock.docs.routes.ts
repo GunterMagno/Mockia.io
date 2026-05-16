@@ -4,7 +4,7 @@
  */
 
 import { Application } from 'express';
-import { ProjectModel } from '../../models/Project';
+import { ProjectModel } from '../../models/Project.js';
 
 /** Mount Swagger UI page for a given project */
 export function mountMockDocsRoutes(app: Application) {

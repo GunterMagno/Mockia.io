@@ -1,7 +1,7 @@
-import { resolveRoute, getProjectEndpoints } from '../modules/mock/routeResolution.service';
-import { ProjectModel } from '../models/Project';
-import { MockAPIModel, EndpointModel } from '../models/MockAPI';
-import { AppError } from '../middlewares/errorHandler';
+import { resolveRoute, getProjectEndpoints } from '../modules/mock/routeResolution.service.js';
+import { ProjectModel } from '../models/Project.js';
+import { MockAPIModel, EndpointModel } from '../models/MockAPI.js';
+import { AppError } from '../middlewares/errorHandler.js';
 
 jest.mock('../models/Project');
 jest.mock('../models/MockAPI', () => ({

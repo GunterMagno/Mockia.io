@@ -3,7 +3,7 @@
  * Helper functions for OpenRouter integration
  */
 
-import { retryConfig } from '../config/ai';
+import { retryConfig } from '../config/ai.js';
 
 /**
  * Rate limiter state for tracking calls

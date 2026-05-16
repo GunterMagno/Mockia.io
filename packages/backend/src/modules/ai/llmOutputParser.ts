@@ -4,7 +4,7 @@
  * or other extraneous text
  */
 
-import { AppError } from '../../middlewares/errorHandler';
+import { AppError } from '../../middlewares/errorHandler.js';
 import { ErrorCode } from '@mockia/shared';
 
 /**

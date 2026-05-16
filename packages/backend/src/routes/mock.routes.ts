@@ -4,9 +4,9 @@
  */
 
 import { Router } from 'express';
-import { resolveRouteHandler, getProjectEndpointsHandler, mockProxyHandler } from '../controllers/mock.controller';
-import { authenticateToken } from '../middlewares/authenticateToken';
-import { validate } from '../middlewares/validateRequest';
+import { resolveRouteHandler, getProjectEndpointsHandler, mockProxyHandler } from '../controllers/mock.controller.js';
+import { authenticateToken } from '../middlewares/authenticateToken.js';
+import { validate } from '../middlewares/validateRequest.js';
 import Joi from 'joi';
 
 export const mockRouter = Router();

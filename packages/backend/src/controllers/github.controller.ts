@@ -6,8 +6,8 @@ import {
   cleanupRepository,
   checkRepoAccessibility,
   GitHubUrlParsed,
-} from '../services/github.service';
-import { asyncHandler } from '../middlewares/errorHandler';
+} from '../services/github.service.js';
+import { asyncHandler } from '../middlewares/errorHandler.js';
 
 /**
  * POST /api/github/parse

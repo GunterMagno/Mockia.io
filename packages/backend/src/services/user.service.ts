@@ -1,7 +1,7 @@
 import bcrypt from 'bcrypt';
-import { UserModel } from '../models/User';
+import { UserModel } from '../models/User.js';
 import type { User as UserDTO } from '@mockia/shared';
-import { AppError } from '../middlewares/errorHandler';
+import { AppError } from '../middlewares/errorHandler.js';
 import { ErrorCode } from '@mockia/shared';
 
 /**

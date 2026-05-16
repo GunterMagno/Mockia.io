@@ -6,4 +6,4 @@
  * Import those from '@mockia/shared' instead.
  */
 
-export * from './auth';
+export * from './auth.js';

@@ -3,15 +3,15 @@
  * Resolves mock API routes based on project slug, HTTP method, and path
  */
 
-import { ProjectModel } from '../../models/Project';
-import { MockAPIModel, EndpointModel, EndpointDocument } from '../../models/MockAPI';
-import { AppError } from '../../middlewares/errorHandler';
+import { ProjectModel } from '../../models/Project.js';
+import { MockAPIModel, EndpointModel, EndpointDocument } from '../../models/MockAPI.js';
+import { AppError } from '../../middlewares/errorHandler.js';
 import { ErrorCode } from '@mockia/shared';
 import {
   extractPathParams,
   calculatePatternSpecificity,
   hasWildcards,
-} from './pathParams.util';
+} from './pathParams.util.js';
 
 /**
  * Result of route resolution

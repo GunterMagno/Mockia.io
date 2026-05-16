@@ -1,7 +1,7 @@
-import { generateSwaggerForProject } from '../modules/mock/swaggerGenerator';
-import { ProjectModel } from '../models/Project';
-import { MockAPIModel } from '../models/MockAPI';
-import * as mockPopulationService from '../modules/mock/mockPopulation.service';
+import { generateSwaggerForProject } from '../modules/mock/swaggerGenerator.js';
+import { ProjectModel } from '../models/Project.js';
+import { MockAPIModel } from '../models/MockAPI.js';
+import * as mockPopulationService from '../modules/mock/mockPopulation.service.js';
 import { Types } from 'mongoose';
 
 jest.mock('../models/Project');

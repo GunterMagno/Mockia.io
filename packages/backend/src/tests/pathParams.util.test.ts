@@ -7,7 +7,7 @@ import {
   extractPathParams,
   calculatePatternSpecificity,
   hasWildcards,
-} from '../modules/mock/pathParams.util';
+} from '../modules/mock/pathParams.util.js';
 
 describe('Path Parameters Utility', () => {
   describe('extractPathParams', () => {

@@ -1,4 +1,4 @@
-import { ProjectModel } from '../models/Project';
+import { ProjectModel } from '../models/Project.js';
 
 /**
  * Normalizes a string to create a URL-friendly slug

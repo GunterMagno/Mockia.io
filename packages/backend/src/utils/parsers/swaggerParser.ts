@@ -9,7 +9,7 @@ import type {
   ResponseSchema,
   ComponentSchema,
   ParsedSwaggerFile,
-} from '../../types/swaggerParser';
+} from '../../types/swaggerParser.js';
 
 /**
  * Parses a Swagger/OpenAPI file (YAML or JSON) and extracts relevant information

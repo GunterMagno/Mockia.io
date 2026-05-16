@@ -4,17 +4,17 @@
  */
 
 import { Response } from 'express';
-import { AuthenticatedRequest } from '../middlewares/authenticateToken';
-import { asyncHandler } from '../middlewares/errorHandler';
-import { generateWithOpenRouter, callOpenRouterWithRetry } from '../services/openRouter.service';
-import { shouldRateLimit } from '../utils/openRouterUtils';
-import { AppError } from '../middlewares/errorHandler';
+import { AuthenticatedRequest } from '../middlewares/authenticateToken.js';
+import { asyncHandler } from '../middlewares/errorHandler.js';
+import { generateWithOpenRouter, callOpenRouterWithRetry } from '../services/openRouter.service.js';
+import { shouldRateLimit } from '../utils/openRouterUtils.js';
+import { AppError } from '../middlewares/errorHandler.js';
 import { ErrorCode } from '@mockia/shared';
 import {
   buildPrompt,
   extractMockAPIFromResponse,
   runAIGenerationPipeline,
-} from '../modules/ai';
+} from '../modules/ai/index.js';
 
 /**
  * POST /api/ai/generate-description

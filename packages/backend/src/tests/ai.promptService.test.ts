@@ -1,7 +1,7 @@
-import { buildPrompt, validateJsonResponse, extractMockAPIFromResponse } from '../modules/ai/prompt.service';
-import { ProjectModel } from '../models/Project';
-import { getProjectContext } from '../services/github-context.service';
-import { AppError } from '../middlewares/errorHandler';
+import { buildPrompt, validateJsonResponse, extractMockAPIFromResponse } from '../modules/ai/prompt.service.js';
+import { ProjectModel } from '../models/Project.js';
+import { getProjectContext } from '../services/github-context.service.js';
+import { AppError } from '../middlewares/errorHandler.js';
 
 jest.mock('../models/Project');
 jest.mock('../services/github-context.service');

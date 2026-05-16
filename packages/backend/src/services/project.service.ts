@@ -1,14 +1,14 @@
-import { ProjectModel } from '../models/Project';
+import { ProjectModel } from '../models/Project.js';
 import crypto from 'crypto';
-import { UserModel } from '../models/User';
-import { generateUniqueSlug } from '../utils/slugGenerator';
-import { AppError } from '../middlewares/errorHandler';
+import { UserModel } from '../models/User.js';
+import { generateUniqueSlug } from '../utils/slugGenerator.js';
+import { AppError } from '../middlewares/errorHandler.js';
 import { ErrorCode } from '@mockia/shared';
 import type { Project as ProjectDTO, CreateProjectRequest, ImportGitHubRequest, ProjectMember, ProjectRole } from '@mockia/shared';
-import { ProjectRoleEnum } from '../models/Project';
-import { parseGitHubUrl } from './github.service';
-import { importAndAnalyzeRepository } from './github-context.service';
-import { createNotification } from './notification.service';
+import { ProjectRoleEnum } from '../models/Project.js';
+import { parseGitHubUrl } from './github.service.js';
+import { importAndAnalyzeRepository } from './github-context.service.js';
+import { createNotification } from './notification.service.js';
 import { NotificationType } from '@mockia/shared';
 
 /**
@@ -141,7 +141,7 @@ export async function createProject(
     await savedProject.populate('members.userId');
 
     // Create empty MockAPI associated with the project
-    const { MockAPIModel } = await import('../models/MockAPI');
+    const { MockAPIModel } = await import('../models/MockAPI.js');
     try {
       await MockAPIModel.create({
         projectId: savedProject._id,
@@ -510,7 +510,7 @@ export async function hardDeleteProject(projectId: string, userId: string): Prom
 
     // Delete project and MockAPI
     await ProjectModel.findByIdAndDelete(projectId);
-    const { MockAPIModel } = await import('../models/MockAPI');
+    const { MockAPIModel } = await import('../models/MockAPI.js');
     await MockAPIModel.deleteMany({ projectId });
   } catch (error) {
     console.error('Error hard deleting project:', error);

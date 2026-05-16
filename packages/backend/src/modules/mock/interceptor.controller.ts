@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { setEndpointConfig } from './interceptor.service';
+import { setEndpointConfig } from './interceptor.service.js';
 
 /**
  * Controller to update endpoint interceptors configuration

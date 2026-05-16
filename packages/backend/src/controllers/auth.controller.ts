@@ -1,12 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
-import { registerUser, loginUser, refreshTokens } from '../services/auth.service';
+import { registerUser, loginUser, refreshTokens } from '../services/auth.service.js';
 import type { 
   CreateUserRequest,
   LoginRequest, 
   LoginResponse, 
   RefreshTokensResponse 
 } from '@mockia/shared';
-import { asyncHandler } from '../middlewares/errorHandler';
+import { asyncHandler } from '../middlewares/errorHandler.js';
 
 /**
  * Controller for user registration
@@ -103,7 +103,7 @@ export const refresh = asyncHandler(
   }
 );
 
-import { getUserProfile } from '../services/user.service';
+import { getUserProfile } from '../services/user.service.js';
 
 /**
  * GET /api/auth/me
@@ -111,7 +111,7 @@ import { getUserProfile } from '../services/user.service';
  */
 export const me = asyncHandler(
   async (req: Request, res: Response) => {
-    const authReq = req as import('../middlewares/authenticateToken').AuthenticatedRequest;
+    const authReq = req as import('../middlewares/authenticateToken.js').AuthenticatedRequest;
     const userId = authReq.user?.id;
 
     if (!userId) {

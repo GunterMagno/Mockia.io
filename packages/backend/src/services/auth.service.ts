@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt';
-import { UserModel } from '../models/User';
-import { DuplicateUserError } from '../models/errors';
+import { UserModel } from '../models/User.js';
+import { DuplicateUserError } from '../models/errors.js';
 import type { 
   CreateUserRequest, 
   User as UserDTO,
@@ -8,8 +8,8 @@ import type {
   LoginResponse,
   RefreshTokensResponse 
 } from '@mockia/shared';
-import { signAccessToken, signRefreshToken, verifyRefreshToken } from './jwt.service';
-import { AppError } from '../middlewares/errorHandler';
+import { signAccessToken, signRefreshToken, verifyRefreshToken } from './jwt.service.js';
+import { AppError } from '../middlewares/errorHandler.js';
 import { ErrorCode } from '@mockia/shared';
 
 /**

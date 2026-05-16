@@ -1,7 +1,7 @@
 import { Types } from 'mongoose';
-import { EndpointModel, MockAPIModel } from '../../models/MockAPI';
-import { EndpointConfigModel } from '../../models/EndpointConfig';
-import { AppError } from '../../middlewares/errorHandler';
+import { EndpointModel, MockAPIModel } from '../../models/MockAPI.js';
+import { EndpointConfigModel } from '../../models/EndpointConfig.js';
+import { AppError } from '../../middlewares/errorHandler.js';
 import { ErrorCode } from '@mockia/shared';
 
 /**

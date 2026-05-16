@@ -4,9 +4,9 @@ import {
   calculateBackoffDelay, 
   callOpenRouterWithRetry, 
   generateWithOpenRouter 
-} from '../services/openRouter.service';
-import * as aiConfig from '../config/ai';
-import { AppError } from '../middlewares/errorHandler';
+} from '../services/openRouter.service.js';
+import * as aiConfig from '../config/ai.js';
+import { AppError } from '../middlewares/errorHandler.js';
 
 jest.mock('axios');
 const mockedAxios = axios as jest.Mocked<typeof axios>;

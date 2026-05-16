@@ -1,8 +1,8 @@
 import { Response } from 'express';
-import { AuthenticatedRequest } from '../../middlewares/authenticateToken';
-import { asyncHandler } from '../../middlewares/errorHandler';
-import { generateSwaggerForProject } from './swaggerGenerator';
-import { ProjectModel } from '../../models/Project';
+import { AuthenticatedRequest } from '../../middlewares/authenticateToken.js';
+import { asyncHandler } from '../../middlewares/errorHandler.js';
+import { generateSwaggerForProject } from './swaggerGenerator.js';
+import { ProjectModel } from '../../models/Project.js';
 
 /**
  * GET /api/projects/:id/swagger.json

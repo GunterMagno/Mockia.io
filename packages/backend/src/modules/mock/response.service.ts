@@ -1,4 +1,4 @@
-import { EndpointModel } from '../../models/MockAPI';
+import { EndpointModel } from '../../models/MockAPI.js';
 import { Types } from 'mongoose';
 import { Document } from 'mongoose';
 

@@ -4,9 +4,9 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { resolveRoute } from './routeResolution.service';
-import { getDefaultResponseForEndpoint } from './response.service';
-import { getEndpointConfig } from './interceptor.service';
+import { resolveRoute } from './routeResolution.service.js';
+import { getDefaultResponseForEndpoint } from './response.service.js';
+import { getEndpointConfig } from './interceptor.service.js';
 
 export async function mockRouter(req: Request, res: Response, next: NextFunction) {
   const projectSlug = req.params?.projectSlug as string | undefined;

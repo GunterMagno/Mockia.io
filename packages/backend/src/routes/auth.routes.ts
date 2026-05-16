@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { register, login, refresh } from '../controllers/auth.controller';
-import { registerSchema, loginSchema, refreshSchema } from '../validation/auth.validation';
-import { validate } from '../middlewares/validateRequest';
+import { register, login, refresh } from '../controllers/auth.controller.js';
+import { registerSchema, loginSchema, refreshSchema } from '../validation/auth.validation.js';
+import { validate } from '../middlewares/validateRequest.js';
 
 /**
  * Authentication router
@@ -71,8 +71,8 @@ authRouter.post(
   refresh
 );
 
-import { me } from '../controllers/auth.controller';
-import { authenticateToken } from '../middlewares/authenticateToken';
+import { me } from '../controllers/auth.controller.js';
+import { authenticateToken } from '../middlewares/authenticateToken.js';
 
 /**
  * GET /api/auth/me

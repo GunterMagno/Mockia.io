@@ -1,8 +1,8 @@
 import { Response } from 'express';
-import { AuthenticatedRequest } from '../middlewares/authenticateToken';
-import { asyncHandler } from '../middlewares/errorHandler';
-import { createProject, getUserProjects, getProjectById, updateProject, archiveProject, hardDeleteProject, cleanupArchivedProjects, addProjectMember, removeProjectMember, importGitHubRepository, regenerateApiKey } from '../services/project.service';
-import { getProjectContext, deleteProjectContext } from '../services/github-context.service';
+import { AuthenticatedRequest } from '../middlewares/authenticateToken.js';
+import { asyncHandler } from '../middlewares/errorHandler.js';
+import { createProject, getUserProjects, getProjectById, updateProject, archiveProject, hardDeleteProject, cleanupArchivedProjects, addProjectMember, removeProjectMember, importGitHubRepository, regenerateApiKey } from '../services/project.service.js';
+import { getProjectContext, deleteProjectContext } from '../services/github-context.service.js';
 import type { CreateProjectRequest, ImportGitHubRequest } from '@mockia/shared';
 
 /**

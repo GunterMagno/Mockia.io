@@ -5,7 +5,7 @@
  */
 
 import { MockAPIOutput, ErrorCode } from '@mockia/shared';
-import { AppError } from '../../middlewares/errorHandler';
+import { AppError } from '../../middlewares/errorHandler.js';
 
 /**
  * Validates that the parsed object is a valid MockAPIOutput

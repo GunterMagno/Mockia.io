@@ -1,7 +1,7 @@
 import { Response, NextFunction } from 'express';
-import { AuthenticatedRequest } from './authenticateToken';
-import { ProjectModel } from '../models/Project';
-import { AppError } from './errorHandler';
+import { AuthenticatedRequest } from './authenticateToken.js';
+import { ProjectModel } from '../models/Project.js';
+import { AppError } from './errorHandler.js';
 import { ErrorCode } from '@mockia/shared';
 import type { ProjectRole } from '@mockia/shared';
 

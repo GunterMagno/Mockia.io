@@ -1,10 +1,10 @@
 import * as path from 'path';
-import { GitHubContextModel, type GitHubContextDocument } from '../models/GitHubContext';
-import { ProjectModel } from '../models/Project';
-import { parseTypeScriptFile } from '../utils/parsers/tsParser';
-import { parseSwaggerFile } from '../utils/parsers/swaggerParser';
-import { codeAnalyzer, type AnalyzedFile } from './github.service';
-import { AppError } from '../middlewares/errorHandler';
+import { GitHubContextModel, type GitHubContextDocument } from '../models/GitHubContext.js';
+import { ProjectModel } from '../models/Project.js';
+import { parseTypeScriptFile } from '../utils/parsers/tsParser.js';
+import { parseSwaggerFile } from '../utils/parsers/swaggerParser.js';
+import { codeAnalyzer, type AnalyzedFile } from './github.service.js';
+import { AppError } from '../middlewares/errorHandler.js';
 import { ErrorCode } from '@mockia/shared';
 
 /**

@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "CommonJS",
+    "module": "NodeNext",
     "lib": [
       "ES2020",
       "DOM"
@@ -18,7 +18,7 @@
     "sourceMap": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
-    "moduleResolution": "node",
+    "moduleResolution": "NodeNext",
     "typeRoots": [
       "../../node_modules/@types",
       "node_modules/@types"

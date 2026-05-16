@@ -4,14 +4,14 @@ import {
   getOpenRouterModel,
   getOpenRouterBaseUrl,
   retryConfig,
-} from '../config/ai';
+} from '../config/ai.js';
 import type {
   OpenRouterPayload,
   OpenRouterResponse,
   OpenRouterMessage,
   OpenRouterError,
-} from '../types/ai';
-import { AppError } from '../middlewares/errorHandler';
+} from '../types/ai.js';
+import { AppError } from '../middlewares/errorHandler.js';
 import { ErrorCode } from '@mockia/shared';
 
 /**

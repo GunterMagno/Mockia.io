@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import * as NotificationService from '../services/notification.service';
+import * as NotificationService from '../services/notification.service.js';
 
 /**
  * Get all notifications for the authenticated user

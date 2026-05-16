@@ -4,12 +4,12 @@
  */
 
 import { Request, Response } from 'express';
-import { applyMockHeaders } from '../modules/mock/header.service';
-import { AuthenticatedRequest } from '../middlewares/authenticateToken';
-import { asyncHandler } from '../middlewares/errorHandler';
-import { resolveRoute, getProjectEndpoints } from '../modules/mock/routeResolution.service';
-import { ResponseModel, EndpointModel } from '../models/MockAPI';
-import { ProjectModel } from '../models/Project';
+import { applyMockHeaders } from '../modules/mock/header.service.js';
+import { AuthenticatedRequest } from '../middlewares/authenticateToken.js';
+import { asyncHandler } from '../middlewares/errorHandler.js';
+import { resolveRoute, getProjectEndpoints } from '../modules/mock/routeResolution.service.js';
+import { ResponseModel, EndpointModel } from '../models/MockAPI.js';
+import { ProjectModel } from '../models/Project.js';
 
 /**
  * POST /api/mock/resolve-route

@@ -1,10 +1,10 @@
-import { GitHubContextModel } from '../models/GitHubContext';
-import { ProjectModel } from '../models/Project';
-import { AppError } from '../middlewares/errorHandler';
+import { GitHubContextModel } from '../models/GitHubContext.js';
+import { ProjectModel } from '../models/Project.js';
+import { AppError } from '../middlewares/errorHandler.js';
 import { ErrorCode } from '@mockia/shared';
 import type { GitHubContext } from '@mockia/shared';
-import { parseGitHubUrl, cloneRepository } from './github.service';
-import { extractContextForProject } from './contextExtractor';
+import { parseGitHubUrl, cloneRepository } from './github.service.js';
+import { extractContextForProject } from './contextExtractor.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
@@ -44,7 +44,7 @@ export async function getProjectContext(
     const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(projectId);
     
     if (!isValidObjectId) {
-      const { ProjectModel } = await import('../models/Project');
+      const { ProjectModel } = await import('../models/Project.js');
       const project = await ProjectModel.findOne({ slug: projectId });
       if (!project) {
         throw new AppError('Project not found', ErrorCode.NOT_FOUND, 404);

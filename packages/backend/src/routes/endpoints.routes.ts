@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { updateEndpointHandler, createEndpointHandler, deleteEndpointHandler } from '../controllers/endpoint.controller';
-import { authenticateToken } from '../middlewares/authenticateToken';
+import { updateEndpointHandler, createEndpointHandler, deleteEndpointHandler } from '../controllers/endpoint.controller.js';
+import { authenticateToken } from '../middlewares/authenticateToken.js';
 
 export const endpointsRouter = Router();
 

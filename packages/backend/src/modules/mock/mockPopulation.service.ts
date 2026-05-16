@@ -4,8 +4,8 @@
  */
 
 import { MockAPIOutput } from '@mockia/shared';
-import { MockAPIModel, EndpointModel, ResponseModel } from '../../models/MockAPI';
-import { AppError } from '../../middlewares/errorHandler';
+import { MockAPIModel, EndpointModel, ResponseModel } from '../../models/MockAPI.js';
+import { AppError } from '../../middlewares/errorHandler.js';
 import { ErrorCode } from '@mockia/shared';
 import { Types } from 'mongoose';
 
@@ -55,7 +55,7 @@ export async function populateEndpointsFromLLM(
       projectObjectId = new Types.ObjectId(projectId);
     } else {
       // Try to find project by slug
-      const { ProjectModel } = await import('../../models/Project');
+      const { ProjectModel } = await import('../../models/Project.js');
       const project = await ProjectModel.findOne({ slug: projectId });
       if (!project) {
         throw new AppError(

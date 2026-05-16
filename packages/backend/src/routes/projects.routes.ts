@@ -13,13 +13,13 @@ import {
   deleteProjectContextHandler,
   regenerateApiKeyHandler,
   hardDeleteProjectHandler,
-} from '../controllers/projects.controller';
-import { authenticateToken } from '../middlewares/authenticateToken';
-import { authorizeRole } from '../middlewares/authorizeRole';
-import { validate } from '../middlewares/validateRequest';
-import { createProjectSchema, updateProjectSchema, addProjectMemberSchema, importGitHubSchema } from '../validation/projects.validation';
+} from '../controllers/projects.controller.js';
+import { authenticateToken } from '../middlewares/authenticateToken.js';
+import { authorizeRole } from '../middlewares/authorizeRole.js';
+import { validate } from '../middlewares/validateRequest.js';
+import { createProjectSchema, updateProjectSchema, addProjectMemberSchema, importGitHubSchema } from '../validation/projects.validation.js';
 import type { ProjectRole } from '@mockia/shared';
-import { getProjectSwagger } from '../modules/mock/swagger.controller';
+import { getProjectSwagger } from '../modules/mock/swagger.controller.js';
 
 /**
  * Projects router

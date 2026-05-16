@@ -1,6 +1,6 @@
-import { NotificationModel } from '../models/Notification';
+import { NotificationModel } from '../models/Notification.js';
 import type { Notification as NotificationDTO, NotificationType } from '@mockia/shared';
-import { AppError } from '../middlewares/errorHandler';
+import { AppError } from '../middlewares/errorHandler.js';
 import { ErrorCode } from '@mockia/shared';
 
 /**

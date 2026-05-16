@@ -1,9 +1,9 @@
 import { simpleGit, SimpleGit } from 'simple-git';
 import fs from 'fs/promises';
 import path from 'path';
-import { AppError } from '../middlewares/errorHandler';
+import { AppError } from '../middlewares/errorHandler.js';
 import { ErrorCode } from '@mockia/shared';
-import { removeDirectory } from '../utils/cleanupUtil';
+import { removeDirectory } from '../utils/cleanupUtil.js';
 
 /**
  * Interface for the result of parseGitHubUrl

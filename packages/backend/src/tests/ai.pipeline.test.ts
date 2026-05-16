@@ -7,8 +7,8 @@
  * - LLM output parsing and validation
  */
 
-import { buildSampleData, formatSampleDataForPrompt } from '../modules/ai/fakeDataProvider';
-import { extractJsonFromLLMOutput } from '../modules/ai/llmOutputParser';
+import { buildSampleData, formatSampleDataForPrompt } from '../modules/ai/fakeDataProvider.js';
+import { extractJsonFromLLMOutput } from '../modules/ai/llmOutputParser.js';
 
 describe('AI Pipeline - Fake Data and Prompt Injection', () => {
   describe('Fake Data Provider', () => {

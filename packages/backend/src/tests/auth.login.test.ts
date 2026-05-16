@@ -1,7 +1,7 @@
 import request from 'supertest';
-import app from '../index';
-import { UserModel } from '../models/User';
-import { connectDB, disconnectDB } from '../config/connection';
+import app from '../index.js';
+import { UserModel } from '../models/User.js';
+import { connectDB, disconnectDB } from '../config/connection.js';
 import bcrypt from 'bcrypt';
 
 describe('Auth - Login (POST /api/auth/login)', () => {

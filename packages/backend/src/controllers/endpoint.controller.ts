@@ -1,7 +1,7 @@
 import { Response } from 'express';
-import { AuthenticatedRequest } from '../middlewares/authenticateToken';
-import { asyncHandler } from '../middlewares/errorHandler';
-import { EndpointModel } from '../models/MockAPI';
+import { AuthenticatedRequest } from '../middlewares/authenticateToken.js';
+import { asyncHandler } from '../middlewares/errorHandler.js';
+import { EndpointModel } from '../models/MockAPI.js';
 
 export const updateEndpointHandler = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
@@ -66,7 +66,7 @@ export const updateEndpointHandler = asyncHandler(
 
     // Handle response updates
     if (responseBody !== undefined || statusCode !== undefined) {
-      const { ResponseModel } = await import('../models/MockAPI');
+      const { ResponseModel } = await import('../models/MockAPI.js');
       let responseDoc;
       
       if (endpoint.responses && endpoint.responses.length > 0) {
@@ -105,8 +105,8 @@ export const createEndpointHandler = asyncHandler(
     const { projectSlug } = req.params;
     const { path, method, description } = req.body;
 
-    const { ProjectModel } = await import('../models/Project');
-    const { MockAPIModel, ResponseModel } = await import('../models/MockAPI');
+    const { ProjectModel } = await import('../models/Project.js');
+    const { MockAPIModel, ResponseModel } = await import('../models/MockAPI.js');
 
     let project;
     const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(projectSlug);
@@ -231,7 +231,7 @@ export const deleteEndpointHandler = asyncHandler(
     }
 
     // 1. Delete associated responses
-    const { ResponseModel } = await import('../models/MockAPI');
+    const { ResponseModel } = await import('../models/MockAPI.js');
     if (endpoint.responses && endpoint.responses.length > 0) {
       await ResponseModel.deleteMany({ _id: { $in: endpoint.responses } });
     }

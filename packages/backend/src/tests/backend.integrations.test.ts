@@ -1,9 +1,9 @@
 import request from 'supertest';
-import app from '../index';
-import { UserModel } from '../models/User';
-import { ProjectModel } from '../models/Project';
-import { MockAPIModel } from '../models/MockAPI';
-import { connectDB, disconnectDB } from '../config/connection';
+import app from '../index.js';
+import { UserModel } from '../models/User.js';
+import { ProjectModel } from '../models/Project.js';
+import { MockAPIModel } from '../models/MockAPI.js';
+import { connectDB, disconnectDB } from '../config/connection.js';
 import bcrypt from 'bcrypt';
 
 describe('Backend Integration Tests', () => {
