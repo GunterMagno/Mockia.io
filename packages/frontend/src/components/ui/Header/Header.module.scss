@@ -1,3 +1,5 @@
+@import '../../../styles/global.scss';
+
 .header {
   display: flex;
   justify-content: space-between;
@@ -10,6 +12,10 @@
   position: relative;
   z-index: 100;
   transition: all var(--transition-normal);
+
+  @include respond-to('md') {
+    padding: 0 var(--spacing-4);
+  }
 }
 
 .landingHeader {
@@ -79,7 +85,7 @@
   align-items: center;
   gap: var(--spacing-10);
 
-  @media (max-width: 900px) {
+  @include respond-to('lg') {
     display: none;
   }
 }
@@ -111,6 +117,10 @@
   font-weight: 800;
   color: var(--secondary-dark-off);
   letter-spacing: -0.02em;
+
+  @include respond-to('sm') {
+    font-size: 1.5rem;
+  }
 }
 
 .highlight {
@@ -129,10 +139,105 @@
   }
 }
 
+.navActions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
+
+  @include respond-to('md') {
+    display: none;
+
+    &.menuOpen {
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 80px;
+      left: 0;
+      right: 0;
+      width: 100%;
+      background-color: var(--secondary-light-disabled);
+      padding: var(--spacing-8) var(--spacing-6);
+      box-shadow: var(--shadow-sm);
+      border-bottom: 1px solid var(--sidebar-border-color);
+      align-items: flex-start;
+      z-index: 1000;
+      animation: slideDown 0.3s ease-out;
+    }
+  }
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.menuBackdrop {
+  position: fixed;
+  top: 80px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 999;
+}
+
+.mobileOnlyLinks {
+  display: none;
+  
+  @include respond-to('md') {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: var(--spacing-4);
+    margin-bottom: var(--spacing-6);
+    padding-bottom: var(--spacing-6);
+    border-bottom: 1px solid var(--sidebar-border-color);
+  }
+}
+
+.mobileNavLink {
+  background: transparent;
+  border: none;
+  color: var(--support-04);
+  font-size: 1.25rem;
+  font-weight: 700;
+  text-decoration: none;
+  text-align: left;
+  padding: var(--spacing-2) 0;
+  cursor: pointer;
+  
+  &:hover {
+    color: var(--support-03);
+  }
+}
+
+.actionItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
+}
+
+.actionLabel {
+  display: none;
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--support-04);
+
+  @include respond-to('md') {
+    display: block;
+  }
+}
+
 .authButtons {
   display: flex;
   align-items: center;
   gap: var(--spacing-4);
+  
+  @include respond-to('md') {
+    width: 100%;
+    flex-direction: column;
+  }
 }
 
 .loginBtn, .signupBtn {
@@ -141,6 +246,13 @@
   border-radius: var(--radius-lg);
   font-size: 1rem;
   transition: all var(--transition-fast);
+  
+  @include respond-to('md') {
+    width: 100%;
+    text-align: center;
+    padding: 16px;
+    font-size: 1.1rem;
+  }
 }
 
 .rightContent {
@@ -148,13 +260,20 @@
   align-items: center;
   gap: var(--spacing-6);
   color: var(--support-03);
+  
+  @include respond-to('md') {
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-4);
+  }
 }
 
 .iconButton {
   background: none;
   border: none;
   cursor: pointer;
-  padding: var(--spacing-1);
+  padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -162,7 +281,7 @@
   transition: transform var(--transition-fast);
 
   &:hover {
-    transform: scale(1.1);
+    transform: scale(1.05);
   }
 }
 
@@ -170,4 +289,47 @@
   width: 32px;
   height: 32px;
   border-radius: var(--radius-full);
+}
+
+/* =========================================
+   Hamburger Menu Button (Mobile Only)
+========================================= */
+.hamburgerBtn {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 32px;
+  height: 22px;
+  padding: 0;
+  z-index: 1001;
+
+  @include respond-to('md') {
+    display: flex;
+  }
+
+  span {
+    display: block;
+    width: 100%;
+    height: 3px;
+    background-color: var(--support-03);
+    border-radius: 4px;
+    transition: all 0.3s cubic-bezier(0.68, -0.6, 0.32, 1.6);
+    transform-origin: center;
+  }
+
+  &.menuOpen {
+    span:nth-child(1) {
+      transform: translateY(9.5px) rotate(45deg);
+    }
+    span:nth-child(2) {
+      opacity: 0;
+      transform: scaleX(0);
+    }
+    span:nth-child(3) {
+      transform: translateY(-9.5px) rotate(-45deg);
+    }
+  }
 }

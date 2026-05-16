@@ -22,6 +22,16 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({ children, onOp
   })
   const [isProfileOpen, setIsProfileOpen] = useState(false)
 
+  React.useEffect(() => {
+    const handleOpenSettings = () => {
+      if (onOpenProjectSettings) onOpenProjectSettings();
+    };
+    document.addEventListener('open-project-settings', handleOpenSettings);
+    return () => {
+      document.removeEventListener('open-project-settings', handleOpenSettings);
+    };
+  }, [onOpenProjectSettings]);
+
   const toggleSidebar = () => {
     const newState = !isCollapsed
     setIsCollapsed(newState)

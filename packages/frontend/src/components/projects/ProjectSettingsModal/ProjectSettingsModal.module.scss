@@ -1,3 +1,5 @@
+@import '../../../styles/global.scss';
+
 .container {
   background-color: var(--settings-modal-bg);
   border-radius: var(--radius-xl);
@@ -7,15 +9,28 @@
   display: flex;
   flex-direction: column;
   min-height: 500px;
+
+  @include respond-to('sm') {
+    min-height: auto;
+  }
 }
 
 .header {
   padding: var(--spacing-6) var(--spacing-8) var(--spacing-2);
+
+  @include respond-to('sm') {
+    padding: var(--spacing-4) var(--spacing-4) var(--spacing-2);
+  }
   
   h2 {
     margin: 0 0 var(--spacing-6);
     font-size: 2rem;
     font-weight: 500;
+
+    @include respond-to('sm') {
+      font-size: 1.5rem;
+      margin-bottom: var(--spacing-4);
+    }
   }
 }
 
@@ -24,7 +39,21 @@
   gap: var(--spacing-6);
   border-bottom: 1px solid var(--sidebar-border-color);
   padding-bottom: var(--spacing-1);
+
+  @include respond-to('sm') {
+    gap: var(--spacing-3);
+    overflow-x: auto;
+    padding-bottom: 0;
+    
+    /* Hide scrollbar but keep functionality */
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+    &::-webkit-scrollbar {
+      display: none; /* Chrome, Safari and Opera */
+    }
+  }
 }
+
 
 .tab {
   background: none;
@@ -35,6 +64,11 @@
   padding: 0 0 var(--spacing-2);
   position: relative;
   transition: color var(--transition-fast);
+  white-space: nowrap;
+
+  @include respond-to('sm') {
+    font-size: var(--text-base);
+  }
 
   &:hover {
     color: var(--settings-text);
@@ -60,6 +94,10 @@
 .content {
   padding: var(--spacing-8);
   flex: 1;
+
+  @include respond-to('sm') {
+    padding: var(--spacing-4);
+  }
 }
 
 .formGroup {
@@ -71,6 +109,10 @@
   label {
     font-size: var(--text-lg);
     font-weight: 500;
+
+    @include respond-to('sm') {
+      font-size: var(--text-base);
+    }
   }
 }
 
@@ -83,6 +125,11 @@
   font-size: var(--text-base);
   outline: none;
   transition: border-color var(--transition-fast);
+  width: 100%;
+
+  @include respond-to('sm') {
+    padding: var(--spacing-3);
+  }
 
   &::placeholder {
     color: var(--muted);
@@ -154,6 +201,11 @@
   max-width: 500px;
   transition: transform 0.1s;
 
+  @include respond-to('sm') {
+    font-size: 1.25rem;
+    padding: var(--spacing-3) var(--spacing-6);
+  }
+
   &:hover {
     background-color: var(--settings-btn-hover);
   }
@@ -177,6 +229,10 @@
   display: flex;
   gap: var(--spacing-4);
   justify-content: center;
+
+  @include respond-to('sm') {
+    flex-direction: column;
+  }
 }
 
 .cancelDeleteBtn {
@@ -221,6 +277,10 @@
   display: flex;
   gap: var(--spacing-4);
 
+  @include respond-to('sm') {
+    flex-direction: column;
+  }
+
   .input {
     flex: 1;
   }
@@ -232,6 +292,10 @@
     background-repeat: no-repeat;
     background-position: right var(--spacing-3) center;
     background-size: 1.2rem;
+
+    @include respond-to('sm') {
+      width: 100%;
+    }
   }
 }
 
@@ -243,6 +307,11 @@
   font-size: 1.5rem;
   cursor: pointer;
   transition: background-color var(--transition-fast);
+
+  @include respond-to('sm') {
+    padding: var(--spacing-3);
+    font-size: 1.25rem;
+  }
 
   &:hover:not(:disabled) {
     background-color: var(--settings-btn-hover);
@@ -267,6 +336,14 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: var(--spacing-8);
+  gap: var(--spacing-4);
+
+  @include respond-to('sm') {
+    flex-direction: column;
+    align-items: flex-start;
+    border-bottom: 1px solid var(--sidebar-border-color);
+    padding-bottom: var(--spacing-4);
+  }
 }
 
 .memberInfo {
@@ -278,33 +355,57 @@
 .memberAvatar {
   width: 60px;
   height: 60px;
+  min-width: 60px;
   background-color: var(--support-03);
   border-radius: var(--radius-full);
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--support-04);
+
+  @include respond-to('sm') {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    font-size: var(--text-lg);
+  }
 }
 
 .memberDetails {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .memberName {
   font-size: var(--text-lg);
   font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  @include respond-to('sm') {
+    font-size: var(--text-base);
+  }
 }
 
 .memberEmail {
   font-size: var(--text-sm);
   color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .memberActions {
   display: flex;
   align-items: center;
   gap: var(--spacing-4);
+
+  @include respond-to('sm') {
+    width: 100%;
+    justify-content: space-between;
+  }
 }
 
 .roleBadge {
@@ -336,6 +437,11 @@
   justify-content: flex-end;
   gap: var(--spacing-4);
   background-color: var(--sidebar-item-active);
+
+  @include respond-to('sm') {
+    padding: var(--spacing-4);
+    flex-direction: column-reverse;
+  }
 }
 
 .cancelBtn {
@@ -344,6 +450,10 @@
   font-size: 1.5rem;
   color: var(--settings-text);
   cursor: pointer;
+
+  @include respond-to('sm') {
+    font-size: 1.25rem;
+  }
   
   &:hover {
     text-decoration: underline;
@@ -357,6 +467,12 @@
   padding: var(--spacing-2) var(--spacing-10);
   font-size: 1.5rem;
   cursor: pointer;
+
+  @include respond-to('sm') {
+    padding: var(--spacing-3);
+    font-size: 1.25rem;
+    width: 100%;
+  }
   
   &:hover:not(:disabled) {
     background-color: var(--settings-btn-hover);
@@ -387,6 +503,10 @@
   border-radius: var(--radius-lg);
   padding: var(--spacing-6);
 
+  @include respond-to('sm') {
+    padding: var(--spacing-4);
+  }
+
   h4 {
     margin: 0 0 var(--spacing-2);
     font-size: var(--text-lg);
@@ -411,6 +531,10 @@
   display: flex;
   gap: var(--spacing-4);
   align-items: center;
+
+  @include respond-to('sm') {
+    flex-direction: column;
+  }
 }
 
 .apiKeyBox {
@@ -423,6 +547,7 @@
   border-radius: var(--radius-md);
   border: 1px solid var(--sidebar-border-color);
   min-height: 48px;
+  width: 100%;
 
   code {
     font-family: monospace;
@@ -465,6 +590,11 @@
   cursor: pointer;
   transition: background-color var(--transition-fast);
 
+  @include respond-to('sm') {
+    width: 100%;
+    padding: var(--spacing-3);
+  }
+
   &:hover {
     background-color: var(--settings-btn-hover);
   }
@@ -504,6 +634,10 @@
   font-weight: 600;
   cursor: pointer;
   transition: all var(--transition-fast);
+
+  @include respond-to('sm') {
+    width: 100%;
+  }
 
   &:hover:not(:disabled) {
     background-color: var(--support-02);

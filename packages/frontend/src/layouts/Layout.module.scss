@@ -1,3 +1,5 @@
+@import '../styles/global.scss';
+
 .layout {
   display: flex;
   flex-direction: column;
@@ -18,6 +20,13 @@
   &.collapsed {
     grid-template-columns: 80px 1fr;
   }
+  
+  @include respond-to('md') {
+    grid-template-columns: 1fr;
+    &.collapsed {
+      grid-template-columns: 1fr;
+    }
+  }
 }
 
 .sidebar {
@@ -30,6 +39,10 @@
   color: var(--support-03);
   box-shadow: var(--shadow-lg);
   z-index: 10;
+  
+  @include respond-to('md') {
+    display: none;
+  }
 }
 
 .toggleBtn {
@@ -120,6 +133,10 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  
+  @include respond-to('md') {
+    grid-column: 1 / -1;
+  }
 }
 
 .main {

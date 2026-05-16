@@ -1,3 +1,5 @@
+@import '../styles/global.scss';
+
 .landing {
   background-color: var(--support-04);
   color: var(--support-03);
@@ -10,27 +12,36 @@
   max-width: 1600px;
   margin: 0 auto;
   padding: 0 var(--spacing-20);
+
+  @include respond-to('md') {
+    padding: 0 var(--spacing-6);
+  }
+
+  @include respond-to('sm') {
+    padding: 0 var(--spacing-4);
+  }
 }
 
 /* =========================================
    Hero Section
 ========================================= */
 .hero {
-  padding: 70px 0;
+  padding: 100px 0;
   display: flex;
   align-items: center;
   gap: var(--spacing-10);
   
-  @media (max-width: 1200px) {
+  @include respond-to('xl') {
     flex-direction: column;
     text-align: center;
-    padding: 80px 0;
+    padding: 60px 0;
   }
 }
 
 .heroContent {
   flex: 1;
   max-width: 1000px;
+  width: 100%;
 }
 
 .heroContent h1 {
@@ -40,11 +51,22 @@
   margin: 0 0 var(--spacing-8);
   letter-spacing: -0.05em;
   color: var(--support-03);
+  overflow-wrap: break-word;
+  word-wrap: break-word;
 
-  @media (max-width: 768px) {
-    font-size: 4rem;
+  @include respond-to('lg') {
+    font-size: 4.5rem;
+  }
+
+  @include respond-to('md') {
+    font-size: 3.5rem;
+  }
+
+  @include respond-to('sm') {
+    font-size: 3rem;
   }
 }
+
 
 .gradientText {
   background: linear-gradient(135deg, var(--primary-light), var(--primary-dark));
@@ -55,6 +77,10 @@
 
 .nowrap {
   white-space: nowrap;
+  
+  @include respond-to('md') {
+    white-space: normal;
+  }
 }
 
 .blackText {
@@ -68,17 +94,33 @@
   margin-bottom: var(--spacing-10);
   max-width: 600px;
   
-  @media (max-width: 1200px) {
+  @include respond-to('xl') {
     margin: 0 auto var(--spacing-10);
   }
+
+  @include respond-to('md') {
+    font-size: 1.1rem;
+  }
+
+  @include respond-to('sm') {
+    font-size: 0.8rem;
+    line-height: 1.4;
+  }
 }
+
+
 
 .heroActions {
   display: flex;
   gap: var(--spacing-6);
   
-  @media (max-width: 1200px) {
+  @include respond-to('xl') {
     justify-content: center;
+  }
+
+  @include respond-to('sm') {
+    flex-direction: column;
+    gap: var(--spacing-4);
   }
 }
 
@@ -93,9 +135,23 @@
   cursor: pointer;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--spacing-4);
   transition: all var(--transition-fast);
   box-shadow: var(--shadow-lg);
+
+  @include respond-to('sm') {
+    width: fit-content;
+    margin: 0 auto;
+    padding: 10px 20px;
+    font-size: 0.9rem;
+    border-radius: var(--radius-lg);
+    
+    img {
+      width: 18px;
+      height: 18px;
+    }
+  }
 
   &:hover {
     transform: translateY(-3px);
@@ -121,10 +177,16 @@
   overflow: hidden;
   border: 1px solid var(--sidebar-border-color);
   min-width: 600px;
+  width: 100%;
   
-  @media (max-width: 1200px) {
-    min-width: 100%;
+  @include respond-to('xl') {
+    min-width: 0;
+    max-width: 700px;
     margin-top: var(--spacing-10);
+  }
+
+  @include respond-to('md') {
+    max-width: 100%;
   }
 }
 
@@ -159,6 +221,9 @@
   color: var(--muted);
   flex: 0.8;
   text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .windowContent {
@@ -167,6 +232,7 @@
   font-size: var(--text-base);
   line-height: 1.6;
   color: var(--support-04);
+  overflow-x: auto;
   
   pre { margin: var(--spacing-0); }
   .comment { color: var(--muted); }
@@ -174,6 +240,11 @@
   .string { color: var(--tertiary-light-disabled); }
   .number { color: var(--support-01); }
   .bool { color: var(--support-01); }
+
+  @include respond-to('md') {
+    padding: var(--spacing-6);
+    font-size: var(--text-sm);
+  }
 }
 
 .windowFooter {
@@ -560,7 +631,19 @@
   white-space: nowrap;
   letter-spacing: 0.1em;
   box-shadow: var(--shadow-xl);
+
+  @include respond-to('lg') {
+    font-size: 4rem;
+    padding: var(--spacing-3) var(--spacing-8);
+  }
+
+  @include respond-to('md') {
+    font-size: 2.5rem;
+    padding: var(--spacing-2) var(--spacing-4);
+    border-width: 2px;
+  }
 }
+
 
 .pricingHeader {
   text-align: center;
