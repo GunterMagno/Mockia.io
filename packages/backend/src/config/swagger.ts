@@ -1,0 +1,44 @@
+import swaggerJsdoc from 'swagger-jsdoc';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const options: swaggerJsdoc.Options = {
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'Mockia.io API Documentation',
+      version: '1.0.0',
+      description: 'API documentation for the Mockia.io platform. Generate, manage and simulate APIs with AI.',
+      contact: {
+        name: 'Mockia Support',
+        url: 'https://mockia.io',
+      },
+    },
+    servers: [
+      {
+        url: 'http://localhost:3000/api',
+        description: 'Development server',
+      },
+    ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
+    },
+  },
+  // Automatically scan all routes and modules for @swagger annotations
+  apis: [
+    path.join(__dirname, '../routes/*.ts'),
+    path.join(__dirname, '../modules/**/*.ts'),
+    path.join(__dirname, '../models/*.ts'),
+  ],
+};
+
+export const specs = swaggerJsdoc(options);

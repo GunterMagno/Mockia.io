@@ -436,7 +436,6 @@
   display: flex;
   justify-content: flex-end;
   gap: var(--spacing-4);
-  background-color: var(--sidebar-item-active);
 
   @include respond-to('sm') {
     padding: var(--spacing-4);

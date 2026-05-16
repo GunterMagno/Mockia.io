@@ -21,8 +21,8 @@ export const Modal: React.FC<ModalProps> = ({
   if (!isOpen) return null
 
   return (
-    <div className={styles.overlay} onClick={onClose}>
-      <div 
+    <article className={styles.overlay} onClick={onClose}>
+      <section 
         className={styles.modal} 
         style={{ '--modal-width': maxWidth } as React.CSSProperties} 
         onClick={(e) => e.stopPropagation()}
@@ -34,8 +34,8 @@ export const Modal: React.FC<ModalProps> = ({
           </header>
         )}
         <section className={noPadding ? '' : styles.body}>{children}</section>
-      </div>
-    </div>
+      </section>
+    </article>
   )
 }
 

@@ -67,11 +67,11 @@ const ProfileModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} noPadding maxWidth="800px">
-      <div className={styles.container}>
+      <article className={styles.container}>
         <h2 className={styles.title}>Account Settings</h2>
         
-        <div className={styles.formSection}>
-          <div className={styles.formGroup}>
+        <section className={styles.formSection}>
+          <article className={styles.formGroup}>
             <label>Username</label>
             <input 
               value={username}
@@ -79,9 +79,9 @@ const ProfileModal: React.FC<Props> = ({ isOpen, onClose }) => {
               className={styles.input}
               placeholder="yourusername"
             />
-          </div>
+          </article>
 
-          <div className={styles.formGroup}>
+          <article className={styles.formGroup}>
             <label>Email</label>
             <input 
               value={email}
@@ -89,10 +89,10 @@ const ProfileModal: React.FC<Props> = ({ isOpen, onClose }) => {
               className={`${styles.input} ${styles.readOnly}`}
               placeholder="your@email.com"
             />
-          </div>
+          </article>
 
-          <div className={styles.passwordGrid}>
-            <div className={styles.formGroup}>
+          <fieldset className={styles.passwordGrid}>
+            <article className={styles.formGroup}>
               <label>Current Password</label>
               <Input 
                 type="password"
@@ -102,8 +102,8 @@ const ProfileModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 placeholder="Current Password"
                 autoComplete="one-time-code"
               />
-            </div>
-            <div className={styles.formGroup}>
+            </article>
+            <article className={styles.formGroup}>
               <label>New Password</label>
               <Input 
                 type="password"
@@ -113,21 +113,21 @@ const ProfileModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 placeholder="New Password"
                 autoComplete="new-password"
               />
-            </div>
-          </div>
-        </div>
+            </article>
+          </fieldset>
+        </section>
 
         {status.message && (
-          <div className={`${styles.status} ${styles[status.type]}`}>
+          <span className={`${styles.status} ${styles[status.type]}`}>
             {status.message}
-          </div>
+          </span>
         )}
 
-        <div className={styles.actions}>
+        <nav className={styles.actions}>
           <button className={styles.logoutBtn} onClick={handleLogout}>
             Log Out
           </button>
-          <div className={styles.rightActions}>
+          <nav className={styles.rightActions}>
             <button className={styles.cancelBtn} onClick={onClose}>
               Cancel
             </button>
@@ -138,9 +138,9 @@ const ProfileModal: React.FC<Props> = ({ isOpen, onClose }) => {
             >
               {loading ? 'Saving...' : 'Save'}
             </button>
-          </div>
-        </div>
-      </div>
+          </nav>
+        </nav>
+      </article>
     </Modal>
   )
 }

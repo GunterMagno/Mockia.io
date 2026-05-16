@@ -6,6 +6,8 @@ import userIcon from '../../../assets/user.svg';
 import logoMockia from '../../../assets/LogoMockia.png';
 import ProfileModal from '../../projects/ProfileModal/ProfileModal';
 import NotificationBell from '../../notifications/NotificationBell/NotificationBell';
+import gridIcon from '../../../assets/grid.svg';
+import settingsIcon from '../../../assets/settings.svg';
 
 const Header: React.FC = () => {
   const location = useLocation();
@@ -13,17 +15,38 @@ const Header: React.FC = () => {
   const path = location.pathname;
   
   // Determine variant based on path
-  const isLanding = path === '/';
-  const isAuthPage = path === '/login' || path === '/signup';
+  const validPaths = ['/', '/login', '/signup', '/terms', '/privacy', '/dashboard'];
   const isProjectPage = path.startsWith('/editor/');
+  const is404 = !validPaths.includes(path) && !isProjectPage;
+
+  const isLanding = path === '/';
+  const isAuthPage = path === '/login' || path === '/signup' || is404;
 
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [projectName, setProjectName] = useState<string | null>(null);
 
   // Close mobile menu on route change
   useEffect(() => {
     setIsMenuOpen(false);
   }, [path]);
+
+  // Listen for project name updates
+  useEffect(() => {
+    const handleSetProjectName = (e: any) => {
+      setProjectName(e.detail);
+    };
+    document.addEventListener('set-project-name', handleSetProjectName);
+    
+    // Clear project name if we leave the project page
+    if (!isProjectPage) {
+      setProjectName(null);
+    }
+    
+    return () => {
+      document.removeEventListener('set-project-name', handleSetProjectName);
+    };
+  }, [isProjectPage]);
 
   const openSettings = () => {
     document.dispatchEvent(new CustomEvent('open-project-settings'));
@@ -37,19 +60,19 @@ const Header: React.FC = () => {
     </Link>
   );
 
-  const ProfileAndBell = () => (
-    <div className={styles.rightContent}>
-      <div className={styles.actionItem}>
+  const ProfileAndBellDesktop = () => (
+    <nav className={`${styles.rightContent} ${styles.desktopOnly}`}>
+      <article className={styles.actionItem}>
         <NotificationBell />
         <span className={styles.actionLabel}>Notifications</span>
-      </div>
+      </article>
       <button className={styles.iconButton} onClick={() => { setIsProfileOpen(true); setIsMenuOpen(false); }} title="Profile">
-        <div className={styles.actionItem}>
+        <article className={styles.actionItem}>
           <img src={userIcon} alt="Profile" className={styles.profileIcon} />
           <span className={styles.actionLabel}>Profile</span>
-        </div>
+        </article>
       </button>
-    </div>
+    </nav>
   );
 
   const HamburgerBtn = () => (
@@ -77,35 +100,74 @@ const Header: React.FC = () => {
   return (
     <>
       <header className={`${styles.header} ${isLanding ? styles.landingHeader : ''}`}>
-        <div className={styles.headerContainer}>
-          <div className={styles.leftSection}>
+        <section className={styles.headerContainer}>
+          <article className={styles.leftSection}>
             <Logo />
-          </div>
+          </article>
+
+          {isProjectPage && projectName && (
+            <article className={styles.centerSection}>
+              <span className={styles.projectName}>{projectName}</span>
+            </article>
+          )}
 
           <HamburgerBtn />
 
-          {isMenuOpen && <div className={styles.menuBackdrop} onClick={() => setIsMenuOpen(false)} />}
+          {isMenuOpen && <article className={styles.menuBackdrop} onClick={() => setIsMenuOpen(false)} />}
 
-          <div className={`${styles.navActions} ${isMenuOpen ? styles.menuOpen : ''}`}>
+          <nav className={`${styles.navActions} ${isMenuOpen ? styles.menuOpen : ''}`}>
             {isAuthenticated && (
-              <div className={styles.mobileOnlyLinks}>
-                <Link to="/dashboard" onClick={() => setIsMenuOpen(false)} className={styles.mobileNavLink}>Dashboard</Link>
-                {isProjectPage && (
-                  <button onClick={openSettings} className={styles.mobileNavLink}>Configuration</button>
+              <nav className={styles.mobileOnlyLinks}>
+                {isProjectPage && projectName && (
+                  <article className={styles.mobileProjectName}>
+                    {projectName}
+                  </article>
                 )}
-              </div>
+                <Link to="/dashboard" onClick={() => setIsMenuOpen(false)} className={styles.mobileNavLink}>
+                  <img src={gridIcon} alt="Dashboard" className={styles.mobileNavIcon} />
+                  Dashboard
+                </Link>
+                {isProjectPage && (
+                  <button onClick={openSettings} className={styles.mobileNavLink}>
+                    <img src={settingsIcon} alt="Configuration" className={styles.mobileNavIcon} />
+                    Configuration
+                  </button>
+                )}
+                
+                <article 
+                  className={`${styles.mobileNavLink} ${styles.mobileNotificationItem}`}
+                  onClick={(e) => {
+                    // Only trigger if clicking the empty space or the text, NOT the dropdown panel
+                    const target = e.target as HTMLElement;
+                    if (target.tagName === 'ARTICLE' || target.tagName === 'SPAN') {
+                      const bellBtn = e.currentTarget.querySelector('button');
+                      if (bellBtn) {
+                        bellBtn.click();
+                      }
+                    }
+                  }}
+                >
+                  <NotificationBell className={styles.mobileNavBellWrapper} />
+                  <span className={styles.mobileNavText}>Notifications</span>
+                </article>
+
+                <button onClick={() => { setIsProfileOpen(true); setIsMenuOpen(false); }} className={styles.mobileNavLink}>
+                  <img src={userIcon} alt="Profile" className={styles.mobileNavIcon} />
+                  Profile
+                </button>
+              </nav>
             )}
 
             {isAuthenticated ? (
-              <ProfileAndBell />
+              <ProfileAndBellDesktop />
             ) : (
-              <div className={styles.authButtons}>
+              <nav className={styles.authButtons}>
                 <Link to="/login" className={styles.loginBtn}>Log In</Link>
                 <Link to="/signup" className={styles.signupBtn}>Sign up</Link>
-              </div>
+              </nav>
             )}
-          </div>
-        </div>
+          </nav>
+        </section>
       </header>
       <ProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
     </>

@@ -48,11 +48,11 @@ services:
       mongo:
         condition: service_healthy
     volumes:
-      - ./packages/backend/src:/app/src
-      - ./packages/backend/package.json:/app/package.json
+      - ./packages/backend/src:/app/packages/backend/src
+      - ./packages/backend/package.json:/app/packages/backend/package.json
     networks:
       - mockia-network
-    command: npm run dev
+    command: npm run dev -w packages/backend
 
   # Frontend Development Server
   frontend:

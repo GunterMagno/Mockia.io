@@ -5,9 +5,9 @@ import styles from './Footer.module.scss'
 export const Footer: React.FC = () => {
   return (
     <footer className={styles.footer}>
-      <div className={styles.container}>
-        <div>&copy; {new Date().getFullYear()} Mockia.io - Intelligent Mock API Generator</div>
-        <div className={styles.links}>
+      <section className={styles.container}>
+        <article>&copy; {new Date().getFullYear()} Mockia.io - Intelligent Mock API Generator</article>
+        <nav className={styles.links}>
           <a 
             href="https://github.com/GunterMagno/Mockia.io/tree/main/docs" 
             className={styles.link}
@@ -18,8 +18,16 @@ export const Footer: React.FC = () => {
           </a>
           <Link to="/terms" className={styles.link}>Terms</Link>
           <Link to="/privacy" className={styles.link}>Privacy</Link>
-        </div>
-      </div>
+          <a 
+            href="http://localhost:3000/api/docs" 
+            className={styles.link}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            API Docs
+          </a>
+        </nav>
+      </section>
     </footer>
   )
 }

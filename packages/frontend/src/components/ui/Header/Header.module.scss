@@ -90,6 +90,39 @@
   }
 }
 
+.centerSection {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  
+  @include respond-to('md') {
+    display: none;
+  }
+}
+
+.projectName {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--support-03);
+  letter-spacing: 0.02em;
+  position: relative;
+  opacity: 0.95;
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary-light), transparent);
+    border-radius: var(--radius-full);
+  }
+}
+
 .authHeader {
   background-color: var(--secondary-light-disabled);
   border-bottom: none;
@@ -196,20 +229,44 @@
   }
 }
 
+.mobileProjectName {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--support-03);
+  margin-bottom: var(--spacing-4);
+  padding-bottom: var(--spacing-4);
+  border-bottom: 1px solid var(--sidebar-border-color);
+  width: 100%;
+}
+
 .mobileNavLink {
-  background: transparent;
-  border: none;
-  color: var(--support-04);
-  font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  width: 100%;
+  background: var(--support-04);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--support-03);
+  font-size: 1.15rem;
   font-weight: 700;
   text-decoration: none;
   text-align: left;
-  padding: var(--spacing-2) 0;
+  padding: var(--spacing-3) var(--spacing-4);
   cursor: pointer;
+  transition: all var(--transition-fast);
   
   &:hover {
-    color: var(--support-03);
+    background: var(--sidebar-item-active);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
   }
+}
+
+.mobileNavIcon {
+  width: 20px;
+  height: 20px;
+  opacity: 0.8;
 }
 
 .actionItem {
@@ -220,9 +277,9 @@
 
 .actionLabel {
   display: none;
-  font-weight: 600;
-  font-size: 1.1rem;
-  color: var(--support-04);
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: var(--support-03);
 
   @include respond-to('md') {
     display: block;
@@ -266,6 +323,51 @@
     flex-direction: column;
     align-items: flex-start;
     gap: var(--spacing-4);
+  }
+}
+
+.desktopOnly {
+  display: flex;
+  @include respond-to('md') {
+    display: none;
+  }
+}
+
+.mobileNotificationItem {
+  position: relative;
+  cursor: pointer;
+  z-index: 10;
+
+  &:hover, &:active {
+    background: var(--support-04);
+    transform: none;
+    box-shadow: none;
+  }
+
+  .mobileNavBellWrapper {
+    position: static;
+    display: flex;
+    align-items: center;
+    
+    button {
+      padding: 0;
+      margin: 0;
+      background: none;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      
+      figure {
+        position: relative;
+        z-index: 2;
+        width: 20px;
+        height: 20px;
+        min-width: 20px;
+        min-height: 20px;
+      }
+    }
   }
 }
 

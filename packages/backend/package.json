@@ -32,6 +32,8 @@
     "mongoose": "^8.0.0",
     "morgan": "^1.10.1",
     "simple-git": "^3.33.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
     "tsx": "^4.0.0",
     "typescript": "^5.2.0"
   },

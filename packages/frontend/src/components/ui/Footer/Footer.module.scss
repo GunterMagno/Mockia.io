@@ -1,11 +1,13 @@
 .footer {
-  padding: var(--spacing-6) var(--spacing-8);
-  background: var(--bg);
-  border-top: 1px solid var(--border);
+  padding: var(--spacing-4) 0;
+  background: var(--support-05);
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
   text-align: center;
-  color: var(--muted);
-  font-size: var(--text-sm);
+  color: var(--support-03);
+  font-size: var(--text-xs);
+  font-weight: 700;
   margin-top: auto;
+  width: 100%;
 }
 
 .container {

@@ -21,54 +21,107 @@ const router = Router();
  */
 
 /**
- * POST /api/ai/generate-description
- * Generate description/documentation for an API feature
+ * @swagger
+ * tags:
+ *   name: AI
+ *   description: AI-powered generation and analysis
+ */
+
+/**
+ * @swagger
+ * /ai/generate-description:
+ *   post:
+ *     summary: Generate feature description
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Success
  */
 router.post('/generate-description', authenticateToken, generateDescriptionHandler);
 
 /**
- * POST /api/ai/generate-mock-data
- * Generate mock data for a given schema
+ * @swagger
+ * /ai/generate-mock-data:
+ *   post:
+ *     summary: Generate mock data
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Success
  */
 router.post('/generate-mock-data', authenticateToken, generateMockDataHandler);
 
 /**
- * POST /api/ai/generate-mock-api-spec
- * Generate a complete mock API specification based on project context
- * Uses Sprint 5: Prompt Engineering and Context Formatting
- * 
- * Request body:
- * {
- *   "projectId": "mongodb-project-id",
- *   "requirement": "Description of what the mock API should do",
- *   "temperature": 0.7 (optional),
- *   "maxTokens": 4000 (optional)
- * }
- * 
- * Response: Complete mock API specification with endpoints and data models
+ * @swagger
+ * /ai/generate-mock-api-spec:
+ *   post:
+ *     summary: Generate API specification
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - projectId
+ *               - requirement
+ *             properties:
+ *               projectId:
+ *                 type: string
+ *               requirement:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Success
  */
 router.post('/generate-mock-api-spec', authenticateToken, generateMockAPISpecHandler);
 
 /**
- * POST /api/ai/generate-and-save
- * Generate a complete mock API specification AND save to database
- * End-to-end pipeline: generate -> parse -> validate -> save
- * 
- * Request body:
- * {
- *   "projectId": "mongodb-project-id",
- *   "requirement": "Description of what the mock API should do",
- *   "temperature": 0.7 (optional),
- *   "maxTokens": 4000 (optional)
- * }
- * 
- * Response: Specification + database creation result
+ * @swagger
+ * /ai/generate-and-save:
+ *   post:
+ *     summary: Generate and save API specification
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - projectId
+ *               - requirement
+ *             properties:
+ *               projectId:
+ *                 type: string
+ *               requirement:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Success
  */
 router.post('/generate-and-save', authenticateToken, generateAndSaveHandler);
 
 /**
- * GET /api/ai/health
- * Check AI service health
+ * @swagger
+ * /ai/health:
+ *   get:
+ *     summary: AI service health check
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Success
  */
 router.get('/health', authenticateToken, aiHealthCheckHandler);
 

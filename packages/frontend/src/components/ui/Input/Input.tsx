@@ -19,7 +19,7 @@ export const Input: React.FC<InputProps> = ({ label, error, type, ...rest }) => 
   };
 
   const content = (
-    <div className={styles.inputWrapper}>
+    <article className={styles.inputWrapper}>
       <input 
         className={`${styles.input} ${isPassword ? styles.passwordInput : ''} ${rest.className || ''}`} 
         type={inputType} 
@@ -36,17 +36,17 @@ export const Input: React.FC<InputProps> = ({ label, error, type, ...rest }) => 
           <Icon src={showPassword ? eyeOffIcon : eyeIcon} size={20} />
         </button>
       )}
-    </div>
+    </article>
   );
 
   if (!label) return content;
 
   return (
-    <div className={styles.field}>
+    <fieldset className={styles.field}>
       <label className={styles.label}>{label}</label>
       {content}
       {error && <span className={styles.error}>{error}</span>}
-    </div>
+    </fieldset>
   );
 };
 

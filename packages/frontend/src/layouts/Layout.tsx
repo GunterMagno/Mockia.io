@@ -47,8 +47,8 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({ children, onOp
   ]
 
   return (
-    <div className={styles.layout}>
-      <div className={`${styles.layoutInner} ${isCollapsed ? styles.collapsed : ''}`}>
+    <section className={styles.layout}>
+      <article className={`${styles.layoutInner} ${isCollapsed ? styles.collapsed : ''}`}>
       {/* Sidebar */}
       <aside className={styles.sidebar}>
         {/* Toggle Button */}
@@ -93,18 +93,18 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({ children, onOp
       <ProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
 
       {/* Main Content Area */}
-      <div className={styles.mainWrapper}>
+      <section className={styles.mainWrapper}>
         <main className={styles.main}>
           <section className={styles.container}>{children}</section>
         </main>
-        </div>
-      </div>
+        </section>
+      </article>
 
       {/* Footer spans across the bottom row */}
-      <div className={styles.footerWrapper}>
+      <footer className={styles.footerWrapper}>
         <Footer />
-      </div>
-    </div>
+      </footer>
+    </section>
   )
 }
 

@@ -32,15 +32,15 @@ const NotificationToast: React.FC<NotificationToastProps> = ({ notification, onC
   };
 
   return (
-    <div className={`${styles.toast} ${isVisible ? styles.visible : ''}`}>
-      <div className={styles.iconContainer}>
+    <aside className={`${styles.toast} ${isVisible ? styles.visible : ''}`}>
+      <figure className={styles.iconContainer}>
         <Icon src={getIcon()} size={20} />
-      </div>
-      <div className={styles.content}>
-        <div className={styles.title}>{notification.title}</div>
-        <div className={styles.message}>{notification.message}</div>
-      </div>
-    </div>
+      </figure>
+      <section className={styles.content}>
+        <span className={styles.title}>{notification.title}</span>
+        <span className={styles.message}>{notification.message}</span>
+      </section>
+    </aside>
   );
 };
 

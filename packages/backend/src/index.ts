@@ -5,9 +5,9 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import { connectDB, disconnectDB, getConnectionStatus } from './config/connection.js';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler.js';
-import { authRouter } from './routes/auth.routes.js';
-import { projectsRouter } from './routes/projects.routes.js';
-import { userRouter } from './routes/user.routes.js';
+import { authRouter } from './modules/auth/routes.js';
+import { projectsRouter } from './modules/projects/routes.js';
+import { userRouter } from './modules/users/routes.js';
 import { githubRouter } from './routes/github.routes.js';
 import { mockRouter } from './routes/mock.routes.js';
 import mountMockDocsRoutes from './modules/mock/mock.docs.routes.js';
@@ -16,6 +16,8 @@ import { endpointsRouter } from './routes/endpoints.routes.js';
 import aiRouter from './routes/ai.routes.js';
 import notificationRouter from './routes/notification.routes.js';
 import { startProjectCleanupScheduler } from './scheduler/projectCleanup.js';
+import swaggerUi from 'swagger-ui-express';
+import { specs } from './config/swagger.js';
 
 dotenv.config();
 
@@ -81,6 +83,9 @@ app.get('/api', (req: Request, res: Response) => {
     },
   });
 });
+
+// API Documentation (OpenAPI)
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(specs));
 
 // ============================================================================
 // APPLICATION ROUTES

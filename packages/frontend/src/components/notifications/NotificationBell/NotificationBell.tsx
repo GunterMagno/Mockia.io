@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Icon } from '../../ui/Icon/Icon';
 import bellIcon from '../../../assets/bell.svg';
 import NotificationPanel from '../NotificationPanel/NotificationPanel';
@@ -12,6 +12,7 @@ interface NotificationBellProps {
 
 const NotificationBell: React.FC<NotificationBellProps> = ({ className }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const wrapperRef = useRef<HTMLElement>(null);
   const { 
     notifications, 
     activeToast, 
@@ -20,8 +21,27 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className }) => {
     clearToast 
   } = useNotifications();
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      // Don't close if clicking inside the wrapper
+      if (wrapperRef.current && wrapperRef.current.contains(event.target as Node)) {
+        return;
+      }
+      
+      const target = event.target as HTMLElement;
+      if (target.closest('[class*="mobileNotificationItem"]')) {
+        return;
+      }
+      
+      setIsOpen(false);
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   return (
-    <div className={`${styles.wrapper} ${className || ''}`}>
+    <section className={`${styles.wrapper} ${className || ''}`} ref={wrapperRef}>
       <button 
         className={`${styles.bellBtn} ${unreadCount > 0 ? styles.hasUnread : ''}`} 
         onClick={() => setIsOpen(!isOpen)}
@@ -45,7 +65,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className }) => {
           onClose={clearToast} 
         />
       )}
-    </div>
+    </section>
   );
 };
 

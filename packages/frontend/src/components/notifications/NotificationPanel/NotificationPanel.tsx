@@ -19,17 +19,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
   onRefresh 
 }) => {
   const navigate = useNavigate();
-  const panelRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(event.target as Node)) {
-        onClose();
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [onClose]);
+  const panelRef = useRef<HTMLElement>(null);
 
   const handleNotificationClick = async (notification: Notification) => {
     if (!notification.isRead) {
@@ -80,34 +70,34 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
   };
 
   return (
-    <div className={styles.panel} ref={panelRef}>
-      <div className={styles.header}>
+    <aside className={styles.panel} ref={panelRef}>
+      <header className={styles.header}>
         <h3>Notifications</h3>
         {notifications.some(n => !n.isRead) && (
           <button onClick={handleMarkAllAsRead} className={styles.markAllBtn}>
             Mark all as read
           </button>
         )}
-      </div>
-      <div className={styles.list}>
+      </header>
+      <section className={styles.list}>
         {notifications.length === 0 ? (
-          <div className={styles.empty}>No notifications yet</div>
+          <article className={styles.empty}>No notifications yet</article>
         ) : (
           notifications.map(notification => (
-            <div 
+            <article 
               key={notification.id} 
               className={`${styles.item} ${!notification.isRead ? styles.unread : ''}`}
               onClick={() => handleNotificationClick(notification)}
             >
-              <div className={styles.iconContainer}>
+              <figure className={styles.iconContainer}>
                 <Icon src={getIcon(notification.type)} size={20} />
-              </div>
-              <div className={styles.content}>
-                <div className={styles.title}>{notification.title}</div>
-                <div className={styles.message}>{notification.message}</div>
-                <div className={styles.date}>{formatDate(notification.createdAt)}</div>
-              </div>
-              {!notification.isRead && <div className={styles.unreadDot} />}
+              </figure>
+              <section className={styles.content}>
+                <span className={styles.title}>{notification.title}</span>
+                <span className={styles.message}>{notification.message}</span>
+                <span className={styles.date}>{formatDate(notification.createdAt)}</span>
+              </section>
+              {!notification.isRead && <span className={styles.unreadDot} />}
               <button 
                 className={styles.deleteBtn} 
                 onClick={(e) => handleDelete(e, notification.id)}
@@ -115,11 +105,11 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
               >
                 ×
               </button>
-            </div>
+            </article>
           ))
         )}
-      </div>
-    </div>
+      </section>
+    </aside>
   );
 };
 

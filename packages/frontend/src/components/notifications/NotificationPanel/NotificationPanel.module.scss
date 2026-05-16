@@ -1,3 +1,5 @@
+@import '../../../styles/global.scss';
+
 .panel {
   position: absolute;
   top: calc(100% + 10px);
@@ -13,6 +15,14 @@
   z-index: 1000;
   overflow: hidden;
   animation: panelFadeIn 0.2s ease-out;
+
+  @include respond-to('md') {
+    right: 0;
+    left: 0;
+    width: 100%;
+    max-width: none;
+    top: calc(100% + 8px);
+  }
 }
 
 @keyframes panelFadeIn {
@@ -32,6 +42,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 
   h3 {
     margin: 0;
@@ -48,6 +60,7 @@
   cursor: pointer;
   padding: 4px 8px;
   border-radius: var(--radius-sm);
+  white-space: nowrap;
 
   &:hover {
     background: var(--primary-color-alpha);
@@ -106,9 +119,16 @@
       background: var(--primary-color-alpha);
     }
   }
+
+  @include respond-to('md') {
+    .deleteBtn {
+      opacity: 1;
+    }
+  }
 }
 
 .iconContainer {
+  margin: 0;
   flex-shrink: 0;
   width: 36px;
   height: 36px;

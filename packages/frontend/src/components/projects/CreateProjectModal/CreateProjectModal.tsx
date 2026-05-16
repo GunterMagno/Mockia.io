@@ -170,13 +170,13 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
 
   return (
     <Modal isOpen={isOpen} onClose={closeAndReset} noPadding maxWidth="900px">
-      <div className={styles.modalContent}>
+      <article className={styles.modalContent}>
         {/* Step Indicator */}
-        <div className={styles.stepIndicator}>
-          <div className={`${styles.dot} ${step === 'select' ? styles.active : ''}`} />
-          <div className={`${styles.dot} ${step === 'config' ? styles.active : ''}`} />
-          <div className={`${styles.dot} ${step === 'ai_prompt' ? styles.active : ''}`} />
-        </div>
+        <nav className={styles.stepIndicator}>
+          <span className={`${styles.dot} ${step === 'select' ? styles.active : ''}`} />
+          <span className={`${styles.dot} ${step === 'config' ? styles.active : ''}`} />
+          <span className={`${styles.dot} ${step === 'ai_prompt' ? styles.active : ''}`} />
+        </nav>
 
         {/* Step 1: Selection */}
         {step === 'select' && (
@@ -185,25 +185,25 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
               <h2>Create New Project</h2>
               <p>Choose how you want to start your next mock API.</p>
             </header>
-            <div className={styles.selectionGrid}>
-              <div className={styles.selectionCard} onClick={() => handleSelectMode('empty')}>
-                <div className={styles.icon}>
+            <section className={styles.selectionGrid}>
+              <article className={styles.selectionCard} onClick={() => handleSelectMode('empty')}>
+                <figure className={styles.icon}>
                   <Icon src={emptyProjectIcon} size={48} color="black" />
-                </div>
+                </figure>
                 <h3>Empty Project</h3>
                 <p>Start from scratch and define your endpoints manually or with AI.</p>
-              </div>
-              <div className={styles.selectionCard} onClick={() => handleSelectMode('github')}>
-                <div className={styles.icon}>
+              </article>
+              <article className={styles.selectionCard} onClick={() => handleSelectMode('github')}>
+                <figure className={styles.icon}>
                   <Icon src={githubIcon} size={48} color="var(--secondary-dark-off)" />
-                </div>
+                </figure>
                 <h3>GitHub Import</h3>
                 <p>Clone a repository and let Mockia analyze its structure automatically.</p>
-              </div>
-            </div>
-            <div className={styles.actions}>
+              </article>
+            </section>
+            <nav className={styles.actions}>
               <button className={styles.cancelBtn} onClick={closeAndReset}>Cancel</button>
-            </div>
+            </nav>
           </>
         )}
 
@@ -215,9 +215,9 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
               <p>{mode === 'github' ? 'Enter the public URL of the repository you want to import.' : 'Give your new project a name and description.'}</p>
             </header>
             
-            <div className={styles.stepContent}>
+            <section className={styles.stepContent}>
               {mode === 'github' ? (
-                <div className={styles.formGroup}>
+                <article className={styles.formGroup}>
                   <label>Repository URL</label>
                   <input 
                     className={styles.input}
@@ -226,10 +226,10 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
                     onChange={e => setRepoUrl(e.target.value)}
                     autoFocus
                   />
-                </div>
+                </article>
               ) : (
                 <>
-                  <div className={styles.formGroup}>
+                  <article className={styles.formGroup}>
                     <label>Project Title</label>
                     <input 
                       className={styles.input}
@@ -238,8 +238,8 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
                       onChange={e => setTitle(e.target.value)}
                       autoFocus
                     />
-                  </div>
-                  <div className={styles.formGroup}>
+                  </article>
+                  <article className={styles.formGroup}>
                     <label>Description (Optional)</label>
                     <input 
                       className={styles.input}
@@ -247,13 +247,13 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
                       value={description}
                       onChange={e => setDescription(e.target.value)}
                     />
-                  </div>
+                  </article>
                 </>
               )}
-              {error && <div className={styles.error}>{error}</div>}
-            </div>
+              {error && <span className={styles.error}>{error}</span>}
+            </section>
 
-            <div className={styles.actions}>
+            <nav className={styles.actions}>
               <button className={styles.cancelBtn} onClick={() => setStep('select')} disabled={validating}>Back</button>
               <button 
                 className={styles.primaryBtn} 
@@ -262,7 +262,7 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
               >
                 {validating ? 'Checking...' : 'Continue'}
               </button>
-            </div>
+            </nav>
           </>
         )}
 
@@ -274,18 +274,18 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
               <p>Do you want Mockia AI to generate endpoints for you?</p>
             </header>
 
-            <div className={styles.stepContent}>
-              <div className={styles.aiCard}>
-                <div className={styles.aiIcon}>
+            <section className={styles.stepContent}>
+              <article className={styles.aiCard}>
+                <figure className={styles.aiIcon}>
                   <Icon src={aiSparkleIcon} size={40} color="white" />
-                </div>
-                <div className={styles.aiText}>
+                </figure>
+                <article className={styles.aiText}>
                   <h4>Smart API Generation</h4>
                   <p>Mockia will use LLMs to create realistic endpoints and data structures based on your input.</p>
-                </div>
-              </div>
+                </article>
+              </article>
 
-              <div className={styles.aiToggle}>
+              <article className={styles.aiToggle}>
                 <input 
                   type="checkbox" 
                   id="shouldGenerate"
@@ -294,10 +294,10 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
                   className={styles.checkbox}
                 />
                 <label htmlFor="shouldGenerate" className={styles.checkboxLabel}>Generate endpoints with AI</label>
-              </div>
+              </article>
 
               {shouldGenerate && (
-                <div className={styles.formGroup}>
+                <article className={styles.formGroup}>
                   <label>What should the AI generate?</label>
                   <textarea 
                     className={styles.textarea}
@@ -305,19 +305,19 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
                     onChange={e => setAiRequirement(e.target.value)}
                     placeholder="Describe the endpoints you want (e.g. A user management API with login, register and profile endpoints...)"
                   />
-                </div>
+                </article>
               )}
 
-              {error && <div className={styles.error}>{error}</div>}
+              {error && <span className={styles.error}>{error}</span>}
               
               {loading && (
-                <div className={styles.statusMessage}>
+                <article className={styles.statusMessage}>
                   <Icon src={loaderIcon} size={20} className={styles.spinner} /> {statusMessage}
-                </div>
+                </article>
               )}
-            </div>
+            </section>
 
-            <div className={styles.actions}>
+            <nav className={styles.actions}>
               <button className={styles.cancelBtn} onClick={() => setStep('config')} disabled={loading}>Back</button>
               <button 
                 className={styles.primaryBtn} 
@@ -326,27 +326,27 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
               >
                 {loading ? 'Creating...' : 'Create Project'}
               </button>
-            </div>
+            </nav>
           </>
         )}
 
         {/* Step 4: Success */}
         {step === 'success' && createdProject && (
-          <div className={styles.successContent}>
+          <article className={styles.successContent}>
             <header className={styles.header}>
-              <div className={styles.successBadge}>✓</div>
+              <figure className={styles.successBadge}>✓</figure>
               <h2>Project Ready!</h2>
               <p>Your mock API has been created successfully.</p>
             </header>
 
-            <div className={styles.stepContent}>
-              <div className={styles.connectionCard}>
-                <div className={styles.infoGroup}>
+            <section className={styles.stepContent}>
+              <article className={styles.connectionCard}>
+                <article className={styles.infoGroup}>
                   <label>Mock Base URL</label>
-                  <div className={styles.infoDisplay}>
-                    <div className={styles.infoBox}>
+                  <article className={styles.infoDisplay}>
+                    <section className={styles.infoBox}>
                       <code>{window.location.origin}/api/mock/{createdProject.slug}</code>
-                    </div>
+                    </section>
                     <button 
                       onClick={() => {
                         navigator.clipboard.writeText(`${window.location.origin}/api/mock/${createdProject.slug}`)
@@ -357,13 +357,13 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
                     >
                       {copiedUrl ? 'Copied!' : 'Copy'}
                     </button>
-                  </div>
-                </div>
+                  </article>
+                </article>
 
-                <div className={styles.infoGroup}>
+                <article className={styles.infoGroup}>
                   <label>Project API Key</label>
-                  <div className={styles.infoDisplay}>
-                    <div className={styles.infoBox}>
+                  <article className={styles.infoDisplay}>
+                    <section className={styles.infoBox}>
                       <code>
                         {showApiKey 
                           ? (createdProject.apiKey || '') 
@@ -376,7 +376,7 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
                       >
                         <Icon src={showApiKey ? eyeOffIcon : eyeIcon} size={16} />
                       </button>
-                    </div>
+                    </section>
                     <button 
                       onClick={() => {
                         navigator.clipboard.writeText(createdProject.apiKey || '')
@@ -387,19 +387,19 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
                     >
                       {copiedKey ? 'Copied!' : 'Copy'}
                     </button>
-                  </div>
-                </div>
+                  </article>
+                </article>
 
-                <div className={styles.instructionNote}>
-                  <div className={styles.noteIcon}>!</div>
-                  <div className={styles.noteText}>
+                <article className={styles.instructionNote}>
+                  <figure className={styles.noteIcon}>!</figure>
+                  <span className={styles.noteText}>
                     <strong>Important:</strong> Include the <code>X-Mockia-API-Key</code> header in your requests to authenticate.
-                  </div>
-                </div>
-              </div>
-            </div>
+                  </span>
+                </article>
+              </article>
+            </section>
 
-            <div className={styles.actions}>
+            <nav className={styles.actions}>
               <button 
                 className={styles.primaryBtn} 
                 onClick={() => {
@@ -409,10 +409,10 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
               >
                 Go to Editor &rarr;
               </button>
-            </div>
-          </div>
+            </nav>
+          </article>
         )}
-      </div>
+      </article>
     </Modal>
   )
 }

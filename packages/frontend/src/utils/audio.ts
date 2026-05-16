@@ -6,7 +6,13 @@ const getAudioContext = () => {
   return new (window.AudioContext || (window as any).webkitAudioContext)();
 };
 
+let lastNotificationPlayTime = 0;
+
 export const playNotificationSound = () => {
+  const now = Date.now();
+  if (now - lastNotificationPlayTime < 1000) return;
+  lastNotificationPlayTime = now;
+
   try {
     const audioCtx = getAudioContext();
     

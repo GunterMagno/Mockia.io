@@ -137,10 +137,10 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} noPadding maxWidth="800px">
-      <div className={styles.container}>
+      <article className={styles.container}>
         <header className={styles.header}>
           <h2>Project Settings</h2>
-          <div className={styles.tabs}>
+          <nav className={styles.tabs}>
             <button 
               className={`${styles.tab} ${activeTab === 'general' ? styles.active : ''}`}
               onClick={() => setActiveTab('general')}
@@ -159,13 +159,13 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
             >
               Connection
             </button>
-          </div>
+          </nav>
         </header>
 
-        <div className={styles.content}>
+        <section className={styles.content}>
           {activeTab === 'general' ? (
-            <div className={styles.generalTab}>
-              <div className={styles.formGroup}>
+            <section className={styles.generalTab}>
+              <article className={styles.formGroup}>
                 <label>Project Name</label>
                 <input 
                   value={title} 
@@ -174,8 +174,8 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
                   placeholder="My Awesome Project"
                   disabled={isViewer}
                 />
-              </div>
-              <div className={styles.formGroup}>
+              </article>
+              <article className={styles.formGroup}>
                 <label>Description</label>
                 <input 
                   value={description} 
@@ -184,44 +184,44 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
                   placeholder="What is this project about?"
                   disabled={isViewer}
                 />
-              </div>
+              </article>
 
               {!isViewer && (
-                <div className={styles.dangerZone}>
-                  <div className={styles.dangerHeader}>
-                    <div className={styles.dangerIcon}>
+                <section className={styles.dangerZone}>
+                  <header className={styles.dangerHeader}>
+                    <figure className={styles.dangerIcon}>
                       <Icon src={warningIcon} size={32} />
-                    </div>
-                    <div className={styles.dangerText}>
+                    </figure>
+                    <article className={styles.dangerText}>
                       <h4>Danger Zone</h4>
                       <p>Once you delete a project, there is no going back. please be certain</p>
-                    </div>
-                  </div>
+                    </article>
+                  </header>
                   
                   {showConfirmDelete ? (
-                    <div className={styles.confirmDelete}>
+                    <article className={styles.confirmDelete}>
                       <p>Are you absolutely sure?</p>
-                      <div className={styles.confirmActions}>
+                      <nav className={styles.confirmActions}>
                         <button onClick={handleCancelDelete} className={styles.cancelDeleteBtn}>No, Keep it</button>
                         <button onClick={handleConfirmDelete} className={styles.confirmDeleteBtn} disabled={loading}>
                           {loading ? 'Deleting...' : 'Yes, Delete Project'}
                         </button>
-                      </div>
-                    </div>
+                      </nav>
+                    </article>
                   ) : (
                     <button onClick={handleDeleteClick} className={styles.deleteBtn} disabled={loading}>
                       Delete Project
                     </button>
                   )}
-                </div>
+                </section>
               )}
-            </div>
+            </section>
           ) : activeTab === 'members' ? (
-            <div className={styles.membersTab}>
+            <section className={styles.membersTab}>
               {!isViewer && (
-                <div className={styles.inviteSection}>
+                <section className={styles.inviteSection}>
                   <label>Invite new members</label>
-                  <div className={styles.inviteForm}>
+                  <article className={styles.inviteForm}>
                     <input 
                       type="email" 
                       value={inviteEmail} 
@@ -240,24 +240,24 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
                     <button onClick={handleInvite} className={styles.inviteBtn} disabled={loading || !inviteEmail}>
                       Invite
                     </button>
-                  </div>
-                </div>
+                  </article>
+                </section>
               )}
 
-              <div className={styles.membersList}>
+              <section className={styles.membersList}>
                 <h4>ACTIVE MEMBERS ( {project.members.length} )</h4>
                 {project.members.map((member) => (
-                  <div key={member.userId} className={styles.memberItem}>
-                    <div className={styles.memberInfo}>
-                      <div className={styles.memberAvatar}>
+                  <article key={member.userId} className={styles.memberItem}>
+                    <article className={styles.memberInfo}>
+                      <figure className={styles.memberAvatar}>
                         {member.username ? member.username[0].toUpperCase() : 'U'}
-                      </div>
-                      <div className={styles.memberDetails}>
+                      </figure>
+                      <article className={styles.memberDetails}>
                         <span className={styles.memberName}>{member.username || 'Unknown User'}</span>
                         <span className={styles.memberEmail}>{member.email || 'No email available'}</span>
-                      </div>
-                    </div>
-                    <div className={styles.memberActions}>
+                      </article>
+                    </article>
+                    <nav className={styles.memberActions}>
                       <span className={`${styles.roleBadge} ${styles[member.role]}`}>
                         {member.role.toUpperCase()}
                       </span>
@@ -270,18 +270,18 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
                           &times;
                         </button>
                       )}
-                    </div>
-                  </div>
+                    </nav>
+                  </article>
                 ))}
-              </div>
-            </div>
+              </section>
+            </section>
           ) : (
-            <div className={styles.connectionTab}>
-              <div className={styles.apiKeySection}>
+            <section className={styles.connectionTab}>
+              <section className={styles.apiKeySection}>
                 <h4>Project API Key</h4>
                 <p>Use this key in the <code>X-Mockia-API-Key</code> header to authenticate your requests.</p>
-                <div className={styles.apiKeyDisplay}>
-                  <div className={styles.apiKeyBox}>
+                <article className={styles.apiKeyDisplay}>
+                  <article className={styles.apiKeyBox}>
                     <code>
                       {showApiKey 
                         ? (project.apiKey || 'No API Key generated') 
@@ -294,7 +294,7 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
                     >
                       <Icon src={showApiKey ? eyeOffIcon : eyeIcon} size={16} />
                     </button>
-                  </div>
+                  </article>
                   <button 
                     className={`${styles.copyBtn} ${copiedKey ? styles.copied : ''}`} 
                     onClick={() => {
@@ -308,11 +308,11 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
                     <Icon src={copiedKey ? checkIcon : copyIcon} size={16} />
                     {copiedKey ? 'Copied' : 'Copy'}
                   </button>
-                </div>
-              </div>
+                </article>
+              </section>
 
               {!isViewer && (
-                <div className={styles.regenerateSection}>
+                <section className={styles.regenerateSection}>
                   <h4>Regenerate API Key</h4>
                   <p>Warning: This will immediately invalidate the current key. Any frontend using the old key will lose access.</p>
                   <button 
@@ -322,12 +322,12 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
                   >
                     {isRegenerating ? 'Regenerating...' : 'Regenerate API Key'}
                   </button>
-                </div>
+                </section>
               )}
-            </div>
+            </section>
           )}
-          {error && <div className={styles.error}>{error}</div>}
-        </div>
+          {error && <span className={styles.error}>{error}</span>}
+        </section>
 
         <footer className={styles.footer}>
           <button className={styles.cancelBtn} onClick={onClose}>{isViewer ? 'Close' : 'Cancel'}</button>
@@ -337,7 +337,7 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
             </button>
           )}
         </footer>
-      </div>
+      </article>
     </Modal>
   )
 }

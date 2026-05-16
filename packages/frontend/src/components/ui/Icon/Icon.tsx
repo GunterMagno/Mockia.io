@@ -13,7 +13,7 @@ export const Icon: React.FC<IconProps> = ({ src, size = 24, color = 'currentColo
   const iconSize = typeof size === 'number' ? `${size}px` : size;
   
   return (
-    <div 
+    <figure 
       className={`${styles.icon} ${className}`}
       style={{
         '--icon-size': iconSize,

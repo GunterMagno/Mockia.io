@@ -14,7 +14,7 @@ type Credentials = { email: string; password: string }
 type AuthContextType = {
   user: User | null
   accessToken: string | null
-  login: (credentials: Credentials) => Promise<void>
+  login: (credentials: Credentials, rememberMe?: boolean) => Promise<void>
   logout: () => void
   isAuthenticated: boolean
   isLoading: boolean
@@ -32,21 +32,23 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
   const [accessToken, setAccessToken] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  // Initialize from localStorage and verify session
+  // Initialize from storage and verify session
   useEffect(() => {
     const initAuth = async () => {
-      const rawUser = localStorage.getItem(USER_KEY)
-      const rawToken = localStorage.getItem(TOKEN_KEY)
+      // Check both storages
+      let rawToken = localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY)
+      let rawUser = localStorage.getItem(USER_KEY) || sessionStorage.getItem(USER_KEY)
 
       if (rawToken) {
         setAccessToken(rawToken)
-        // If we have a token, we MUST verify it before finishing loading
         try {
           const res = await api.get('/auth/me')
           const u = res?.data?.user ?? null
           if (u) {
             setUser(u)
-            localStorage.setItem(USER_KEY, JSON.stringify(u))
+            // Sync current storage
+            const storage = localStorage.getItem(TOKEN_KEY) ? localStorage : sessionStorage
+            storage.setItem(USER_KEY, JSON.stringify(u))
           } else {
             logout()
           }
@@ -55,8 +57,8 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
           logout()
         }
       } else if (rawUser) {
-        // No token but user in storage? This is inconsistent state, clear it
         localStorage.removeItem(USER_KEY)
+        sessionStorage.removeItem(USER_KEY)
       }
 
       setIsLoading(false)
@@ -65,15 +67,12 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
     initAuth()
   }, [])
 
-  const login = async (credentials: Credentials) => {
-    // Call backend login via API client
+  const login = async (credentials: Credentials, rememberMe: boolean = false) => {
     const res = await api.post('/auth/login', credentials)
     const data = res?.data as any
-    // Support multiple possible payload shapes from backend
     const tokenFromServer: string | null = data?.token ?? data?.accessToken ?? data?.jwt ?? data?.data?.accessToken ?? data?.data?.token ?? data?.data?.tokens?.accessToken ?? null
     let userFromServer: User | null = data?.user ?? data?.userInfo ?? data?.data?.user ?? null
 
-    // If backend did not return user, try to fetch current user using the token
     if (!userFromServer && tokenFromServer) {
       try {
         const meRes = await api.get('/auth/me')
@@ -84,18 +83,21 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
       }
     }
 
-    // Persist
     setUser(userFromServer)
     setAccessToken(tokenFromServer)
+
+    const storage = rememberMe ? localStorage : sessionStorage
+    
+    // Clear other storage to avoid conflicts
+    const otherStorage = rememberMe ? sessionStorage : localStorage
+    otherStorage.removeItem(USER_KEY)
+    otherStorage.removeItem(TOKEN_KEY)
+
     try {
-      localStorage.setItem(USER_KEY, JSON.stringify(userFromServer))
+      storage.setItem(USER_KEY, JSON.stringify(userFromServer))
+      storage.setItem(TOKEN_KEY, tokenFromServer ?? '')
     } catch (err) {
-      console.warn('Could not save user to localStorage (quota exceeded?):', err)
-    }
-    try {
-      localStorage.setItem(TOKEN_KEY, tokenFromServer ?? '')
-    } catch (err) {
-      console.warn('Could not save token to localStorage (quota exceeded?):', err)
+      console.warn('Could not save auth data to storage:', err)
     }
   }
 
@@ -104,6 +106,8 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
     setAccessToken(null)
     localStorage.removeItem(USER_KEY)
     localStorage.removeItem(TOKEN_KEY)
+    sessionStorage.removeItem(USER_KEY)
+    sessionStorage.removeItem(TOKEN_KEY)
   }
 
   const value = useMemo<AuthContextType>( () => ({
@@ -118,12 +122,12 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
   return (
     <AuthContext.Provider value={value}>
       {isLoading ? (
-        <div className={styles.loadingOverlay}>
-          <div className={styles.loadingContent}>
+        <section className={styles.loadingOverlay}>
+          <article className={styles.loadingContent}>
             <h2>Loading session...</h2>
-            <div className="loader"></div>
-          </div>
-        </div>
+            <span className="loader"></span>
+          </article>
+        </section>
       ) : children}
     </AuthContext.Provider>
   )

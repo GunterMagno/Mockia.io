@@ -1,4 +1,4 @@
-import { cleanupArchivedProjects } from '../services/project.service.js';
+import { cleanupArchivedProjects } from '../modules/projects/service.js';
 
 /**
  * Scheduler for cleaning up archived projects
