@@ -22,8 +22,21 @@ const Dashboard: React.FC = () => {
     if (!silent) setLoading(true)
     getProjects()
       .then((ps) => {
-        // Simple optimization: only update if length or IDs changed
-        setProjects(ps)
+        try {
+          const lastVisited = JSON.parse(localStorage.getItem('mockia_last_visited') || '{}')
+          const getProjectTime = (p: Project) => {
+            const localVis = lastVisited[p.id] || 0
+            const dbUp = p.updatedAt ? new Date(p.updatedAt).getTime() : 0
+            const dbCr = p.createdAt ? new Date(p.createdAt).getTime() : 0
+            return Math.max(localVis, dbUp, dbCr)
+          }
+
+          const sorted = [...ps].sort((a, b) => getProjectTime(b) - getProjectTime(a))
+          setProjects(sorted)
+        } catch (e) {
+          console.error("Error sorting projects:", e)
+          setProjects(ps)
+        }
       })
       .catch(() => setProjects([]))
       .finally(() => {

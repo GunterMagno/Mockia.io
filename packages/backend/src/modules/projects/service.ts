@@ -193,7 +193,7 @@ export async function getUserProjects(userId: string): Promise<ProjectDTO[]> {
       isArchived: false,
     })
       .populate('members.userId')
-      .sort({ createdAt: -1 })
+      .sort({ updatedAt: -1 })
       .lean();
 
     return projects.map(mapProjectToDTO);

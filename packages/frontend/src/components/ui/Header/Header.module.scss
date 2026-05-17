@@ -96,7 +96,8 @@
   transform: translateX(-50%);
   display: flex;
   align-items: center;
-  pointer-events: none;
+  gap: var(--spacing-3);
+  pointer-events: auto;
   
   @include respond-to('md') {
     display: none;
@@ -121,6 +122,32 @@
     background: linear-gradient(90deg, var(--primary-light), transparent);
     border-radius: var(--radius-full);
   }
+}
+
+.settingsIconBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: var(--spacing-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--support-03);
+  opacity: 0.7;
+  transition: all var(--transition-fast);
+  border-radius: var(--radius-full);
+  line-height: 1;
+
+  &:hover {
+    opacity: 1;
+    color: var(--primary-dark);
+    transform: rotate(30deg);
+    background-color: var(--glass-border-color);
+  }
+}
+
+.settingsIcon {
+  display: block;
 }
 
 .authHeader {
@@ -229,14 +256,46 @@
   }
 }
 
+.mobileProjectNameContainer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: var(--spacing-4);
+  padding-bottom: var(--spacing-4);
+  border-bottom: 1px solid var(--sidebar-border-color);
+}
+
 .mobileProjectName {
   font-size: 1.5rem;
   font-weight: 800;
   color: var(--support-03);
-  margin-bottom: var(--spacing-4);
-  padding-bottom: var(--spacing-4);
-  border-bottom: 1px solid var(--sidebar-border-color);
-  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 55%;
+}
+
+.mobileSettingsHeaderBtn {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  background: var(--support-04);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--support-03);
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: var(--spacing-2) var(--spacing-3);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+
+  &:hover, &:active {
+    background: var(--sidebar-item-active);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+  }
 }
 
 .mobileNavLink {
@@ -379,6 +438,7 @@
   align-items: center;
   justify-content: center;
   color: inherit;
+  text-decoration: none;
   transition: transform var(--transition-fast);
 
   &:hover {

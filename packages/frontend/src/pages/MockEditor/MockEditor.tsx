@@ -134,7 +134,16 @@ const MockEditor: React.FC = () => {
     fetchEndpoints()
     if (id) {
       getProjectById(id)
-        .then(setProject)
+        .then((p) => {
+          setProject(p)
+          try {
+            const lastVisited = JSON.parse(localStorage.getItem('mockia_last_visited') || '{}')
+            lastVisited[p.id] = Date.now()
+            localStorage.setItem('mockia_last_visited', JSON.stringify(lastVisited))
+          } catch (e) {
+            console.error("Error saving last visited project:", e)
+          }
+        })
         .catch(err => {
           console.error("Error fetching project:", err);
           navigate('/dashboard');
