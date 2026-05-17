@@ -99,12 +99,14 @@ const MockEditor: React.FC = () => {
   // Polling for real-time updates
   useEffect(() => {
     const interval = setInterval(() => {
-      // Refresh project to check for membership/access changes
+      // Refresh project to check for membership/access changes and update members list dynamically
       if (id) {
-        getProjectById(id).catch(err => {
-          console.error("Access lost or project deleted:", err);
-          navigate('/dashboard');
-        });
+        getProjectById(id)
+          .then(setProject)
+          .catch(err => {
+            console.error("Access lost or project deleted:", err);
+            navigate('/dashboard');
+          });
       }
 
       // ONLY refresh endpoints if user is NOT editing anything to avoid losing state

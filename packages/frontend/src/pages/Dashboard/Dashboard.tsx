@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react'
 import Layout from '../../layouts/Layout'
-import { Card } from '../../components/ui/Card/Card'
 import { Button } from '../../components/ui/Button/Button'
 import { getProjects } from '../../services/projectService'
 import type { Project } from '../../services/projectService'
@@ -78,22 +77,35 @@ const Dashboard: React.FC = () => {
             <article 
               key={p.id} 
               onClick={() => navigate(`/editor/${p.slug}`)} 
-              className={styles.cardWrapper}
+              className={styles.projectCard}
             >
-              <Card title={p.title} className={styles.projectCard}>
-                <p className={styles.description}>
-                  {p.description || 'No description'}
-                </p>
-                <footer className={styles.cardFooter}>
-                  <article className={styles.meta}>
-                    <span>{p.gitHubRepo ? '🔗 GitHub' : '📄 Local'}</span>
-                    {p.members.some(m => m.userId === user?.id && m.role !== 'OWNER') && (
-                      <span className={styles.sharedBadge}>Shared</span>
-                    )}
-                  </article>
-                  <span>{p.updatedAt ? new Date(p.updatedAt).toLocaleDateString() : 'Recently'}</span>
-                </footer>
-              </Card>
+              <header className={styles.cardHeader}>
+                <h3 className={styles.cardTitle}>{p.title}</h3>
+                {p.members.some(m => m.userId === user?.id && m.role !== 'OWNER') && (
+                  <span className={styles.sharedBadge}>Shared</span>
+                )}
+              </header>
+              <p className={styles.description}>
+                {p.description || 'No description provided.'}
+              </p>
+              <footer className={styles.cardFooter}>
+                <div className={styles.meta}>
+                  {p.gitHubRepo ? (
+                    <span className={`${styles.badge} ${styles.github}`}>
+                      <span className={styles.badgeDot}></span>
+                      GitHub
+                    </span>
+                  ) : (
+                    <span className={`${styles.badge} ${styles.local}`}>
+                      <span className={styles.badgeDot}></span>
+                      Local
+                    </span>
+                  )}
+                </div>
+                <span className={styles.date}>
+                  {p.updatedAt ? new Date(p.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recently'}
+                </span>
+              </footer>
             </article>
           ))}
         </section>

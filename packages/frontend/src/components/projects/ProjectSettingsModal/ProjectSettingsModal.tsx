@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Modal } from '../../ui/Modal/Modal'
 import { Icon } from '../../ui/Icon/Icon'
-import { updateProject, archiveProject, addProjectMember, removeProjectMember, regenerateApiKey } from '../../../services/projectService'
+import { updateProject, archiveProject, addProjectMember, removeProjectMember, regenerateApiKey, leaveProject } from '../../../services/projectService'
 import type { Project } from '@mockia/shared'
 import styles from './ProjectSettingsModal.module.scss'
 import warningIcon from '../../../assets/warning.svg'
@@ -38,6 +38,7 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
   const [isRegenerating, setIsRegenerating] = useState(false)
   const [error, setError] = useState('')
   const [showConfirmDelete, setShowConfirmDelete] = useState(false)
+  const [showConfirmLeave, setShowConfirmLeave] = useState(false)
   
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
@@ -89,6 +90,30 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
     } finally {
       setLoading(false)
       setShowConfirmDelete(false)
+    }
+  }
+
+  const handleLeaveClick = () => {
+    setShowConfirmLeave(true)
+  }
+
+  const handleCancelLeave = () => {
+    setShowConfirmLeave(false)
+  }
+
+  const handleConfirmLeave = async () => {
+    setLoading(true)
+    setError('')
+    try {
+      await leaveProject(project.id)
+      onDelete() // Navigates to dashboard
+      onClose()
+    } catch (err: any) {
+      setError('Failed to leave project')
+      playErrorSound()
+    } finally {
+      setLoading(false)
+      setShowConfirmLeave(false)
     }
   }
 
@@ -186,34 +211,64 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
                 />
               </article>
 
-              {!isViewer && (
+              {project.ownerId !== currentUserId ? (
                 <section className={styles.dangerZone}>
                   <header className={styles.dangerHeader}>
                     <figure className={styles.dangerIcon}>
                       <Icon src={warningIcon} size={32} />
                     </figure>
                     <article className={styles.dangerText}>
-                      <h4>Danger Zone</h4>
-                      <p>Once you delete a project, there is no going back. please be certain</p>
+                      <h4>Leave Project</h4>
+                      <p>Once you leave the project, you will lose all access. The owner must invite you again for access.</p>
                     </article>
                   </header>
                   
-                  {showConfirmDelete ? (
+                  {showConfirmLeave ? (
                     <article className={styles.confirmDelete}>
-                      <p>Are you absolutely sure?</p>
+                      <p>Are you absolutely sure you want to leave this project?</p>
                       <nav className={styles.confirmActions}>
-                        <button onClick={handleCancelDelete} className={styles.cancelDeleteBtn}>No, Keep it</button>
-                        <button onClick={handleConfirmDelete} className={styles.confirmDeleteBtn} disabled={loading}>
-                          {loading ? 'Deleting...' : 'Yes, Delete Project'}
+                        <button onClick={handleCancelLeave} className={styles.cancelLeaveBtn}>No, Stay</button>
+                        <button onClick={handleConfirmLeave} className={styles.confirmDeleteBtn} disabled={loading}>
+                          {loading ? 'Leaving...' : 'Yes, Leave Project'}
                         </button>
                       </nav>
                     </article>
                   ) : (
-                    <button onClick={handleDeleteClick} className={styles.deleteBtn} disabled={loading}>
-                      Delete Project
+                    <button onClick={handleLeaveClick} className={styles.deleteBtn} disabled={loading}>
+                      Leave Project
                     </button>
                   )}
                 </section>
+              ) : (
+                !isViewer && (
+                  <section className={styles.dangerZone}>
+                    <header className={styles.dangerHeader}>
+                      <figure className={styles.dangerIcon}>
+                        <Icon src={warningIcon} size={32} />
+                      </figure>
+                      <article className={styles.dangerText}>
+                        <h4>Danger Zone</h4>
+                        <p>Once you delete a project, there is no going back. please be certain</p>
+                      </article>
+                    </header>
+                    
+                    {showConfirmDelete ? (
+                      <article className={styles.confirmDelete}>
+                        <p>Are you absolutely sure?</p>
+                        <nav className={styles.confirmActions}>
+                          <button onClick={handleCancelDelete} className={styles.cancelDeleteBtn}>No, Keep it</button>
+                          <button onClick={handleConfirmDelete} className={styles.confirmDeleteBtn} disabled={loading}>
+                            {loading ? 'Deleting...' : 'Yes, Delete Project'}
+                          </button>
+                        </nav>
+                      </article>
+                    ) : (
+                      <button onClick={handleDeleteClick} className={styles.deleteBtn} disabled={loading}>
+                        Delete Project
+                      </button>
+                    )}
+                  </section>
+                )
               )}
             </section>
           ) : activeTab === 'members' ? (

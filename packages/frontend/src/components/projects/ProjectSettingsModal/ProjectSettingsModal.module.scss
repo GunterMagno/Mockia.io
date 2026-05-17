@@ -248,6 +248,22 @@
   }
 }
 
+.cancelLeaveBtn {
+  background-color: #f3f0ff;
+  border: 1px solid #dcd3ff;
+  padding: var(--spacing-2) var(--spacing-6);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  color: #5b21b6;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+  
+  &:hover {
+    background-color: #ede9fe;
+    border-color: #c0b2fc;
+  }
+}
+
 .confirmDeleteBtn {
   background-color: var(--support-02);
   color: var(--support-04);

@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import styles from './Modal.module.scss'
 
 interface ModalProps {
@@ -18,12 +18,27 @@ export const Modal: React.FC<ModalProps> = ({
   noPadding, 
   maxWidth = '600px' 
 }) => {
-  if (!isOpen) return null
+  const [shouldRender, setShouldRender] = useState(isOpen)
+  const [isAnimating, setIsAnimating] = useState(false)
+
+  useEffect(() => {
+    if (isOpen) {
+      setShouldRender(true)
+      const timer = setTimeout(() => setIsAnimating(true), 10)
+      return () => clearTimeout(timer)
+    } else {
+      setIsAnimating(false)
+      const timer = setTimeout(() => setShouldRender(false), 200)
+      return () => clearTimeout(timer)
+    }
+  }, [isOpen])
+
+  if (!shouldRender) return null
 
   return (
-    <article className={styles.overlay} onClick={onClose}>
+    <article className={`${styles.overlay} ${isAnimating ? styles.active : ''}`} onClick={onClose}>
       <section 
-        className={styles.modal} 
+        className={`${styles.modal} ${isAnimating ? styles.active : ''}`} 
         style={{ '--modal-width': maxWidth } as React.CSSProperties} 
         onClick={(e) => e.stopPropagation()}
       >

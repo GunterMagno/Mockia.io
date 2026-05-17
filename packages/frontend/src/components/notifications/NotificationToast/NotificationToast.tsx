@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import ReactDOM from 'react-dom';
 import { Notification } from '@mockia/shared';
 import styles from './NotificationToast.module.scss';
 import { Icon } from '../../ui/Icon/Icon';
@@ -31,7 +32,7 @@ const NotificationToast: React.FC<NotificationToastProps> = ({ notification, onC
     return bellIcon;
   };
 
-  return (
+  return ReactDOM.createPortal(
     <aside className={`${styles.toast} ${isVisible ? styles.visible : ''}`}>
       <figure className={styles.iconContainer}>
         <Icon src={getIcon()} size={20} />
@@ -40,7 +41,8 @@ const NotificationToast: React.FC<NotificationToastProps> = ({ notification, onC
         <span className={styles.title}>{notification.title}</span>
         <span className={styles.message}>{notification.message}</span>
       </section>
-    </aside>
+    </aside>,
+    document.body
   );
 };
 

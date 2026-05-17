@@ -66,8 +66,8 @@
 
   :global(.field) {
     margin-bottom: 0;
-    border: none;
     padding: 0;
+    border: none;
     
     label {
       color: var(--secondary-dark);
@@ -103,6 +103,7 @@
   justify-content: space-between;
   align-items: center;
   margin-top: -4px;
+  border: none;
 }
 
 .rememberMe {

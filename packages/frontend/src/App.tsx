@@ -1,6 +1,6 @@
 import React from 'react'
 import './App.css'
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import AuthProvider from './contexts/AuthContext'
 import Login from './pages/Auth/Login'
 import Signup from './pages/Auth/Signup'
@@ -23,7 +23,7 @@ const AppShell: React.FC = () => {
   const is404 = !validPaths.includes(path) && !path.startsWith('/editor/');
 
   const showHeader = true; 
-  const showFooter = !isProtectedRoute; 
+  const showFooter = !isProtectedRoute && !is404;  
 
   return (
     <section className="appShell">

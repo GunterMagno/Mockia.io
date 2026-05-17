@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../../middlewares/authenticateToken.js';
 import { asyncHandler } from '../../middlewares/errorHandler.js';
-import { createProject, getUserProjects, getProjectById, updateProject, archiveProject, hardDeleteProject, cleanupArchivedProjects, addProjectMember, removeProjectMember, importGitHubRepository, regenerateApiKey } from './service.js';
+import { createProject, getUserProjects, getProjectById, updateProject, archiveProject, hardDeleteProject, cleanupArchivedProjects, addProjectMember, removeProjectMember, importGitHubRepository, regenerateApiKey, leaveProject } from './service.js';
 import { getProjectContext, deleteProjectContext } from '../../services/github-context.service.js';
 import type { CreateProjectRequest, ImportGitHubRequest } from '@mockia/shared';
 
@@ -401,3 +401,26 @@ export const regenerateApiKeyHandler = asyncHandler(
     });
   }
 );
+
+/**
+ * POST /api/projects/:id/leave
+ * Allows a member to leave a project
+ */
+export const leaveProjectHandler = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new Error('User ID not found in request');
+    }
+
+    const { id } = req.params;
+    await leaveProject(id, userId);
+
+    res.status(200).json({
+      success: true,
+      message: 'Successfully left the project',
+      timestamp: new Date().toISOString(),
+    });
+  }
+);
+

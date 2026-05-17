@@ -55,3 +55,8 @@ export const regenerateApiKey = async (projectId: string): Promise<Project> => {
   const res = await api.post<{ data: Project }>(`/projects/${projectId}/regenerate-api-key`)
   return res.data.data
 }
+
+export const leaveProject = async (projectId: string): Promise<void> => {
+  await api.post(`/projects/${projectId}/leave`)
+}
+

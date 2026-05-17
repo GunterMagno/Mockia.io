@@ -68,78 +68,80 @@ const ProfileModal: React.FC<Props> = ({ isOpen, onClose }) => {
   return (
     <Modal isOpen={isOpen} onClose={onClose} noPadding maxWidth="800px">
       <article className={styles.container}>
-        <h2 className={styles.title}>Account Settings</h2>
-        
-        <section className={styles.formSection}>
-          <article className={styles.formGroup}>
-            <label>Username</label>
-            <input 
-              value={username}
-              onChange={e => setUsername(e.target.value)}
-              className={styles.input}
-              placeholder="yourusername"
-            />
-          </article>
-
-          <article className={styles.formGroup}>
-            <label>Email</label>
-            <input 
-              value={email}
-              readOnly
-              className={`${styles.input} ${styles.readOnly}`}
-              placeholder="your@email.com"
-            />
-          </article>
-
-          <fieldset className={styles.passwordGrid}>
+        <section className={styles.innerContent}>
+          <h2 className={styles.title}>Account Settings</h2>
+          
+          <section className={styles.formSection}>
             <article className={styles.formGroup}>
-              <label>Current Password</label>
-              <Input 
-                type="password"
-                value={currentPassword}
-                onChange={e => setCurrentPassword(e.target.value)}
+              <label>Username</label>
+              <input 
+                value={username}
+                onChange={e => setUsername(e.target.value)}
                 className={styles.input}
-                placeholder="Current Password"
-                autoComplete="one-time-code"
+                placeholder="yourusername"
               />
             </article>
+
             <article className={styles.formGroup}>
-              <label>New Password</label>
-              <Input 
-                type="password"
-                value={newPassword}
-                onChange={e => setNewPassword(e.target.value)}
-                className={styles.input}
-                placeholder="New Password"
-                autoComplete="new-password"
+              <label>Email</label>
+              <input 
+                value={email}
+                readOnly
+                className={`${styles.input} ${styles.readOnly}`}
+                placeholder="your@email.com"
               />
             </article>
-          </fieldset>
-        </section>
 
-        {status.message && (
-          <span className={`${styles.status} ${styles[status.type]}`}>
-            {status.message}
-          </span>
-        )}
+            <fieldset className={styles.passwordGrid}>
+              <article className={styles.formGroup}>
+                <label>Current Password</label>
+                <Input 
+                  type="password"
+                  value={currentPassword}
+                  onChange={e => setCurrentPassword(e.target.value)}
+                  className={styles.input}
+                  placeholder="Current Password"
+                  autoComplete="one-time-code"
+                />
+              </article>
+              <article className={styles.formGroup}>
+                <label>New Password</label>
+                <Input 
+                  type="password"
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  className={styles.input}
+                  placeholder="New Password"
+                  autoComplete="new-password"
+                />
+              </article>
+            </fieldset>
+          </section>
 
-        <nav className={styles.actions}>
-          <button className={styles.logoutBtn} onClick={handleLogout}>
-            Log Out
-          </button>
-          <nav className={styles.rightActions}>
-            <button className={styles.cancelBtn} onClick={onClose}>
-              Cancel
+          {status.message && (
+            <article className={`${styles.status} ${styles[status.type]}`}>
+              {status.message}
+            </article>
+          )}
+
+          <nav className={styles.actions}>
+            <button className={styles.logoutBtn} onClick={handleLogout}>
+              Log Out
             </button>
-            <button 
-              className={styles.saveBtn} 
-              onClick={handleSave} 
-              disabled={loading || (!!newPassword && !currentPassword)}
-            >
-              {loading ? 'Saving...' : 'Save'}
-            </button>
+            <nav className={styles.rightActions}>
+              <button className={styles.cancelBtn} onClick={onClose}>
+                Cancel
+              </button>
+              <button 
+                className={styles.saveBtn} 
+                onClick={handleSave} 
+                disabled={loading || (!!newPassword && !currentPassword)}
+              >
+                {loading ? 'Saving...' : 'Save'}
+              </button>
+            </nav>
           </nav>
-        </nav>
+        </section>
       </article>
     </Modal>
   )

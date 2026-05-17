@@ -4,7 +4,7 @@
   position: absolute;
   top: calc(100% + 10px);
   right: 0;
-  width: 350px;
+  width: 360px;
   max-height: 500px;
   background: var(--support-04);
   border: 1px solid var(--support-05);
@@ -17,11 +17,13 @@
   animation: panelFadeIn 0.2s ease-out;
 
   @include respond-to('md') {
-    right: 0;
-    left: 0;
-    width: 100%;
-    max-width: none;
+    position: absolute;
     top: calc(100% + 8px);
+    right: 0;
+    left: auto;
+    width: 310px;
+    max-width: calc(100vw - 32px);
+    z-index: 2000;
   }
 }
 
@@ -37,33 +39,36 @@
 }
 
 .header {
-  padding: 1rem;
-  border-bottom: 1px solid var(--border-color);
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+  gap: var(--spacing-4);
 
   h3 {
     margin: 0;
     font-size: 1rem;
-    color: var(--text-primary);
+    color: var(--settings-text);
+    flex-shrink: 0;
   }
 }
 
 .markAllBtn {
   background: none;
   border: none;
-  color: var(--primary-color);
+  color: var(--primary-light);
   font-size: 0.8rem;
+  font-weight: 600;
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
+  padding: 5px 35px;
+  border-radius: var(--radius-md);
   white-space: nowrap;
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
 
   &:hover {
-    background: var(--primary-color-alpha);
+    background: rgba(79, 70, 229, 0.08);
   }
 }
 
@@ -143,16 +148,23 @@
 .content {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .title {
+  display: block;
   font-weight: 600;
   font-size: 0.9rem;
   color: var(--text-primary);
   margin-bottom: 0.2rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .message {
+  display: block;
   font-size: 0.85rem;
   color: var(--text-secondary);
   line-height: 1.4;
@@ -162,6 +174,7 @@
 }
 
 .date {
+  display: block;
   font-size: 0.75rem;
   color: var(--text-muted);
 }

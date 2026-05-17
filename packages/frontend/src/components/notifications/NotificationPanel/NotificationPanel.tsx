@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Notification, NotificationType } from '@mockia/shared';
 import { markAsRead, deleteNotification } from '../../../services/notificationService';
@@ -59,6 +59,8 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
         return warningIcon;
       case NotificationType.PROJECT_UPDATE:
         return bellIcon;
+      case NotificationType.PROJECT_LEAVE:
+        return warningIcon;
       default:
         return bellIcon;
     }

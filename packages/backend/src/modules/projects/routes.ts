@@ -13,6 +13,7 @@ import {
   deleteProjectContextHandler,
   regenerateApiKeyHandler,
   hardDeleteProjectHandler,
+  leaveProjectHandler,
 } from './controller.js';
 import { authenticateToken } from '../../middlewares/authenticateToken.js';
 import { authorizeRole } from '../../middlewares/authorizeRole.js';
@@ -425,6 +426,30 @@ projectsRouter.delete(
   '/:id/context',
   authenticateToken,
   deleteProjectContextHandler
+);
+
+/**
+ * @swagger
+ * /projects/{id}/leave:
+ *   post:
+ *     summary: Leave project
+ *     tags: [Projects]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Successfully left the project
+ */
+projectsRouter.post(
+  '/:id/leave',
+  authenticateToken,
+  leaveProjectHandler
 );
 
 export default projectsRouter;

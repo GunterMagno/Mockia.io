@@ -730,6 +730,7 @@ export async function removeProjectMember(
 
     // Remove member
     project.members.splice(targetMemberIndex, 1);
+    project.markModified('members');
 
     // Save project
     await project.save();
@@ -919,3 +920,83 @@ export async function regenerateApiKey(
     );
   }
 }
+
+/**
+ * Leave a project
+ * Only non-owners can leave
+ */
+export async function leaveProject(
+  projectId: string,
+  userId: string
+): Promise<void> {
+  try {
+    const project = await resolveProject(projectId);
+    if (!project) {
+      throw new AppError(
+        'Project not found',
+        ErrorCode.NOT_FOUND,
+        404
+      );
+    }
+
+    // Verify user is a member
+    const memberIndex = project.members.findIndex((m: any) => {
+      const mid = m.userId?._id ? m.userId._id.toString() : m.userId.toString();
+      return mid === userId;
+    });
+
+    if (memberIndex === -1) {
+      throw new AppError(
+        'You are not a member of this project',
+        ErrorCode.FORBIDDEN,
+        403
+      );
+    }
+
+    const member = project.members[memberIndex];
+    const role = String(member.role).toUpperCase();
+
+    // Check if user is owner
+    if (role === 'OWNER') {
+      throw new AppError(
+        'Owners cannot leave the project. Transfer ownership or delete the project instead.',
+        ErrorCode.VALIDATION_ERROR,
+        400
+      );
+    }
+
+    // Remove member
+    project.members.splice(memberIndex, 1);
+    project.markModified('members');
+
+    // Save project
+    await project.save();
+
+    // Notify the OWNER of the project
+    const leavingUser = await UserModel.findById(userId);
+    const leavingUsername = leavingUser ? leavingUser.username : 'A participant';
+    const ownerId = project.ownerId.toString();
+
+    await createNotification({
+      userId: ownerId,
+      type: NotificationType.PROJECT_LEAVE,
+      title: 'Participant Left Project',
+      message: `${leavingUsername} has left "${project.title}".`,
+      link: `/editor/${project.slug}`,
+      projectId: project._id.toString()
+    }).catch(err => console.error('Failed to send leave notification:', err));
+
+  } catch (error) {
+    if (error instanceof AppError) {
+      throw error;
+    }
+
+    console.error('Error leaving project:', error);
+    throw new AppError(
+      'Failed to leave project',
+      ErrorCode.INTERNAL_SERVER_ERROR,
+      500
+    );
+  }
+}
+

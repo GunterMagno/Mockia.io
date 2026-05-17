@@ -58,25 +58,74 @@
   gap: var(--spacing-6);
 }
 
-.cardWrapper {
+.projectCard {
+  background: linear-gradient(135deg, var(--support-04) 0%, rgba(255, 255, 255, 0.6) 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
   cursor: pointer;
-  transition: transform var(--transition-normal);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  min-height: 200px;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 5px;
+    background: linear-gradient(180deg, var(--primary-light), #818cf8);
+    opacity: 0.85;
+    transition: all 0.3s ease;
+  }
 
   &:hover {
-    transform: translateY(-4px);
+    transform: translateY(-8px) scale(1.02);
+    border-color: var(--primary-light);
+    box-shadow: 0 20px 40px rgba(79, 70, 229, 0.12), 0 4px 16px rgba(0, 0, 0, 0.02);
+
+    &::before {
+      width: 7px;
+      opacity: 1;
+    }
+
+    .cardTitle {
+      color: var(--primary-light);
+    }
   }
 }
 
-.projectCard {
-  height: 100%;
+.cardHeader {
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: var(--spacing-4);
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--settings-text);
+  line-height: 1.3;
+  transition: color var(--transition-fast);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
 }
 
 .description {
   color: var(--muted);
-  margin: var(--spacing-2) 0 var(--spacing-4) 0;
-  font-size: var(--text-sm);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin: 0 0 1.5rem 0;
   flex: 1;
   display: -webkit-box;
   -webkit-line-clamp: 3;
@@ -88,11 +137,9 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: var(--spacing-6);
+  margin-top: auto;
   padding-top: var(--spacing-4);
-  border-top: 1px solid var(--sidebar-border-color);
-  color: var(--text-muted);
-  font-size: var(--text-sm);
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .meta {
@@ -101,12 +148,61 @@
   gap: var(--spacing-3);
 }
 
-.sharedBadge {
-  background: var(--primary-light-disabled);
-  color: var(--primary-light);
-  padding: 2px 8px;
-  border-radius: var(--radius-sm);
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px solid transparent;
+
+  .badgeDot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+
+  &.github {
+    background: rgba(13, 148, 136, 0.08);
+    color: #0d9488;
+    border-color: rgba(13, 148, 136, 0.2);
+
+    .badgeDot {
+      background: #0d9488;
+      box-shadow: 0 0 8px #0d9488;
+    }
+  }
+
+  &.local {
+    background: rgba(79, 70, 229, 0.08);
+    color: var(--primary-light);
+    border-color: rgba(79, 70, 229, 0.2);
+
+    .badgeDot {
+      background: var(--primary-light);
+      box-shadow: 0 0 8px var(--primary-light);
+    }
+  }
+}
+
+.sharedBadge {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  box-shadow: 0 2px 6px rgba(217, 119, 6, 0.3);
+}
+
+.date {
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-weight: 500;
 }
