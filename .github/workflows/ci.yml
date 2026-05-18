@@ -162,9 +162,15 @@ jobs:
             cat frontend.log
             exit 1
           }
-          
           echo "Services are ready! Running Cypress E2E tests..."
-          npx cypress run --project ./packages/frontend
+          npx cypress run --project ./packages/frontend || {
+            echo "::error::Cypress E2E tests failed! Dumping logs..."
+            echo "=== BACKEND LOGS ==="
+            cat backend.log
+            echo "=== FRONTEND LOGS ==="
+            cat frontend.log
+            exit 1
+          }
         env:
           MONGODB_URI: mongodb://localhost:27017/mockia-e2e
           BACKEND_PORT: 3000
