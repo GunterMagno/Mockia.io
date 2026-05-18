@@ -38,10 +38,13 @@ const Login: React.FC = () => {
 
     setLoading(true)
     setError(null)
+    console.log('[Login] Starting login for email:', email)
     try {
       await login({ email, password }, rememberMe)
+      console.log('[Login] Login succeeded, navigating to dashboard...')
       navigate('/dashboard')
     } catch (err: any) {
+      console.error('[Login] Error caught during login flow:', err?.message || err, err?.stack)
       setError(getBackendErrorMessage(err))
       playErrorSound()
     } finally {
