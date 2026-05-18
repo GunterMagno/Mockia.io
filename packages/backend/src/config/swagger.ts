@@ -1,20 +1,12 @@
 import swaggerJsdoc from 'swagger-jsdoc';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import fs from 'fs';
 
-let currentDirname: string;
+const baseDir = process.cwd();
 
-try {
-  // Use a dynamic Function evaluation to prevent compiler errors under CommonJS/Jest
-  const metaUrl = new Function('return import.meta.url')();
-  if (metaUrl) {
-    currentDirname = path.dirname(fileURLToPath(metaUrl));
-  } else {
-    currentDirname = __dirname;
-  }
-} catch (e) {
-  currentDirname = __dirname;
-}
+// Automatically detect whether we are running in a production dist environment or from source (src)
+const isProd = fs.existsSync(path.join(baseDir, 'dist'));
+const sourceDir = isProd ? 'dist' : 'src';
 
 const options: swaggerJsdoc.Options = {
   definition: {
@@ -45,11 +37,10 @@ const options: swaggerJsdoc.Options = {
     },
   },
   // Automatically scan all routes and modules for @swagger annotations
-  // Scan both .ts (for development and tests) and .js (for production builds)
   apis: [
-    path.join(currentDirname, '../routes/*.{ts,js}'),
-    path.join(currentDirname, '../modules/**/*.{ts,js}'),
-    path.join(currentDirname, '../models/*.{ts,js}'),
+    path.join(baseDir, `${sourceDir}/routes/*.{ts,js}`),
+    path.join(baseDir, `${sourceDir}/modules/**/*.{ts,js}`),
+    path.join(baseDir, `${sourceDir}/models/*.{ts,js}`),
   ],
 };
 
