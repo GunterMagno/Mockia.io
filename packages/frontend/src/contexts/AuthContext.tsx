@@ -68,50 +68,36 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
   }, [])
 
   const login = async (credentials: Credentials, rememberMe: boolean = false) => {
-    console.log('[AuthContext] login method called for:', credentials.email)
-    try {
-      const res = await api.post('/auth/login', credentials)
-      const data = res?.data as any
-      console.log('[AuthContext] POST /auth/login resolved successfully. Response keys:', Object.keys(res ?? {}), 'data keys:', Object.keys(data ?? {}))
-      
-      const tokenFromServer: string | null = data?.token ?? data?.accessToken ?? data?.jwt ?? data?.data?.accessToken ?? data?.data?.token ?? data?.data?.tokens?.accessToken ?? null
-      let userFromServer: User | null = data?.user ?? data?.userInfo ?? data?.data?.user ?? null
+    const res = await api.post('/auth/login', credentials)
+    const data = res?.data as any
+    const tokenFromServer: string | null = data?.token ?? data?.accessToken ?? data?.jwt ?? data?.data?.accessToken ?? data?.data?.token ?? data?.data?.tokens?.accessToken ?? null
+    let userFromServer: User | null = data?.user ?? data?.userInfo ?? data?.data?.user ?? null
 
-      console.log('[AuthContext] Extracted tokens/user - Token present:', !!tokenFromServer, 'User:', JSON.stringify(userFromServer))
-
-      if (!userFromServer && tokenFromServer) {
-        try {
-          console.log('[AuthContext] User data not in response, making /auth/me call...')
-          const meRes = await api.get('/auth/me')
-          userFromServer = meRes?.data?.user ?? null
-          console.log('[AuthContext] /auth/me resolved, user:', JSON.stringify(userFromServer))
-        } catch (err) {
-          console.error('[AuthContext] Failed to fetch user info with new token:', err)
-          userFromServer = null
-        }
-      }
-
-      setUser(userFromServer)
-      setAccessToken(tokenFromServer)
-
-      const storage = rememberMe ? localStorage : sessionStorage
-      
-      // Clear other storage to avoid conflicts
-      const otherStorage = rememberMe ? sessionStorage : localStorage
-      otherStorage.removeItem(USER_KEY)
-      otherStorage.removeItem(TOKEN_KEY)
-
+    if (!userFromServer && tokenFromServer) {
       try {
-        console.log('[AuthContext] Saving to storage (rememberMe:', rememberMe, ')')
-        storage.setItem(USER_KEY, JSON.stringify(userFromServer))
-        storage.setItem(TOKEN_KEY, tokenFromServer ?? '')
-        console.log('[AuthContext] LocalStorage token read check:', storage.getItem(TOKEN_KEY) ? 'Exists' : 'Empty')
+        const meRes = await api.get('/auth/me')
+        userFromServer = meRes?.data?.user ?? null
       } catch (err) {
-        console.warn('[AuthContext] Could not save auth data to storage:', err)
+        console.error('Failed to fetch user info with new token:', err)
+        userFromServer = null
       }
-    } catch (err: any) {
-      console.error('[AuthContext] Axios error during /auth/login request:', err?.message || err, err?.response?.data || '(no response data)')
-      throw err
+    }
+
+    setUser(userFromServer)
+    setAccessToken(tokenFromServer)
+
+    const storage = rememberMe ? localStorage : sessionStorage
+    
+    // Clear other storage to avoid conflicts
+    const otherStorage = rememberMe ? sessionStorage : localStorage
+    otherStorage.removeItem(USER_KEY)
+    otherStorage.removeItem(TOKEN_KEY)
+
+    try {
+      storage.setItem(USER_KEY, JSON.stringify(userFromServer))
+      storage.setItem(TOKEN_KEY, tokenFromServer ?? '')
+    } catch (err) {
+      console.warn('Could not save auth data to storage:', err)
     }
   }
 

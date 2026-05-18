@@ -36,20 +36,13 @@ const Signup: React.FC = () => {
 
     setLoading(true)
     setError(null)
-    console.log('[Signup] Starting registration for email:', email)
     try {
       // Call signup endpoint
-      const registerRes = await api.post('/auth/register', { email, password, username })
-      console.log('[Signup] Registration request succeeded, response:', JSON.stringify(registerRes.data))
-      
+      await api.post('/auth/register', { email, password, username })
       // Auto login
-      console.log('[Signup] Initiating auto-login...')
       await login({ email, password }, rememberMe)
-      console.log('[Signup] Auto-login succeeded, navigating to dashboard...')
-      
       navigate('/dashboard')
     } catch (err: any) {
-      console.error('[Signup] Error caught during registration/login flow:', err?.message || err, err?.stack)
       setError(getBackendErrorMessage(err))
       playErrorSound()
     } finally {

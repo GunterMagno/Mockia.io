@@ -1,12 +1,9 @@
 import swaggerJsdoc from 'swagger-jsdoc';
 import path from 'path';
-import fs from 'fs';
+import { fileURLToPath } from 'url';
 
-const baseDir = process.cwd();
-
-// Automatically detect whether we are running in a production dist environment or from source (src)
-const isProd = fs.existsSync(path.join(baseDir, 'dist'));
-const sourceDir = isProd ? 'dist' : 'src';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const options: swaggerJsdoc.Options = {
   definition: {
@@ -38,9 +35,9 @@ const options: swaggerJsdoc.Options = {
   },
   // Automatically scan all routes and modules for @swagger annotations
   apis: [
-    path.join(baseDir, `${sourceDir}/routes/*.{ts,js}`),
-    path.join(baseDir, `${sourceDir}/modules/**/*.{ts,js}`),
-    path.join(baseDir, `${sourceDir}/models/*.{ts,js}`),
+    path.join(__dirname, '../routes/*.ts'),
+    path.join(__dirname, '../modules/**/*.ts'),
+    path.join(__dirname, '../models/*.ts'),
   ],
 };
 
