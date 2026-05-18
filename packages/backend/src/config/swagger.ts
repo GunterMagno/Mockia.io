@@ -2,8 +2,19 @@ import swaggerJsdoc from 'swagger-jsdoc';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+let currentDirname: string;
+
+try {
+  // Use a dynamic Function evaluation to prevent compiler errors under CommonJS/Jest
+  const metaUrl = new Function('return import.meta.url')();
+  if (metaUrl) {
+    currentDirname = path.dirname(fileURLToPath(metaUrl));
+  } else {
+    currentDirname = __dirname;
+  }
+} catch (e) {
+  currentDirname = __dirname;
+}
 
 const options: swaggerJsdoc.Options = {
   definition: {
@@ -34,10 +45,11 @@ const options: swaggerJsdoc.Options = {
     },
   },
   // Automatically scan all routes and modules for @swagger annotations
+  // Scan both .ts (for development and tests) and .js (for production builds)
   apis: [
-    path.join(__dirname, '../routes/*.ts'),
-    path.join(__dirname, '../modules/**/*.ts'),
-    path.join(__dirname, '../models/*.ts'),
+    path.join(currentDirname, '../routes/*.{ts,js}'),
+    path.join(currentDirname, '../modules/**/*.{ts,js}'),
+    path.join(currentDirname, '../models/*.{ts,js}'),
   ],
 };
 
