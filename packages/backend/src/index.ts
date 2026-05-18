@@ -69,6 +69,14 @@ app.get('/api/health', (req: Request, res: Response) => {
   });
 });
 
+// Test Logger endpoint to capture headless browser console logs in CI
+app.post('/api/test-log', (req: Request, res: Response) => {
+  const { message } = req.body;
+  console.log(`[Browser Console] ${message}`);
+  res.sendStatus(200);
+});
+
+
 /**
  * Root endpoint
  */
