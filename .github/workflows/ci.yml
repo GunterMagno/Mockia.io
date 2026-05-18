@@ -171,7 +171,7 @@ jobs:
           PORT: 3000
           JWT_ACCESS_SECRET: test-secret-key-super-secure-for-testing
           JWT_REFRESH_SECRET: test-refresh-secret-key-for-testing
-          NODE_ENV: test
+          NODE_ENV: development
           SUPPRESS_LOGS: false
           VITE_API_URL: http://localhost:3000/api
 
