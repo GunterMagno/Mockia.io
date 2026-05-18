@@ -148,8 +148,23 @@ jobs:
       - name: Build shared package
         run: npm run build -w @mockia/shared
 
-      - name: Start Backend
-        run: npm run dev -w @mockia/backend &
+      - name: Start Services and Run E2E Tests
+        run: |
+          npm run dev -w @mockia/backend > backend.log 2>&1 &
+          npm run dev -w @mockia/frontend > frontend.log 2>&1 &
+          
+          echo "Waiting for backend and frontend services to be ready..."
+          npx wait-on http://localhost:5173 http://localhost:3000/api/health --timeout 60000 || {
+            echo "::error::Timeout waiting for backend/frontend. Dumping logs..."
+            echo "=== BACKEND LOGS ==="
+            cat backend.log
+            echo "=== FRONTEND LOGS ==="
+            cat frontend.log
+            exit 1
+          }
+          
+          echo "Services are ready! Running Cypress E2E tests..."
+          npx cypress run --project ./packages/frontend
         env:
           MONGODB_URI: mongodb://localhost:27017/mockia-e2e
           BACKEND_PORT: 3000
@@ -157,18 +172,6 @@ jobs:
           JWT_ACCESS_SECRET: test-secret-key-super-secure-for-testing
           JWT_REFRESH_SECRET: test-refresh-secret-key-for-testing
           NODE_ENV: test
-          SUPPRESS_LOGS: true
-
-      - name: Start Frontend
-        run: npm run dev -w @mockia/frontend &
-        env:
+          SUPPRESS_LOGS: false
           VITE_API_URL: http://localhost:3000/api
-
-      - name: Run Cypress tests
-        uses: cypress-io/github-action@v6
-        with:
-          working-directory: ./packages/frontend
-          wait-on: 'http://localhost:5173, http://localhost:3000/api/health'
-          wait-on-timeout: 60
-          install: false
 
