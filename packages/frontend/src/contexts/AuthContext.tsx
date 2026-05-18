@@ -1,5 +1,8 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react'
-// Local lightweight User type (will be replaced by @mockia/shared in a proper build)
+
+/**
+ * Lightweight User type interface matching the backend schema
+ */
 interface User {
   id: string
   email: string
@@ -11,12 +14,25 @@ import { api } from '../services/api'
 
 type Credentials = { email: string; password: string }
 
+/**
+ * Interface representing the globally managed authentication context state
+ */
 type AuthContextType = {
+  /** Currently authenticated user details or null */
   user: User | null
+  /** Session JWT access token */
   accessToken: string | null
+  /**
+   * Action to authenticate user credentials
+   * @param credentials - email and password payload
+   * @param rememberMe - determines if local or session storage should be used
+   */
   login: (credentials: Credentials, rememberMe?: boolean) => Promise<void>
+  /** Logs out user, clearing local and session states */
   logout: () => void
+  /** Checks if the user session is active */
   isAuthenticated: boolean
+  /** Represents startup verification loading state */
   isLoading: boolean
 }
 
@@ -27,6 +43,10 @@ const USER_KEY = 'mockia_user'
 
 import styles from './AuthContext.module.scss'
 
+/**
+ * Global authentication state provider.
+ * Intercepts, verifies and stores active JWT user sessions on application load.
+ */
 export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [accessToken, setAccessToken] = useState<string | null>(null)
@@ -67,6 +87,9 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
     initAuth()
   }, [])
 
+  /**
+   * Performs authentication request and handles session storage binding
+   */
   const login = async (credentials: Credentials, rememberMe: boolean = false) => {
     const res = await api.post('/auth/login', credentials)
     const data = res?.data as any
@@ -101,6 +124,9 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
     }
   }
 
+  /**
+   * Resets active session and destroys stored tokens
+   */
   const logout = () => {
     setUser(null)
     setAccessToken(null)
@@ -133,6 +159,10 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
   )
 }
 
+/**
+ * Hook to consume the global authentication context
+ * @returns {AuthContextType} Authentication state and controls
+ */
 export const useAuth = (): AuthContextType => {
   const ctx = useContext(AuthContext)
   if (!ctx) {

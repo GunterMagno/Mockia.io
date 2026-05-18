@@ -4,6 +4,13 @@
 
 ---
 
+### 🌐 Recursos del Proyecto (Entregables DAW)
+- **Despliegue Público (Producción):** [https://mockia-frontend.onrender.com](https://mockia-frontend.onrender.com)
+- **Prototipo Interactivo (Figma):** [Figma UI/UX Mockia.io Prototype](https://www.figma.com/design/AwPy6Q8UwZrXtGBYpr9cIV/Proyecto-Mockia.io?m=auto&t=e1ozWaJmS2b6hTJt-6)
+- **Documentación Académica Completa:** Disponible detalladamente en la carpeta [/docs](https://github.com/GunterMagno/Mockia.io/tree/main/docs)
+
+---
+
 ## ¿Por qué Monorepo?
 
 Un **monorepo con npm workspaces** fue elegido para:

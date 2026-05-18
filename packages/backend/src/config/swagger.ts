@@ -1,9 +1,9 @@
 import swaggerJsdoc from 'swagger-jsdoc';
 import path from 'path';
-import { fileURLToPath } from 'url';
+// @ts-ignore
+import { getSwaggerDirname } from './pathHelper.cjs';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const swaggerDirname = getSwaggerDirname();
 
 const options: swaggerJsdoc.Options = {
   definition: {
@@ -35,9 +35,9 @@ const options: swaggerJsdoc.Options = {
   },
   // Automatically scan all routes and modules for @swagger annotations
   apis: [
-    path.join(__dirname, '../routes/*.ts'),
-    path.join(__dirname, '../modules/**/*.ts'),
-    path.join(__dirname, '../models/*.ts'),
+    path.join(swaggerDirname, '../routes/*.ts'),
+    path.join(swaggerDirname, '../modules/**/*.ts'),
+    path.join(swaggerDirname, '../models/*.ts'),
   ],
 };
 

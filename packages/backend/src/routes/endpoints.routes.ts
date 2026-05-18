@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { updateEndpointHandler, createEndpointHandler, deleteEndpointHandler } from '../controllers/endpoint.controller.js';
 import { authenticateToken } from '../middlewares/authenticateToken.js';
+import { validate } from '../middlewares/validateRequest.js';
+import { createEndpointSchema, updateEndpointSchema } from '../validation/endpoints.validation.js';
 
 export const endpointsRouter = Router();
 
@@ -32,6 +34,7 @@ export const endpointsRouter = Router();
 endpointsRouter.put(
   '/:id',
   authenticateToken,
+  validate({ body: updateEndpointSchema }),
   updateEndpointHandler
 );
 
@@ -80,5 +83,6 @@ endpointsRouter.delete(
 endpointsRouter.post(
   '/:projectSlug',
   authenticateToken,
+  validate({ body: createEndpointSchema }),
   createEndpointHandler
 );
