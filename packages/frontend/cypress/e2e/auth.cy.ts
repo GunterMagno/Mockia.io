@@ -8,13 +8,13 @@ describe('Authentication Flow', () => {
     // Fill the signup form
     cy.get('input[name="username"]').type('TestUser');
     cy.get('input[name="email"]').type(randomEmail);
-    cy.get('input[name="password"]').type(password);
+    cy.get('input[name="new-password"]').type(password);
     
     // Submit
     cy.get('button[type="submit"]').click();
     
-    // Should be redirected to login
-    cy.url().should('include', '/login');
+    // Should be auto-logged in and redirected to dashboard
+    cy.url().should('include', '/dashboard');
   });
 
   it('Should successfully login and redirect to dashboard', () => {
@@ -29,6 +29,6 @@ describe('Authentication Flow', () => {
     
     // Should be redirected to dashboard
     cy.url().should('include', '/dashboard');
-    cy.contains('Proyectos').should('be.visible');
+    cy.contains('My Projects').should('be.visible');
   });
 });

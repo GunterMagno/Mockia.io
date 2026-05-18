@@ -24,14 +24,26 @@ describe('Dashboard Flow', () => {
     // Click on create project button
     cy.contains('button', 'New Project').click();
     
-    // Fill modal form
-    cy.get('input[name="title"]').type(projectName);
-    cy.get('textarea[name="description"]').type('E2E Test Project');
+    // Step 1: Select Empty Project card
+    cy.contains('Empty Project').click();
     
-    // Click submit
+    // Step 2: Fill Details (using placeholder selectors as name attribute is not present)
+    cy.get('input[placeholder="My Awesome API"]').type(projectName);
+    cy.get('input[placeholder="A short description of what this API does..."]').type('E2E Test Project');
+    
+    // Click Continue
+    cy.contains('button', 'Continue').click();
+    
+    // Step 3: Skip AI generation for fast testing
+    cy.get('#shouldGenerate').uncheck({ force: true });
+    
+    // Click Create Project
     cy.contains('button', 'Create Project').click();
     
-    // Project should appear in the dashboard list
-    cy.contains(projectName).should('be.visible');
+    // Step 4: Click Go to Editor on success screen
+    cy.contains('button', 'Go to Editor').click();
+    
+    // Should be redirected to the editor view
+    cy.url().should('include', '/editor/');
   });
 });

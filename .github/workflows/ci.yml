@@ -121,3 +121,54 @@ jobs:
       - name: Build frontend
         working-directory: ./packages/frontend
         run: npm run build
+
+  test-e2e:
+    name: Test - E2E (Cypress)
+    runs-on: ubuntu-latest
+    needs: [type-check-backend, type-check-frontend]
+    services:
+      mongodb:
+        image: mongo:latest
+        ports:
+          - 27017:27017
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared package
+        run: npm run build -w @mockia/shared
+
+      - name: Start Backend
+        run: npm run dev -w @mockia/backend &
+        env:
+          MONGODB_URI: mongodb://localhost:27017/mockia-e2e
+          BACKEND_PORT: 3000
+          PORT: 3000
+          JWT_ACCESS_SECRET: test-secret-key-super-secure-for-testing
+          JWT_REFRESH_SECRET: test-refresh-secret-key-for-testing
+          NODE_ENV: test
+          SUPPRESS_LOGS: true
+
+      - name: Start Frontend
+        run: npm run dev -w @mockia/frontend &
+        env:
+          VITE_API_URL: http://localhost:3000/api
+
+      - name: Run Cypress tests
+        uses: cypress-io/github-action@v6
+        with:
+          working-directory: ./packages/frontend
+          wait-on: 'http://localhost:5173, http://localhost:3000/api/health'
+          wait-on-timeout: 60
+          install: false
+
