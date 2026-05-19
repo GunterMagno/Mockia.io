@@ -10,7 +10,7 @@ interface TokenPayload {
   exp?: number; // Expiration time
 }
 
-const ACCESS_TOKEN_EXPIRES_IN = '15m';
+const ACCESS_TOKEN_EXPIRES_IN = '1h';
 const REFRESH_TOKEN_EXPIRES_IN = '7d';
 
 /**
