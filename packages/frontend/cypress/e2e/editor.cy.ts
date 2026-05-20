@@ -66,8 +66,8 @@ describe('Editor Flow', () => {
     // Update HTTP method
     cy.contains('article', 'HTTP Method').find('select').select('POST');
     
-    // Update status code to 201 Created
-    cy.contains('article', 'Status Code').find('select').select('201');
+    // Update status code using Force HTTP Status to 201 Created
+    cy.contains('article', 'Force HTTP Status').find('select').select('201');
     
     // Save changes
     cy.contains('button', 'Save Changes').click();
