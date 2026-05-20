@@ -6,8 +6,8 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
-    "build:prod": "tsc",
+    "build": "tsc && node -e \"import('fs').then(fs => { fs.mkdirSync('dist/config', { recursive: true }); fs.copyFileSync('src/config/pathHelper.cjs', 'dist/config/pathHelper.cjs'); })\"",
+    "build:prod": "tsc && node -e \"import('fs').then(fs => { fs.mkdirSync('dist/config', { recursive: true }); fs.copyFileSync('src/config/pathHelper.cjs', 'dist/config/pathHelper.cjs'); })\"",
     "start": "node dist/index.js",
     "test": "jest --runInBand --forceExit --detectOpenHandles",
     "test:watch": "jest --watch",
