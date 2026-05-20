@@ -1,8 +1,8 @@
-import { Types } from 'mongoose';
 import { EndpointModel, MockAPIModel } from '../../models/MockAPI.js';
 import { EndpointConfigModel } from '../../models/EndpointConfig.js';
 import { AppError } from '../../middlewares/errorHandler.js';
 import { ErrorCode } from '@mockia/shared';
+import { mockCache } from './mockCache.service.js';
 
 /**
  * Sets or updates interceptor config for a given endpoint
@@ -45,6 +45,7 @@ export async function setEndpointConfig(
     if (dto.override_response !== undefined) cfg.override_response = dto.override_response;
   }
   await cfg.save();
+  mockCache.invalidateEndpointConfig(endpointId);
   return cfg;
 }
 

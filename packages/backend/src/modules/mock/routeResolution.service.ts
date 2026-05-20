@@ -7,6 +7,7 @@ import { ProjectModel } from '../../models/Project.js';
 import { MockAPIModel, EndpointModel, EndpointDocument } from '../../models/MockAPI.js';
 import { AppError } from '../../middlewares/errorHandler.js';
 import { ErrorCode } from '@mockia/shared';
+import { mockCache } from './mockCache.service.js';
 import {
   extractPathParams,
   calculatePatternSpecificity,
@@ -40,15 +41,8 @@ export async function resolveRoute(
   path: string
 ): Promise<ResolvedRoute | null> {
   try {
-    // Step 1: Find project by ID or Slug
-    let project;
-    const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(projectSlug);
-    if (isValidObjectId) {
-      project = await ProjectModel.findById(projectSlug);
-    }
-    if (!project) {
-      project = await ProjectModel.findOne({ slug: projectSlug });
-    }
+    // Step 1: Find project using Cache
+    const project = await mockCache.getProject(projectSlug);
 
     if (!project) {
       throw new AppError(
@@ -57,8 +51,8 @@ export async function resolveRoute(
         404
       );
     }
-    // Step 2: Find MockAPI for this project
-    const mockAPI = await MockAPIModel.findOne({ projectId: project._id });
+    // Step 2: Find MockAPI using Cache
+    const mockAPI = await mockCache.getMockAPI(project._id.toString());
     if (!mockAPI) {
       throw new AppError(
         `No Mock API found for project "${projectSlug}"`,
@@ -66,11 +60,14 @@ export async function resolveRoute(
         404
       );
     }
-    // Step 3: Get all endpoints for this MockAPI and method
-    const endpoints = await EndpointModel.find({
-      mockApiId: mockAPI._id,
-      method: method.toUpperCase(),
-    });
+    // Step 3: Get all endpoints using Cache
+    const allEndpoints = await mockCache.getEndpoints(mockAPI._id.toString());
+    
+    // Filter by method in-memory (highly optimized)
+    const endpoints = allEndpoints.filter(
+      ep => ep.method === method.toUpperCase()
+    );
+    
     if (endpoints.length === 0) {
       return null; // No endpoints found for this method
     }

@@ -12,6 +12,7 @@ import { ResponseModel, EndpointModel } from '../models/MockAPI.js';
 import { ProjectModel } from '../models/Project.js';
 import { EndpointConfigModel } from '../models/EndpointConfig.js';
 import { getDefaultErrorBody } from '../modules/mock/errorHelper.js';
+import { mockCache } from '../modules/mock/mockCache.service.js';
 
 /**
  * POST /api/mock/resolve-route
@@ -185,7 +186,7 @@ export const mockProxyHandler = asyncHandler(
 
     // 1. Authenticate with API Key
     const apiKeyHeader = req.headers['x-mockia-api-key'] as string;
-    const project = await ProjectModel.findOne({ slug: projectSlug });
+    const project = await mockCache.getProject(projectSlug);
     
     if (!project) {
       res.status(404).json({
@@ -255,9 +256,12 @@ export const mockProxyHandler = asyncHandler(
     const responseNameHeader = req.headers['x-mockia-response-name'];
     const responseQueryStatus = req.query._status;
 
-    // Populate responses to find by name or status
-    const endpoint = await EndpointModel.findById(resolvedRoute.endpoint._id).populate('responses');
-    const responses = (endpoint?.responses as any[]) || [];
+    // Use pre-populated responses if available in cache, otherwise fetch from DB
+    const responses = (resolvedRoute.endpoint.responses &&
+      resolvedRoute.endpoint.responses.length > 0 &&
+      typeof resolvedRoute.endpoint.responses[0] === 'object')
+      ? (resolvedRoute.endpoint.responses as any[])
+      : (await EndpointModel.findById(resolvedRoute.endpoint._id).populate('responses'))?.responses as any[] || [];
     
     let targetResponse;
 
@@ -282,8 +286,8 @@ export const mockProxyHandler = asyncHandler(
     let statusCode = targetResponse.statusCode || 200;
     let responseData = targetResponse.schema || targetResponse.examples?.[0] || {};
 
-    // Apply interceptors/overrides if configured
-    const cfg = await EndpointConfigModel.findOne({ endpointId: resolvedRoute.endpoint._id.toString() });
+    // Apply interceptors/overrides if configured (using Cache)
+    const cfg = await mockCache.getEndpointConfig(resolvedRoute.endpoint._id.toString());
     if (cfg) {
       if (cfg.force_status_code) {
         statusCode = cfg.force_status_code;

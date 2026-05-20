@@ -5,12 +5,10 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { resolveRoute } from './routeResolution.service.js';
-import { getDefaultResponseForEndpoint } from './response.service.js';
-import { getEndpointConfig } from './interceptor.service.js';
 import { EndpointModel } from '../../models/MockAPI.js';
 import { getDefaultErrorBody } from './errorHelper.js';
 import { applyMockHeaders } from './header.service.js';
-import { ProjectModel } from '../../models/Project.js';
+import { mockCache } from './mockCache.service.js';
 
 export async function mockRouter(req: Request, res: Response, next: NextFunction) {
   applyMockHeaders(res);
@@ -27,7 +25,7 @@ export async function mockRouter(req: Request, res: Response, next: NextFunction
 
   // 1. Authenticate with API Key
   const apiKeyHeader = req.headers['x-mockia-api-key'] as string;
-  const project = await ProjectModel.findOne({ slug: projectSlug });
+  const project = await mockCache.getProject(projectSlug);
   
   if (!project) {
     return res.status(404).json({
@@ -58,10 +56,20 @@ export async function mockRouter(req: Request, res: Response, next: NextFunction
     return next();
   }
 
-  // Retrieve the default response for this endpoint
-  const defaultResp = await getDefaultResponseForEndpoint(resolved.endpoint._id.toString());
+  // Get responses from the cached resolved endpoint (fully populated), falling back to DB if needed
+  const responses = (resolved.endpoint.responses &&
+    resolved.endpoint.responses.length > 0 &&
+    typeof resolved.endpoint.responses[0] === 'object')
+    ? (resolved.endpoint.responses as any[])
+    : (await EndpointModel.findById(resolved.endpoint._id).populate('responses'))?.responses as any[] || [];
+
+  if (responses.length === 0) {
+    return next();
+  }
+
+  // Find the default response in memory (0ms DB calls)
+  const defaultResp = responses.find(r => r.is_default === true) ?? responses[0] ?? null;
   if (!defaultResp) {
-    // No default response defined; let other handlers respond
     return next();
   }
 
@@ -70,14 +78,12 @@ export async function mockRouter(req: Request, res: Response, next: NextFunction
     : (defaultResp as any).body ?? {};
   let statusCode = (defaultResp as any).statusCode ?? 200;
 
-  // Apply interceptors if configured
-  const cfg = await getEndpointConfig(resolved.endpoint._id.toString());
+  // Apply interceptors if configured (using Cache)
+  const cfg = await mockCache.getEndpointConfig(resolved.endpoint._id.toString());
   if (cfg) {
     if (cfg.force_status_code) {
       statusCode = cfg.force_status_code;
-      // Get all responses to check for an explicit match
-      const endpoint = await EndpointModel.findById(resolved.endpoint._id).populate('responses');
-      const responses = (endpoint?.responses as any[]) || [];
+      // Get all responses to check for an explicit match (in memory)
       const matchingResponse = responses.find(r => r.statusCode === statusCode);
       if (matchingResponse) {
         body = matchingResponse.schema || matchingResponse.examples?.[0] || {};

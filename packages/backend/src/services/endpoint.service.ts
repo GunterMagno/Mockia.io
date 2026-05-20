@@ -3,6 +3,7 @@ import { ProjectModel } from '../models/Project.js';
 import { AppError } from '../middlewares/errorHandler.js';
 import { ErrorCode } from '@mockia/shared';
 import { EndpointConfigModel } from '../models/EndpointConfig.js';
+import { mockCache } from '../modules/mock/mockCache.service.js';
 
 /**
  * Service to manage mock API endpoints
@@ -140,6 +141,10 @@ export async function updateEndpoint(
 
   await endpoint.save();
 
+  if (project && project.slug) {
+    await mockCache.invalidateProject(project.slug);
+  }
+
   const cfgDoc = await EndpointConfigModel.findOne({ endpointId: endpoint._id });
   const endpointObj = endpoint.toObject();
 
@@ -232,6 +237,10 @@ export async function createEndpoint(
   mockAPI.endpoints.push(endpoint._id as any);
   await mockAPI.save();
 
+  if (project && project.slug) {
+    await mockCache.invalidateProject(project.slug);
+  }
+
   // Populate responses before returning
   await endpoint.populate('responses');
 
@@ -284,6 +293,10 @@ export async function deleteEndpoint(
 
   // 4. Delete the endpoint document itself
   await EndpointModel.findByIdAndDelete(endpointId);
+
+  if (project && project.slug) {
+    await mockCache.invalidateProject(project.slug);
+  }
 
   return { success: true };
 }

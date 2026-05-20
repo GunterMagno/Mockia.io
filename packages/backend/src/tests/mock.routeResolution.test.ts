@@ -2,6 +2,7 @@ import { resolveRoute, getProjectEndpoints } from '../modules/mock/routeResoluti
 import { ProjectModel } from '../models/Project.js';
 import { MockAPIModel, EndpointModel } from '../models/MockAPI.js';
 import { AppError } from '../middlewares/errorHandler.js';
+import { mockCache } from '../modules/mock/mockCache.service.js';
 
 jest.mock('../models/Project');
 jest.mock('../models/MockAPI', () => ({
@@ -12,6 +13,7 @@ jest.mock('../models/MockAPI', () => ({
 describe('Route Resolution Service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockCache.clearAll();
   });
 
   describe('resolveRoute', () => {

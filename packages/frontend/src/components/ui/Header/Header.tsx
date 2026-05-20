@@ -57,7 +57,7 @@ const Header: React.FC = () => {
   const Logo = () => (
     <Link to="/" className={styles.logo}>
       <img src={logoMockia} alt="" className={styles.logoImg} />
-      <span className={styles.logoText}>Mock<span className={styles.highlight}>IA</span>.io</span>
+      <span className={styles.logoText}>Mock<span className={styles.highlight}>IA</span></span>
     </Link>
   );
 
