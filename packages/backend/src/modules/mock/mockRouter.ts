@@ -9,8 +9,11 @@ import { getDefaultResponseForEndpoint } from './response.service.js';
 import { getEndpointConfig } from './interceptor.service.js';
 import { EndpointModel } from '../../models/MockAPI.js';
 import { getDefaultErrorBody } from './errorHelper.js';
+import { applyMockHeaders } from './header.service.js';
+import { ProjectModel } from '../../models/Project.js';
 
 export async function mockRouter(req: Request, res: Response, next: NextFunction) {
+  applyMockHeaders(res);
   const projectSlug = req.params?.projectSlug as string | undefined;
   let relativePath = (req.params ? req.params[0] : undefined) || '';
   if (!relativePath.startsWith('/')) {
@@ -20,6 +23,33 @@ export async function mockRouter(req: Request, res: Response, next: NextFunction
 
   if (!projectSlug) {
     return next();
+  }
+
+  // 1. Authenticate with API Key
+  const apiKeyHeader = req.headers['x-mockia-api-key'] as string;
+  const project = await ProjectModel.findOne({ slug: projectSlug });
+  
+  if (!project) {
+    return res.status(404).json({
+      success: false,
+      error: {
+        code: 'NOT_FOUND',
+        message: `Project "${projectSlug}" not found`,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // Check API Key if project has one
+  if (project.apiKey && project.apiKey !== apiKeyHeader) {
+    return res.status(401).json({
+      success: false,
+      error: {
+        code: 'UNAUTHORIZED',
+        message: 'Invalid or missing X-Mockia-API-Key header',
+      },
+      timestamp: new Date().toISOString(),
+    });
   }
 
   const resolved = await resolveRoute(projectSlug, method, relativePath);

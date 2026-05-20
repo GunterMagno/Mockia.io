@@ -34,15 +34,20 @@ const isDevelopment = process.env.NODE_ENV === 'development';
 app.use(helmet());
 
 // CORS: Cross-origin resource sharing control
-app.use(
+app.use((req, res, next) => {
+  // Bypasses the restrictive global CORS domain check for public/mock endpoints,
+  // allowing them to handle their own open CORS rules (origin: '*') in their respective routers.
+  if (req.path.startsWith('/api/mock') || req.path.startsWith('/mock')) {
+    return next();
+  }
   cors({
     origin: process.env.CORS_ORIGIN,
     credentials: true,
     optionsSuccessStatus: 200,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-  })
-);
+  })(req, res, next);
+});
 
 // Morgan: HTTP request logging
 const morganFormat = isDevelopment ? 'dev' : 'combined';
@@ -122,7 +127,21 @@ mountMockDocsRoutes(app);
 
 // Catch-all Mock Router for direct project path interception
 // Intercepts any request to /mock/:projectSlug/* and serves default responses
-app.all('/mock/:projectSlug/*', catchAllMockRouter);
+app.all(
+  '/mock/:projectSlug/*',
+  cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Mockia-API-Key',
+      'X-Mockia-Response-Status',
+      'X-Mockia-Response-Name',
+    ],
+  }),
+  catchAllMockRouter
+);
 
 // AI generation routes (protected)
 app.use('/api/ai', aiRouter);
