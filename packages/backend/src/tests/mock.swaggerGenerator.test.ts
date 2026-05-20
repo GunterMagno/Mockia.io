@@ -72,5 +72,46 @@ describe('Swagger Generator', () => {
       expect(swagger.paths['/posts'].post.responses).toHaveProperty('200');
       expect(swagger.paths['/posts'].post).toHaveProperty('requestBody');
     });
+
+    it('should fall back to default swagger metadata when project and mock api are minimal', async () => {
+      const projectId = new Types.ObjectId().toString();
+      const mockProject = {};
+
+      (ProjectModel.findById as jest.Mock).mockResolvedValue(mockProject);
+      (MockAPIModel.findOne as jest.Mock).mockResolvedValue(null);
+
+      const swagger = await generateSwaggerForProject(projectId);
+
+      expect(swagger.info.title).toBe('API');
+      expect(swagger.info.description).toBe('');
+      expect(swagger.paths).toEqual({});
+    });
+
+    it('should default response description and schema when endpoint response fields are missing', async () => {
+      const projectId = new Types.ObjectId().toString();
+      const mockProject = { title: 'Test API', description: 'Desc' };
+      const mockApi = { _id: new Types.ObjectId() };
+      const mockEndpoints = [
+        {
+          path: '/comments',
+          method: 'GET',
+          description: 'List comments',
+          responses: [
+            {
+              statusCode: 204,
+            },
+          ],
+        },
+      ];
+
+      (ProjectModel.findById as jest.Mock).mockResolvedValue(mockProject);
+      (MockAPIModel.findOne as jest.Mock).mockResolvedValue(mockApi);
+      jest.spyOn(mockPopulationService, 'getEndpointsForMockAPI').mockResolvedValue(mockEndpoints as any);
+
+      const swagger = await generateSwaggerForProject(projectId);
+
+      expect(swagger.paths['/comments'].get.responses['204'].description).toBe('Response');
+      expect(swagger.paths['/comments'].get.responses['204'].content['application/json'].schema).toEqual({ type: 'object' });
+    });
   });
 });

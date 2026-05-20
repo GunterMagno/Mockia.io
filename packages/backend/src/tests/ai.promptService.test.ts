@@ -90,6 +90,46 @@ describe('AI Prompt Service', () => {
       const messages = await buildPrompt(mockProject._id, 'test');
       expect(messages[1].content).toContain('No GitHub context available yet');
     });
+
+    it('should format README, swagger routes, and budget skipped files', async () => {
+      const mockContext = {
+        repoName: 'test-repo',
+        repoUrl: 'https://github.com/test/repo',
+        repoOwner: 'test',
+        summary: 'A test repo',
+        stats: { totalFiles: 3, totalInterfaces: 0, totalFunctions: 0, totalRoutes: 0 },
+        files: [
+          {
+            path: 'README.md',
+            summary: 'Project overview',
+          },
+          {
+            path: 'openapi.yaml',
+            type: 'swagger',
+            summary: 'API spec',
+            routes: [{ methods: ['GET', 'POST'], path: '/api/items' }],
+          },
+          {
+            path: 'src/very-large-file.ts',
+            summary: 'x'.repeat(5000),
+          },
+        ],
+      } as any;
+
+      (ProjectModel.findById as jest.Mock).mockResolvedValue(mockProject);
+      (getProjectContext as jest.Mock).mockResolvedValue(mockContext);
+
+      const messages = await buildPrompt(mockProject._id, 'test', {
+        contextBudgetOverride: 500,
+      });
+
+      expect(messages[1].content).toContain('Project Documentation / README');
+      expect(messages[1].content).toContain('Content:\nProject overview');
+      expect(messages[1].content).toContain('OpenAPI Spec');
+      expect(messages[1].content).toContain('Routes:');
+      expect(messages[1].content).toContain('GET,POST /api/items');
+      expect(messages[1].content).toContain('Included: 2, Omitted: 1');
+    });
   });
 
   describe('validateJsonResponse', () => {
