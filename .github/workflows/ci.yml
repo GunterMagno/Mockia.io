@@ -150,6 +150,7 @@ jobs:
       - name: Run Cypress E2E Tests
         uses: cypress-io/github-action@v6
         with:
+          install: false
           working-directory: ./packages/frontend
           start: |
             npm run dev -w @mockia/backend
