@@ -218,7 +218,7 @@ const startServer = async (): Promise<void> => {
 // Start server only if NOT in test environment
 // Note: Direct execution check commented out due to ESM/CommonJS module compatibility
 // The app is exported below for testing purposes
-if (process.env.NODE_ENV !== 'test') {
+if (process.env.NODE_ENV !== 'test' || process.env.E2E === 'true') {
   // In production, start the server directly
   startServer();
 }

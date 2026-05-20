@@ -159,7 +159,8 @@ jobs:
           wait-on-timeout: 120
         env:
           MONGODB_URI: mongodb://localhost:27017/mockia-test
-          NODE_ENV: test
+          NODE_ENV: development
+          E2E: 'true'
           JWT_ACCESS_SECRET: test-secret-key-super-secure-for-testing
           JWT_REFRESH_SECRET: test-refresh-secret-key-for-testing
           SUPPRESS_LOGS: true
