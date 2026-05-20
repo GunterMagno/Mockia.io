@@ -64,6 +64,12 @@ const MockEditor: React.FC = () => {
   const userRole = project?.members?.find(m => String(m.userId) === String(currentUserId))?.role
   const isViewer = userRole === 'VIEWER'
 
+  const apiBaseUrl = import.meta.env.VITE_API_URL && (import.meta.env.VITE_API_URL.startsWith('http') || import.meta.env.VITE_API_URL.startsWith('//'))
+    ? import.meta.env.VITE_API_URL
+    : window.location.origin + '/api';
+  const cleanedApiBaseUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
+  const mockBaseUrl = project?.slug ? `${cleanedApiBaseUrl}/mock/${project.slug}` : '...';
+
   const fetchEndpoints = (silent = false) => {
     if (id) {
       getEndpoints(id)
@@ -321,16 +327,17 @@ const MockEditor: React.FC = () => {
           <article className={styles.urlSection}>
             <span className={styles.urlLabel}>Mock Base URL:</span>
             <code className={styles.urlDisplay}>
-              {window.location.origin}/api/mock/{project?.slug || '...'}
+              {mockBaseUrl}
             </code>
             <Button 
               variant="ghost" 
               size="sm" 
               onClick={() => {
-                const url = `${window.location.origin}/api/mock/${project?.slug}`;
-                navigator.clipboard.writeText(url);
-                setCopiedUrl(true);
-                setTimeout(() => setCopiedUrl(false), 2000);
+                if (project?.slug) {
+                  navigator.clipboard.writeText(mockBaseUrl);
+                  setCopiedUrl(true);
+                  setTimeout(() => setCopiedUrl(false), 2000);
+                }
               }}
               title="Copy URL"
               className={`${styles.copyBtn} ${copiedUrl ? styles.copied : ''}`}

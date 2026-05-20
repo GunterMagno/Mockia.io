@@ -113,7 +113,6 @@ app.use('/api/github', githubRouter);
 app.use('/api/mock', cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Mockia-API-Key', 'X-Mockia-Response-Status', 'X-Mockia-Response-Name'],
 }), mockRouter);
 
 // Endpoints routes (protected)
@@ -132,13 +131,6 @@ app.all(
   cors({
     origin: '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: [
-      'Content-Type',
-      'Authorization',
-      'X-Mockia-API-Key',
-      'X-Mockia-Response-Status',
-      'X-Mockia-Response-Name',
-    ],
   }),
   catchAllMockRouter
 );

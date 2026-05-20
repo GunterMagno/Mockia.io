@@ -48,6 +48,12 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
   const [copiedKey, setCopiedKey] = useState(false)
   const [showApiKey, setShowApiKey] = useState(false)
 
+  const apiBaseUrl = import.meta.env.VITE_API_URL && (import.meta.env.VITE_API_URL.startsWith('http') || import.meta.env.VITE_API_URL.startsWith('//'))
+    ? import.meta.env.VITE_API_URL
+    : window.location.origin + '/api';
+  const cleanedApiBaseUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
+  const mockBaseUrl = createdProject?.slug ? `${cleanedApiBaseUrl}/mock/${createdProject.slug}` : '';
+
 
   const reset = () => {
     setStep('select')
@@ -345,11 +351,11 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
                   <label>Mock Base URL</label>
                   <article className={styles.infoDisplay}>
                     <section className={styles.infoBox}>
-                      <code>{window.location.origin}/api/mock/{createdProject.slug}</code>
+                      <code>{mockBaseUrl}</code>
                     </section>
                     <button 
                       onClick={() => {
-                        navigator.clipboard.writeText(`${window.location.origin}/api/mock/${createdProject.slug}`)
+                        navigator.clipboard.writeText(mockBaseUrl)
                         setCopiedUrl(true)
                         setTimeout(() => setCopiedUrl(false), 2000)
                       }}
