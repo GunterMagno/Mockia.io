@@ -11,6 +11,7 @@ import { applyMockHeaders } from './header.service.js';
 import { mockCache } from './mockCache.service.js';
 
 export async function mockRouter(req: Request, res: Response, next: NextFunction) {
+  const startTime = Date.now();
   applyMockHeaders(res);
   const projectSlug = req.params?.projectSlug as string | undefined;
   let relativePath = (req.params ? req.params[0] : undefined) || '';
@@ -97,7 +98,11 @@ export async function mockRouter(req: Request, res: Response, next: NextFunction
       body = cfg.override_response;
     }
     if (cfg.delay_ms && cfg.delay_ms > 0) {
-      await new Promise((resolve) => setTimeout(resolve, cfg.delay_ms));
+      const elapsed = Date.now() - startTime;
+      const remaining = Math.max(0, cfg.delay_ms - elapsed);
+      if (remaining > 0) {
+        await new Promise((resolve) => setTimeout(resolve, remaining));
+      }
     }
   }
 

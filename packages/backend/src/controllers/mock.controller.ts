@@ -162,6 +162,7 @@ export const getProjectEndpointsHandler = asyncHandler(
  */
 export const mockProxyHandler = asyncHandler(
   async (req: Request, res: Response) => {
+    const startTime = Date.now();
     applyMockHeaders(res);
     const method = req.method;
     
@@ -305,7 +306,11 @@ export const mockProxyHandler = asyncHandler(
         responseData = cfg.override_response;
       }
       if (cfg.delay_ms && cfg.delay_ms > 0) {
-        await new Promise((resolve) => setTimeout(resolve, cfg.delay_ms));
+        const elapsed = Date.now() - startTime;
+        const remaining = Math.max(0, cfg.delay_ms - elapsed);
+        if (remaining > 0) {
+          await new Promise((resolve) => setTimeout(resolve, remaining));
+        }
       }
     }
 
