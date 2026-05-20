@@ -21,7 +21,7 @@ export async function getDefaultResponseForEndpoint(
     if (!responses || responses.length === 0) return null;
 
     const defaultResp = responses.find(r => r.is_default === true);
-    return defaultResp ?? null;
+    return defaultResp ?? responses[0] ?? null;
   } catch {
     return null;
   }

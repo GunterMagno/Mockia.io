@@ -10,6 +10,8 @@ import { asyncHandler } from '../middlewares/errorHandler.js';
 import { resolveRoute, getProjectEndpoints } from '../modules/mock/routeResolution.service.js';
 import { ResponseModel, EndpointModel } from '../models/MockAPI.js';
 import { ProjectModel } from '../models/Project.js';
+import { EndpointConfigModel } from '../models/EndpointConfig.js';
+import { getDefaultErrorBody } from '../modules/mock/errorHelper.js';
 
 /**
  * POST /api/mock/resolve-route
@@ -116,20 +118,29 @@ export const getProjectEndpointsHandler = asyncHandler(
       method ? String(method) : undefined
     );
 
+    const endpointIds = endpoints.map(ep => ep._id);
+    const configs = await EndpointConfigModel.find({ endpointId: { $in: endpointIds } });
+    const configMap = new Map(configs.map(c => [c.endpointId.toString(), c]));
+
     res.status(200).json({
       success: true,
       data: {
         projectSlug,
         method: method ? String(method) : 'all',
         count: endpoints.length,
-        endpoints: endpoints.map(ep => ({
-          id: ep._id.toString(),
-          path: ep.path,
-          method: ep.method,
-          description: ep.description,
-          requestSchema: ep.requestSchema,
-          responses: ep.responses,
-        })),
+        endpoints: endpoints.map(ep => {
+          const cfg = configMap.get(ep._id.toString());
+          return {
+            id: ep._id.toString(),
+            path: ep.path,
+            method: ep.method,
+            description: ep.description,
+            requestSchema: ep.requestSchema,
+            responses: ep.responses,
+            delay_ms: cfg?.delay_ms ?? 0,
+            force_status_code: cfg?.force_status_code ?? 0,
+          };
+        }),
       },
       timestamp: new Date().toISOString(),
     });
@@ -268,8 +279,31 @@ export const mockProxyHandler = asyncHandler(
     }
 
     // 5. Return the mock response
-    const statusCode = targetResponse.statusCode || 200;
-    const responseData = targetResponse.schema || targetResponse.examples?.[0] || {};
+    let statusCode = targetResponse.statusCode || 200;
+    let responseData = targetResponse.schema || targetResponse.examples?.[0] || {};
+
+    // Apply interceptors/overrides if configured
+    const cfg = await EndpointConfigModel.findOne({ endpointId: resolvedRoute.endpoint._id.toString() });
+    if (cfg) {
+      if (cfg.force_status_code) {
+        statusCode = cfg.force_status_code;
+        // If there's an explicit response for this forced status code, use it!
+        const matchingResponse = responses.find(r => r.statusCode === statusCode);
+        if (matchingResponse) {
+          responseData = matchingResponse.schema || matchingResponse.examples?.[0] || {};
+        } else if (statusCode === 204) {
+          responseData = null;
+        } else if (statusCode >= 400) {
+          responseData = getDefaultErrorBody(statusCode);
+        }
+      }
+      if (cfg.override_response !== undefined && cfg.override_response !== null) {
+        responseData = cfg.override_response;
+      }
+      if (cfg.delay_ms && cfg.delay_ms > 0) {
+        await new Promise((resolve) => setTimeout(resolve, cfg.delay_ms));
+      }
+    }
 
     res.status(statusCode).json(responseData);
   }

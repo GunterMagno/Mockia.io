@@ -23,6 +23,11 @@ export function applyMockHeaders(res: Response): void {
     res.setHeader('Access-Control-Allow-Origin', '*');
   }
 
+  // Prevent browser and proxy caching to ensure live simulation (e.g. delays) works consistently
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+
   // Inject an identifiable request ID for tracing
   const requestId = generateRequestId();
   res.setHeader('X-Mockia-Request-ID', requestId);

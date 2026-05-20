@@ -2,6 +2,7 @@ import { EndpointModel, MockAPIModel, ResponseModel } from '../models/MockAPI.js
 import { ProjectModel } from '../models/Project.js';
 import { AppError } from '../middlewares/errorHandler.js';
 import { ErrorCode } from '@mockia/shared';
+import { EndpointConfigModel } from '../models/EndpointConfig.js';
 
 /**
  * Service to manage mock API endpoints
@@ -15,6 +16,8 @@ interface UpdateEndpointData {
   requestSchema?: any;
   responseBody?: any;
   statusCode?: number;
+  delay_ms?: number;
+  force_status_code?: number;
 }
 
 interface CreateEndpointData {
@@ -119,8 +122,33 @@ export async function updateEndpoint(
     }
   }
 
+  // 5. Update or create associated EndpointConfig doc
+  if (data.delay_ms !== undefined || data.force_status_code !== undefined) {
+    let cfg = await EndpointConfigModel.findOne({ endpointId: endpoint._id });
+    if (!cfg) {
+      cfg = new EndpointConfigModel({
+        endpointId: endpoint._id,
+        delay_ms: data.delay_ms ?? 0,
+        force_status_code: data.force_status_code ?? 0,
+      });
+    } else {
+      if (data.delay_ms !== undefined) cfg.delay_ms = data.delay_ms;
+      if (data.force_status_code !== undefined) cfg.force_status_code = data.force_status_code;
+    }
+    await cfg.save();
+  }
+
   await endpoint.save();
-  return endpoint;
+
+  const cfgDoc = await EndpointConfigModel.findOne({ endpointId: endpoint._id });
+  const endpointObj = endpoint.toObject();
+
+  return {
+    ...endpointObj,
+    id: endpoint._id.toString(),
+    delay_ms: cfgDoc?.delay_ms ?? 0,
+    force_status_code: cfgDoc?.force_status_code ?? 0,
+  };
 }
 
 /**
@@ -207,7 +235,14 @@ export async function createEndpoint(
   // Populate responses before returning
   await endpoint.populate('responses');
 
-  return endpoint;
+  const endpointObj = endpoint.toObject();
+
+  return {
+    ...endpointObj,
+    id: endpoint._id.toString(),
+    delay_ms: 0,
+    force_status_code: 0,
+  };
 }
 
 /**

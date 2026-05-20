@@ -3,13 +3,15 @@
 .editorWrapper {
   flex: 1;
   min-height: 0; // Essential for Monaco in flex
+  min-width: 0;  // Essential for Monaco in flex to prevent horizontal overflow
   height: 100%;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   overflow: hidden;
   width: 100%;
 
-  @include respond-to('md') {
-    min-height: 400px;
+  @include respond-to(1450px) {
+    height: 450px;
+    min-height: 450px;
   }
 }

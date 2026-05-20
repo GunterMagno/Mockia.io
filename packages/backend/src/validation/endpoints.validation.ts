@@ -67,4 +67,23 @@ export const updateEndpointSchema = Joi.object({
       'number.min': 'HTTP status code must be at least 100',
       'number.max': 'HTTP status code cannot exceed 599',
     }),
+  delay_ms: Joi.number()
+    .integer()
+    .min(0)
+    .max(10000)
+    .optional()
+    .messages({
+      'number.min': 'Delay must be at least 0 ms',
+      'number.max': 'Delay cannot exceed 10000 ms (10 seconds)',
+    }),
+  force_status_code: Joi.number()
+    .integer()
+    .min(0)
+    .max(599)
+    .optional()
+    .allow(null, 0)
+    .messages({
+      'number.min': 'Forced HTTP status code must be at least 0',
+      'number.max': 'Forced HTTP status code cannot exceed 599',
+    }),
 });

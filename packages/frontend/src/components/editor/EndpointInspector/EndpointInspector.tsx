@@ -18,7 +18,7 @@ export const EndpointInspector: React.FC<EndpointInspectorProps> = ({ endpoint, 
       </header>
 
       <fieldset className={styles.fieldset} disabled={readOnly}>
-        <article>
+        <article className={styles.field}>
           <label className={styles.label}>
             HTTP Method
           </label>
@@ -41,7 +41,7 @@ export const EndpointInspector: React.FC<EndpointInspectorProps> = ({ endpoint, 
           onChange={(e) => onChangeMeta({ path: e.target.value })} 
         />
 
-        <article>
+        <article className={styles.field}>
           <label className={styles.label}>
             Status Code
           </label>
@@ -81,6 +81,53 @@ export const EndpointInspector: React.FC<EndpointInspectorProps> = ({ endpoint, 
           value={endpoint.description} 
           onChange={(e) => onChangeMeta({ description: e.target.value })} 
         />
+
+        <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: 'var(--spacing-3) 0 var(--spacing-2) 0' }} />
+
+        <header className={styles.header}>
+          <h4 style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Simulation & Overrides
+          </h4>
+        </header>
+
+        <Input 
+          label="Simulate Delay (ms)" 
+          type="number"
+          min={0}
+          max={10000}
+          placeholder="0"
+          value={endpoint.delay_ms || ''} 
+          onChange={(e) => onChangeMeta({ delay_ms: Math.max(0, parseInt(e.target.value)) || 0 })} 
+        />
+
+        <article className={styles.field}>
+          <label className={styles.label}>
+            Force HTTP Status
+          </label>
+          <select 
+            value={endpoint.force_status_code || 0} 
+            onChange={(e) => onChangeMeta({ force_status_code: parseInt(e.target.value) || 0 })}
+            className={styles.select}
+          >
+            <option value="0">None (Use default response code)</option>
+            <optgroup label="2xx Success">
+              <option value="200">200 OK</option>
+              <option value="201">201 Created</option>
+              <option value="204">204 No Content</option>
+            </optgroup>
+            <optgroup label="4xx Client Error">
+              <option value="400">400 Bad Request</option>
+              <option value="401">401 Unauthorized</option>
+              <option value="403">403 Forbidden</option>
+              <option value="404">404 Not Found</option>
+              <option value="409">409 Conflict</option>
+            </optgroup>
+            <optgroup label="5xx Server Error">
+              <option value="500">500 Internal Server Error</option>
+              <option value="503">503 Service Unavailable</option>
+            </optgroup>
+          </select>
+        </article>
 
       </fieldset>
     </section>

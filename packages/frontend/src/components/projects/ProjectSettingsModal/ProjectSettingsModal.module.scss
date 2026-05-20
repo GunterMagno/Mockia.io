@@ -658,3 +658,60 @@
     cursor: not-allowed;
   }
 }
+
+.githubBox {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  background-color: var(--settings-input-bg);
+  padding: 0 var(--spacing-2) 0 var(--spacing-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  min-height: 48px;
+  width: 100%;
+}
+
+.githubInput {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: var(--settings-input-text);
+  font-size: var(--text-base);
+  outline: none;
+  width: 100%;
+  cursor: default;
+}
+
+.githubLinkBtn {
+  background-color: var(--support-04);
+  color: var(--support-03);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: var(--spacing-2) var(--spacing-4);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  height: 32px;
+  margin-left: var(--spacing-2);
+
+  &:hover {
+    background-color: var(--support-05);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+.githubIconColor {
+  opacity: 0.8;
+}
+

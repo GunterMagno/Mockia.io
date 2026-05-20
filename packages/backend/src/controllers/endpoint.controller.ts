@@ -20,7 +20,7 @@ export const updateEndpointHandler = asyncHandler(
     }
 
     const { id } = req.params;
-    const { path, method, description, requestSchema, responseBody, statusCode } = req.body;
+    const { path, method, description, requestSchema, responseBody, statusCode, delay_ms, force_status_code } = req.body;
 
     const endpoint = await endpointService.updateEndpoint(id, userId, {
       path,
@@ -28,7 +28,9 @@ export const updateEndpointHandler = asyncHandler(
       description,
       requestSchema,
       responseBody,
-      statusCode
+      statusCode,
+      delay_ms,
+      force_status_code
     });
 
     res.status(200).json({

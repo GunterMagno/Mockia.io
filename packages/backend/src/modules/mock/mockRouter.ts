@@ -7,10 +7,15 @@ import { Request, Response, NextFunction } from 'express';
 import { resolveRoute } from './routeResolution.service.js';
 import { getDefaultResponseForEndpoint } from './response.service.js';
 import { getEndpointConfig } from './interceptor.service.js';
+import { EndpointModel } from '../../models/MockAPI.js';
+import { getDefaultErrorBody } from './errorHelper.js';
 
 export async function mockRouter(req: Request, res: Response, next: NextFunction) {
   const projectSlug = req.params?.projectSlug as string | undefined;
-  const relativePath = (req.params ? req.params[0] : undefined) || '';
+  let relativePath = (req.params ? req.params[0] : undefined) || '';
+  if (!relativePath.startsWith('/')) {
+    relativePath = '/' + relativePath;
+  }
   const method = req.method;
 
   if (!projectSlug) {
@@ -38,7 +43,20 @@ export async function mockRouter(req: Request, res: Response, next: NextFunction
   // Apply interceptors if configured
   const cfg = await getEndpointConfig(resolved.endpoint._id.toString());
   if (cfg) {
-    if (cfg.force_status_code) statusCode = cfg.force_status_code;
+    if (cfg.force_status_code) {
+      statusCode = cfg.force_status_code;
+      // Get all responses to check for an explicit match
+      const endpoint = await EndpointModel.findById(resolved.endpoint._id).populate('responses');
+      const responses = (endpoint?.responses as any[]) || [];
+      const matchingResponse = responses.find(r => r.statusCode === statusCode);
+      if (matchingResponse) {
+        body = matchingResponse.schema || matchingResponse.examples?.[0] || {};
+      } else if (statusCode === 204) {
+        body = null;
+      } else if (statusCode >= 400) {
+        body = getDefaultErrorBody(statusCode);
+      }
+    }
     if (cfg.override_response !== undefined && cfg.override_response !== null) {
       body = cfg.override_response;
     }

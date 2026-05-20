@@ -11,6 +11,8 @@ export interface EndpointData {
     schema: any;
     examples?: any[];
   }>
+  delay_ms?: number
+  force_status_code?: number
 }
 
 export const getEndpoints = async (projectSlug: string): Promise<EndpointData[]> => {
@@ -18,7 +20,15 @@ export const getEndpoints = async (projectSlug: string): Promise<EndpointData[]>
   return res.data.data.endpoints
 }
 
-export const updateEndpoint = async (endpointId: string, payload: Partial<EndpointData> & { responseBody?: any, statusCode?: number }): Promise<EndpointData> => {
+export const updateEndpoint = async (
+  endpointId: string,
+  payload: Partial<EndpointData> & { 
+    responseBody?: any; 
+    statusCode?: number; 
+    delay_ms?: number; 
+    force_status_code?: number 
+  }
+): Promise<EndpointData> => {
   const res = await api.put<{ data: EndpointData }>(`/endpoints/${endpointId}`, payload)
   return res.data.data
 }

@@ -13,6 +13,7 @@ import { mockRouter } from './routes/mock.routes.js';
 import mountMockDocsRoutes from './modules/mock/mock.docs.routes.js';
 import { mockRouter as catchAllMockRouter } from './modules/mock/mockRouter.js';
 import { endpointsRouter } from './routes/endpoints.routes.js';
+import { mountInterceptorRoutes } from './modules/mock/interceptor.routes.js';
 import aiRouter from './routes/ai.routes.js';
 import notificationRouter from './routes/notification.routes.js';
 import { startProjectCleanupScheduler } from './scheduler/projectCleanup.js';
@@ -112,6 +113,9 @@ app.use('/api/mock', cors({
 
 // Endpoints routes (protected)
 app.use('/api/endpoints', endpointsRouter);
+
+// Interceptor/Override config routes
+mountInterceptorRoutes(app);
 
 // Swagger Docs for Mock Router per-project (before catch-all)
 mountMockDocsRoutes(app);

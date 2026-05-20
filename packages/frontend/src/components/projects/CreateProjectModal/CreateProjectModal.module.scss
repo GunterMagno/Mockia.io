@@ -1,5 +1,7 @@
 .modalContent {
-  height: 40rem;
+  min-height: 40rem;
+  max-height: 90vh;
+  overflow-y: auto;
   max-width: 100%;
   background-color: var(--secondary-light-disabled);
   border-radius: var(--radius-xl);

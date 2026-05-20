@@ -19,28 +19,45 @@
   margin: 0;
   display: flex;
   flex-direction: column;
+  gap: var(--spacing-4); // Matches normal form fieldsets spacing
+  min-width: 0;
+}
+
+.field {
+  border: none;
+  display: flex;
+  flex-direction: column;
   gap: var(--spacing-2);
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
 }
 
 .label {
-  display: block;
-  margin-bottom: var(--spacing-1);
   font-size: var(--text-sm);
-  color: var(--muted);
+  color: var(--support-03);
+  font-weight: 500;
+  margin: 0;
 }
 
 .select {
+  box-sizing: border-box;
   width: 100%;
-  padding: var(--spacing-2);
+  padding: var(--spacing-3) var(--spacing-4);
+  border: 1px solid var(--support-05);
   border-radius: var(--radius-md);
-  border: 1px solid var(--border);
-  background: var(--card-bg);
-  color: var(--text);
   font-size: var(--text-base);
+  background: var(--support-04);
+  color: var(--support-03);
   outline: none;
-  transition: border-color var(--transition-fast);
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
 
   &:focus {
     border-color: var(--primary-light);
+    box-shadow: 0 0 0 0.1875rem var(--sidebar-border-color);
+    background: var(--support-04);
   }
 }

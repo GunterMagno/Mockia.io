@@ -294,7 +294,9 @@ const MockEditor: React.FC = () => {
         method: activeEndpoint.method,
         description: activeEndpoint.description,
         responseBody: parsedJson,
-        statusCode
+        statusCode,
+        delay_ms: activeEndpoint.delay_ms || 0,
+        force_status_code: activeEndpoint.force_status_code || 0
       }
       
       // Update endpoint on backend

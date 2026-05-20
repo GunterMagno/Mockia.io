@@ -9,6 +9,8 @@ import copyIcon from '../../../assets/copy.svg'
 import checkIcon from '../../../assets/check.svg'
 import eyeIcon from '../../../assets/eye.svg'
 import eyeOffIcon from '../../../assets/eye-off.svg'
+import githubIcon from '../../../assets/github.svg'
+import externalLinkIcon from '../../../assets/external-link.svg'
 import { playErrorSound } from '../../../utils/audio'
 
 type Props = {
@@ -210,6 +212,30 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
                   disabled={isViewer}
                 />
               </article>
+
+              {project.gitHubRepo && (
+                <article className={styles.formGroup}>
+                  <label>Connected GitHub Repository</label>
+                  <article className={styles.githubBox}>
+                    <Icon src={githubIcon} size={30} className={styles.githubIconColor} />
+                    <input 
+                      type="text" 
+                      readOnly 
+                      value={project.gitHubRepo.url} 
+                      className={styles.githubInput}
+                    />
+                    <button 
+                      type="button"
+                      onClick={() => window.open(project.gitHubRepo?.url, '_blank', 'noopener,noreferrer')}
+                      className={styles.githubLinkBtn}
+                      title="Open on GitHub"
+                    >
+                      <Icon src={externalLinkIcon} size={16} />
+                      <span>Open Repository</span>
+                    </button>
+                  </article>
+                </article>
+              )}
 
               {project.ownerId !== currentUserId ? (
                 <section className={styles.dangerZone}>
