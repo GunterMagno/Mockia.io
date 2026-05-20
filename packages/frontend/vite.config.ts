@@ -16,9 +16,9 @@ export default defineConfig({
       usePolling: true,
     },
     proxy: {
-      // Proxy API requests to the backend service within Docker network
+      // Proxy API requests to the backend service
       '/api': {
-        target: 'http://mockia-backend:3000',
+        target: process.env.BACKEND_URL || 'http://mockia-backend:3000',
         changeOrigin: true,
         secure: false,
       },
