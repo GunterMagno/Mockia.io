@@ -6,6 +6,7 @@ import { EndpointModel, MockAPIModel, ResponseModel } from '../models/MockAPI.js
 import { EndpointConfigModel } from '../models/EndpointConfig.js';
 import { connectDB, disconnectDB } from '../config/connection.js';
 import bcrypt from 'bcrypt';
+import { mockCache } from '../modules/mock/mockCache.service.js';
 
 describe('Mock Router Delay and Status Code Interceptors', () => {
   let accessToken: string;
@@ -131,6 +132,8 @@ describe('Mock Router Delay and Status Code Interceptors', () => {
     await EndpointModel.findByIdAndUpdate(endpointId, {
       $push: { responses: custom500Response._id }
     });
+
+    mockCache.invalidateProject(projectSlug);
 
     // 4. Call mock proxy again and verify it now returns the custom 500 response body instead of the generic one
     const mockResCustom500 = await request(app)

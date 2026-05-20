@@ -4,6 +4,7 @@ import path from 'path';
 import { AppError } from '../middlewares/errorHandler.js';
 import { ErrorCode } from '@mockia/shared';
 import { removeDirectory } from '../utils/cleanupUtil.js';
+import axios from 'axios';
 
 /**
  * Interface for the result of parseGitHubUrl
@@ -131,26 +132,21 @@ export function parseGitHubUrl(url: string): GitHubUrlParsed {
  * @throws AppError if the repository is not found or is private
  */
 export async function checkRepoAccessibility(owner: string, repo: string): Promise<void> {
-  const repoUrl = `https://github.com/${owner}/${repo}.git`;
-  const git: SimpleGit = simpleGit();
-  
   try {
-    await git.listRemote([repoUrl]);
-  } catch (error) {
-    if (error instanceof Error) {
-      const errorMsg = error.message.toLowerCase();
-      if (errorMsg.includes('not found') || errorMsg.includes('does not appear to be a git repository')) {
+    await axios.get(`https://github.com/${owner}/${repo}`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      },
+      timeout: 10000,
+    });
+  } catch (error: any) {
+    if (error.response) {
+      const status = error.response.status;
+      if (status === 404) {
         throw new AppError(
           `Repository not found: ${owner}/${repo}. Please ensure it is a public repository.`,
           ErrorCode.NOT_FOUND,
           404
-        );
-      }
-      if (errorMsg.includes('permission denied') || errorMsg.includes('authentication failed')) {
-        throw new AppError(
-          `Access denied for ${owner}/${repo}. Mockia only supports public repositories for now.`,
-          ErrorCode.FORBIDDEN,
-          403
         );
       }
     }

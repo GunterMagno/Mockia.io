@@ -8,6 +8,8 @@ import { getBackendErrorMessage } from '../../utils/error'
 import { validateEmail, validatePassword, validateUsername } from '../../utils/validation'
 import { playErrorSound } from '../../utils/audio'
 
+import ModalErrorAlert from '../../components/ui/ModalErrorAlert/ModalErrorAlert'
+
 import styles from './Auth.module.scss'
 
 const Signup: React.FC = () => {
@@ -101,9 +103,7 @@ const Signup: React.FC = () => {
             </fieldset>
             
             {error && (
-              <span className={styles.error}>
-                {error}
-              </span>
+              <ModalErrorAlert message={error} />
             )}
             
             <Button type="submit" isLoading={loading} className={styles.submitBtn}>

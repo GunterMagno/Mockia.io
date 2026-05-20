@@ -5,6 +5,8 @@ import { useAuth } from '../../../contexts/AuthContext'
 import { Input } from '../../ui/Input/Input'
 import styles from './ProfileModal.module.scss'
 import { playErrorSound } from '../../../utils/audio'
+import { getBackendErrorMessage } from '../../../utils/error'
+import ModalErrorAlert from '../../ui/ModalErrorAlert/ModalErrorAlert'
 
 type Props = {
   isOpen: boolean
@@ -53,7 +55,7 @@ const ProfileModal: React.FC<Props> = ({ isOpen, onClose }) => {
         onClose()
       }, 1500)
     } catch (err: any) {
-      setStatus({ type: 'error', message: err?.response?.data?.message || 'Failed to update profile. Check current password.' })
+      setStatus({ type: 'error', message: getBackendErrorMessage(err) })
       playErrorSound()
     } finally {
       setLoading(false)
@@ -118,8 +120,12 @@ const ProfileModal: React.FC<Props> = ({ isOpen, onClose }) => {
             </fieldset>
           </section>
 
-          {status.message && (
-            <article className={`${styles.status} ${styles[status.type]}`}>
+          {status.message && status.type === 'error' && (
+            <ModalErrorAlert message={status.message} />
+          )}
+
+          {status.message && status.type === 'success' && (
+            <article className={`${styles.status} ${styles.success}`}>
               {status.message}
             </article>
           )}

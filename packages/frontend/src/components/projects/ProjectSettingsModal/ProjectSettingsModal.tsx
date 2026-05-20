@@ -12,6 +12,7 @@ import eyeOffIcon from '../../../assets/eye-off.svg'
 import githubIcon from '../../../assets/github.svg'
 import externalLinkIcon from '../../../assets/external-link.svg'
 import { playErrorSound } from '../../../utils/audio'
+import ModalErrorAlert from '../../ui/ModalErrorAlert/ModalErrorAlert'
 
 type Props = {
   isOpen: boolean
@@ -407,7 +408,7 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
               )}
             </section>
           )}
-          {error && <span className={styles.error}>{error}</span>}
+          <ModalErrorAlert message={error} />
         </section>
 
         <footer className={styles.footer}>

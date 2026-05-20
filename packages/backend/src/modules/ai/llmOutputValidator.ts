@@ -204,11 +204,49 @@ function validateEndpoint(endpoint: unknown, index: number): AppError | null {
     );
   }
 
-  // Examples array
-  if (ep.examples) {
-    if (!Array.isArray(ep.examples)) {
+  // Self-heal and validate examples array
+  if (ep.examples && Array.isArray(ep.examples)) {
+    ep.examples = ep.examples.map((item: any) => {
+      // If item is null or not a plain object
+      if (!item || typeof item !== 'object' || Array.isArray(item)) {
+        return {
+          request: {},
+          response: { value: item }
+        };
+      }
+      
+      const hasRequest = 'request' in item && item.request && typeof item.request === 'object';
+      const hasResponse = 'response' in item && item.response && typeof item.response === 'object';
+      
+      if (hasRequest || hasResponse) {
+        return {
+          request: hasRequest ? item.request : {},
+          response: hasResponse ? item.response : {}
+        };
+      }
+      
+      // Flat mock response - wrap in response block
+      return {
+        request: {},
+        response: item
+      };
+    });
+  } else {
+    // If examples is missing or not an array, initialize a default one
+    ep.examples = [
+      {
+        request: {},
+        response: {}
+      }
+    ];
+  }
+
+  // Validate examples array format post-healing
+  for (let i = 0; i < (ep.examples as any[]).length; i++) {
+    const item = (ep.examples as any[])[i];
+    if (!item || typeof item.request !== 'object' || typeof item.response !== 'object') {
       return new AppError(
-        `endpoints[${index}].examples must be an array`,
+        `endpoints[${index}].examples[${i}] must contain request and response objects`,
         ErrorCode.VALIDATION_ERROR,
         400
       );

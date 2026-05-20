@@ -14,6 +14,7 @@ import loaderIcon from '../../../assets/loader.svg'
 import eyeIcon from '../../../assets/eye.svg'
 import eyeOffIcon from '../../../assets/eye-off.svg'
 import { playErrorSound } from '../../../utils/audio'
+import ModalErrorAlert from '../../ui/ModalErrorAlert/ModalErrorAlert'
 
 type Props = {
   isOpen: boolean
@@ -256,7 +257,7 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
                   </article>
                 </>
               )}
-              {error && <span className={styles.error}>{error}</span>}
+              <ModalErrorAlert message={error} />
             </section>
 
             <nav className={styles.actions}>
@@ -283,7 +284,7 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
             <section className={styles.stepContent}>
               <article className={styles.aiCard}>
                 <figure className={styles.aiIcon}>
-                  <Icon src={aiSparkleIcon} size={40} color="white" />
+                  <Icon src={aiSparkleIcon} size={52} color="var(--support-04)" />
                 </figure>
                 <article className={styles.aiText}>
                   <h4>Smart API Generation</h4>
@@ -314,7 +315,7 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
                 </article>
               )}
 
-              {error && <span className={styles.error}>{error}</span>}
+              <ModalErrorAlert message={error} />
               
               {loading && (
                 <article className={styles.statusMessage}>

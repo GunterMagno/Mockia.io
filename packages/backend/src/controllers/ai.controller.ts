@@ -124,6 +124,7 @@ export const generateMockDataHandler = asyncHandler(
       {
         temperature: 0.8, // More creative for data generation
         max_tokens: 2000,
+        response_format: { type: 'json_object' },
       }
     );
 
@@ -209,8 +210,9 @@ export const generateMockAPISpecHandler = asyncHandler(
 
     // Call OpenRouter API with structured messages
     const openRouterResponse = await callOpenRouterWithRetry(messages, {
-      temperature: req.body.temperature ?? 0.7,
-      max_tokens: req.body.maxTokens ?? 2000,
+      temperature: req.body.temperature ?? 0.85,
+      max_tokens: req.body.maxTokens ?? 5000,
+      response_format: { type: 'json_object' },
     });
 
     // Extract the generated content from response
@@ -306,8 +308,9 @@ export const generateAndSaveHandler = asyncHandler(
       // 2. Call OpenRouter API
       console.log('[AI] Calling OpenRouter API...');
       const openRouterResponse = await callOpenRouterWithRetry(messages, {
-        temperature: req.body.temperature ?? 0.7,
-        max_tokens: req.body.maxTokens ?? 2000,
+        temperature: req.body.temperature ?? 0.85,
+        max_tokens: req.body.maxTokens ?? 5000,
+        response_format: { type: 'json_object' },
       });
 
       // 3. Get response content

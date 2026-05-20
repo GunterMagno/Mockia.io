@@ -49,11 +49,13 @@ function truncateContext(context: string, maxTokens: number): string {
 
 /**
  * Formats the GitHub context into a readable string for the prompt
+ * Implements intelligent sorting, noise filtering, and file-level budgeting
  * 
  * @param context - Raw GitHub context data
+ * @param maxTokens - Maximum tokens allowed for the context budget
  * @returns Formatted context string
  */
-function formatGitHubContext(context: any): string {
+function formatGitHubContext(context: any, maxTokens: number): string {
   const sections: string[] = [];
 
   // Repository info
@@ -72,72 +74,171 @@ function formatGitHubContext(context: any): string {
   sections.push(`- Functions: ${context.stats?.totalFunctions || 0}`);
   sections.push(`- Routes: ${context.stats?.totalRoutes || 0}`);
 
-  // File structure
-  if (context.files && context.files.length > 0) {
-    sections.push(`\n## Code Structure\n`);
+  if (!context.files || context.files.length === 0) {
+    return sections.join('\n');
+  }
 
-    // Group files by type
-    const filesByType = {
-      typescript: context.files.filter((f: any) => f.type === 'typescript'),
-      swagger: context.files.filter((f: any) => f.type === 'swagger'),
-      other: context.files.filter((f: any) => f.type === 'other'),
-    };
+  // Filter out noisy files (tests, configs, locks, setup)
+  const isNoiseFile = (filePath: string): boolean => {
+    const lower = filePath.toLowerCase();
+    return (
+      lower.includes('.test.') ||
+      lower.includes('.spec.') ||
+      lower.includes('.setup.') ||
+      lower.includes('.config.') ||
+      lower.endsWith('.d.ts') ||
+      lower.includes('/__tests__/') ||
+      lower.includes('/mocks/') ||
+      lower.includes('/test/') ||
+      lower === 'tsconfig.json' ||
+      lower === 'package.json' ||
+      lower === 'package-lock.json' ||
+      lower === 'yarn.lock' ||
+      lower === 'pnpm-lock.yaml'
+    );
+  };
 
-    if (filesByType.typescript.length > 0) {
-      sections.push(`### TypeScript Files`);
-      filesByType.typescript.forEach((file: any) => {
-        sections.push(`- ${file.path}`);
-        if (file.summary) {
-          sections.push(`  Summary: ${file.summary}`);
-        }
-        if (file.interfaces && file.interfaces.length > 0) {
-          sections.push(`  Interfaces:`);
-          file.interfaces.forEach((i: any) => {
-            sections.push(`    interface ${i.name} { ${i.properties.join('; ')} }`);
-          });
-        }
-        if (file.typeAliases && file.typeAliases.length > 0) {
-          sections.push(`  Types:`);
-          file.typeAliases.forEach((t: any) => {
-            sections.push(`    type ${t.name} = ${t.type}`);
-          });
-        }
-        if (file.enums && file.enums.length > 0) {
-          sections.push(`  Enums:`);
-          file.enums.forEach((e: any) => {
-            sections.push(`    enum ${e.name} { ${e.members.join(', ')} }`);
-          });
-        }
-        if (file.functions && file.functions.length > 0) {
-          sections.push(`  Functions:`);
-          file.functions.forEach((f: any) => {
-            sections.push(`    ${f.name}(${f.params.join(', ')}): ${f.returnType}`);
-          });
-        }
-      });
+  const filteredFiles = context.files.filter((file: any) => !isNoiseFile(file.path));
+
+  // Priority scoring for files (lower is higher priority)
+  const getFilePriority = (file: any): number => {
+    const lowerPath = file.path.toLowerCase();
+    if (lowerPath === 'readme.md' || lowerPath.endsWith('/readme.md') || lowerPath.endsWith('\\readme.md')) {
+      return 0;
     }
-
-    if (filesByType.swagger.length > 0) {
-      sections.push(`\n### OpenAPI/Swagger Files`);
-      filesByType.swagger.forEach((file: any) => {
-        sections.push(`- ${file.path}`);
-        if (file.summary) {
-          sections.push(`  ${file.summary}`);
-        }
-      });
+    
+    if (file.type === 'swagger') return 1;
+    
+    // Models, schemas, interfaces, DTOs
+    if (
+      lowerPath.includes('model') ||
+      lowerPath.includes('schema') ||
+      lowerPath.includes('interface') ||
+      lowerPath.includes('type') ||
+      lowerPath.includes('dto')
+    ) {
+      return 2;
     }
+    
+    // Routes and controllers
+    if (
+      lowerPath.includes('route') ||
+      lowerPath.includes('router') ||
+      lowerPath.includes('controller')
+    ) {
+      return 3;
+    }
+    
+    // Core entry points
+    const baseName = lowerPath.split('/').pop() || '';
+    if (
+      baseName === 'index.ts' ||
+      baseName === 'main.ts' ||
+      baseName === 'app.ts' ||
+      baseName === 'server.ts' ||
+      baseName === 'index.js' ||
+      baseName === 'main.js' ||
+      baseName === 'app.js' ||
+      baseName === 'server.js'
+    ) {
+      return 4;
+    }
+    
+    return 5;
+  };
 
-    if (filesByType.typescript.length > 0) {
-      sections.push(`\n### Routes`);
-      filesByType.typescript.forEach((file: any) => {
-        if (file.routes && file.routes.length > 0) {
-          file.routes.forEach((route: any) => {
-            sections.push(`- ${route.methods.join(',')} ${route.path}`);
-          });
-        }
-      });
+  // Sort files by priority, then alphabetically
+  filteredFiles.sort((a: any, b: any) => {
+    const prioA = getFilePriority(a);
+    const prioB = getFilePriority(b);
+    if (prioA !== prioB) {
+      return prioA - prioB;
+    }
+    return a.path.localeCompare(b.path);
+  });
+
+  // Helper to format a single file section
+  const formatFileSection = (file: any): string => {
+    const fileLines: string[] = [];
+    const lowerPath = file.path.toLowerCase();
+    
+    if (lowerPath === 'readme.md' || lowerPath.endsWith('/readme.md') || lowerPath.endsWith('\\readme.md')) {
+      fileLines.push(`- [Project Documentation / README] ${file.path}`);
+      if (file.summary) {
+        fileLines.push(`  Content:\n${file.summary}`);
+      }
+    } else if (file.type === 'swagger') {
+      fileLines.push(`- [OpenAPI Spec] ${file.path}`);
+      if (file.summary) {
+        fileLines.push(`  Summary: ${file.summary}`);
+      }
+      if (file.routes && file.routes.length > 0) {
+        fileLines.push(`  Routes:`);
+        file.routes.forEach((route: any) => {
+          fileLines.push(`    - ${route.methods.join(',')} ${route.path}`);
+        });
+      }
+    } else {
+      fileLines.push(`- [Code File] ${file.path}`);
+      if (file.summary) {
+        fileLines.push(`  Summary: ${file.summary}`);
+      }
+      if (file.routes && file.routes.length > 0) {
+        fileLines.push(`  Extracted Code Routes:`);
+        file.routes.forEach((route: any) => {
+          fileLines.push(`    - ${route.methods.join(',')} ${route.path}`);
+        });
+      }
+      if (file.interfaces && file.interfaces.length > 0) {
+        fileLines.push(`  Interfaces:`);
+        file.interfaces.forEach((i: any) => {
+          fileLines.push(`    interface ${i.name} { ${i.properties.join('; ')} }`);
+        });
+      }
+      if (file.typeAliases && file.typeAliases.length > 0) {
+        fileLines.push(`  Types:`);
+        file.typeAliases.forEach((t: any) => {
+          fileLines.push(`    type ${t.name} = ${t.type}`);
+        });
+      }
+      if (file.enums && file.enums.length > 0) {
+        fileLines.push(`  Enums:`);
+        file.enums.forEach((e: any) => {
+          fileLines.push(`    enum ${e.name} { ${e.members.join(', ')} }`);
+        });
+      }
+      if (file.functions && file.functions.length > 0) {
+        fileLines.push(`  Functions:`);
+        file.functions.forEach((f: any) => {
+          fileLines.push(`    ${f.name}(${f.params.join(', ')}): ${f.returnType}`);
+        });
+      }
+    }
+    
+    return fileLines.join('\n');
+  };
+
+  // Budgeting logic (1 token ≈ 4 characters)
+  let currentTokens = Math.ceil(sections.join('\n').length / 4);
+  const budgetLines: string[] = [];
+  let includedCount = 0;
+  let skippedCount = 0;
+
+  for (const file of filteredFiles) {
+    const formatted = formatFileSection(file);
+    const fileTokens = Math.ceil(formatted.length / 4);
+    
+    if (currentTokens + fileTokens <= maxTokens) {
+      budgetLines.push(formatted);
+      currentTokens += fileTokens;
+      includedCount++;
+    } else {
+      skippedCount++;
     }
   }
+
+  sections.push(`\n## Code Structure (Priority Sorted & Budgeted - Included: ${includedCount}, Omitted: ${skippedCount})\n`);
+  sections.push(budgetLines.join('\n\n'));
 
   return sections.join('\n');
 }
@@ -185,31 +286,29 @@ export async function buildPrompt(
   // Use the real _id for subsequent operations
   const realProjectId = project._id.toString();
 
+  // Budget context
+  const contextBudget =
+    options?.contextBudgetOverride || TOKEN_LIMITS.contextBudget;
+
   // Load GitHub context
   let contextString = '';
+  let hasContext = false;
   try {
     const context = await getProjectContext(realProjectId);
-    contextString = formatGitHubContext(context);
+    if (context && (context.files?.length > 0 || context.repoName || context.summary)) {
+      contextString = formatGitHubContext(context, contextBudget);
+      hasContext = true;
+    } else {
+      contextString = `## Project: ${project.title}\nDescription: ${project.description || 'A software application'}\nNo GitHub context available yet.`;
+    }
   } catch (error) {
     // Context might not exist yet, proceed with empty context
     console.warn(`No GitHub context found for project ${realProjectId}`);
-    contextString = `## Project: ${project.title}\nNo GitHub context available yet.`;
+    contextString = `## Project: ${project.title}\nDescription: ${project.description || 'A software application'}\nNo GitHub context available yet.`;
   }
 
   // Truncate context to fit budget
-  const contextBudget =
-    options?.contextBudgetOverride || TOKEN_LIMITS.contextBudget;
   const truncatedContext = truncateContext(contextString, contextBudget);
-
-  // Build sample data for prompt injection (DISABLED to avoid bias)
-  /*
-  const sampleData = buildSampleData({
-    userCount: 3,
-    productCount: 4,
-    orderCount: 2,
-  });
-  const sampleDataSection = formatSampleDataForPrompt(sampleData);
-  */
 
   // Build messages array
   const messages: OpenRouterMessage[] = [];
@@ -228,20 +327,10 @@ export async function buildPrompt(
     content: `## GitHub Repository Context\n\n${truncatedContext}`,
   });
 
-  /*
-  // Sample data message
-  messages.push({
-    role: 'user',
-    content: sampleDataSection,
-  });
-  */
-
-  // User request message
-  messages.push({
-    role: 'user',
-    content: `## Your Task
-
-Based EXCLUSIVELY on the actual TypeScript interfaces, routes, and data models found in the repository context provided above, generate a comprehensive mock API specification for the following requirement:
+  const contextInstructions = hasContext
+    ? `IMPORTANT: First, read the "Project Documentation / README" section in the GitHub context to fully understand the application's domain, core business logic, and main entities.
+    
+Based EXCLUSIVELY on the project description, README documentation, and the actual code files (interfaces, types, functions, and routes) found in the repository context provided above, generate a comprehensive mock API specification that perfectly matches the business domain of this application for the following requirement:
 
 ${userInput}
 
@@ -252,7 +341,26 @@ Rules for EXCELLENCE:
 4. **REALISTIC MOCK DATA**: Include RICH, REALISTIC MOCK DATA in the examples (e.g., actual dish names like "Spaghetti Carbonara", realistic prices, valid IDs) that a frontend developer can use directly.
 5. **NO GENERIC BIAS**: DO NOT generate generic "orders" or "products" unless they are explicitly present in the repository context.
 6. **RESPONSE FIDELITY**: Ensure response examples match the schema and are realistic but concise.
-7. **JSON ONLY**: Return ONLY valid JSON. No markdown blocks.`,
+7. **JSON ONLY**: Return ONLY valid JSON. No markdown blocks.
+8. **EMPTY CONTEXT FALLBACK**: If the repository context provided above is empty, contains no files, or has no parsed interfaces/routes, you MUST NOT return empty endpoints. In that case, ignore the "EXCLUSIVELY" and "NO GENERIC BIAS" rules. Instead, use maximum creative freedom to generate beautiful mock endpoints based on the repository name, project context, and user requirements.`
+    : `There is NO repository context connected yet. Therefore, you have MAXIMUM CREATIVE FREEDOM!
+
+Based on the Project Name ("${project.title}") and Description ("${project.description || 'A custom web application'}"), generate a beautiful, comprehensive, and highly realistic mock API specification for the following requirement:
+
+${userInput}
+
+Rules for EXCELLENCE:
+1. **INVENT DYNAMIC DOMAINS**: Fully invent realistic resources and schemas suited to the project name (e.g., if the project is a "Task Tracker", create "/api/tasks", "/api/categories", "/api/comments"; if it's a "Gym Tracker", create "/api/workouts", "/api/exercises", "/api/members").
+2. **BE CREATIVE & DIVERSE**: DO NOT return generic "Example" or "123" text. DO NOT reuse the same names. Generate highly diverse and real-looking mock data (e.g., actual user names, dynamic task descriptions like "Fix header alignment on mobile", actual product names, realistic prices, and recent ISO dates).
+3. **LOGICAL ENDPOINTS**: Generate between 5 and 10 logical REST endpoints (GET list, GET by ID, POST, PUT, DELETE).
+4. **NO DUPLICATES**: Ensure all example objects have unique IDs, unique names, and realistic varied values.
+5. **RESPONSE FIDELITY**: Ensure response examples match the schema.
+6. **JSON ONLY**: Return ONLY valid JSON. No markdown blocks.`;
+
+  // User request message
+  messages.push({
+    role: 'user',
+    content: `## Your Task\n\n${contextInstructions}`,
   });
 
   return messages;
