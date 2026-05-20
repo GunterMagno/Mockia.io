@@ -65,7 +65,7 @@ jobs:
         run: npm run build -w @mockia/shared
 
       - name: Run tests with coverage
-        run: npm run test:coverage -- --forceExit --detectOpenHandles
+        run: npm run test:coverage
         env:
           MONGODB_URI: mongodb://localhost:27017/mockia-test
           NODE_ENV: test
