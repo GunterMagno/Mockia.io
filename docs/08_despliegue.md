@@ -2,8 +2,26 @@
 
 Este apartado describe la arquitectura de despliegue de Mockia.io en entornos de producción, analizando la dockerización, la configuración del proxy inverso (Nginx), la integración continua (GitHub Actions) y las pautas para asegurar el entorno bajo HTTPS/SSL.
 
-## 8.1 Dockerización del Entorno (Desarrollo vs Producción)
+## 8.1 URL de la Aplicación en Producción
 
+El proyecto se encuentra totalmente operativo y accesible a través de Internet en las siguientes direcciones:
+- **Frontend SPA (Aplicación Web):** [https://mockia-frontend.onrender.com](https://mockia-frontend.onrender.com)
+- **Backend API Base URL:** [https://mockia-backend.onrender.com/api](https://mockia-backend.onrender.com/api)
+- **Servidor Dinámico (Mock Router):** `https://mockia-backend.onrender.com/mock/:slug/*`
+
+---
+
+## 8.2 Entorno de Despliegue (PaaS: Render)
+
+Para el paso a producción se ha seleccionado la plataforma en la nube **Render** por su soporte nativo de contenedores Docker y sitios estáticos. El despliegue se orquesta mediante el archivo IaC (Infrastructure as Code) `render.yaml` presente en la raíz del repositorio, el cual levanta dos servicios:
+
+1. **Web Service (Backend):** Render lee el `Dockerfile.prod` del backend, compila TypeScript, expone el puerto interno e inyecta las variables de entorno de producción (Tokens, Base de Datos, API Keys).
+2. **Static Site (Frontend):** Render ejecuta el comando de *build* (`npm run build:frontend`) y sirve los archivos HTML/JS resultantes a través de un CDN ultrarrápido (Content Delivery Network), gestionando los certificados SSL/HTTPS de forma automática.
+3. **Base de Datos (Database):** El clúster principal de datos NoSQL se aloja de forma externa y segura en **MongoDB Atlas**.
+
+---
+
+## 8.3 Dockerización del Entorno (Desarrollo vs Producción)
 Mockia.io está diseñado para ser totalmente reproducible y portable mediante contenedores de **Docker**. El proyecto se separa en dos configuraciones independientes:
 
 ### Entorno de Desarrollo (`docker-compose.yml`)
@@ -20,7 +38,7 @@ Optimizado para rendimiento, seguridad y empaquetamiento estático:
 
 ---
 
-## 8.2 Configuración del Servidor Web y Proxy Inverso (Nginx)
+## 8.4 Configuración del Servidor Web y Proxy Inverso (Nginx)
 
 Se utiliza **Nginx** como único punto de entrada de tráfico web de producción, actuando como servidor estático de la SPA y como proxy inverso inteligente para redirigir las peticiones dinámicas.
 
@@ -48,7 +66,7 @@ server {
 
 ---
 
-## 8.3 Integración y Despliegue Continuo (CI/CD)
+## 8.5 Integración y Despliegue Continuo (CI/CD)
 
 El Monorepo integra un flujo de integración continua mediante **GitHub Actions** en el archivo `.github/workflows/ci.yml`:
 

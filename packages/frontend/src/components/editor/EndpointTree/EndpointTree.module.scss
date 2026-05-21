@@ -103,6 +103,7 @@
     flex: 1;
     min-width: 0; // Allow truncation
     background: transparent;
+    color: var(--secondary-dark);
     
     &:hover {
       background: transparent; // Wrapper handles hover

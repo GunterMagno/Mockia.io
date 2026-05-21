@@ -29,3 +29,15 @@ Los beneficiarios de Mockia.io se dividen en tres perfiles profesionales clave:
 - **Desarrolladores Frontend y Mobile:** Consumirán endpoints realistas y estables desde las fases iniciales del desarrollo del cliente, sin dependencias del progreso del backend.
 - **Ingenieros de QA (Quality Assurance):** Podrán forzar fallos de red y probar flujos extremos y de recuperación sin alterar código de base de datos o lógica de negocio real.
 - **Arquitectos de Software y Product Owners:** Podrán generar rápidamente prototipos funcionales (sandbox) con datos reales para validación rápida con clientes antes de programar la lógica del backend.
+
+---
+
+## 1.4 Análisis Comparativo de Aplicaciones Similares
+
+Para posicionar Mockia.io en el mercado, se han analizado las principales alternativas actuales, detectando áreas clave de mejora:
+
+- **Mockoon:** Es la herramienta de escritorio líder. Sin embargo, su principal desventaja es que es **local y 100% manual**. No permite colaboración nativa en la nube (salvo pagando planes Enterprise muy caros) y obliga al desarrollador a escribir cada JSON a mano.
+- **Postman Mocks:** Ofrece mocks en la nube, pero su configuración es tediosa, requiere crear Colecciones previas, no tiene generación por IA a partir de código fuente y su curva de aprendizaje es alta.
+- **JSONPlaceholder / DummyJSON:** Son APIs públicas gratuitas alojadas en la nube y muy rápidas, pero son **estáticas**. Solo devuelven datos genéricos (posts, usuarios) que no se adaptan a la lógica de negocio real de una empresa.
+
+**El factor diferencial de Mockia.io:** Combina lo mejor de los tres mundos. Es Cloud y colaborativo (como Postman), rápido (como JSONPlaceholder), pero **autogenerado mediante IA leyendo tu propio código fuente**, eliminando el trabajo manual que exige Mockoon.

@@ -1,8 +1,36 @@
 # Apartado 6: Desarrollo y Arquitectura del Backend (DWES)
 
-Este apartado analiza detalladamente la implementación técnica de la lógica de servidor, abordando el patrón MVC limpio de desarrollo, la autenticación por JWT, el motor dinámico de enrutamiento (Mock Router) y la integración de prompts con Inteligencia Artificial.
+Este apartado analiza detalladamente la implementación técnica de la lógica de servidor, la metodología de trabajo seguida, las herramientas de control de versiones y las dificultades técnicas superadas durante la creación de Mockia.io.
 
-## 6.1 Arquitectura MVC e Implementación Limpia
+## 6.1 Secuencia de Desarrollo (Metodología Ágil)
+
+El proyecto se ha gestionado siguiendo directrices de la metodología ágil **Scrum** adaptada a un único desarrollador, utilizando un tablero Kanban (GitHub Projects) para el seguimiento de tareas. El desarrollo se estructuró en 10 sprints principales, organizados de forma progresiva desde la base del producto hasta su despliegue final:
+
+- **Sprints 1 a 3:** definición de la identidad visual, configuración inicial del frontend y desarrollo de la autenticación, el registro de usuarios y la gestión básica de proyectos y perfiles.
+- **Sprints 4 a 5:** implementación del pipeline de ingesta desde GitHub, con clonado de repositorios, análisis de código, construcción del contexto global y preparación de la integración con la IA.
+- **Sprints 6 a 7:** desarrollo del Mock Router, resolución de rutas dinámicas, sistema de interceptores y generación automática de la documentación OpenAPI/Swagger.
+- **Sprints 8 a 10:** consolidación del dashboard, editor de mocks, rutas protegidas, pruebas E2E, documentación técnica, preparación de la demo y despliegue del proyecto.
+
+---
+
+## 6.2 Herramientas de Control de Versiones
+
+Todo el ciclo de vida del código se ha gestionado mediante **Git** y alojado en **GitHub**. 
+Se ha seguido una estrategia de ramificación basada en **GitFlow** simplificado:
+- `main`: Rama de producción, código estable y desplegable.
+- `develop`: Rama de integración donde se unen todas las características.
+  
+---
+
+## 6.3 Dificultades Encontradas y Soluciones Técnicas
+
+1. **Configuración del Monorepo con TypeScript:** Compartir interfaces entre el frontend y el backend (`@mockia/shared`) generó problemas de resolución de rutas en tiempo de compilación. **Solución:** Ajustar rigurosamente los `tsconfig.json` utilizando `Project References` y modificar los scripts de Docker para compilar siempre el paquete compartido antes que los servicios principales.
+2. **Inconsistencia en las respuestas de la IA (LLM):** Los modelos de lenguaje a menudo devolvían el JSON rodeado de texto explicativo o etiquetas Markdown (```json ... ```), lo que rompía el parseo de `JSON.parse()`. **Solución:** Se implementó un algoritmo robusto (`llmOutputParser.ts`) que extrae la subcadena JSON exacta mediante expresiones regulares, logrando un flujo de "auto-sanado" (Self-Healing) antes de inyectarlo a la base de datos.
+3. **Rendimiento del Interceptor Dinámico:** Capturar todas las peticiones web mediante un wildcard (`/*`) y buscar coincidencias en MongoDB generaba lentitud, afectando a la latencia simulada. **Solución:** Se añadieron índices compuestos nativos en MongoDB (`mockApiId` + `method`) y un sistema de caché en memoria (`mockCache.service.ts`) que resuelve las peticiones sin tocar el disco en el 95% de los casos.
+
+---
+
+## 6.4 Arquitectura MVC e Implementación Limpia
 
 El backend está diseñado bajo principios de **arquitectura de tres capas (MVC modificado)** para garantizar la modularidad y separación estricta de responsabilidades, facilitando la escalabilidad del sistema:
 
@@ -13,7 +41,7 @@ El backend está diseñado bajo principios de **arquitectura de tres capas (MVC 
 
 ---
 
-## 6.2 Gestión de Identidad y Seguridad (JWT)
+## 6.5 Gestión de Identidad y Seguridad (JWT)
 
 La autenticación de usuarios se implementa de manera robusta y sin estado utilizando **JSON Web Tokens (JWT)**:
 
@@ -29,7 +57,7 @@ Para proteger la integridad de los espacios de trabajo, se define el middleware 
 
 ---
 
-## 6.3 Motor de Enrutamiento Dinámico (Mock Router)
+## 6.6 Motor de Enrutamiento Dinámico (Mock Router)
 
 Una de las joyas arquitectónicas de Mockia.io es el **Mock Router**. Mientras que otros servidores de mocks requieren definir rutas estáticas en código, Mockia captura peticiones de forma dinámica absoluta utilizando el enrutador wildcard de Express.
 
@@ -50,7 +78,7 @@ app.all('/mock/:projectSlug/*', catchAllMockRouter);
 
 ---
 
-## 6.4 Ingesta de GitHub e Integración de IA con OpenRouter
+## 6.7 Ingesta de GitHub e Integración de IA con OpenRouter
 
 La funcionalidad central de autogeneración inteligente se gestiona mediante un flujo estructurado:
 

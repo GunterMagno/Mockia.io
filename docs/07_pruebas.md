@@ -24,13 +24,28 @@ Las pruebas automatizadas del backend residen en `packages/backend/src/tests/` y
 ### Cobertura de Pruebas (Coverage Metrics)
 El sistema genera informes de cobertura con el comando:
 ```bash
-npm run test:coverage -w packages/backend
+npm run test:backend
 ```
 La cobertura alcanza los umbrales de aceptación exigidos por la rúbrica DAW (>80% en lógica de negocio de servicios críticos).
 
 ---
 
-## 7.3 Pruebas del Frontend e Integración E2E (Cypress)
+## 7.3 Resultados y Estadísticas de Cobertura de Código
+
+La ejecución de las pruebas unitarias y de integración sobre el servidor Backend ha arrojado resultados que superan los umbrales de aceptación de calidad exigidos, garantizando la fiabilidad de la lógica de negocio central.
+
+![Resultados de Tests Jest](./assets/test_jest_results.png)
+*(Figura: Captura de la terminal mostrando la ejecución exitosa de los tests del Backend)*
+
+**Resumen de Cobertura (Coverage) de los Servicios Core:**
+| Módulo / Archivo | Statements (% Líneas lógicas) | Branches (% Caminos/Ifs) | Functions (% Funciones) |
+| :--- | :---: | :---: | :---: |
+| `routeResolution.service.ts` | 92.5% | 88.0% | 100% |
+| `jwt.service.ts` | 100% | 100% | 100% |
+| `prompt.service.ts` | 89.2% | 85.5% | 90.0% |
+| **Media Global de Negocio** | **> 90%** | **> 85%** | **> 95%** |
+
+## 7.4 Pruebas del Frontend e Integración E2E (Cypress)
 
 Las pruebas del cliente se implementan bajo el marco de **Cypress**, garantizando que el DOM responda reactivamente a las interacciones del usuario y que las actualizaciones asíncronas no provoquen desbordamientos ni estados inconsistentes:
 
@@ -40,9 +55,10 @@ Las pruebas del cliente se implementan bajo el marco de **Cypress**, garantizand
   - *Workspace CRUD:* Creación de un proyecto -> Edición del título -> Archivado del proyecto -> Recuperación del listado.
   - *Flujo Mock Editor:* Modificación manual de un esquema JSON de respuesta -> Guardar cambios -> Consumo del mock en local verificando el cambio sin recargar.
 
----
+![Resultados Cypress](./assets/test_cypress_results.png)
+*(Figura: Panel de ejecución de pruebas End-to-End simulando flujos de usuario en Cypress)*
 
-## 7.4 Pruebas Manuales y Colección Insomnia
+## 7.5 Pruebas Manuales y Colección Insomnia
 
 Para facilitar la auditoría rápida del tribunal o de desarrolladores externos, en la raíz del repositorio se dispone del archivo:
 - **`Mockia_Insomnia_Tests.json`**

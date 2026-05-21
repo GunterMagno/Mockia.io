@@ -1,10 +1,38 @@
 # Apartado 4: Guía de Estilos Visuales e Interfaces
 
-Este apartado formaliza la guía de estilos visuales e interfaces (UI/UX) implementada de forma rigurosa y coherente a lo largo de toda la plataforma **Mockia.io**. El diseño y la estética se basan directamente en las variables de CSS y tokens de diseño declarados de manera centralizada en el archivo global de estilos:`global.scss`.
+Este apartado formaliza la guía de estilos visuales e interfaces (UI/UX) implementada de forma rigurosa y coherente a lo largo de toda la plataforma **Mockia.io**. El diseño y la estética se basan directamente en las variables de CSS declaradas en `global.scss`.
+
+## 4.1 Enlace al Prototipo y Wireframes
+
+El diseño fue concebido y validado previamente en la herramienta de prototipado Figma.
+- **Acceso al Prototipo Interactivo (Figma):** [Mockia.io Figma Interactive Prototype](https://www.figma.com/design/AwPy6Q8UwZrXtGBYpr9cIV/Proyecto-Mockia.io?node-id=0-1&p=f)
+
+### Mockups Principales de la Interfaz
+
+*(Nota: Estas capturas reflejan el diseño conceptual establecido en Figma)*
+
+![Wireframe Dashboard](./assets/wireframe_dashboard.png)
+*Figura 1: Diseño del panel de control de proyectos (Dashboard).*
+
+![Wireframe Mock Editor](./assets/wireframe_editor.png)
+*Figura 2: Diseño de la arquitectura de triple columna para el Mock Editor.*
 
 ---
 
-## 4.1 Paleta de Colores Completa y Semántica
+## 4.2 Componentes Reutilizables Definidos
+
+El frontend de Mockia.io sigue principios de **Atomic Design**, encapsulando la lógica y el estilo visual (mediante SCSS Modules) en componentes altamente reutilizables ubicados en `packages/frontend/src/components/ui/`:
+
+1. **`Button`:** Componente de botón con variantes de estado (primario, secundario, peligro) y soporte interno para *spinners* de carga asíncrona.
+2. **`Input`:** Campo de entrada de texto estandarizado con gestión de etiquetas (labels), íconos integrados y estados de validación de error.
+3. **`Card`:** Contenedor base con sombras suaves (`--shadow-sm`) y bordes redondeados (`--radius-lg`) utilizado para encapsular proyectos en el Dashboard.
+4. **`Modal`:** Componente flotante de alto nivel con superposición oscura (overlay) que atrapa el foco del usuario. Utilizado para crear proyectos o ajustes.
+5. **`Icon`:** Envoltorio optimizado para renderizar iconografía vectorial coherente en toda la plataforma.
+6. **`ModalErrorAlert`:** Componente específico para mostrar banners de error críticos de forma unificada en formularios complejos.
+
+---
+
+## 4.3 Paleta de Colores Completa y Semántica
 
 El sistema de colores cuenta con un esquema vibrante y de alto contraste que facilita la legibilidad de código JSON, estados de endpoints y paneles de control. Los tokens de color se estructuran de la siguiente manera:
 
@@ -53,7 +81,7 @@ Un tema lila/lavanda dedicado exclusivamente al modal de ajustes del proyecto:
 
 ---
 
-## 4.2 Tipografía y Escala de Textos
+## 4.4 Tipografía y Escala de Textos
 
 Se utiliza una tipografía altamente legible en pantallas que optimiza el renderizado de código e interfaces complejas:
 
@@ -71,7 +99,7 @@ Se utiliza una tipografía altamente legible en pantallas que optimiza el render
 
 ---
 
-## 4.3 Espaciados, Radios y Sombras (Layout)
+## 4.5 Espaciados, Radios y Sombras (Layout)
 
 Para estructurar los paneles y garantizar una disposición modular de las cajas, el diseño utiliza variables centralizadas:
 
@@ -99,7 +127,7 @@ Para estructurar los paneles y garantizar una disposición modular de las cajas,
 
 ---
 
-## 4.4 Efecto Glassmorphism y Capas Especiales
+## 4.6 Efecto Glassmorphism y Capas Especiales
 
 La interfaz utiliza efectos visuales modernos tipo SaaS para estructurar y jerarquizar los elementos interactivos en el espacio tridimensional de la pantalla:
 
@@ -110,7 +138,7 @@ La interfaz utiliza efectos visuales modernos tipo SaaS para estructurar y jerar
 
 ---
 
-## 4.5 Retícula Responsive y Breakpoints
+## 4.7 Retícula Responsive y Breakpoints
 
 El monorepo incorpora mixins responsivos en SASS para adaptar fluidamente las interfaces tri-columna del editor en cualquier dispositivo:
 
@@ -139,7 +167,7 @@ El monorepo incorpora mixins responsivos en SASS para adaptar fluidamente las in
 
 ---
 
-## 4.6 Animaciones, Transiciones e Interactividad (UX)
+## 4.8 Animaciones, Transiciones e Interactividad (UX)
 
 Para dotar al sistema de una apariencia reactiva, se incorporan efectos interactivos refinados:
 

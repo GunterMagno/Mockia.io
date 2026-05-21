@@ -30,11 +30,11 @@ const Index: React.FC = () => {
               <nav className={styles.heroActions}>
                 {isAuthenticated ? (
                   <button className={styles.primaryBtn} onClick={() => navigate('/dashboard')}>
-                    <span>Go to Dashboard</span> <img src={arrowRight} alt="" />
+                    <span>Go to Dashboard</span> <img src={arrowRight} alt="Dashboard icon" />
                   </button>
                 ) : (
                   <button className={styles.primaryBtn} onClick={() => navigate('/signup')}>
-                    <span>Start for free</span> <img src={arrowRight} alt="" />
+                    <span>Start for free</span> <img src={arrowRight} alt="Signup icon" />
                   </button>
                 )}
               </nav>
@@ -83,17 +83,17 @@ const Index: React.FC = () => {
           <h2>Designed for high-speed engineering.</h2>
           <article className={styles.featureGrid}>
             <article className={styles.featureCard}>
-              <figure className={styles.iconBox}><img src={sparkles} alt="" /></figure>
+              <figure className={styles.iconBox}><img src={sparkles} alt="Instant GitHub Sync icon" /></figure>
               <h3>Instant GitHub Sync</h3>
               <p>Point to any repository. Our AI parses your types, interfaces, and schemas to generate a mirror API in seconds.</p>
             </article>
             <article className={styles.featureCard}>
-              <figure className={styles.iconBox}><img src={codeIcon} alt="" /></figure>
+              <figure className={styles.iconBox}><img src={codeIcon} alt="Realistic Data icon" /></figure>
               <h3>Realistic Data</h3>
               <p>No more "Lorem Ipsum". Mockia populates your endpoints with context-aware data that looks and feels like production.</p>
             </article>
             <article className={styles.featureCard}>
-              <figure className={styles.iconBox}><img src={terminalIcon} alt="" /></figure>
+              <figure className={styles.iconBox}><img src={terminalIcon} alt="CLI-First Workflow icon" /></figure>
               <h3>CLI-First Workflow</h3>
               <p>Deploy, update, and manage your mocks directly from your terminal. Built for developers who hate context switching.</p>
             </article>
@@ -128,7 +128,7 @@ const Index: React.FC = () => {
 
             <article className={styles.trustCard}>
               <header className={styles.trustHeader}>
-                <figure className={styles.icon}><img src={shieldIcon} alt="" /></figure>
+                <figure className={styles.icon}><img src={shieldIcon} alt="Trust icon" /></figure>
                 <nav className={styles.badges}>
                   <span className={styles.badge}>NEW</span>
                   <span className={styles.badge}>V2.0</span>
@@ -144,7 +144,7 @@ const Index: React.FC = () => {
             </article>
 
             <article className={styles.quoteCard}>
-              <figure className={styles.quoteDecoration}><img src={quoteIcon} alt="" /></figure>
+              <figure className={styles.quoteDecoration}><img src={quoteIcon} alt="Quote icon" /></figure>
               <article className={styles.quoteContent}>
                 <h2>"Mockia saved us 3 weeks of backend development time."</h2>
                 <footer className={styles.author}>

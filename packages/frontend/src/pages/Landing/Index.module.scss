@@ -90,7 +90,7 @@
 .heroDescription {
   font-size: 1.25rem;
   line-height: 1.6;
-  color: var(--muted);
+  color: var(--primary-dark);
   margin-bottom: var(--spacing-10);
   max-width: 600px;
   
@@ -344,7 +344,7 @@
 }
 
 .featureCard p {
-  color: var(--muted);
+  color: var(--primary-dark);
   line-height: 1.7;
   font-size: 1.1rem;
   margin: 0;
@@ -404,7 +404,7 @@
   text-transform: uppercase;
   font-size: var(--text-xs);
   letter-spacing: 0.25em;
-  color: var(--muted);
+  color: var(--primary-light-disabled);
   margin: 0 0 var(--spacing-6);
   font-weight: 800;
 }
@@ -417,7 +417,7 @@
 }
 
 .infraCard p {
-  color: var(--muted);
+  color: var(--secondary-light-disabled);
   font-size: 1.25rem;
   max-width: 550px;
   margin: 0 auto var(--spacing-12);
@@ -500,7 +500,7 @@
   }
 
   p {
-    color: var(--muted);
+    color: var(--primary-dark);
     font-size: 1.15rem;
     line-height: 1.6;
     margin: 0 0 var(--spacing-8);
