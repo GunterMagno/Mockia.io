@@ -35,7 +35,7 @@ La cobertura alcanza los umbrales de aceptación exigidos por la rúbrica DAW (>
 La ejecución de las pruebas unitarias y de integración sobre el servidor Backend ha arrojado resultados que superan los umbrales de aceptación de calidad exigidos, garantizando la fiabilidad de la lógica de negocio central.
 
 ![Resultados de Tests Jest](./assets/test_jest_results.png)
-*(Figura: Captura de la terminal mostrando la ejecución exitosa de los tests del Backend)*
+*(Captura de la terminal mostrando la ejecución exitosa de los tests del Backend)*
 
 **Resumen de Cobertura (Coverage) de los Servicios Core:**
 | Módulo / Archivo | Statements (% Líneas lógicas) | Branches (% Caminos/Ifs) | Functions (% Funciones) |
@@ -56,7 +56,7 @@ Las pruebas del cliente se implementan bajo el marco de **Cypress**, garantizand
   - *Flujo Mock Editor:* Modificación manual de un esquema JSON de respuesta -> Guardar cambios -> Consumo del mock en local verificando el cambio sin recargar.
 
 ![Resultados Cypress](./assets/test_cypress_results.png)
-*(Figura: Panel de ejecución de pruebas End-to-End simulando flujos de usuario en Cypress)*
+*(Panel de ejecución de pruebas End-to-End simulando flujos de usuario en Cypress)*
 
 ## 7.5 Pruebas Manuales y Colección Insomnia
 

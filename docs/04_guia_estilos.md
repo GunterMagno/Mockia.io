@@ -12,10 +12,10 @@ El diseño fue concebido y validado previamente en la herramienta de prototipado
 *(Nota: Estas capturas reflejan el diseño conceptual establecido en Figma)*
 
 ![Wireframe Dashboard](./assets/wireframe_dashboard.png)
-*Figura 1: Diseño del panel de control de proyectos (Dashboard).*
+*Diseño del panel de control de proyectos (Dashboard).*
 
 ![Wireframe Mock Editor](./assets/wireframe_editor.png)
-*Figura 2: Diseño de la arquitectura de triple columna para el Mock Editor.*
+*Diseño de la arquitectura de triple columna para el Mock Editor.*
 
 ---
 
