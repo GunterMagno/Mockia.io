@@ -425,6 +425,7 @@ const MockEditor: React.FC = () => {
               endpoint={activeEndpoint} 
               onChangeMeta={handleMetaChange} 
               readOnly={isViewer}
+              mockBaseUrl={mockBaseUrl}
             />
           )}
         </aside>

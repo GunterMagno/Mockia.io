@@ -1,4 +1,5 @@
-import React from 'react'
+import React, { useMemo, useState } from 'react'
+import { generateSnippets, type CodeSnippets } from '@mockia/shared'
 import type { EndpointData } from '../../../services/endpointService'
 import { Input } from '../../ui/Input/Input'
 
@@ -6,11 +7,36 @@ export interface EndpointInspectorProps {
   endpoint: EndpointData
   onChangeMeta: (updates: Partial<EndpointData>) => void
   readOnly?: boolean
+  /** URL publica base del mock (sin el path del endpoint). */
+  mockBaseUrl?: string
 }
+
+const LANGS: Array<{ key: keyof CodeSnippets; label: string }> = [
+  { key: 'curl', label: 'cURL' },
+  { key: 'fetch', label: 'fetch' },
+  { key: 'axios', label: 'axios' },
+  { key: 'python', label: 'Python' },
+]
 
 import styles from './EndpointInspector.module.scss'
 
-export const EndpointInspector: React.FC<EndpointInspectorProps> = ({ endpoint, onChangeMeta, readOnly }) => {
+export const EndpointInspector: React.FC<EndpointInspectorProps> = ({ endpoint, onChangeMeta, readOnly, mockBaseUrl }) => {
+  const [lang, setLang] = useState<keyof CodeSnippets>('curl')
+  const [copied, setCopied] = useState(false)
+  const snippets = useMemo(
+    () => (mockBaseUrl && mockBaseUrl !== '...'
+      ? generateSnippets({ method: endpoint.method, url: `${mockBaseUrl}${endpoint.path}` })
+      : null),
+    [mockBaseUrl, endpoint.method, endpoint.path],
+  )
+  const copy = () => {
+    if (!snippets) return
+    navigator.clipboard.writeText(snippets[lang]).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    }).catch(() => {})
+  }
+
   return (
     <section className={styles.inspector}>
       <header className={styles.header}>
@@ -95,6 +121,31 @@ export const EndpointInspector: React.FC<EndpointInspectorProps> = ({ endpoint, 
         </article>
 
       </fieldset>
+
+      {snippets && (
+        <section className={styles.snippets} aria-label="Code snippets">
+          <header className={styles.snippetsHeader}>
+            <div role="tablist" className={styles.tabs}>
+              {LANGS.map(({ key, label }) => (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  aria-selected={lang === key}
+                  className={`${styles.tab} ${lang === key ? styles.tabActive : ''}`}
+                  onClick={() => setLang(key)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <button type="button" className={styles.copyBtn} onClick={copy}>
+              {copied ? 'Copied' : 'Copy'}
+            </button>
+          </header>
+          <pre className={styles.code}><code>{snippets[lang]}</code></pre>
+        </section>
+      )}
     </section>
   )
 }
