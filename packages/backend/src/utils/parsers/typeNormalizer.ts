@@ -3,6 +3,9 @@
  * This helps reduce token usage and provide consistent type representations
  */
 
+/** Max chars of a type string that get normalized; longer input is truncated (ReDoS guard). */
+const MAX_TYPE_LENGTH = 1000;
+
 export interface NormalizationResult {
   original: string;
   normalized: string;
