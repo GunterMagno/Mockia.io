@@ -233,6 +233,8 @@
   border-left: 1px solid var(--border);
   padding-left: var(--spacing-3);
   max-height: 60vh;
+  overflow-y: auto;
+  min-width: 0;
 
   @include respond-to(1450px) {
     width: 100%;

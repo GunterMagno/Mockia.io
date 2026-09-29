@@ -3,6 +3,8 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: var(--spacing-8);
+  gap: var(--spacing-4);
+  flex-wrap: wrap;
 }
 
 .titleSection {
@@ -54,7 +56,7 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
   gap: var(--spacing-6);
 }
 

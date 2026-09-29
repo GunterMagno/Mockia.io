@@ -29,6 +29,11 @@
   flex: 1;
   padding: var(--spacing-8);
   overflow-y: auto;
+  min-width: 0;
+
+  @include respond-to('md') {
+    padding: var(--spacing-4);
+  }
 }
 
 .container {
