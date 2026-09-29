@@ -87,6 +87,7 @@ const Header: React.FC = () => {
       className={`${styles.hamburgerBtn} ${isMenuOpen ? styles.menuOpen : ''}`} 
       onClick={() => setIsMenuOpen(!isMenuOpen)}
       aria-label="Toggle menu"
+      aria-expanded={isMenuOpen}
     >
       <span></span>
       <span></span>

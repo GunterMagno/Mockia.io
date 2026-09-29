@@ -19,50 +19,55 @@
 }
 
 .landingHeader {
-  background-color: var(--secondary-light-disabled);
+  background-color: var(--ds-bg);
+  color: var(--ds-text);
   height: 80px;
   box-shadow: none;
-  border-bottom: 1px solid var(--sidebar-border-color);
-  
+  border-bottom: 1px solid var(--ds-border);
+
+  .logoText { color: var(--ds-text); }
+  .highlight { color: var(--ds-accent-text); }
+
   .navLink {
-    color: var(--support-04);
+    color: var(--ds-text);
     font-size: 1rem;
     font-weight: 500;
     text-decoration: underline;
-    
-    &:hover {
-      color: var(--support-03);
-      opacity: 1;
-    }
   }
 
   .loginBtn {
-    background: var(--secondary-light);
-    color: var(--support-04);
+    background: var(--ds-surface-2);
+    color: var(--ds-text);
     font-weight: 700;
-    border: none;
+    border: 1px solid var(--ds-border);
     padding: 10px 24px;
     border-radius: var(--radius-lg);
-    
+
     &:hover {
-      background: var(--secondary-dark);
-      color: var(--support-05);
+      background: var(--ds-border);
+      color: var(--ds-text);
     }
   }
 
   .signupBtn {
-    background: var(--tertiary-light-disabled);
-    color: var(--support-03);
+    background: var(--ds-ok);
+    color: var(--ds-bg);
     font-weight: 700;
     padding: 10px 24px;
     border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-sm);
-    
+
     &:hover {
       transform: translateY(-1px);
-      background: var(--tertiary-light);
-      color: var(--support-04);
+      background: var(--ds-ok);
+      color: var(--ds-bg);
     }
+  }
+
+  .hamburgerBtn span { background-color: var(--ds-text); }
+
+  .navActions.menuOpen {
+    background-color: var(--ds-surface);
+    border-bottom-color: var(--ds-border);
   }
 }
 
@@ -462,9 +467,10 @@
   cursor: pointer;
   flex-direction: column;
   justify-content: space-between;
-  width: 32px;
-  height: 22px;
-  padding: 0;
+  box-sizing: border-box;
+  width: 44px;
+  height: 44px;
+  padding: 11px 6px;
   z-index: 1001;
 
   @include respond-to('md') {
