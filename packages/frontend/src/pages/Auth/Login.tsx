@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { Input } from '../../components/ui/Input/Input'
 import { Button } from '../../components/ui/Button/Button'
 import { useAuth } from '../../contexts/AuthContext'
@@ -13,6 +13,7 @@ import styles from './Auth.module.scss'
 
 const Login: React.FC = () => {
   const navigate = useNavigate()
+  const from = (useLocation().state as { from?: string } | null)?.from
   const { login } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -42,7 +43,7 @@ const Login: React.FC = () => {
     setError(null)
     try {
       await login({ email, password }, rememberMe)
-      navigate('/dashboard')
+      navigate(from ?? '/dashboard', { replace: true })
     } catch (err: any) {
       setError(getBackendErrorMessage(err))
       playErrorSound()

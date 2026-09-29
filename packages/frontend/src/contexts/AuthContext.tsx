@@ -41,8 +41,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 const TOKEN_KEY = 'mockia_token'
 const USER_KEY = 'mockia_user'
 
-import styles from './AuthContext.module.scss'
-
 /**
  * Global authentication state provider.
  * Intercepts, verifies and stores active JWT user sessions on application load.
@@ -147,14 +145,8 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
 
   return (
     <AuthContext.Provider value={value}>
-      {isLoading ? (
-        <section className={styles.loadingOverlay}>
-          <article className={styles.loadingContent}>
-            <h2>Loading session...</h2>
-            <span className="loader"></span>
-          </article>
-        </section>
-      ) : children}
+      {/* No bloquea el arbol: el home publico se ve al instante; ProtectedRoute espera a isLoading */}
+      {children}
     </AuthContext.Provider>
   )
 }

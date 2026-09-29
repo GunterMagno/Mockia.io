@@ -1,0 +1,55 @@
+/* Solo transform/opacity: barato para el compositor. Con prefers-reduced-motion queda estatico (reset.scss). */
+.ambient {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.blob {
+  position: absolute;
+  width: 55vmax;
+  height: 55vmax;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.55;
+  will-change: transform;
+}
+
+.a {
+  top: -20vmax;
+  right: -15vmax;
+  background: radial-gradient(circle, var(--color-glow-accent), transparent 65%);
+  animation: driftA 48s ease-in-out infinite alternate;
+}
+
+.b {
+  bottom: -25vmax;
+  left: -20vmax;
+  background: radial-gradient(circle, var(--color-glow-ok), transparent 65%);
+  animation: driftB 60s ease-in-out infinite alternate;
+}
+
+.c {
+  top: 35%;
+  left: 40%;
+  width: 40vmax;
+  height: 40vmax;
+  background: radial-gradient(circle, var(--color-accent-soft), transparent 65%);
+  animation: driftC 72s ease-in-out infinite alternate;
+}
+
+.grid {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(var(--color-border) 1px, transparent 1px);
+  background-size: 32px 32px;
+  opacity: 0.35;
+  mask-image: radial-gradient(ellipse at 50% 30%, #000, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse at 50% 30%, #000, transparent 75%);
+}
+
+@keyframes driftA { to { transform: translate3d(-12vmax, 10vmax, 0) scale(1.15); } }
+@keyframes driftB { to { transform: translate3d(14vmax, -8vmax, 0) scale(1.1); } }
+@keyframes driftC { to { transform: translate3d(-10vmax, -12vmax, 0) scale(0.9); } }

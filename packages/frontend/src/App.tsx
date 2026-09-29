@@ -13,6 +13,7 @@ import Footer from './components/ui/Footer/Footer'
 import Terms from './pages/Legal/Terms'
 import Privacy from './pages/Legal/Privacy'
 import NotFound from './pages/NotFound/NotFound'
+import AmbientBackground from './components/ui/AmbientBackground/AmbientBackground'
 
 const AppShell: React.FC = () => {
   const location = useLocation();
@@ -27,8 +28,11 @@ const AppShell: React.FC = () => {
 
   return (
     <section className="appShell">
+      <AmbientBackground />
       {showHeader && <Header />}
       <main className="mainContent">
+        {/* key por ruta: cada cambio de seccion entra con el mismo fundido, sin corte seco */}
+        <div className="routeFade" key={path}>
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
@@ -41,6 +45,7 @@ const AppShell: React.FC = () => {
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </div>
       </main>
       {showFooter && <Footer />}
     </section>
