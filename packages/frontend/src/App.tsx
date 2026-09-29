@@ -13,14 +13,14 @@ import Footer from './components/ui/Footer/Footer'
 import Terms from './pages/Legal/Terms'
 import Privacy from './pages/Legal/Privacy'
 import NotFound from './pages/NotFound/NotFound'
+import { PATHS, isKnownPath, isProtectedPath } from './routes/paths'
 
 const AppShell: React.FC = () => {
   const location = useLocation();
   const path = location.pathname;
   
-  const validPaths = ['/', '/login', '/signup', '/terms', '/privacy', '/dashboard'];
-  const isProtectedRoute = path === '/dashboard' || path.startsWith('/editor/');
-  const is404 = !validPaths.includes(path) && !path.startsWith('/editor/');
+  const isProtectedRoute = isProtectedPath(path);
+  const is404 = !isKnownPath(path);
 
   const showHeader = true; 
   const showFooter = !isProtectedRoute && !is404;  
@@ -30,14 +30,14 @@ const AppShell: React.FC = () => {
       {showHeader && <Header />}
       <main className="mainContent">
         <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/terms" element={<Terms />} />
-          <Route path="/privacy" element={<Privacy />} />
+          <Route path={PATHS.home} element={<Index />} />
+          <Route path={PATHS.login} element={<Login />} />
+          <Route path={PATHS.signup} element={<Signup />} />
+          <Route path={PATHS.terms} element={<Terms />} />
+          <Route path={PATHS.privacy} element={<Privacy />} />
           <Route element={<ProtectedRoute />}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/editor/:id" element={<MockEditor />} />
+            <Route path={PATHS.dashboard} element={<Dashboard />} />
+            <Route path={PATHS.editorPattern} element={<MockEditor />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

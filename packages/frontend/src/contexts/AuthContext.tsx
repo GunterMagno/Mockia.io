@@ -41,7 +41,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 const TOKEN_KEY = 'mockia_token'
 const USER_KEY = 'mockia_user'
 
-import styles from './AuthContext.module.scss'
 
 /**
  * Global authentication state provider.
@@ -50,7 +49,10 @@ import styles from './AuthContext.module.scss'
 export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [accessToken, setAccessToken] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  // Solo hay carga si hay sesion guardada que verificar; sin token el home carga al instante
+  const [isLoading, setIsLoading] = useState(
+    () => !!(localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY))
+  )
 
   // Initialize from storage and verify session
   useEffect(() => {
@@ -147,14 +149,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
 
   return (
     <AuthContext.Provider value={value}>
-      {isLoading ? (
-        <section className={styles.loadingOverlay}>
-          <article className={styles.loadingContent}>
-            <h2>Loading session...</h2>
-            <span className="loader"></span>
-          </article>
-        </section>
-      ) : children}
+      {children}
     </AuthContext.Provider>
   )
 }

@@ -9,6 +9,7 @@ import NotificationBell from '../../notifications/NotificationBell/NotificationB
 import gridIcon from '../../../assets/grid.svg';
 import settingsIcon from '../../../assets/settings.svg';
 import Icon from '../Icon/Icon';
+import { PATHS, isKnownPath, isAuthPath } from '../../../routes/paths';
 
 const Header: React.FC = () => {
   const location = useLocation();
@@ -16,12 +17,11 @@ const Header: React.FC = () => {
   const path = location.pathname;
   
   // Determine variant based on path
-  const validPaths = ['/', '/login', '/signup', '/terms', '/privacy', '/dashboard'];
-  const isProjectPage = path.startsWith('/editor/');
-  const is404 = !validPaths.includes(path) && !isProjectPage;
+  const isProjectPage = path.startsWith('/editor/') && isKnownPath(path);
+  const is404 = !isKnownPath(path);
 
-  const isLanding = path === '/';
-  const isAuthPage = path === '/login' || path === '/signup' || is404;
+  const isLanding = path === PATHS.home;
+  const isAuthPage = isAuthPath(path) || is404;
 
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -55,7 +55,7 @@ const Header: React.FC = () => {
   };
 
   const Logo = () => (
-    <Link to="/" className={styles.logo}>
+    <Link to={PATHS.home} className={styles.logo}>
       <img src={logoMockia} alt="MockIA logo" className={styles.logoImg} />
       <span className={styles.logoText}>Mock<span className={styles.highlight}>IA</span></span>
     </Link>
@@ -63,7 +63,7 @@ const Header: React.FC = () => {
 
   const ProfileAndBellDesktop = () => (
     <nav className={`${styles.rightContent} ${styles.desktopOnly}`}>
-      <Link to="/dashboard" className={styles.iconButton} title="Dashboard">
+      <Link to={PATHS.dashboard} className={styles.iconButton} title="Dashboard">
         <article className={styles.actionItem}>
           <Icon src={gridIcon} size={24} />
           <span className={styles.actionLabel}>Dashboard</span>
@@ -138,7 +138,7 @@ const Header: React.FC = () => {
                     </button>
                   </article>
                 )}
-                <Link to="/dashboard" onClick={() => setIsMenuOpen(false)} className={styles.mobileNavLink}>
+                <Link to={PATHS.dashboard} onClick={() => setIsMenuOpen(false)} className={styles.mobileNavLink}>
                   <img src={gridIcon} alt="Dashboard" className={styles.mobileNavIcon} />
                   Dashboard
                 </Link>
@@ -171,8 +171,8 @@ const Header: React.FC = () => {
               <ProfileAndBellDesktop />
             ) : (
               <nav className={styles.authButtons}>
-                <Link to="/login" className={styles.loginBtn}>Log In</Link>
-                <Link to="/signup" className={styles.signupBtn}>Sign up</Link>
+                <Link to={PATHS.login} className={styles.loginBtn}>Log In</Link>
+                <Link to={PATHS.signup} className={styles.signupBtn}>Sign up</Link>
               </nav>
             )}
           </nav>

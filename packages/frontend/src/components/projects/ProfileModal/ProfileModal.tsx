@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { Modal } from '../../ui/Modal/Modal'
 import { getProfile, updateProfile, changePassword } from '../../../services/userService'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../contexts/AuthContext'
+import { PATHS } from '../../../routes/paths'
 import { Input } from '../../ui/Input/Input'
 import styles from './ProfileModal.module.scss'
 import { playErrorSound } from '../../../utils/audio'
@@ -15,6 +17,7 @@ type Props = {
 
 const ProfileModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const { logout } = useAuth()
+  const navigate = useNavigate()
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
   const [currentPassword, setCurrentPassword] = useState('')
@@ -63,6 +66,7 @@ const ProfileModal: React.FC<Props> = ({ isOpen, onClose }) => {
   }
 
   const handleLogout = () => {
+    navigate(PATHS.home)
     logout()
     onClose()
   }

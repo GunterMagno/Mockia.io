@@ -1,5 +1,6 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
+import { PATHS } from '../../../routes/paths'
 import styles from './Footer.module.scss'
 
 export const Footer: React.FC = () => {
@@ -16,10 +17,10 @@ export const Footer: React.FC = () => {
           >
             Documentation
           </a>
-          <Link to="/terms" className={styles.link}>Terms</Link>
-          <Link to="/privacy" className={styles.link}>Privacy</Link>
+          <Link to={PATHS.terms} className={styles.link}>Terms</Link>
+          <Link to={PATHS.privacy} className={styles.link}>Privacy</Link>
           <a 
-            href="http://localhost:3000/api/docs" 
+            href="/api/docs" 
             className={styles.link}
             target="_blank"
             rel="noopener noreferrer"

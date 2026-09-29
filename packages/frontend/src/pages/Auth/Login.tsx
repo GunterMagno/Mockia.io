@@ -1,11 +1,12 @@
 import React, { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { Input } from '../../components/ui/Input/Input'
 import { Button } from '../../components/ui/Button/Button'
 import { useAuth } from '../../contexts/AuthContext'
 import { getBackendErrorMessage } from '../../utils/error'
 import { validatePassword } from '../../utils/validation'
 import { playErrorSound } from '../../utils/audio'
+import { PATHS, postLoginTarget } from '../../routes/paths'
 
 import ModalErrorAlert from '../../components/ui/ModalErrorAlert/ModalErrorAlert'
 
@@ -13,6 +14,7 @@ import styles from './Auth.module.scss'
 
 const Login: React.FC = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { login } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -42,7 +44,7 @@ const Login: React.FC = () => {
     setError(null)
     try {
       await login({ email, password }, rememberMe)
-      navigate('/dashboard')
+      navigate(postLoginTarget(location.state), { replace: true })
     } catch (err: any) {
       setError(getBackendErrorMessage(err))
       playErrorSound()
@@ -104,13 +106,10 @@ const Login: React.FC = () => {
           <footer className={styles.footer}>
             <span>
               <span>Don't have an account? </span>
-              <Link to="/signup">
+              <Link to={PATHS.signup}>
                 Create an account
               </Link>
             </span>
-            <Link to="Not Found" className={styles.forgotPassword}>
-              Forgot password?
-            </Link>
           </footer>
         </article>
       </section>
