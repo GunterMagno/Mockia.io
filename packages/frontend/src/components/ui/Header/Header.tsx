@@ -12,7 +12,7 @@ import Icon from '../Icon/Icon';
 
 const Header: React.FC = () => {
   const location = useLocation();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const path = location.pathname;
   
   // Determine variant based on path
@@ -56,14 +56,14 @@ const Header: React.FC = () => {
 
   const Logo = () => (
     <Link to="/" className={styles.logo}>
-      <img src={logoMockia} alt="MockIA logo" className={styles.logoImg} />
+      <img src={logoMockia} alt="" className={styles.logoImg} />
       <span className={styles.logoText}>Mock<span className={styles.highlight}>IA</span></span>
     </Link>
   );
 
   const ProfileAndBellDesktop = () => (
     <nav className={`${styles.rightContent} ${styles.desktopOnly}`}>
-      <Link to="/dashboard" className={styles.iconButton} title="Dashboard">
+      <Link to="/dashboard" className={styles.iconButton} title="Dashboard" aria-label="Dashboard">
         <article className={styles.actionItem}>
           <Icon src={gridIcon} size={24} />
           <span className={styles.actionLabel}>Dashboard</span>
@@ -73,9 +73,9 @@ const Header: React.FC = () => {
         <NotificationBell />
         <span className={styles.actionLabel}>Notifications</span>
       </article>
-      <button className={styles.iconButton} onClick={() => { setIsProfileOpen(true); setIsMenuOpen(false); }} title="Profile">
+      <button className={styles.iconButton} onClick={() => { setIsProfileOpen(true); setIsMenuOpen(false); }} title="Profile" aria-label="Profile">
         <article className={styles.actionItem}>
-          <img src={userIcon} alt="Profile" className={styles.profileIcon} />
+          <Icon src={userIcon} size={28} className={styles.profileIcon} />
           <span className={styles.actionLabel}>Profile</span>
         </article>
       </button>
@@ -87,6 +87,7 @@ const Header: React.FC = () => {
       className={`${styles.hamburgerBtn} ${isMenuOpen ? styles.menuOpen : ''}`} 
       onClick={() => setIsMenuOpen(!isMenuOpen)}
       aria-label="Toggle menu"
+      aria-controls="site-nav"
       aria-expanded={isMenuOpen}
     >
       <span></span>
@@ -107,7 +108,7 @@ const Header: React.FC = () => {
   // 2. Landing & Main App Header with responsive Hamburger Menu
   return (
     <>
-      <header className={`${styles.header} ${isLanding ? styles.landingHeader : ''}`}>
+      <header className={styles.header}>
         <section className={styles.headerContainer}>
           <article className={styles.leftSection}>
             <Logo />
@@ -116,7 +117,7 @@ const Header: React.FC = () => {
           {isProjectPage && projectName && (
             <article className={styles.centerSection}>
               <span className={styles.projectName}>{projectName}</span>
-              <button onClick={openSettings} className={styles.settingsIconBtn} title="Project Settings">
+              <button onClick={openSettings} className={styles.settingsIconBtn} title="Project Settings" aria-label="Project Settings">
                 <Icon src={settingsIcon} size={20} className={styles.settingsIcon} />
               </button>
             </article>
@@ -126,20 +127,28 @@ const Header: React.FC = () => {
 
           {isMenuOpen && <article className={styles.menuBackdrop} onClick={() => setIsMenuOpen(false)} />}
 
-          <nav className={`${styles.navActions} ${isMenuOpen ? styles.menuOpen : ''}`}>
+          {isLanding && !isAuthenticated && (
+            <nav className={styles.navCenter} aria-label="Sections">
+              <a href="#story-title" className={styles.navLink}>How it works</a>
+              <a href="#builder-title" className={styles.navLink}>Try the builder</a>
+              <a href="#features-title" className={styles.navLink}>Features</a>
+            </nav>
+          )}
+
+          <nav id="site-nav" className={`${styles.navActions} ${isMenuOpen ? styles.menuOpen : ''}`}>
             {isAuthenticated && (
               <nav className={styles.mobileOnlyLinks}>
                 {isProjectPage && projectName && (
                   <article className={styles.mobileProjectNameContainer}>
                     <span className={styles.mobileProjectName}>{projectName}</span>
                     <button onClick={openSettings} className={styles.mobileSettingsHeaderBtn}>
-                      <img src={settingsIcon} alt="Configuration" className={styles.mobileNavIcon} />
+                      <Icon src={settingsIcon} size={20} className={styles.mobileNavIcon} />
                       Configuration
                     </button>
                   </article>
                 )}
                 <Link to="/dashboard" onClick={() => setIsMenuOpen(false)} className={styles.mobileNavLink}>
-                  <img src={gridIcon} alt="Dashboard" className={styles.mobileNavIcon} />
+                  <Icon src={gridIcon} size={20} className={styles.mobileNavIcon} />
                   Dashboard
                 </Link>
                 
@@ -161,7 +170,7 @@ const Header: React.FC = () => {
                 </article>
 
                 <button onClick={() => { setIsProfileOpen(true); setIsMenuOpen(false); }} className={styles.mobileNavLink}>
-                  <img src={userIcon} alt="Profile" className={styles.mobileNavIcon} />
+                  <Icon src={userIcon} size={20} className={styles.mobileNavIcon} />
                   Profile
                 </button>
               </nav>
@@ -169,7 +178,7 @@ const Header: React.FC = () => {
 
             {isAuthenticated ? (
               <ProfileAndBellDesktop />
-            ) : (
+            ) : !isLoading && (
               <nav className={styles.authButtons}>
                 <Link to="/login" className={styles.loginBtn}>Log In</Link>
                 <Link to="/signup" className={styles.signupBtn}>Sign up</Link>

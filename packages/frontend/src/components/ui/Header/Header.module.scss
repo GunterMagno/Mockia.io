@@ -1,100 +1,106 @@
 @import '../../../styles/global.scss';
 
+/* Un solo header para toda la app. Solo tokens: contraste AA/AAA (ver tokens.scss).
+   Los iconos usan <Icon> (mascara + currentColor), asi heredan el color del texto. */
+
 .header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  height: var(--header-h);
   padding: 0 var(--spacing-6);
-  height: 80px;
-  background-color: var(--secondary-light-disabled);
-  color: var(--support-03);
-  box-shadow: var(--shadow-sm);
-  position: relative;
-  z-index: 100;
-  transition: all var(--transition-normal);
+  background: color-mix(in srgb, var(--color-bg) 88%, transparent);
+  backdrop-filter: blur(12px); /* funcional: el contenido pasa por debajo al hacer scroll */
+  color: var(--color-text);
+  border-bottom: 1px solid var(--color-border);
 
   @include respond-to('md') {
     padding: 0 var(--spacing-4);
   }
 }
 
-.landingHeader {
-  background-color: var(--ds-bg);
-  color: var(--ds-text);
-  height: 80px;
-  box-shadow: none;
-  border-bottom: 1px solid var(--ds-border);
-
-  .logoText { color: var(--ds-text); }
-  .highlight { color: var(--ds-accent-text); }
-
-  .navLink {
-    color: var(--ds-text);
-    font-size: 1rem;
-    font-weight: 500;
-    text-decoration: underline;
-  }
-
-  .loginBtn {
-    background: var(--ds-surface-2);
-    color: var(--ds-text);
-    font-weight: 700;
-    border: 1px solid var(--ds-border);
-    padding: 10px 24px;
-    border-radius: var(--radius-lg);
-
-    &:hover {
-      background: var(--ds-border);
-      color: var(--ds-text);
-    }
-  }
-
-  .signupBtn {
-    background: var(--ds-ok);
-    color: var(--ds-bg);
-    font-weight: 700;
-    padding: 10px 24px;
-    border-radius: var(--radius-lg);
-
-    &:hover {
-      transform: translateY(-1px);
-      background: var(--ds-ok);
-      color: var(--ds-bg);
-    }
-  }
-
-  .hamburgerBtn span { background-color: var(--ds-text); }
-
-  .navActions.menuOpen {
-    background-color: var(--ds-surface);
-    border-bottom-color: var(--ds-border);
-  }
+.authHeader {
+  justify-content: center;
 }
 
 .headerContainer {
-  width: 100%;
-  max-width: 1600px;
-  margin: 0 auto;
+  position: relative;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  position: relative;
+  width: 100%;
+  max-width: 1600px;
   height: 100%;
+  margin: 0 auto;
 }
 
+.leftSection {
+  display: flex;
+  align-items: center;
+}
+
+/* ---- Logo ---- */
+.logo {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  min-height: var(--tap);
+  text-decoration: none;
+  color: var(--color-text);
+}
+
+.logoImg {
+  height: 36px;
+  width: auto;
+  object-fit: contain;
+}
+
+.logoText {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-black);
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+}
+
+.highlight {
+  color: var(--color-accent-text);
+}
+
+/* ---- Navegacion central (landing, sin sesion) ---- */
 .navCenter {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
   align-items: center;
-  gap: var(--spacing-10);
+  gap: var(--spacing-8);
 
   @include respond-to('lg') {
     display: none;
   }
 }
 
+.navLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  color: var(--color-text-muted);
+  font-weight: var(--weight-medium);
+  font-size: var(--text-base);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+
+  &:hover {
+    color: var(--color-text);
+    text-decoration: underline;
+    text-underline-offset: 0.35em;
+  }
+}
+
+/* ---- Nombre de proyecto (editor) ---- */
 .centerSection {
   position: absolute;
   left: 50%;
@@ -102,52 +108,35 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-3);
-  pointer-events: auto;
-  
+
   @include respond-to('md') {
     display: none;
   }
 }
 
 .projectName {
-  font-size: 1.35rem;
-  font-weight: 800;
-  color: var(--support-03);
-  letter-spacing: 0.02em;
-  position: relative;
-  opacity: 0.95;
-
-  &::after {
-    content: '';
-    position: absolute;
-    bottom: -6px;
-    left: 0;
-    width: 100%;
-    height: 3px;
-    background: linear-gradient(90deg, var(--primary-light), transparent);
-    border-radius: var(--radius-full);
-  }
+  font-size: var(--text-xl);
+  font-weight: var(--weight-black);
+  letter-spacing: 0.01em;
+  color: var(--color-text);
 }
 
 .settingsIconBtn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: var(--spacing-2);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--support-03);
-  opacity: 0.7;
-  transition: all var(--transition-fast);
+  width: var(--tap);
+  height: var(--tap);
+  background: none;
+  border: none;
   border-radius: var(--radius-full);
-  line-height: 1;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color var(--transition-fast), background-color var(--transition-fast);
 
   &:hover {
-    opacity: 1;
-    color: var(--primary-dark);
-    transform: rotate(30deg);
-    background-color: var(--glass-border-color);
+    color: var(--color-text);
+    background: var(--color-active);
   }
 }
 
@@ -155,55 +144,7 @@
   display: block;
 }
 
-.authHeader {
-  background-color: var(--secondary-light-disabled);
-  border-bottom: none;
-  box-shadow: none;
-  justify-content: center;
-  height: 80px;
-}
-
-.logo {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-2);
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.logoImg {
-  height: 40px;
-  width: auto;
-  object-fit: contain;
-}
-
-.logoText {
-  font-size: 1.9rem;
-  font-weight: 800;
-  color: var(--secondary-dark-off);
-  letter-spacing: -0.02em;
-
-  @include respond-to('sm') {
-    font-size: 1.5rem;
-  }
-}
-
-.highlight {
-  color: var(--primary-dark);
-}
-
-.navLink {
-  text-decoration: none;
-  color: var(--support-04);
-  font-weight: 500;
-  font-size: var(--text-base);
-  transition: all var(--transition-fast);
-  
-  &:hover {
-    opacity: 0.8;
-  }
-}
-
+/* ---- Acciones ---- */
 .navActions {
   display: flex;
   align-items: center;
@@ -215,49 +156,148 @@
     &.menuOpen {
       display: flex;
       flex-direction: column;
+      align-items: flex-start;
       position: fixed;
-      top: 80px;
+      top: var(--header-h);
       left: 0;
       right: 0;
       width: 100%;
-      background-color: var(--secondary-light-disabled);
-      padding: var(--spacing-8) var(--spacing-6);
-      box-shadow: var(--shadow-sm);
-      border-bottom: 1px solid var(--sidebar-border-color);
-      align-items: flex-start;
+      max-height: calc(100dvh - var(--header-h));
+      overflow-y: auto;
+      padding: var(--spacing-6);
+      background: var(--color-surface);
+      border-bottom: 1px solid var(--color-border);
+      box-shadow: var(--shadow-lg);
       z-index: 1000;
-      animation: slideDown 0.3s ease-out;
+      animation: slideDown 0.25s var(--ease-out);
     }
   }
 }
 
 @keyframes slideDown {
-  from { transform: translateY(-20px); opacity: 0; }
+  from { transform: translateY(-12px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
 
 .menuBackdrop {
   position: fixed;
-  top: 80px;
+  top: var(--header-h);
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
+  background: var(--color-overlay);
   z-index: 999;
 }
 
+.authButtons {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+
+  @include respond-to('md') {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+.loginBtn,
+.signupBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--tap);
+  padding: 0 var(--spacing-6);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-base);
+  font-weight: var(--weight-bold);
+  text-decoration: none;
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.loginBtn {
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  border: 1px solid var(--color-border-strong);
+
+  &:hover { background: var(--color-border); }
+}
+
+.signupBtn {
+  background: var(--color-cta);
+  color: var(--color-on-cta);
+
+  &:hover { transform: translateY(-1px); }
+}
+
+/* ---- Sesion iniciada: escritorio ---- */
+.rightContent {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
+  color: var(--color-text);
+}
+
+.desktopOnly {
+  display: flex;
+
+  @include respond-to('md') {
+    display: none;
+  }
+}
+
+.iconButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--tap);
+  min-height: var(--tap);
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: var(--radius-full);
+  color: var(--color-text);
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color var(--transition-fast);
+
+  &:hover { background: var(--color-active); }
+}
+
+.actionItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  color: var(--color-text);
+}
+
+.actionLabel {
+  display: none;
+  font-weight: var(--weight-bold);
+  font-size: var(--text-lg);
+  color: var(--color-text);
+
+  @include respond-to('md') {
+    display: block;
+  }
+}
+
+.profileIcon {
+  color: var(--color-text);
+}
+
+/* ---- Menu movil ---- */
 .mobileOnlyLinks {
   display: none;
-  
+
   @include respond-to('md') {
     display: flex;
     flex-direction: column;
     width: 100%;
-    gap: var(--spacing-4);
-    margin-bottom: var(--spacing-6);
-    padding-bottom: var(--spacing-6);
-    border-bottom: 1px solid var(--sidebar-border-color);
+    gap: var(--spacing-3);
+    margin-bottom: var(--spacing-4);
+    padding-bottom: var(--spacing-4);
+    border-bottom: 1px solid var(--color-border);
   }
 }
 
@@ -265,212 +305,96 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--spacing-3);
   width: 100%;
-  margin-bottom: var(--spacing-4);
-  padding-bottom: var(--spacing-4);
-  border-bottom: 1px solid var(--sidebar-border-color);
+  padding-bottom: var(--spacing-3);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .mobileProjectName {
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: var(--support-03);
+  max-width: 55%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 55%;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-black);
+  color: var(--color-text);
 }
 
-.mobileSettingsHeaderBtn {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-2);
-  background: var(--support-04);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  color: var(--support-03);
-  font-size: 0.95rem;
-  font-weight: 700;
-  padding: var(--spacing-2) var(--spacing-3);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  flex-shrink: 0;
-
-  &:hover, &:active {
-    background: var(--sidebar-item-active);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-sm);
-  }
-}
-
+.mobileSettingsHeaderBtn,
 .mobileNavLink {
   display: flex;
   align-items: center;
   gap: var(--spacing-3);
-  width: 100%;
-  background: var(--support-04);
-  border: 1px solid var(--border);
+  min-height: var(--tap);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  color: var(--support-03);
-  font-size: 1.15rem;
-  font-weight: 700;
-  text-decoration: none;
+  color: var(--color-text);
+  font-size: var(--text-base);
+  font-weight: var(--weight-bold);
   text-align: left;
-  padding: var(--spacing-3) var(--spacing-4);
+  text-decoration: none;
   cursor: pointer;
-  transition: all var(--transition-fast);
-  
-  &:hover {
-    background: var(--sidebar-item-active);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-sm);
-  }
+  transition: background-color var(--transition-fast);
+
+  &:hover,
+  &:active { background: var(--color-border); }
+}
+
+.mobileSettingsHeaderBtn {
+  flex-shrink: 0;
+  padding: var(--spacing-2) var(--spacing-3);
+}
+
+.mobileNavLink {
+  width: 100%;
+  padding: var(--spacing-3) var(--spacing-4);
 }
 
 .mobileNavIcon {
-  width: 20px;
-  height: 20px;
-  opacity: 0.8;
-}
-
-.actionItem {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-4);
-}
-
-.actionLabel {
-  display: none;
-  font-weight: 700;
-  font-size: 1.15rem;
-  color: var(--support-03);
-
-  @include respond-to('md') {
-    display: block;
-  }
-}
-
-.authButtons {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-4);
-  
-  @include respond-to('md') {
-    width: 100%;
-    flex-direction: column;
-  }
-}
-
-.loginBtn, .signupBtn {
-  text-decoration: none;
-  padding: 10px 24px;
-  border-radius: var(--radius-lg);
-  font-size: 1rem;
-  transition: all var(--transition-fast);
-  
-  @include respond-to('md') {
-    width: 100%;
-    text-align: center;
-    padding: 16px;
-    font-size: 1.1rem;
-  }
-}
-
-.rightContent {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-6);
-  color: var(--support-03);
-  
-  @include respond-to('md') {
-    width: 100%;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--spacing-4);
-  }
-}
-
-.desktopOnly {
-  display: flex;
-  @include respond-to('md') {
-    display: none;
-  }
+  color: var(--color-text);
 }
 
 .mobileNotificationItem {
   position: relative;
-  cursor: pointer;
   z-index: 10;
-
-  &:hover, &:active {
-    background: var(--support-04);
-    transform: none;
-    box-shadow: none;
-  }
 
   .mobileNavBellWrapper {
     position: static;
     display: flex;
     align-items: center;
-    
+
     button {
       margin: 0;
       background: none;
-      width: 20px;
-      height: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      
-      figure {
-        position: relative;
-        z-index: 2;
-        width: 20px;
-        height: 20px;
-        min-width: 20px;
-        min-height: 20px;
-      }
+      width: 24px;
+      height: 24px;
+      min-width: 24px;
+      min-height: 24px;
+      padding: 0;
+      color: var(--color-text);
     }
   }
 }
 
-.iconButton {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: inherit;
-  text-decoration: none;
-  transition: transform var(--transition-fast);
-
-  &:hover {
-    transform: scale(1.05);
-  }
+.mobileNavText {
+  color: var(--color-text);
 }
 
-.profileIcon {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-full);
-}
-
-/* =========================================
-   Hamburger Menu Button (Mobile Only)
-========================================= */
+/* ---- Hamburguesa ---- */
 .hamburgerBtn {
   display: none;
-  background: none;
-  border: none;
-  cursor: pointer;
   flex-direction: column;
   justify-content: space-between;
   box-sizing: border-box;
-  width: 44px;
-  height: 44px;
-  padding: 11px 6px;
+  width: var(--tap);
+  height: var(--tap);
+  padding: 13px 8px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
   z-index: 1001;
 
   @include respond-to('md') {
@@ -480,23 +404,16 @@
   span {
     display: block;
     width: 100%;
-    height: 3px;
-    background-color: var(--support-03);
-    border-radius: 4px;
-    transition: all 0.3s cubic-bezier(0.68, -0.6, 0.32, 1.6);
+    height: 2px;
+    background-color: var(--color-text);
+    border-radius: 2px;
+    transition: transform 0.3s var(--ease-out), opacity 0.2s var(--ease-out);
     transform-origin: center;
   }
 
   &.menuOpen {
-    span:nth-child(1) {
-      transform: translateY(9.5px) rotate(45deg);
-    }
-    span:nth-child(2) {
-      opacity: 0;
-      transform: scaleX(0);
-    }
-    span:nth-child(3) {
-      transform: translateY(-9.5px) rotate(-45deg);
-    }
+    span:nth-child(1) { transform: translateY(8px) rotate(45deg); }
+    span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+    span:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
   }
 }
