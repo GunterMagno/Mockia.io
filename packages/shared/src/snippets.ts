@@ -82,7 +82,8 @@ export function generateSnippets(req: SnippetRequest): CodeSnippets {
   // ---- cURL ----
   const curlParts: string[] = [`curl ${method === 'HEAD' ? '-I ' : method === 'GET' ? '' : `-X ${method} `}${shq(url)}`];
   headers.forEach(([k, v]) => curlParts.push(`-H ${shq(`${k}: ${v}`)}`));
-  if (hasBody) curlParts.push(`-d ${shq(rawBody)}`);
+  // --data-raw: plain -d treats a body starting with '@' as a file to read (local file exfiltration on copy-paste).
+  if (hasBody) curlParts.push(`--data-raw ${shq(rawBody)}`);
   const curl = curlParts.join(' \\\n  ');
 
   // ---- Fetch ----

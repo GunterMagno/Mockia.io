@@ -20,7 +20,7 @@ describe('generateSnippets', () => {
     });
     expect(s.curl).toContain('-X POST');
     expect(s.curl).toContain("-H 'Content-Type: application/json'");
-    expect(s.curl).toContain(`-d '{"name":"Ana","ok":true,"none":null,"tags":["a","b"]}'`);
+    expect(s.curl).toContain(`--data-raw '{"name":"Ana","ok":true,"none":null,"tags":["a","b"]}'`);
     expect(s.fetch).toContain('body: JSON.stringify({');
     expect(s.axios).toContain('data: {');
     expect(s.python).toContain('json={');
@@ -36,7 +36,7 @@ describe('generateSnippets', () => {
   it("escapa comillas simples en shell: ' => '\\''", () => {
     const s = generateSnippets({ method: 'POST', url: "https://h/it's", body: "o'brien" });
     expect(s.curl).toContain(`'https://h/it'\\''s'`);
-    expect(s.curl).toContain(`-d 'o'\\''brien'`);
+    expect(s.curl).toContain(`--data-raw 'o'\\''brien'`);
   });
 
   it('escapa comillas dobles y saltos de línea en JS y Python', () => {
@@ -56,7 +56,7 @@ describe('generateSnippets', () => {
     expect(generateSnippets({ method: "GET'; rm -rf /", url: 'u' }).curl).toBe("curl 'u'");
     expect(generateSnippets({ method: 'HEAD', url: 'u' }).curl).toBe("curl -I 'u'");
     const g = generateSnippets({ method: 'GET', url: 'u', body: { a: 1 } });
-    expect(g.curl).not.toContain('-d');
+    expect(g.curl).not.toContain('--data-raw');
     expect(g.fetch).not.toContain('body');
   });
 
@@ -65,5 +65,11 @@ describe('generateSnippets', () => {
     expect(s.python).toContain('"a": {}');
     expect(s.python).toContain('"b": []');
     expect(s.python).toContain('"e": False');
+  });
+
+  it('cuerpo que empieza por @ no lee archivos locales en cURL (--data-raw)', () => {
+    const s = generateSnippets({ method: 'POST', url: 'u', body: '@/etc/passwd' });
+    expect(s.curl).toContain("--data-raw '@/etc/passwd'");
+    expect(s.curl).not.toMatch(/ -d /);
   });
 });
