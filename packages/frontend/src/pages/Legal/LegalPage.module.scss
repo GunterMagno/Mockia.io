@@ -1,9 +1,8 @@
 .legalPage {
-  background-color: var(--support-04);
-  color: var(--support-03);
-  min-height: 100vh;
+  color: var(--color-text);
+  min-height: 100%;
   padding: 120px 0 100px;
-  font-family: var(--font-sans);
+  font-family: var(--font-ui);
 }
 
 .container {
@@ -35,7 +34,7 @@
 .content {
   line-height: 1.8;
   font-size: 1.15rem;
-  color: var(--support-03);
+  color: var(--color-text);
   
   section {
     margin-bottom: 60px;
@@ -46,12 +45,12 @@
     font-weight: 800;
     margin-bottom: var(--spacing-6);
     letter-spacing: -0.02em;
-    color: var(--primary-dark);
+    color: var(--color-accent-text);
   }
   
   p {
     margin-bottom: var(--spacing-6);
-    color: var(--support-03);
+    color: var(--color-text);
     opacity: 0.9;
   }
   
@@ -65,7 +64,7 @@
       
       &::before {
         content: "•";
-        color: var(--primary-light);
+        color: var(--color-accent-text);
         font-weight: bold;
         display: inline-block;
         width: 1em;
@@ -75,14 +74,14 @@
   }
   
   a {
-    color: var(--primary-light);
+    color: var(--color-accent-text);
     text-decoration: none;
     font-weight: 700;
     border-bottom: 2px solid transparent;
     transition: all var(--transition-fast);
     
     &:hover {
-      border-bottom-color: var(--primary-light);
+      border-bottom-color: var(--color-accent);
     }
   }
 }

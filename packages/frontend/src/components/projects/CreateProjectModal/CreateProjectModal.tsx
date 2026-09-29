@@ -202,7 +202,7 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
               </article>
               <article className={styles.selectionCard} onClick={() => handleSelectMode('github')}>
                 <figure className={styles.icon}>
-                  <Icon src={githubIcon} size={48} color="var(--secondary-dark-off)" />
+                  <Icon src={githubIcon} size={48} color="var(--color-border)" />
                 </figure>
                 <h3>GitHub Import</h3>
                 <p>Clone a repository and let Mockia analyze its structure automatically.</p>
@@ -284,7 +284,7 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
             <section className={styles.stepContent}>
               <article className={styles.aiCard}>
                 <figure className={styles.aiIcon}>
-                  <Icon src={aiSparkleIcon} size={52} color="var(--support-04)" />
+                  <Icon src={aiSparkleIcon} size={52} color="var(--color-surface)" />
                 </figure>
                 <article className={styles.aiText}>
                   <h4>Smart API Generation</h4>

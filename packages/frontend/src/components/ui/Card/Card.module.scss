@@ -8,30 +8,15 @@
   border: 1px solid var(--border);
   position: relative;
   overflow: hidden;
-  transition: transform var(--transition-normal) cubic-bezier(0.34, 1.56, 0.64, 1),
+  transition: transform var(--transition-normal) var(--ease-out),
               box-shadow var(--transition-normal),
               border-color var(--transition-normal);
 
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, var(--primary-light), #818cf8);
-    opacity: 0;
-    transition: opacity var(--transition-fast);
-  }
-
   &:hover {
     transform: translateY(-6px);
-    border-color: var(--primary-light);
-    box-shadow: 0 16px 36px rgba(79, 70, 229, 0.08), 0 4px 12px rgba(0, 0, 0, 0.03);
+    border-color: var(--color-accent);
+    box-shadow: var(--shadow-lg);
 
-    &::before {
-      opacity: 1;
-    }
   }
 }
 
@@ -41,8 +26,8 @@
   font-weight: 700;
   font-size: var(--text-lg);
   letter-spacing: -0.02em;
-  color: var(--settings-text);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0) 100%);
+  color: var(--color-text);
+  background: var(--color-glass);
 }
 
 .content {

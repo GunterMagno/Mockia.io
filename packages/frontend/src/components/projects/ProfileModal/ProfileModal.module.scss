@@ -1,7 +1,7 @@
 .container {
-  background-color: var(--settings-modal-bg);
+  background-color: var(--color-surface);
   border-radius: var(--radius-xl);
-  color: var(--settings-text);
+  color: var(--color-text);
   overflow: hidden;
 }
 
@@ -35,21 +35,21 @@
 
 .input {
   width: 100%;
-  background-color: var(--settings-input-bg);
+  background-color: var(--color-surface-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: var(--spacing-4);
-  color: var(--settings-input-text);
+  color: var(--color-text);
   font-size: var(--text-base);
   outline: none;
   transition: border-color var(--transition-fast);
 
   &::placeholder {
-    color: var(--support-04);
+    color: var(--color-on-accent);
   }
 
   &:focus {
-    border-color: var(--primary-light);
+    border-color: var(--color-accent);
   }
 
   &.readOnly {
@@ -80,16 +80,16 @@
   box-sizing: border-box;
   border-radius: var(--radius-lg);
   margin-top: var(--spacing-6);
-  animation: fadeIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation: fadeIn 0.25s var(--ease-out) forwards;
 
   &.success {
-    background-color: var(--support-01);
-    color: var(--support-04);
+    background-color: var(--color-ok-solid);
+    color: var(--color-on-accent);
   }
 
   &.error {
-    background-color: var(--support-02);
-    color: var(--support-04);
+    background-color: var(--color-danger-solid);
+    color: var(--color-on-accent);
   }
 }
 
@@ -118,8 +118,8 @@
 }
 
 .logoutBtn {
-  background-color: var(--support-02);
-  color: var(--support-04);
+  background-color: var(--color-danger-solid);
+  color: var(--color-on-accent);
   border: none;
   border-radius: var(--radius-lg);
   padding: var(--spacing-2) var(--spacing-6);
@@ -136,7 +136,7 @@
   background: none;
   border: none;
   font-size: 1.8rem;
-  color: var(--settings-text);
+  color: var(--color-text);
   cursor: pointer;
   
   &:hover {
@@ -145,7 +145,7 @@
 }
 
 .saveBtn {
-  background-color: var(--settings-btn-primary);
+  background-color: var(--color-accent-solid);
   border: none;
   border-radius: var(--radius-full);
   padding: var(--spacing-3) var(--spacing-10);
@@ -155,7 +155,7 @@
   transition: background-color var(--transition-fast), transform 0.1s;
 
   &:hover:not(:disabled) {
-    background-color: var(--settings-btn-hover);
+    background-color: var(--color-accent-solid-hover);
   }
 
   &:active:not(:disabled) {

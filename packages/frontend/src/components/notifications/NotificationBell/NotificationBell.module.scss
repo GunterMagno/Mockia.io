@@ -25,8 +25,8 @@
   position: absolute;
   top: -4px;
   right: -4px;
-  background-color: var(--tertiary-light);
-  color: var(--support-04);
+  background-color: var(--color-warn-solid);
+  color: var(--color-on-accent);
   font-size: 10px;
   font-weight: bold;
   min-width: 16px;
@@ -36,9 +36,9 @@
   align-items: center;
   justify-content: center;
   padding: 0 4px;
-  border: 2px solid var(--secondary-light-disabled);
+  border: 2px solid var(--color-bg);
 }
 
 .hasUnread {
-  color: var(--tertiary-light);
+  color: var(--color-warn);
 }

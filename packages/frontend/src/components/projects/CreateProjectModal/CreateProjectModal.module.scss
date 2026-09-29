@@ -3,9 +3,9 @@
   max-height: 90vh;
   overflow-y: auto;
   max-width: 100%;
-  background-color: var(--secondary-light-disabled);
+  background-color: var(--color-surface-2);
   border-radius: var(--radius-xl);
-  color: var(--secondary-dark-off);
+  color: var(--color-text-muted);
   padding: var(--spacing-8);
   box-shadow: var(--shadow-lg);
   display: flex;
@@ -51,7 +51,7 @@
     transition: all var(--transition-normal);
 
     &.active {
-      background: var(--primary-light);
+      background: var(--color-accent-solid);
     }
   }
 }
@@ -63,7 +63,7 @@
 }
 
 .selectionCard {
-  background: var(--glass-bg);
+  background: var(--color-glass);
   border: var(--glass-border);
   border-radius: var(--radius-lg);
   padding: var(--spacing-6);
@@ -77,8 +77,8 @@
 
   &:hover {
     transform: translateY(-4px);
-    background: var(--glass-bg);
-    border-color: var(--primary-light);
+    background: var(--color-glass);
+    border-color: var(--color-accent);
   }
 
   .icon {
@@ -115,7 +115,7 @@
 .input, .textarea {
   width: 100%;
   padding: var(--spacing-3) var(--spacing-4);
-  background: var(--glass-bg);
+  background: var(--color-glass);
   border: 1px solid var(--sidebar-border-color);
   border-radius: var(--radius-md);
   color: inherit;
@@ -125,8 +125,8 @@
   transition: all var(--transition-fast);
 
   &:focus {
-    border-color: var(--primary-light);
-    background: var(--glass-bg);
+    border-color: var(--color-accent);
+    background: var(--color-glass);
   }
 
   &::placeholder {
@@ -140,8 +140,8 @@
 }
 
 .aiCard {
-  background: linear-gradient(135deg, var(--primary-light-disabled), var(--secondary-light));
-  color: var(--support-04);
+  background: linear-gradient(135deg, var(--color-bg), var(--color-surface-2));
+  color: var(--color-on-accent);
   padding: var(--spacing-5);
   border-radius: var(--radius-lg);
   display: flex;
@@ -182,8 +182,8 @@
 }
 
 .primaryBtn {
-  background-color: var(--primary-light);
-  color: var(--support-04);
+  background-color: var(--color-accent-solid);
+  color: var(--color-on-accent);
   border: none;
   padding: var(--spacing-2) var(--spacing-8);
   border-radius: var(--radius-lg);
@@ -207,7 +207,7 @@
   text-align: center;
   font-size: var(--text-sm);
   font-weight: 500;
-  color: var(--primary-dark);
+  color: var(--color-accent-text);
   margin-top: var(--spacing-4);
   display: flex;
   align-items: center;
@@ -216,7 +216,7 @@
 }
 
 .error {
-  color: var(--support-02);
+  color: var(--color-danger);
   background: var(--sidebar-item-active);
   padding: var(--spacing-3);
   border-radius: var(--radius-md);
@@ -265,8 +265,8 @@
 .successBadge {
   width: 80px;
   height: 80px;
-  background: var(--support-01);
-  color: var(--support-04);
+  background: var(--color-ok-solid);
+  color: var(--color-on-accent);
   border-radius: var(--radius-full);
   display: flex;
   align-items: center;
@@ -274,7 +274,7 @@
   font-size: 3rem;
   margin: 0 auto var(--spacing-4);
   box-shadow: var(--shadow-lg);
-  animation: badgePop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  animation: badgePop 0.5s var(--ease-out);
 }
 
 @keyframes badgePop {
@@ -283,7 +283,7 @@
 }
 
 .connectionCard {
-  background: var(--glass-bg);
+  background: var(--color-glass);
   border: 1px solid var(--sidebar-border-color);
   border-radius: var(--radius-xl);
   padding: var(--spacing-6);
@@ -329,7 +329,7 @@
     font-family: monospace;
     font-size: var(--text-sm);
     word-break: break-all;
-    color: var(--primary-light);
+    color: var(--color-accent-text);
   }
 }
 
@@ -338,7 +338,7 @@
   border: none;
   padding: var(--spacing-1);
   cursor: pointer;
-  color: var(--support-03);
+  color: var(--color-text);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -354,8 +354,8 @@
 }
 
 .copyBtn {
-  background: var(--primary-light);
-  color: var(--support-04);
+  background: var(--color-accent-solid);
+  color: var(--color-on-accent);
   border: none;
   padding: var(--spacing-2) var(--spacing-4);
   border-radius: var(--radius-md);
@@ -368,11 +368,11 @@
   align-items: center;
 
   &:hover {
-    background: var(--primary-dark);
+    background: var(--color-accent-solid-hover);
   }
 
   &.copied {
-    background: var(--support-01);
+    background: var(--color-ok-solid);
   }
 }
 
@@ -387,8 +387,8 @@
   align-items: flex-start;
 
   .noteIcon {
-    background: var(--secondary-light);
-    color: var(--support-03);
+    background: var(--color-surface-2);
+    color: var(--color-text);
     width: 24px;
     height: 24px;
     border-radius: var(--radius-full);

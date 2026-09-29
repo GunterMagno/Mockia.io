@@ -11,7 +11,7 @@
 
 .label {
   font-size: var(--text-sm);
-  color: var(--support-03);
+  color: var(--color-text);
   font-weight: 500;
 }
 
@@ -26,11 +26,11 @@
   box-sizing: border-box;
   width: 100%;
   padding: var(--spacing-3) var(--spacing-4);
-  border: 1px solid var(--support-05);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   font-size: var(--text-base);
-  background: var(--support-04);
-  color: var(--support-03);
+  background: var(--color-surface);
+  color: var(--color-text);
   transition: all var(--transition-fast);
   outline: none;
   box-shadow: var(--shadow-sm);
@@ -41,9 +41,9 @@
 }
 
 .input:focus {
-  border-color: var(--primary-light);
+  border-color: var(--color-accent);
   box-shadow: 0 0 0 0.1875rem var(--sidebar-border-color);
-  background: var(--support-04);
+  background: var(--color-surface);
 }
 
 .nakedInput {
@@ -67,7 +67,7 @@
   background: transparent;
   border: none;
   cursor: pointer;
-  color: var(--support-03);
+  color: var(--color-text);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -84,7 +84,7 @@
 }
 
 .error {
-  color: var(--support-02);
+  color: var(--color-danger);
   font-size: var(--text-sm);
   margin-top: var(--spacing-1);
 }

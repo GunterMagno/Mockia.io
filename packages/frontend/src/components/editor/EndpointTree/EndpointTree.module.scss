@@ -33,7 +33,7 @@
 .settingsBtn {
   background: none;
   border: none;
-  color: var(--secondary-light);
+  color: var(--color-text-muted);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -43,7 +43,7 @@
   transition: all var(--transition-fast);
 
   &:hover {
-    color: var(--primary-light);
+    color: var(--color-accent-text);
     background-color: var(--sidebar-item-active);
   }
 }
@@ -74,11 +74,11 @@
   font-weight: bold;
   min-width: 40px;
 
-  &.get { color: var(--primary-light); }
-  &.post { color: var(--support-01); }
-  &.put { color: var(--tertiary-light); }
-  &.delete { color: var(--support-02); }
-  &.patch { color: var(--tertiary-dark); }
+  &.get { color: var(--color-accent-text); }
+  &.post { color: var(--color-ok); }
+  &.put { color: var(--color-warn); }
+  &.delete { color: var(--color-danger); }
+  &.patch { color: var(--color-warn); }
 }
 
 .path {
@@ -103,7 +103,7 @@
     flex: 1;
     min-width: 0; // Allow truncation
     background: transparent;
-    color: var(--secondary-dark);
+    color: var(--color-text-muted);
     
     &:hover {
       background: transparent; // Wrapper handles hover
@@ -118,8 +118,8 @@
     height: 24px;
     margin-right: var(--spacing-1);
     border: none;
-    background: var(--support-02);
-    color: var(--support-04);
+    background: var(--color-danger-solid);
+    color: var(--color-on-accent);
     border-radius: 50%;
     cursor: pointer;
     font-size: 18px;
@@ -131,7 +131,7 @@
     flex-shrink: 0;
 
     &:hover {
-      background: var(--settings-danger-border);
+      background: var(--color-danger);
       transform: scale(1.1);
       box-shadow: var(--shadow-md);
     }

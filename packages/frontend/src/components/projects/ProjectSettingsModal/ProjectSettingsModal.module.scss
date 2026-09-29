@@ -1,10 +1,10 @@
 @import '../../../styles/global.scss';
 
 .container {
-  background-color: var(--settings-modal-bg);
+  background-color: var(--color-surface);
   border-radius: var(--radius-xl);
   overflow: hidden;
-  color: var(--settings-text);
+  color: var(--color-text);
   font-family: inherit;
   display: flex;
   flex-direction: column;
@@ -71,11 +71,11 @@
   }
 
   &:hover {
-    color: var(--settings-text);
+    color: var(--color-text);
   }
 
   &.active {
-    color: var(--settings-text);
+    color: var(--color-text);
     font-weight: 600;
 
     &::after {
@@ -85,7 +85,7 @@
       left: 0;
       right: 0;
       height: 3px;
-      background-color: var(--settings-text);
+      background-color: var(--color-text);
       border-radius: var(--radius-full);
     }
   }
@@ -117,11 +117,11 @@
 }
 
 .input, .textarea, .select {
-  background-color: var(--settings-input-bg);
+  background-color: var(--color-surface-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: var(--spacing-4);
-  color: var(--settings-input-text);
+  color: var(--color-text);
   font-size: var(--text-base);
   outline: none;
   transition: border-color var(--transition-fast);
@@ -136,7 +136,7 @@
   }
 
   &:focus {
-    border-color: var(--primary-light);
+    border-color: var(--color-accent);
   }
 }
 
@@ -147,8 +147,8 @@
 
 .dangerZone {
   margin-top: var(--spacing-10);
-  background-color: var(--settings-danger-bg);
-  border: 2px solid var(--settings-danger-border);
+  background-color: var(--color-danger-soft);
+  border: 2px solid var(--color-danger);
   border-radius: var(--radius-lg);
   padding: var(--spacing-4);
   display: flex;
@@ -178,7 +178,7 @@
   h4 {
     margin: 0;
     font-size: var(--text-lg);
-    color: var(--settings-danger-border);
+    color: var(--color-danger);
     text-align: center;
   }
   p {
@@ -190,8 +190,8 @@
 }
 
 .deleteBtn {
-  background-color: var(--settings-btn-primary);
-  color: var(--settings-text);
+  background-color: var(--color-accent-solid);
+  color: var(--color-text);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: var(--spacing-3) var(--spacing-10);
@@ -207,7 +207,7 @@
   }
 
   &:hover {
-    background-color: var(--settings-btn-hover);
+    background-color: var(--color-accent-solid-hover);
   }
 
   &:active {
@@ -221,7 +221,7 @@
   p {
     margin-bottom: var(--spacing-4);
     font-weight: 600;
-    color: var(--support-02);
+    color: var(--color-danger);
   }
 }
 
@@ -241,7 +241,7 @@
   padding: var(--spacing-2) var(--spacing-6);
   border-radius: var(--radius-md);
   cursor: pointer;
-  color: var(--settings-text);
+  color: var(--color-text);
   
   &:hover {
     background-color: var(--sidebar-item-active);
@@ -249,24 +249,24 @@
 }
 
 .cancelLeaveBtn {
-  background-color: #f3f0ff;
-  border: 1px solid #dcd3ff;
+  background-color: var(--color-accent-soft);
+  border: 1px solid var(--color-accent);
   padding: var(--spacing-2) var(--spacing-6);
   border-radius: var(--radius-md);
   cursor: pointer;
-  color: #5b21b6;
+  color: var(--color-accent-text);
   font-weight: 600;
   transition: all var(--transition-fast);
   
   &:hover {
-    background-color: #ede9fe;
-    border-color: #c0b2fc;
+    background-color: var(--color-active);
+    border-color: var(--color-accent-text);
   }
 }
 
 .confirmDeleteBtn {
-  background-color: var(--support-02);
-  color: var(--support-04);
+  background-color: var(--color-danger-solid);
+  color: var(--color-on-accent);
   border: none;
   padding: var(--spacing-2) var(--spacing-6);
   border-radius: var(--radius-md);
@@ -274,7 +274,7 @@
   font-weight: bold;
   
   &:hover {
-    background-color: var(--support-02);
+    background-color: var(--color-danger-solid);
   }
 }
 
@@ -316,7 +316,7 @@
 }
 
 .inviteBtn {
-  background-color: var(--settings-btn-primary);
+  background-color: var(--color-accent-solid);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 0 var(--spacing-8);
@@ -330,7 +330,7 @@
   }
 
   &:hover:not(:disabled) {
-    background-color: var(--settings-btn-hover);
+    background-color: var(--color-accent-solid-hover);
   }
 
   &:disabled {
@@ -372,12 +372,12 @@
   width: 60px;
   height: 60px;
   min-width: 60px;
-  background-color: var(--support-03);
+  background-color: var(--color-bg);
   border-radius: var(--radius-full);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--support-04);
+  color: var(--color-on-accent);
 
   @include respond-to('sm') {
     width: 48px;
@@ -429,7 +429,7 @@
   border-radius: var(--radius-lg);
   font-size: var(--text-sm);
   font-weight: 600;
-  background-color: var(--settings-danger-bg);
+  background-color: var(--color-danger-soft);
   min-width: 100px;
   text-align: center;
 }
@@ -443,7 +443,7 @@
   padding: 0;
   
   &:hover {
-    color: var(--support-02);
+    color: var(--color-danger);
   }
 }
 
@@ -463,7 +463,7 @@
   background: none;
   border: none;
   font-size: 1.5rem;
-  color: var(--settings-text);
+  color: var(--color-text);
   cursor: pointer;
 
   @include respond-to('sm') {
@@ -476,7 +476,7 @@
 }
 
 .saveBtn {
-  background-color: var(--settings-btn-primary);
+  background-color: var(--color-accent-solid);
   border: none;
   border-radius: var(--radius-lg);
   padding: var(--spacing-2) var(--spacing-10);
@@ -490,7 +490,7 @@
   }
   
   &:hover:not(:disabled) {
-    background-color: var(--settings-btn-hover);
+    background-color: var(--color-accent-solid-hover);
   }
   
   &:disabled {
@@ -501,7 +501,7 @@
 
 .error {
   margin-top: var(--spacing-4);
-  color: var(--support-02);
+  color: var(--color-danger);
   font-weight: bold;
 }
 
@@ -524,7 +524,7 @@
 
   p {
     font-size: var(--text-sm);
-    color: var(--settings-text);
+    color: var(--color-text);
     margin: 0 0 var(--spacing-4);
 
     code {
@@ -561,7 +561,7 @@
   code {
     font-family: monospace;
     font-size: var(--text-base);
-    color: var(--primary-light);
+    color: var(--color-accent-text);
     word-break: break-all;
     background: none;
     padding: 0;
@@ -574,7 +574,7 @@
   border: none;
   padding: var(--spacing-1);
   cursor: pointer;
-  color: var(--support-03);
+  color: var(--color-text);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -590,7 +590,7 @@
 }
 
 .copyBtn {
-  background-color: var(--settings-btn-primary);
+  background-color: var(--color-accent-solid);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: var(--spacing-2) var(--spacing-6);
@@ -605,13 +605,13 @@
   }
 
   &:hover {
-    background-color: var(--settings-btn-hover);
+    background-color: var(--color-accent-solid-hover);
   }
 
   &.copied {
-    background-color: var(--support-01);
-    border-color: var(--support-01);
-    color: var(--support-04);
+    background-color: var(--color-ok-solid);
+    border-color: var(--color-ok-solid);
+    color: var(--color-on-accent);
   }
 }
 
@@ -620,7 +620,7 @@
   padding-top: var(--spacing-8);
 
   h4 {
-    color: var(--support-02);
+    color: var(--color-danger);
     margin: 0 0 var(--spacing-2);
     font-size: var(--text-lg);
     font-weight: 600;
@@ -635,8 +635,8 @@
 
 .regenerateBtn {
   background-color: transparent;
-  color: var(--support-02);
-  border: 1px solid var(--support-02);
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger);
   border-radius: var(--radius-lg);
   padding: var(--spacing-3) var(--spacing-8);
   font-size: var(--text-base);
@@ -649,8 +649,8 @@
   }
 
   &:hover:not(:disabled) {
-    background-color: var(--support-02);
-    color: var(--support-04);
+    background-color: var(--color-danger-solid);
+    color: var(--color-on-accent);
   }
 
   &:disabled {
@@ -664,7 +664,7 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-3);
-  background-color: var(--settings-input-bg);
+  background-color: var(--color-surface-2);
   padding: 0 var(--spacing-2) 0 var(--spacing-4);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
@@ -676,7 +676,7 @@
   background: transparent;
   border: none;
   padding: 0;
-  color: var(--settings-input-text);
+  color: var(--color-text);
   font-size: var(--text-base);
   outline: none;
   width: 100%;
@@ -684,8 +684,8 @@
 }
 
 .githubLinkBtn {
-  background-color: var(--support-04);
-  color: var(--support-03);
+  background-color: var(--color-surface);
+  color: var(--color-text);
   border: none;
   border-radius: var(--radius-md);
   padding: var(--spacing-2) var(--spacing-4);
@@ -701,7 +701,7 @@
   margin-left: var(--spacing-2);
 
   &:hover {
-    background-color: var(--support-05);
+    background-color: var(--color-surface-2);
     transform: translateY(-1px);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
   }

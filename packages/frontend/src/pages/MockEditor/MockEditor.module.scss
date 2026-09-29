@@ -30,7 +30,7 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-2);
-  background: var(--support-04);
+  background: var(--color-surface);
   padding: var(--spacing-2) var(--spacing-4);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
@@ -44,7 +44,7 @@
 
 .urlLabel {
   font-size: var(--text-xs);
-  color: var(--secondary-light);
+  color: var(--color-text-muted);
   font-weight: 600;
   text-transform: uppercase;
   white-space: nowrap;
@@ -53,7 +53,7 @@
 .urlDisplay {
   font-family: monospace;
   font-size: var(--text-sm);
-  color: var(--primary-light);
+  color: var(--color-accent-text);
   font-weight: 600;
   word-break: break-all;
 }
@@ -62,7 +62,7 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-2);
-  background: var(--support-04);
+  background: var(--color-surface);
   padding: var(--spacing-2) var(--spacing-4);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
@@ -75,7 +75,7 @@
   code {
     font-family: monospace;
     font-size: var(--text-xs);
-    color: var(--secondary-light);
+    color: var(--color-text-muted);
     background: var(--sidebar-item-active);
     padding: calc(var(--spacing-1) / 2) var(--spacing-1);
     border-radius: var(--radius-sm);
@@ -84,7 +84,7 @@
 
 .authLabel {
   font-size: var(--text-xs);
-  color: var(--secondary-light);
+  color: var(--color-text-muted);
   font-weight: 600;
   text-transform: uppercase;
 }
@@ -102,7 +102,7 @@
 }
 
 .unsaved {
-  color: var(--tertiary-light);
+  color: var(--color-warn);
   font-size: var(--text-sm);
   font-weight: bold;
 }
@@ -130,20 +130,20 @@
 
 
 .settingsBtn {
-  color: var(--secondary-light);
+  color: var(--color-text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
   
   &:hover {
-    color: var(--primary-light);
+    color: var(--color-accent-text);
   }
 }
 
 .aiBtn {
-  background-color: var(--support-04);
-  color: var(--primary-dark);
-  border: 1px solid var(--primary-light);
+  background-color: var(--color-surface);
+  color: var(--color-accent-text);
+  border: 1px solid var(--color-accent);
   font-weight: 600;
 
   @include respond-to('sm') {
@@ -153,8 +153,8 @@
 }
 
 .viewerBadge {
-  background-color: var(--support-04);
-  color: var(--support-03);
+  background-color: var(--color-surface);
+  color: var(--color-text);
   padding: var(--spacing-2) var(--spacing-4);
   border-radius: var(--radius-lg);
   font-size: var(--text-sm);
@@ -288,7 +288,7 @@
   transition: border-color var(--transition-fast);
 
   &:focus {
-    border-color: var(--primary-light);
+    border-color: var(--color-accent);
   }
 }
 
@@ -300,16 +300,16 @@
 
 .copyBtn {
   padding: var(--spacing-1);
-  color: var(--secondary-light);
+  color: var(--color-text-muted);
   transition: all var(--transition-fast);
 
   &:hover {
-    color: var(--primary-light);
+    color: var(--color-accent-text);
     background-color: var(--sidebar-item-active);
   }
 
   &.copied {
-    color: var(--support-01);
+    color: var(--color-ok);
   }
 }
 

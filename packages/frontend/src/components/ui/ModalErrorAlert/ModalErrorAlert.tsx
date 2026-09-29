@@ -17,7 +17,7 @@ export const ModalErrorAlert: React.FC<ModalErrorAlertProps> = ({ message, class
         <Icon
           src={errorAlertIcon}
           size={18}
-          color="var(--support-02)"
+          color="var(--color-danger)"
           className={styles.icon}
         />
       </figure>

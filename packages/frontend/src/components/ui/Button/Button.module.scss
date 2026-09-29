@@ -7,8 +7,8 @@
   border-radius: var(--radius-md);
   padding: var(--spacing-3) var(--spacing-5);
   cursor: pointer;
-  color: var(--support-04);
-  background: var(--primary-light);
+  color: var(--color-on-accent);
+  background: var(--color-accent-solid);
   transition: all var(--transition-fast);
   font-weight: 600;
   gap: var(--spacing-2);
@@ -28,32 +28,32 @@
   cursor: not-allowed;
 }
 .primary {
-  background: var(--primary-light);
-  color: var(--support-04);
+  background: var(--color-accent-solid);
+  color: var(--color-on-accent);
 }
 .secondary {
-  background: var(--support-04);
-  color: var(--support-03);
-  border: 1px solid var(--support-05);
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
 }
 .secondary:hover:not(:disabled) {
-  background: var(--support-05);
-  border-color: var(--support-03);
+  background: var(--color-surface-2);
+  border-color: var(--color-text);
 }
 .ghost {
   background: transparent;
-  color: var(--primary-light);
+  color: var(--color-accent-text);
   border: 1px solid transparent;
 }
 .ghost:hover:not(:disabled) {
   background: var(--sidebar-item-active);
 }
 .danger {
-  background: var(--support-02);
-  color: var(--support-04);
+  background: var(--color-danger-solid);
+  color: var(--color-on-accent);
 }
 .danger:hover:not(:disabled) {
-  background: var(--settings-danger-border);
+  background: var(--color-danger);
 }
 .sm {
   padding: var(--spacing-1) var(--spacing-3);

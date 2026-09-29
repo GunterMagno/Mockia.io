@@ -11,7 +11,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: radial-gradient(circle at top right, var(--primary-dark), transparent 50%);
+  background: radial-gradient(circle at top right, var(--color-accent-solid-hover), transparent 50%);
   opacity: 0.15;
   pointer-events: none;
 }
@@ -51,10 +51,7 @@
   font-weight: 900;
   margin: 0 0 var(--spacing-4);
   letter-spacing: -0.05em;
-  background: linear-gradient(135deg, var(--primary-light), var(--primary-dark));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  text-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  color: var(--color-accent-text);
 }
 
 .subtitle {
@@ -66,7 +63,7 @@
 
 .gradientText {
   font-style: italic;
-  color: var(--primary-light);
+  color: var(--color-accent-text);
 }
 
 .content {
@@ -89,8 +86,8 @@
 }
 
 .primaryBtn {
-  background: var(--primary-light);
-  color: var(--support-04);
+  background: var(--color-accent-solid);
+  color: var(--color-on-accent);
   padding: 16px 32px;
   border-radius: var(--radius-xl);
   font-weight: 700;

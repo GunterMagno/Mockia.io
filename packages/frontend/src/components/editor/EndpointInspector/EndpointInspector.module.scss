@@ -36,7 +36,7 @@
 
 .label {
   font-size: var(--text-sm);
-  color: var(--support-03);
+  color: var(--color-text);
   font-weight: 500;
   margin: 0;
 }
@@ -45,20 +45,20 @@
   box-sizing: border-box;
   width: 100%;
   padding: var(--spacing-3) var(--spacing-4);
-  border: 1px solid var(--support-05);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   font-size: var(--text-base);
-  background: var(--support-04);
-  color: var(--support-03);
+  background: var(--color-surface);
+  color: var(--color-text);
   outline: none;
   transition: all var(--transition-fast);
   box-shadow: var(--shadow-sm);
   cursor: pointer;
 
   &:focus {
-    border-color: var(--primary-light);
+    border-color: var(--color-accent);
     box-shadow: 0 0 0 0.1875rem var(--sidebar-border-color);
-    background: var(--support-04);
+    background: var(--color-surface);
   }
 }
 
@@ -87,15 +87,15 @@
 .copyBtn {
   font-size: var(--text-sm);
   padding: var(--spacing-1) var(--spacing-3);
-  border: 1px solid var(--support-05);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  background: var(--support-04);
-  color: var(--support-03);
+  background: var(--color-surface);
+  color: var(--color-text);
   cursor: pointer;
   transition: all var(--transition-fast);
 
   &:hover {
-    border-color: var(--primary-light);
+    border-color: var(--color-accent);
   }
 }
 
@@ -107,9 +107,9 @@
 .code {
   margin: 0;
   padding: var(--spacing-3);
-  border: 1px solid var(--support-05);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  background: var(--support-04);
+  background: var(--color-surface);
   font-size: var(--text-sm);
   max-height: 16rem;
   overflow: auto;
