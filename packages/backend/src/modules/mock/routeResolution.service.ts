@@ -64,9 +64,12 @@ export async function resolveRoute(
     const allEndpoints = await mockCache.getEndpoints(mockAPI._id.toString());
     
     // Filter by method in-memory (highly optimized)
-    const endpoints = allEndpoints.filter(
-      ep => ep.method === method.toUpperCase()
-    );
+    const verb = String(method ?? '').toUpperCase();
+    let endpoints = allEndpoints.filter(ep => ep.method === verb);
+    // HEAD sin endpoint propio => sirve el GET (Express descarta el cuerpo en HEAD)
+    if (endpoints.length === 0 && verb === 'HEAD') {
+      endpoints = allEndpoints.filter(ep => ep.method === 'GET');
+    }
     
     if (endpoints.length === 0) {
       return null; // No endpoints found for this method

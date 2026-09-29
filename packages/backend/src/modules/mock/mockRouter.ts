@@ -9,8 +9,21 @@ import { EndpointModel } from '../../models/MockAPI.js';
 import { getDefaultErrorBody } from './errorHelper.js';
 import { applyMockHeaders } from './header.service.js';
 import { mockCache } from './mockCache.service.js';
+import { applyCustomHeaders, clampStatus, waitDelay } from './mockBehavior.js';
 
+/**
+ * Express 4 no captura rechazos de handlers async: sin este wrapper cualquier fallo de BD/cache
+ * dispara `unhandledRejection` y index.ts hace process.exit(1).
+ */
 export async function mockRouter(req: Request, res: Response, next: NextFunction) {
+  try {
+    await handleMock(req, res, next);
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function handleMock(req: Request, res: Response, next: NextFunction) {
   const startTime = Date.now();
   applyMockHeaders(res);
   const projectSlug = req.params?.projectSlug as string | undefined;
@@ -77,13 +90,13 @@ export async function mockRouter(req: Request, res: Response, next: NextFunction
   let body = Array.isArray(defaultResp.examples) && defaultResp.examples.length > 0
     ? defaultResp.examples[0]
     : (defaultResp as any).body ?? {};
-  let statusCode = (defaultResp as any).statusCode ?? 200;
+  let statusCode = clampStatus((defaultResp as any).statusCode, 200);
 
   // Apply interceptors if configured (using Cache)
   const cfg = await mockCache.getEndpointConfig(resolved.endpoint._id.toString());
   if (cfg) {
     if (cfg.force_status_code) {
-      statusCode = cfg.force_status_code;
+      statusCode = clampStatus(cfg.force_status_code, statusCode);
       // Get all responses to check for an explicit match (in memory)
       const matchingResponse = responses.find(r => r.statusCode === statusCode);
       if (matchingResponse) {
@@ -97,13 +110,8 @@ export async function mockRouter(req: Request, res: Response, next: NextFunction
     if (cfg.override_response !== undefined && cfg.override_response !== null) {
       body = cfg.override_response;
     }
-    if (cfg.delay_ms && cfg.delay_ms > 0) {
-      const elapsed = Date.now() - startTime;
-      const remaining = Math.max(0, cfg.delay_ms - elapsed);
-      if (remaining > 0) {
-        await new Promise((resolve) => setTimeout(resolve, remaining));
-      }
-    }
+    applyCustomHeaders(res, cfg.headers);
+    await waitDelay(startTime, cfg.delay_ms, cfg.jitter_ms);
   }
 
   res.setHeader('Content-Type', 'application/json');

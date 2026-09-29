@@ -2,8 +2,18 @@
   box-sizing: border-box;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 html, body, #root {
   height: 100%;
+}
+
+/* clip (no hidden) evita scroll horizontal sin romper position: sticky */
+html, body {
+  overflow-x: clip;
 }
 
 body {
@@ -13,6 +23,23 @@ body {
   color: var(--text);
 }
 
+img, svg, video, canvas {
+  max-width: 100%;
+}
+
+pre {
+  max-width: 100%;
+}
+
 .container {
   padding: var(--spacing-4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }

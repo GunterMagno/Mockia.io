@@ -18,7 +18,8 @@ export interface NormalizationResult {
  * @returns Normalized type representation
  */
 export function normalizeType(type: string): NormalizationResult {
-  const original = type.trim();
+  // Tope de longitud: los regex lazy `<(.+?)>` son cuadraticos con entradas enormes sin `>`; no-string no debe lanzar
+  const original = String(type ?? '').trim().slice(0, MAX_TYPE_LENGTH);
   let normalized = original;
   let simplified = false;
 

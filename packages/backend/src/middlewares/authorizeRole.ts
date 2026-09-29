@@ -14,7 +14,10 @@ import type { ProjectRole } from '@mockia/shared';
  * @param allowedRoles - Array of roles that are allowed to access this endpoint
  * @returns Middleware function that checks user's role in the project
  */
-export function authorizeRole(allowedRoles: ProjectRole[]) {
+export function authorizeRole(
+  allowedRoles: ProjectRole[],
+  getRef: (req: AuthenticatedRequest) => unknown = (req) => req.params.id
+) {
   return async (
     req: AuthenticatedRequest,
     res: Response,
@@ -22,7 +25,9 @@ export function authorizeRole(allowedRoles: ProjectRole[]) {
   ): Promise<void> => {
     try {
       const userId = req.user?.id;
-      const projectId = req.params.id;
+      const ref = getRef(req);
+      // Only strings: an object here would reach the Mongo filter (NoSQL injection).
+      const projectId = typeof ref === 'string' ? ref : undefined;
 
       if (!userId) {
         throw new AppError(

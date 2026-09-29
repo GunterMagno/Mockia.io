@@ -28,35 +28,43 @@ export function extractJsonFromLLMOutput(rawOutput: string): unknown {
     );
   }
 
-  let jsonString = rawOutput.trim();
+  if (rawOutput.length > MAX_LLM_OUTPUT_CHARS) {
+    throw new AppError('AI output too large', ErrorCode.VALIDATION_ERROR, 400);
+  }
 
-  // Try to extract JSON from markdown code blocks first
-  const markdownMatch = jsonString.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (markdownMatch) {
-    jsonString = markdownMatch[1].trim();
-  } else {
-    // Try to find JSON by looking for first { and last }
-    const firstBrace = jsonString.indexOf('{');
-    const lastBrace = jsonString.lastIndexOf('}');
+  const text = rawOutput.replace(/^﻿/, '').trim();
 
-    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-      jsonString = jsonString.substring(firstBrace, lastBrace + 1);
+  // Candidatos en orden de preferencia: bloques markdown, objeto {..}, array [..], texto completo.
+  // Antes solo se probaba UN candidato: un bloque de codigo no-JSON o un array rompian el parseo.
+  const candidates: string[] = [];
+  for (const m of text.matchAll(/```[a-zA-Z]*\s*([\s\S]*?)```/g)) candidates.push(m[1].trim());
+  for (const [open, close] of [['{', '}'], ['[', ']']] as const) {
+    const first = text.indexOf(open);
+    const last = text.lastIndexOf(close);
+    if (first !== -1 && last > first) candidates.push(text.substring(first, last + 1));
+  }
+  candidates.push(text);
+
+  let lastError: unknown;
+  for (const candidate of candidates) {
+    try {
+      const parsed = JSON.parse(candidate);
+      // Un primitivo suelto ("42", "true") no es una respuesta estructurada valida
+      if (parsed !== null && typeof parsed === 'object') return parsed;
+    } catch (error) {
+      lastError = error;
     }
   }
 
-  // Attempt to parse the extracted JSON
-  try {
-    return JSON.parse(jsonString);
-  } catch (error) {
-    // Log the problematic string for debugging
-    console.error('Failed to parse extracted JSON:', jsonString.substring(0, 200));
-    throw new AppError(
-      `Failed to parse AI output as JSON: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      ErrorCode.INTERNAL_SERVER_ERROR,
-      500
-    );
-  }
+  console.error('Failed to parse extracted JSON:', text.substring(0, 200));
+  throw new AppError(
+    `Failed to parse AI output as JSON: ${lastError instanceof Error ? lastError.message : 'no JSON object or array found'}`,
+    ErrorCode.INTERNAL_SERVER_ERROR,
+    500
+  );
 }
+
+const MAX_LLM_OUTPUT_CHARS = 2_000_000;
 
 /**
  * Safety wrapper that returns null instead of throwing if JSON extraction fails

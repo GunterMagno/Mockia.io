@@ -19,12 +19,23 @@ import notificationRouter from './routes/notification.routes.js';
 import { startProjectCleanupScheduler } from './scheduler/projectCleanup.js';
 import swaggerUi from 'swagger-ui-express';
 import { specs } from './config/swagger.js';
+import { billingRouter } from './modules/billing/routes.js';
+import { mockQuotaGate } from './middlewares/planGate.js';
+import { rateLimit } from './middlewares/rateLimit.js';
+import { authenticateToken } from './middlewares/authenticateToken.js';
+import { authorizeRole } from './middlewares/authorizeRole.js';
+import { assertJwtConfig } from './services/jwt.service.js';
+import type { ProjectRole } from '@mockia/shared';
 
 dotenv.config();
 
 const app: Express = express();
 const port = process.env.BACKEND_PORT || 3000;
 const isDevelopment = process.env.NODE_ENV === 'development';
+
+// Behind a reverse proxy (nginx) req.ip must come from X-Forwarded-For, or every client shares one rate-limit bucket.
+// TRUST_PROXY = number of proxy hops (default 1 in production, off otherwise).
+app.set('trust proxy', Number(process.env.TRUST_PROXY ?? (process.env.NODE_ENV === 'production' ? 1 : 0)));
 
 // ============================================================================
 // SECURITY AND UTILITY MIDDLEWARES
@@ -33,29 +44,55 @@ const isDevelopment = process.env.NODE_ENV === 'development';
 // Helmet: HTTP headers security
 app.use(helmet());
 
-// CORS: Cross-origin resource sharing control
+// CORS: comma-separated allow-list. Unset = local dev origin only (never open by default).
+// "*" is accepted but then credentials are disabled (Bearer tokens do not need them).
+const corsOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+const corsWildcard = corsOrigins.includes('*');
+const corsMiddleware = cors({
+  origin: corsWildcard ? '*' : corsOrigins,
+  credentials: !corsWildcard,
+  optionsSuccessStatus: 200,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+});
 app.use((req, res, next) => {
   // Bypasses the restrictive global CORS domain check for public/mock endpoints,
   // allowing them to handle their own open CORS rules (origin: '*') in their respective routers.
   if (req.path.startsWith('/api/mock') || req.path.startsWith('/mock')) {
     return next();
   }
-  cors({
-    origin: process.env.CORS_ORIGIN,
-    credentials: true,
-    optionsSuccessStatus: 200,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  })(req, res, next);
+  corsMiddleware(req, res, next);
 });
 
 // Morgan: HTTP request logging
 const morganFormat = isDevelopment ? 'dev' : 'combined';
 app.use(morgan(morganFormat));
 
-// Express.json with 10mb limit
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ limit: '10mb', extended: true }));
+// Rate limiting (sliding window, per IP). Off under jest so suites that hammer login/register stay deterministic.
+if (process.env.NODE_ENV !== 'test') {
+  const MIN15 = 15 * 60 * 1000;
+  const globalLimiter = rateLimit({ windowMs: MIN15, max: 1000 });
+  const authLimiter = rateLimit({ windowMs: MIN15, max: 20 }); // login / register / refresh brute force
+  const heavyLimiter = rateLimit({ windowMs: MIN15, max: 60 }); // AI (paid upstream) and GitHub clone
+  // Public mock traffic (own quota gate), Stripe webhook and health probes are not throttled here.
+  app.use('/api', (req, res, next) =>
+    /^\/(mock|billing|health)(\/|$)/.test(req.path) ? next() : globalLimiter(req, res, next)
+  );
+  app.use('/api/auth', (req, res, next) => (req.method === 'POST' ? authLimiter(req, res, next) : next()));
+  app.use('/api/ai', heavyLimiter);
+  app.use('/api/github', heavyLimiter);
+}
+
+// Billing: MUST stay before express.json (Stripe webhook needs the raw body). Mock quota gate self-scopes to /mock and /api/mock.
+app.use('/api/billing', billingRouter);
+app.use(mockQuotaGate);
+
+// Body size limit (1mb: enough for OpenAPI/spec payloads, cuts memory-exhaustion DoS)
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ limit: '1mb', extended: true }));
 
 // ============================================================================
 // HEALTH CHECK ROUTES
@@ -69,8 +106,6 @@ app.get('/api/health', (req: Request, res: Response) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV,
     database: dbStatus,
   });
 });
@@ -118,7 +153,22 @@ app.use('/api/mock', cors({
 // Endpoints routes (protected)
 app.use('/api/endpoints', endpointsRouter);
 
-// Interceptor/Override config routes
+// Interceptor/Override config routes.
+// Guard for the unauthenticated PUT (was P0: anyone could rewrite any endpoint's config): only OWNER/EDITOR of the
+// project pass; then next() falls through to the interceptor route. endpointId/_id are dropped from the body
+// so the DTO cannot override the endpoint bound by the URL.
+app.put(
+  '/api/projects/:id/endpoints/:eid/config',
+  authenticateToken,
+  authorizeRole(['OWNER', 'EDITOR'] as unknown as ProjectRole[]),
+  (req: Request, _res: Response, next) => {
+    if (req.body && typeof req.body === 'object') {
+      delete req.body.endpointId;
+      delete req.body._id;
+    }
+    next();
+  }
+);
 mountInterceptorRoutes(app);
 
 // Swagger Docs for Mock Router per-project (before catch-all)
@@ -161,6 +211,9 @@ app.use(errorHandler);
  */
 const startServer = async (): Promise<void> => {
   try {
+    // Fail fast on missing/weak JWT secrets
+    assertJwtConfig();
+
     // Connect to MongoDB
     await connectDB();
 

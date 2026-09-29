@@ -7,6 +7,8 @@ interface EndpointConfigDocument extends Document {
   endpointId: Types.ObjectId;
   force_status_code?: number;
   delay_ms?: number;
+  jitter_ms?: number;
+  headers?: Record<string, string>;
   override_response?: any;
   createdAt: Date;
   updatedAt: Date;
@@ -36,6 +38,17 @@ const endpointConfigSchema = new Schema<EndpointConfigDocument>(
       type: Schema.Types.Mixed,
       required: false,
       default: null,
+    },
+    jitter_ms: {
+      type: Number,
+      required: false,
+      min: 0,
+      max: 30000,
+    },
+    // Headers de respuesta custom; se filtran otra vez al servirlos (mockBehavior.sanitizeHeaders)
+    headers: {
+      type: Schema.Types.Mixed,
+      required: false,
     },
   },
   { timestamps: true }

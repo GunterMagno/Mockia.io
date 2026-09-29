@@ -9,6 +9,8 @@
 import { faker } from '@faker-js/faker';
 import type { SampleData } from '@mockia/shared';
 
+const MAX_SAMPLE_COUNT = 100;
+
 /**
  * Builds realistic sample data using Faker.js
  * 
@@ -26,9 +28,14 @@ export function buildSampleData(options?: {
   productCount?: number;
   orderCount?: number;
 }): SampleData {
-  const userCount = options?.userCount ?? 3;
-  const productCount = options?.productCount ?? 4;
-  const orderCount = options?.orderCount ?? 2;
+  // Acotar: 0 usuarios/productos hace que arrayElement([]) lance; negativos/NaN/enormes rompen Array.from
+  const clamp = (v: number | undefined, def: number, min: number) => {
+    const n = Number(v ?? def);
+    return Number.isFinite(n) ? Math.min(MAX_SAMPLE_COUNT, Math.max(min, Math.floor(n))) : def;
+  };
+  const userCount = clamp(options?.userCount, 3, 1);
+  const productCount = clamp(options?.productCount, 4, 1);
+  const orderCount = clamp(options?.orderCount, 2, 0);
 
   // Generate sample users
   const users = Array.from({ length: userCount }, () => ({

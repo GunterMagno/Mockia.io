@@ -116,6 +116,67 @@
   --settings-btn-primary: #8a8ce0;
   --settings-btn-hover: #7a7cc0;
   --settings-btn-secondary: #c0c2ef;
+
+  /* =========================================
+     Tokens que faltaban (se usaban sin definir)
+  ========================================= */
+  --spacing-0: 0;
+  --spacing-12: 3rem;
+  --spacing-16: 4rem;
+  --spacing-20: 5rem;
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
+  --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.25);
+  --primary: var(--primary-light);
+  --primary-color-alpha: rgba(79, 70, 229, 0.25);
+  --primary-color-alpha-low: rgba(79, 70, 229, 0.1);
+
+  /* =========================================
+     Design System "ds": identidad oscura (landing + inspector)
+     Contraste calculado a mano (WCAG 2.x), sobre --ds-bg / --ds-surface:
+       --ds-text        #f4f4f5  ~18:1 / ~16:1  (AAA)
+       --ds-text-muted  #b4b4bd  ~9.5:1 / ~8.6:1 (AAA)
+       --ds-ok          #10b981  ~8:1  / ~7.1:1 (AAA, texto/iconos)
+       --ds-accent-text #a5b4fc  ~10:1 / ~9:1   (AAA, texto)
+     --ds-accent (#6366f1) solo para relleno, borde y foco, no para texto.
+  ========================================= */
+  --ds-bg: #09090b;
+  --ds-surface: #18181b;
+  --ds-surface-2: #27272a;
+  --ds-border: #3f3f46;
+  --ds-text: #f4f4f5;
+  --ds-text-muted: #b4b4bd;
+  --ds-ok: #10b981;
+  --ds-accent: #6366f1;
+  --ds-accent-text: #a5b4fc;
+  --ds-warn: #fbbf24;
+  --ds-danger: #f87171;
+  --ds-glow-ok: rgba(16, 185, 129, 0.25);
+  --ds-glow-accent: rgba(99, 102, 241, 0.3);
+
+  /* Tipografia: mono para JSON/endpoints, sans geometrica para UI */
+  --ds-font-ui: "Inter", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  --ds-font-mono: "JetBrains Mono", "Fira Code", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+  /* Escala fluida (clamp): 360px -> 1440px */
+  --ds-step-0: clamp(0.9375rem, 0.9rem + 0.2vw, 1.0625rem);
+  --ds-step-1: clamp(1.125rem, 1.05rem + 0.35vw, 1.375rem);
+  --ds-step-2: clamp(1.375rem, 1.2rem + 0.9vw, 2rem);
+  --ds-step-3: clamp(1.75rem, 1.4rem + 1.8vw, 3rem);
+  --ds-step-4: clamp(2.25rem, 1.6rem + 3.2vw, 4.5rem);
+
+  /* Densidad: la landing usa "comfortable"; el editor puede usar "compact" */
+  --ds-pad-section: clamp(3rem, 2rem + 5vw, 7rem);
+  --ds-pad-card: clamp(1.25rem, 1rem + 1.5vw, 2.5rem);
+  --ds-gap: clamp(1rem, 0.75rem + 1.2vw, 2rem);
+  --ds-gutter: clamp(1rem, 0.5rem + 3vw, 5rem);
+  --ds-tap: 44px;
+}
+
+/* Densidad compacta para zonas de trabajo (editor) */
+[data-density='compact'] {
+  --ds-pad-card: var(--spacing-3);
+  --ds-gap: var(--spacing-2);
+  --ds-tap: 40px;
 }
 
 /* =========================================

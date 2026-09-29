@@ -140,24 +140,34 @@ class MockCacheService {
    * Invalidates all cache entries for a given project slug
    */
   async invalidateProject(projectSlug: string): Promise<void> {
-    const project = await this.getProject(projectSlug);
+    // Lo cacheado se lee primero: si el proyecto ya no existe en BD, aun asi se limpian sus claves.
+    const cached = this.cache.get<ProjectDocument>(`project:${projectSlug}`);
     this.cache.delete(`project:${projectSlug}`);
-    if (project) {
-      const projectIdStr = project._id.toString();
-      this.cache.delete(`project:id:${projectIdStr}`);
-      this.cache.delete(`mockapi:${projectIdStr}`);
+    try {
+      const project = cached ?? (await this.getProject(projectSlug));
+      this.cache.delete(`project:${projectSlug}`);
+      if (project) {
+        const projectIdStr = project._id.toString();
+        this.cache.delete(`project:id:${projectIdStr}`);
+        const cachedApi = this.cache.get<any>(`mockapi:${projectIdStr}`);
+        if (cachedApi) this.cache.delete(`endpoints:${cachedApi._id.toString()}`);
+        this.cache.delete(`mockapi:${projectIdStr}`);
 
-      const mockAPI = await MockAPIModel.findOne({ projectId: project._id });
-      if (mockAPI) {
-        const mockApiIdStr = mockAPI._id.toString();
-        this.cache.delete(`endpoints:${mockApiIdStr}`);
+        const mockAPI = await MockAPIModel.findOne({ projectId: project._id });
+        if (mockAPI) {
+          const mockApiIdStr = mockAPI._id.toString();
+          this.cache.delete(`endpoints:${mockApiIdStr}`);
 
-        // Also clear configs for this project's endpoints
-        const endpoints = await EndpointModel.find({ mockApiId: mockAPI._id });
-        for (const ep of endpoints) {
-          this.cache.delete(`config:${ep._id.toString()}`);
+          // Also clear configs for this project's endpoints
+          const endpoints = await EndpointModel.find({ mockApiId: mockAPI._id });
+          for (const ep of endpoints) {
+            this.cache.delete(`config:${ep._id.toString()}`);
+          }
         }
       }
+    } catch {
+      // Un fallo de BD no puede dejar datos viejos servidos ni tumbar la peticion: vaciar todo es seguro.
+      this.cache.clear();
     }
   }
 

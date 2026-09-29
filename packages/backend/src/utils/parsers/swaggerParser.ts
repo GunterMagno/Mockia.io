@@ -11,6 +11,8 @@ import type {
   ParsedSwaggerFile,
 } from '../../types/swaggerParser.js';
 
+const MAX_SPEC_BYTES = 5 * 1024 * 1024;
+
 /**
  * Parses a Swagger/OpenAPI file (YAML or JSON) and extracts relevant information
  * @param filePath - Path to the OpenAPI/Swagger file
@@ -23,6 +25,9 @@ export async function parseSwaggerFile(filePath: string): Promise<ParsedSwaggerF
     throw new Error(`File not found: ${filePath}`);
   }
 
+  if (fs.statSync(absolutePath).size > MAX_SPEC_BYTES) {
+    throw new Error(`Swagger/OpenAPI file too large (max ${MAX_SPEC_BYTES} bytes)`);
+  }
   const fileContent = fs.readFileSync(absolutePath, 'utf-8');
   let swaggerObj: Record<string, unknown>;
 
@@ -31,6 +36,10 @@ export async function parseSwaggerFile(filePath: string): Promise<ParsedSwaggerF
     swaggerObj = yaml.load(fileContent) as Record<string, unknown>;
   } catch (error) {
     throw new Error(`Failed to parse Swagger/OpenAPI file: ${error}`);
+  }
+  // yaml.load devuelve undefined/null/string/array para archivos vacios o no-objeto: sin esto, TypeError
+  if (!swaggerObj || typeof swaggerObj !== 'object' || Array.isArray(swaggerObj)) {
+    throw new Error('Invalid Swagger/OpenAPI file: root must be a mapping/object');
   }
 
   const version = String(swaggerObj.openapi || swaggerObj.swagger || '3.0.0');

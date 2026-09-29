@@ -6,10 +6,15 @@
 import { Router } from 'express';
 import { resolveRouteHandler, getProjectEndpointsHandler, mockProxyHandler } from '../controllers/mock.controller.js';
 import { authenticateToken } from '../middlewares/authenticateToken.js';
+import { authorizeRole } from '../middlewares/authorizeRole.js';
 import { validate } from '../middlewares/validateRequest.js';
 import Joi from 'joi';
+import type { ProjectRole } from '@mockia/shared';
 
 export const mockRouter = Router();
+
+// Any project member (viewer included) may read; non-members get 403.
+const ANY_MEMBER = ['OWNER', 'EDITOR', 'VIEWER'] as unknown as ProjectRole[];
 
 /**
  * Validation schemas
@@ -62,6 +67,7 @@ mockRouter.post(
   '/resolve-route',
   authenticateToken,
   validate({ body: resolveRouteSchema }),
+  authorizeRole(ANY_MEMBER, (req) => req.body?.projectSlug),
   resolveRouteHandler
 );
 
@@ -106,6 +112,7 @@ mockRouter.post(
 mockRouter.get(
   '/endpoints/:projectSlug',
   authenticateToken,
+  authorizeRole(ANY_MEMBER, (req) => req.params.projectSlug),
   getProjectEndpointsHandler
 );
 

@@ -3,6 +3,42 @@ import { EndpointConfigModel } from '../../models/EndpointConfig.js';
 import { AppError } from '../../middlewares/errorHandler.js';
 import { ErrorCode } from '@mockia/shared';
 import { mockCache } from './mockCache.service.js';
+import { clampDelay, clampStatus, sanitizeHeaders } from './mockBehavior.js';
+
+export interface EndpointConfigDto {
+  force_status_code?: number | null;
+  delay_ms?: number | null;
+  jitter_ms?: number | null;
+  headers?: Record<string, string> | null;
+  override_response?: any;
+}
+
+export type NormalizedConfigDto = {
+  [K in keyof EndpointConfigDto]: Exclude<EndpointConfigDto[K], null>;
+};
+
+/**
+ * Valida y acota el DTO del interceptor: status 200-599 (0/null lo desactiva), latencias >= 0 acotadas
+ * a MAX_DELAY_MS, headers filtrados. Lanza 400 ante valores no numericos o fuera de rango.
+ */
+export function normalizeConfigDto(dto: EndpointConfigDto): NormalizedConfigDto {
+  const bad = (field: string) => new AppError(`Invalid value for ${field}`, ErrorCode.VALIDATION_ERROR, 400);
+  const out: NormalizedConfigDto = {};
+  if (dto.force_status_code !== undefined) {
+    const n = dto.force_status_code === null ? 0 : Number(dto.force_status_code);
+    if (n !== 0 && clampStatus(n, 0) === 0) throw bad('force_status_code');
+    out.force_status_code = n;
+  }
+  for (const f of ['delay_ms', 'jitter_ms'] as const) {
+    if (dto[f] === undefined) continue;
+    const n = dto[f] === null ? 0 : Number(dto[f]);
+    if (!Number.isFinite(n) || n < 0) throw bad(f);
+    out[f] = clampDelay(n);
+  }
+  if (dto.headers !== undefined) out.headers = sanitizeHeaders(dto.headers);
+  if (dto.override_response !== undefined) out.override_response = dto.override_response;
+  return out;
+}
 
 /**
  * Sets or updates interceptor config for a given endpoint
@@ -11,8 +47,9 @@ import { mockCache } from './mockCache.service.js';
 export async function setEndpointConfig(
   projectId: string,
   endpointId: string,
-  dto: { force_status_code?: number; delay_ms?: number; override_response?: any }
+  rawDto: EndpointConfigDto
 ) {
+  const dto = normalizeConfigDto(rawDto ?? {});
   // Load endpoint to verify ownership
   const endpoint = await EndpointModel.findById(endpointId as any);
   if (!endpoint) {
@@ -42,6 +79,8 @@ export async function setEndpointConfig(
   } else {
     if (dto.force_status_code !== undefined) cfg.force_status_code = dto.force_status_code;
     if (dto.delay_ms !== undefined) cfg.delay_ms = dto.delay_ms;
+    if (dto.jitter_ms !== undefined) cfg.jitter_ms = dto.jitter_ms;
+    if (dto.headers !== undefined) cfg.headers = dto.headers;
     if (dto.override_response !== undefined) cfg.override_response = dto.override_response;
   }
   await cfg.save();

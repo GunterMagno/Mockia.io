@@ -17,6 +17,7 @@ import {
 } from './controller.js';
 import { authenticateToken } from '../../middlewares/authenticateToken.js';
 import { authorizeRole } from '../../middlewares/authorizeRole.js';
+import { enforceProjectLimit } from '../../middlewares/planGate.js';
 import { validate } from '../../middlewares/validateRequest.js';
 import { createProjectSchema, updateProjectSchema, addProjectMemberSchema, importGitHubSchema } from './validation.js';
 import type { ProjectRole } from '@mockia/shared';
@@ -72,6 +73,7 @@ export const projectsRouter = Router();
 projectsRouter.post(
   '/',
   authenticateToken,
+  enforceProjectLimit,
   validate({ body: createProjectSchema }),
   createProjectHandler
 );

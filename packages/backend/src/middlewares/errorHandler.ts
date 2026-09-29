@@ -46,12 +46,15 @@ export const errorHandler = (
       'Validation error',
       ErrorCode.VALIDATION_ERROR,
       400,
-      { originalError: err.message }
+      // Mongoose messages echo schema paths/values: development only.
+      process.env.NODE_ENV === 'development' ? { originalError: err.message } : undefined
     );
   }
   else {
+    // Unexpected errors: real message only in development/test, generic in production (no internals leak).
+    const expose = process.env.NODE_ENV !== 'production';
     appError = new AppError(
-      err.message || 'Internal server error',
+      expose ? err.message || 'Internal server error' : 'Internal server error',
       ErrorCode.INTERNAL_SERVER_ERROR,
       500
     );

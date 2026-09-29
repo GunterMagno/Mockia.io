@@ -8,6 +8,12 @@ interface UserDocument extends Document {
   email: string;
   username: string;
   passwordHash: string;
+  /** Subscription tier. Effective tier also depends on billingStatus (see modules/billing/plans.ts). */
+  plan: 'free' | 'pro' | 'team';
+  /** Mirrors Stripe subscription state. Anything but 'active' degrades to the free tier. */
+  billingStatus: 'active' | 'past_due' | 'canceled';
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -33,6 +39,18 @@ const userSchema = new Schema<UserDocument>(
       type: String,
       required: true,
     },
+    plan: {
+      type: String,
+      enum: ['free', 'pro', 'team'],
+      default: 'free',
+    },
+    billingStatus: {
+      type: String,
+      enum: ['active', 'past_due', 'canceled'],
+      default: 'active',
+    },
+    stripeCustomerId: { type: String, index: true, sparse: true },
+    stripeSubscriptionId: { type: String },
   },
   {
     timestamps: true,

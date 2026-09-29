@@ -13,6 +13,7 @@ import { ProjectModel } from '../models/Project.js';
 import { EndpointConfigModel } from '../models/EndpointConfig.js';
 import { getDefaultErrorBody } from '../modules/mock/errorHelper.js';
 import { mockCache } from '../modules/mock/mockCache.service.js';
+import { applyCustomHeaders, clampStatus, waitDelay } from '../modules/mock/mockBehavior.js';
 
 /**
  * POST /api/mock/resolve-route
@@ -284,14 +285,14 @@ export const mockProxyHandler = asyncHandler(
     }
 
     // 5. Return the mock response
-    let statusCode = targetResponse.statusCode || 200;
+    let statusCode = clampStatus(targetResponse.statusCode, 200);
     let responseData = targetResponse.schema || targetResponse.examples?.[0] || {};
 
     // Apply interceptors/overrides if configured (using Cache)
     const cfg = await mockCache.getEndpointConfig(resolvedRoute.endpoint._id.toString());
     if (cfg) {
       if (cfg.force_status_code) {
-        statusCode = cfg.force_status_code;
+        statusCode = clampStatus(cfg.force_status_code, statusCode);
         // If there's an explicit response for this forced status code, use it!
         const matchingResponse = responses.find(r => r.statusCode === statusCode);
         if (matchingResponse) {
@@ -305,13 +306,8 @@ export const mockProxyHandler = asyncHandler(
       if (cfg.override_response !== undefined && cfg.override_response !== null) {
         responseData = cfg.override_response;
       }
-      if (cfg.delay_ms && cfg.delay_ms > 0) {
-        const elapsed = Date.now() - startTime;
-        const remaining = Math.max(0, cfg.delay_ms - elapsed);
-        if (remaining > 0) {
-          await new Promise((resolve) => setTimeout(resolve, remaining));
-        }
-      }
+      applyCustomHeaders(res, cfg.headers);
+      await waitDelay(startTime, cfg.delay_ms, cfg.jitter_ms);
     }
 
     res.status(statusCode).json(responseData);
