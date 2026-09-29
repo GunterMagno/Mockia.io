@@ -6,6 +6,10 @@
 
 import { MockAPIOutput, ErrorCode } from '@mockia/shared';
 import { AppError } from '../../middlewares/errorHandler.js';
+import { findSchemaProblem } from '../../utils/parsers/schemaGuard.js';
+
+/** Tope de endpoints por especificacion generada: cada uno son N escrituras a BD. */
+export const MAX_GENERATED_ENDPOINTS = 200;
 
 /**
  * Validates that the parsed object is a valid MockAPIOutput
@@ -80,6 +84,24 @@ export function validateGeneratedApi(data: unknown): MockAPIOutput {
   if (obj.endpoints.length === 0) {
     throw new AppError(
       'endpoints array must not be empty',
+      ErrorCode.VALIDATION_ERROR,
+      400
+    );
+  }
+
+  if (obj.endpoints.length > MAX_GENERATED_ENDPOINTS) {
+    throw new AppError(
+      `endpoints array too large (max ${MAX_GENERATED_ENDPOINTS})`,
+      ErrorCode.VALIDATION_ERROR,
+      400
+    );
+  }
+
+  // Profundidad/nodos/ciclos: BSON rechaza >100 niveles y un ciclo rompe la serializacion mas tarde
+  const problem = findSchemaProblem(obj);
+  if (problem) {
+    throw new AppError(
+      `AI output rejected: nested structure too complex (${problem})`,
       ErrorCode.VALIDATION_ERROR,
       400
     );

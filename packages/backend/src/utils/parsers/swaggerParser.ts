@@ -10,6 +10,7 @@ import type {
   ComponentSchema,
   ParsedSwaggerFile,
 } from '../../types/swaggerParser.js';
+import { findSchemaProblem } from './schemaGuard.js';
 
 const MAX_SPEC_BYTES = 5 * 1024 * 1024;
 
@@ -40,6 +41,12 @@ export async function parseSwaggerFile(filePath: string): Promise<ParsedSwaggerF
   // yaml.load devuelve undefined/null/string/array para archivos vacios o no-objeto: sin esto, TypeError
   if (!swaggerObj || typeof swaggerObj !== 'object' || Array.isArray(swaggerObj)) {
     throw new Error('Invalid Swagger/OpenAPI file: root must be a mapping/object');
+  }
+
+  // Aliases YAML circulares o gigantes: se rechazan aqui, antes de que cualquier consumidor los recorra/serialice
+  const problem = findSchemaProblem(swaggerObj);
+  if (problem) {
+    throw new Error(`Invalid Swagger/OpenAPI file: structure rejected (${problem})`);
   }
 
   const version = String(swaggerObj.openapi || swaggerObj.swagger || '3.0.0');

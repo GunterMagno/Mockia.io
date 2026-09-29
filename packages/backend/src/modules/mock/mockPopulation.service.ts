@@ -6,6 +6,7 @@
 import { MockAPIOutput } from '@mockia/shared';
 import { MockAPIModel, EndpointModel, ResponseModel } from '../../models/MockAPI.js';
 import { AppError } from '../../middlewares/errorHandler.js';
+import { mockCache } from './mockCache.service.js';
 import { ErrorCode } from '@mockia/shared';
 import { Types } from 'mongoose';
 
@@ -148,6 +149,7 @@ export async function populateEndpointsFromLLM(
     // 5. Update MockAPI with endpoint references (appended)
     mockApi.endpoints = endpointIds;
     await mockApi.save();
+    mockCache.invalidateMockApi(mockApi._id.toString());
     console.log(`[PopulationService] ✓ All endpoints saved (${endpointsCreated})`);
 
     return {
@@ -224,6 +226,7 @@ export async function deleteAllEndpointsForMockAPI(
 
     // Delete all endpoints
     const result = await EndpointModel.deleteMany({ mockApiId: objectId });
+    mockCache.invalidateMockApi(mockApiId);
 
     return result.deletedCount || 0;
   } catch (error) {

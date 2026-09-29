@@ -121,7 +121,7 @@ export function compactType(type: string, maxLength: number = 80): string {
  * @returns The base type without modifiers
  */
 export function extractBaseType(type: string): string {
-  let base = type.trim();
+  let base = String(type ?? '').trim().slice(0, MAX_TYPE_LENGTH);
 
   // Remove array brackets
   base = base.replace(/\[\]$/g, '');

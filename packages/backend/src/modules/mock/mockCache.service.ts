@@ -64,6 +64,15 @@ class MemoryCache {
 
 class MockCacheService {
   private cache = new MemoryCache();
+  /**
+   * Sube en cada invalidacion. Una carga que empezo antes de invalidar no puede escribir su resultado
+   * (posiblemente viejo) en cache despues: sin esto, una lectura en vuelo "resucita" datos borrados.
+   */
+  private generation = 0;
+
+  private setIfFresh<T>(startGen: number, key: string, value: T): void {
+    if (startGen === this.generation) this.cache.set(key, value);
+  }
 
   /**
    * Resolves or gets project by its slug
@@ -73,6 +82,7 @@ class MockCacheService {
     const cached = this.cache.get<ProjectDocument>(cacheKey);
     if (cached) return cached;
 
+    const startGen = this.generation;
     let project;
     const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(projectSlug);
     if (isValidObjectId) {
@@ -83,8 +93,8 @@ class MockCacheService {
     }
 
     if (project) {
-      this.cache.set(cacheKey, project);
-      this.cache.set(`project:id:${project._id.toString()}`, project);
+      this.setIfFresh(startGen, cacheKey, project);
+      this.setIfFresh(startGen, `project:id:${project._id.toString()}`, project);
     }
     return project;
   }
@@ -97,9 +107,10 @@ class MockCacheService {
     const cached = this.cache.get<any>(cacheKey);
     if (cached) return cached;
 
+    const startGen = this.generation;
     const mockAPI = await MockAPIModel.findOne({ projectId });
     if (mockAPI) {
-      this.cache.set(cacheKey, mockAPI);
+      this.setIfFresh(startGen, cacheKey, mockAPI);
     }
     return mockAPI;
   }
@@ -112,12 +123,13 @@ class MockCacheService {
     const cached = this.cache.get<EndpointDocument[]>(cacheKey);
     if (cached) return cached;
 
+    const startGen = this.generation;
     const query = EndpointModel.find({ mockApiId });
     const endpoints = typeof (query as any).populate === 'function'
       ? await (query as any).populate('responses')
       : await query;
 
-    this.cache.set(cacheKey, endpoints);
+    this.setIfFresh(startGen, cacheKey, endpoints);
     return endpoints;
   }
 
@@ -129,9 +141,10 @@ class MockCacheService {
     const cached = this.cache.get<EndpointConfigDocument>(cacheKey);
     if (cached) return cached;
 
+    const startGen = this.generation;
     const cfg = await EndpointConfigModel.findOne({ endpointId });
     if (cfg) {
-      this.cache.set(cacheKey, cfg);
+      this.setIfFresh(startGen, cacheKey, cfg);
     }
     return cfg;
   }
@@ -140,6 +153,7 @@ class MockCacheService {
    * Invalidates all cache entries for a given project slug
    */
   async invalidateProject(projectSlug: string): Promise<void> {
+    this.generation++;
     // Lo cacheado se lee primero: si el proyecto ya no existe en BD, aun asi se limpian sus claves.
     const cached = this.cache.get<ProjectDocument>(`project:${projectSlug}`);
     this.cache.delete(`project:${projectSlug}`);
@@ -175,6 +189,7 @@ class MockCacheService {
    * Invalidates project cache by ID directly
    */
   async invalidateProjectId(projectId: string): Promise<void> {
+    this.generation++;
     const idKey = `project:id:${projectId}`;
     const project = this.cache.get<ProjectDocument>(idKey);
     this.cache.delete(idKey);
@@ -216,13 +231,23 @@ class MockCacheService {
    * Invalidates a specific endpoint configuration
    */
   invalidateEndpointConfig(endpointId: string): void {
+    this.generation++;
     this.cache.delete(`config:${endpointId}`);
+  }
+
+  /**
+   * Invalidates the endpoint list of a MockAPI (after bulk create/delete of endpoints)
+   */
+  invalidateMockApi(mockApiId: string): void {
+    this.generation++;
+    this.cache.delete(`endpoints:${mockApiId}`);
   }
 
   /**
    * Clears the entire cache
    */
   clearAll(): void {
+    this.generation++;
     this.cache.clear();
   }
 }
