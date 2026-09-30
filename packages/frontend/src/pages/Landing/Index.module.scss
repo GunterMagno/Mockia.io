@@ -90,9 +90,20 @@
   position: relative;
   isolation: isolate;
   padding-block: clamp(2.5rem, 2rem + 6vw, 7rem);
-  background:
-    radial-gradient(60% 50% at 80% 10%, var(--color-glow-accent), transparent 70%),
-    radial-gradient(50% 40% at 10% 90%, var(--color-glow-ok), transparent 70%);
+
+  /* Brillos en capa propia con la misma mascara que el fondo: sin borde duro en el limite de la seccion */
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+    background:
+      radial-gradient(60% 50% at 80% 10%, var(--color-glow-accent), transparent 70%),
+      radial-gradient(50% 40% at 10% 75%, var(--color-glow-ok), transparent 70%);
+    mask-image: linear-gradient(#000 50%, transparent);
+    -webkit-mask-image: linear-gradient(#000 50%, transparent);
+  }
 }
 
 .heroBackdrop {

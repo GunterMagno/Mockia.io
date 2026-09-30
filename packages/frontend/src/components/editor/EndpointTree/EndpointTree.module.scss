@@ -95,8 +95,14 @@
   border-radius: var(--radius-md);
   transition: background var(--transition-fast);
 
-  &:hover {
+  &:hover,
+  &:has(.selected) {
     background: var(--sidebar-item-active);
+  }
+
+  /* El seleccionado lleva una marca de acento a la izquierda ademas del fondo (no solo color) */
+  &:has(.selected) {
+    box-shadow: inset 2px 0 0 var(--color-accent-text);
   }
 
   .item {
@@ -107,6 +113,11 @@
     
     &:hover {
       background: transparent; // Wrapper handles hover
+    }
+
+    &.selected {
+      color: var(--color-text);
+      font-weight: 700;
     }
   }
 

@@ -1,5 +1,4 @@
-@import '../../../styles/global.scss';
-
+/* La altura la fija el contenedor (MockEditor): Monaco ocupa el 100% */
 .editorWrapper {
   flex: 1;
   min-height: 0; // Essential for Monaco in flex
@@ -9,9 +8,4 @@
   border-radius: var(--radius-md);
   overflow: hidden;
   width: 100%;
-
-  @include respond-to(1450px) {
-    height: 450px;
-    min-height: 450px;
-  }
 }

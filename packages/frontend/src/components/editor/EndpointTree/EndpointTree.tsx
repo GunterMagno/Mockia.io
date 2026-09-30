@@ -28,6 +28,7 @@ export const EndpointTree: React.FC<EndpointTreeProps> = ({ endpoints, selectedI
           <button
             onClick={() => onSelect(ep.id)}
             className={`${styles.item} ${selectedId === ep.id ? styles.selected : ''}`}
+            aria-current={selectedId === ep.id ? 'true' : undefined}
           >
             <span className={`${styles.method} ${styles[ep.method.toLowerCase()] || ''}`}>
               {ep.method.toUpperCase()}
