@@ -1,0 +1,1622 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cómo funciona Mockia</title>
+<meta name="description" content="Animación interactiva de Mockia: de tu repositorio de GitHub a una API mock en vivo, paso a paso.">
+<meta name="theme-color" content="#09090b">
+<!-- Marca que hay JS antes del primer pintado: evita ver el estado final un instante antes de que arranque la animación -->
+<script>document.documentElement.classList.add('js');</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* ===================================================================
+   1. TOKENS — mismos valores que la web de Mockia (tema oscuro único)
+   =================================================================== */
+:root {
+  color-scheme: dark;
+  --bg: #09090b;
+  --panel: #0d0d10;
+  --surface: #18181b;
+  --surface-2: #27272a;
+  --border: #3f3f46;
+  --border-strong: #8a8a94;
+  --text: #f4f4f5;
+  --muted: #b4b4bd;
+  --accent: #6366f1;
+  --accent-text: #a5b4fc;
+  --accent-solid: #4f46e5;
+  --ok: #34d399;
+  --ok-solid: #047857;
+  --warn: #fbbf24;
+  --danger: #f87171;
+  --glow-accent: rgba(99, 102, 241, 0.35);
+  --glow-ok: rgba(52, 211, 153, 0.3);
+  --font-ui: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; }
+
+body {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: clamp(10px, 2.5vmin, 32px);
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+}
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+.ic { width: 1em; height: 1em; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.ic--fill { fill: currentColor; stroke: none; }
+
+:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+
+/* ===================================================================
+   2. CONTENEDOR — container query: el componente se adapta a su ancho,
+      no al de la ventana (sirve igual a pantalla completa o incrustado)
+   =================================================================== */
+.explainer {
+  container: explainer / inline-size;
+  position: relative;
+  isolation: isolate;
+  width: min(1180px, 100%);
+  padding: clamp(16px, 2.4vw, 28px);
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  background:
+    radial-gradient(60% 55% at 10% 0%, rgba(99, 102, 241, 0.16), transparent 70%),
+    radial-gradient(50% 50% at 100% 100%, rgba(52, 211, 153, 0.1), transparent 70%),
+    linear-gradient(180deg, #111114, var(--bg));
+  box-shadow: 0 40px 120px -40px rgba(0, 0, 0, 0.9);
+  overflow: hidden;
+}
+
+/* Retícula isométrica de fondo (líneas a ±30°) */
+.explainer::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    repeating-linear-gradient(30deg, rgba(165, 180, 252, 0.06) 0 1px, transparent 1px 36px),
+    repeating-linear-gradient(-30deg, rgba(165, 180, 252, 0.06) 0 1px, transparent 1px 36px);
+  -webkit-mask-image: radial-gradient(ellipse 85% 70% at 50% 62%, #000 25%, transparent 80%);
+  mask-image: radial-gradient(ellipse 85% 70% at 50% 62%, #000 25%, transparent 80%);
+  pointer-events: none;
+}
+
+/* ---------- Cabecera ---------- */
+.ex-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: clamp(12px, 2vw, 20px);
+}
+
+.head-left { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+
+.brand { display: inline-flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.15rem; letter-spacing: -0.02em; }
+.brand-mark {
+  display: inline-flex; align-items: center; gap: 1px;
+  height: 32px; padding: 0 7px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  box-shadow: 0 8px 20px -8px var(--glow-accent);
+  font-family: var(--font-mono); font-weight: 700; font-size: 0.9rem; color: #e0e7ff;
+}
+.brand-mark .ic { font-size: 0.85rem; stroke-width: 2.2; }
+.brand-name span { color: var(--accent-text); }
+
+.eyebrow {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(165, 180, 252, 0.25);
+  background: rgba(99, 102, 241, 0.1);
+  color: var(--accent-text);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.lang {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(24, 24, 27, 0.8);
+}
+.lang button {
+  min-width: 44px;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted);
+  font: 600 0.8rem var(--font-ui);
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+.lang button:hover { color: var(--text); }
+.lang button[aria-pressed='true'] { background: var(--surface-2); color: var(--text); }
+
+/* ---------- Rótulos de cada paso (se superponen: solo se ve el activo) ---------- */
+.captions { display: grid; margin-bottom: 4px; }
+.caption {
+  grid-area: 1 / 1;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: clamp(12px, 2vw, 20px);
+  align-items: start;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(10px);
+  transition: opacity 0.5s var(--ease-out), transform 0.6s var(--ease-out), visibility 0s linear 0.5s;
+}
+.caption.is-active {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition: opacity 0.5s var(--ease-out) 0.1s, transform 0.6s var(--ease-out) 0.1s, visibility 0s;
+}
+.caption-num {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: clamp(1.5rem, 1.1rem + 1.8vw, 2.4rem);
+  line-height: 1;
+  color: var(--accent-text);
+}
+.caption h2 {
+  margin: 0;
+  font-size: clamp(1.2rem, 0.95rem + 1.2vw, 1.85rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+.caption p {
+  margin: 6px 0 0;
+  max-width: 64ch;
+  color: var(--muted);
+  font-size: clamp(0.9rem, 0.85rem + 0.25vw, 1.02rem);
+  line-height: 1.55;
+}
+
+/* ===================================================================
+   3. ESCENARIO — tres estaciones unidas por cables de datos
+   =================================================================== */
+.stage {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr) minmax(0, 1.3fr);
+  column-gap: clamp(40px, 5.5cqi, 84px);
+  align-items: center;
+  padding: 26px 4px 50px;
+  transition: opacity 0.17s ease;
+}
+.stage.is-jumping { opacity: 0.2; }
+.js .explainer:not(.is-ready) .stage { opacity: 0; }
+
+/* Cables SVG (se recalculan en cada frame siguiendo a las tarjetas) */
+.wires { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 1; }
+.wire-base { fill: none; stroke: rgba(165, 180, 252, 0.26); stroke-width: 2; stroke-dasharray: 2 7; stroke-linecap: round; }
+.wire-flow {
+  fill: none;
+  stroke: url(#wireGrad);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-dasharray: 16 22;
+  filter: drop-shadow(0 0 6px rgba(129, 140, 248, 0.9));
+  animation: flow 0.9s linear infinite;
+}
+@keyframes flow { to { stroke-dashoffset: -38; } }
+.port { fill: var(--bg); stroke: var(--accent-text); stroke-width: 2; }
+.route { fill: none; stroke: none; }
+
+/* Estaciones: la activa se ilumina, las demás quedan en segundo plano */
+.station {
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+  opacity: 0.5;
+  filter: saturate(0.55);
+  transition: opacity 0.6s var(--ease-out), filter 0.6s var(--ease-out);
+}
+.station.is-active, .station.is-done { opacity: 1; filter: none; }
+.station.is-done { opacity: 0.78; }
+
+/* Plataforma isométrica bajo cada tarjeta */
+.pad {
+  position: absolute;
+  left: 50%;
+  bottom: -34px;
+  width: 128%;
+  aspect-ratio: 10 / 2.4;
+  transform: translateX(-50%);
+  overflow: visible;
+  z-index: -1;
+}
+.pad-outer { fill: rgba(99, 102, 241, 0.05); stroke: rgba(165, 180, 252, 0.22); stroke-width: 1; vector-effect: non-scaling-stroke; transition: stroke 0.6s, fill 0.6s; }
+.pad-inner { fill: none; stroke: rgba(165, 180, 252, 0.12); stroke-width: 1; vector-effect: non-scaling-stroke; stroke-dasharray: 3 5; }
+.station.is-active .pad-outer { fill: rgba(99, 102, 241, 0.12); stroke: rgba(165, 180, 252, 0.7); filter: drop-shadow(0 0 10px rgba(99, 102, 241, 0.6)); }
+
+.float { will-change: transform; }
+
+/* Tarjetas flotantes */
+.card {
+  position: relative;
+  padding: 13px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(39, 39, 42, 0.94), rgba(20, 20, 23, 0.98));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 30px 60px -28px rgba(0, 0, 0, 0.95),
+    0 12px 24px -12px rgba(0, 0, 0, 0.6);
+  transition: border-color 0.5s var(--ease-out), box-shadow 0.5s var(--ease-out);
+}
+.station.is-active .card {
+  border-color: rgba(165, 180, 252, 0.5);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 0 0 1px rgba(99, 102, 241, 0.22),
+    0 40px 80px -34px var(--glow-accent),
+    0 12px 24px -12px rgba(0, 0, 0, 0.6);
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.card-head .ic { font-size: 1rem; color: var(--accent-text); }
+.card-head .ic--fill { color: var(--text); }
+.step-tag {
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font: 700 0.64rem var(--font-mono);
+}
+
+.mono { font-family: var(--font-mono); }
+
+/* ---------- Estación 1: repositorio ---------- */
+.field-label { display: block; margin-bottom: 6px; color: var(--muted); font-size: 0.7rem; font-weight: 600; }
+.field {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--panel);
+  font: 500 0.74rem var(--font-mono);
+  overflow: hidden;
+}
+.field .ic { font-size: 0.9rem; color: var(--muted); }
+
+/* Máquina de escribir: el texto se revela con clip-path en pasos de un carácter (tipografía monoespaciada) */
+.typing { position: relative; display: inline-block; white-space: nowrap; }
+.typing-text { display: inline-block; }
+.typing-caret {
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  width: 2px;
+  height: 1.25em;
+  margin-top: -0.62em;
+  border-radius: 1px;
+  background: var(--accent-text);
+  animation: blink 1s steps(1) infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+.btn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--accent-solid);
+  color: #fff;
+  font-weight: 700;
+}
+.btn > .btn-label { grid-area: 1 / 1; display: inline-flex; align-items: center; gap: 7px; }
+.btn .ic { font-size: 0.95rem; }
+.btn-import { height: 38px; margin-top: 9px; font-size: 0.8rem; }
+.ripple {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 56px;
+  height: 56px;
+  margin: -28px 0 0 -28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  pointer-events: none;
+}
+
+.code {
+  position: relative;
+  margin-top: 11px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+  overflow: hidden;
+}
+.code-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font: 500 0.68rem var(--font-mono);
+}
+.code-head .ic { font-size: 0.8rem; }
+.code-lines { position: relative; padding: 7px 10px; font: 400 0.72rem/1.65 var(--font-mono); }
+.code-lines .ln { display: block; white-space: pre; }
+.tk-k { color: var(--accent-text); }
+.tk-t { color: var(--ok); }
+.tk-s { color: var(--warn); }
+.scan {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 7px;
+  height: 1.65em;
+  font-size: 0.72rem;
+  background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.28), transparent);
+  border-top: 1px solid rgba(165, 180, 252, 0.4);
+  border-bottom: 1px solid rgba(165, 180, 252, 0.4);
+  pointer-events: none;
+}
+
+.chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; }
+.chips-label { margin-right: 2px; color: var(--muted); font-size: 0.68rem; font-weight: 600; }
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(52, 211, 153, 0.45);
+  background: rgba(52, 211, 153, 0.1);
+  color: var(--ok);
+  font: 600 0.7rem var(--font-mono);
+}
+.chip .ic { font-size: 0.75rem; stroke-width: 3; }
+
+/* ---------- Estación 2: Mockia IA ---------- */
+.ai-top { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 10px; align-items: center; }
+.core { width: 112px; height: 112px; overflow: visible; }
+.orbit { fill: none; stroke: rgba(165, 180, 252, 0.45); stroke-width: 1.2; stroke-dasharray: 3 6; }
+.orbit--b { stroke: rgba(52, 211, 153, 0.4); }
+.sat { fill: var(--accent-text); filter: drop-shadow(0 0 4px rgba(165, 180, 252, 0.9)); }
+.sat--ok { fill: var(--ok); filter: drop-shadow(0 0 4px rgba(52, 211, 153, 0.9)); }
+.edge { fill: none; stroke: rgba(224, 231, 255, 0.55); stroke-width: 1; stroke-linejoin: round; }
+.pulse { fill: none; stroke: var(--accent-text); stroke-width: 2; }
+.cube-spark { color: #fff; }
+
+.log { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; font-size: 0.72rem; }
+.log li { display: flex; align-items: center; gap: 7px; color: var(--muted); min-width: 0; line-height: 1.3; }
+.log .log-text { min-width: 0; }
+.log .state { position: relative; width: 15px; height: 15px; flex-shrink: 0; }
+.log .state .ic { position: absolute; inset: 0; font-size: 15px; }
+.spin { animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.log .spin { color: var(--accent-text); }
+.log .ok { color: var(--ok); stroke-width: 3; }
+
+.endpoints { display: grid; gap: 5px; margin: 12px 0 0; padding: 0; list-style: none; }
+.endpoints li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(9, 9, 11, 0.6);
+  font: 500 0.72rem var(--font-mono);
+  white-space: nowrap;
+}
+.m { min-width: 48px; font: 700 0.64rem var(--font-mono); letter-spacing: 0.02em; }
+.m-get { color: var(--accent-text); }
+.m-post { color: var(--ok); }
+.m-put { color: var(--warn); }
+.m-del { color: var(--danger); }
+
+.ep-ready {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(52, 211, 153, 0.12);
+  color: var(--ok);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.ep-ready .ic { stroke-width: 3; }
+
+/* ---------- Estación 3: API en vivo + tu app ---------- */
+.live { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; color: var(--ok); font-size: 0.66rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); animation: livepulse 1.8s ease-out infinite; }
+@keyframes livepulse { 0% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.55); } 100% { box-shadow: 0 0 0 9px rgba(52, 211, 153, 0); } }
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 32px;
+  margin-bottom: 7px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--panel);
+  font: 500 0.7rem var(--font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.row .ic { font-size: 0.85rem; color: var(--muted); }
+.k { color: var(--muted); }
+
+.ctrls { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 7px; }
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.pill .ic { font-size: 0.8rem; }
+.pill-val { display: inline-grid; font: 700 0.7rem var(--font-mono); color: var(--text); }
+.pill-val > span { grid-area: 1 / 1; }
+.v-ok { color: var(--ok); }
+.v-err { color: var(--danger); }
+
+.req { display: flex; align-items: center; gap: 7px; margin-bottom: 7px; }
+.req .row { flex: 1; margin: 0; }
+.btn-send { height: 32px; padding: 0 12px; font-size: 0.72rem; flex-shrink: 0; }
+
+.resp { border: 1px solid var(--border); border-radius: 10px; background: var(--panel); overflow: hidden; }
+.resp-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--border);
+  font: 700 0.68rem var(--font-mono);
+  white-space: nowrap;
+}
+.head-states { display: inline-grid; min-width: 0; }
+.head-states > span { grid-area: 1 / 1; display: inline-flex; align-items: center; gap: 6px; }
+.head-states .ic { font-size: 0.85rem; color: var(--accent-text); }
+.b-ok { color: var(--ok); }
+.b-err { color: var(--danger); }
+.ms { margin-left: auto; color: var(--muted); font-weight: 500; }
+.resp-body { display: grid; padding: 7px 10px 9px; min-height: 112px; font: 400 0.7rem/1.6 var(--font-mono); }
+.resp-body > .json { grid-area: 1 / 1; margin: 0; }
+.json .ln { display: block; white-space: pre; }
+.j-k { color: var(--accent-text); }
+.j-s { color: var(--ok); }
+.j-n { color: var(--warn); }
+.j-p { color: var(--muted); }
+
+/* Tu app: tarjeta superpuesta (profundidad isométrica) */
+.app {
+  position: absolute;
+  right: -26px;
+  bottom: -44px;
+  z-index: 3;
+  width: clamp(168px, 50%, 206px);
+  padding: 9px;
+  border-radius: 16px;
+  border: 1px solid rgba(165, 180, 252, 0.38);
+  background: linear-gradient(180deg, #1d1d23, #131316);
+  box-shadow: 0 30px 60px -18px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(0, 0, 0, 0.45), 0 0 44px -12px var(--glow-accent);
+}
+.app-bar { display: flex; align-items: center; gap: 4px; margin-bottom: 8px; }
+.app-bar > i { width: 7px; height: 7px; border-radius: 50%; background: var(--border); }
+.app-bar > em { margin-left: 5px; color: var(--muted); font-size: 0.64rem; font-style: normal; font-weight: 600; }
+.app-refresh {
+  margin-left: auto;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  background: var(--surface-2);
+  color: var(--text);
+}
+.app-refresh .ic { font-size: 0.8rem; }
+.app-title { display: block; margin: 0 0 7px 2px; font-size: 0.78rem; font-weight: 800; }
+.app-body { display: grid; min-height: 88px; }
+.app-body > * { grid-area: 1 / 1; }
+.app-list { display: grid; gap: 6px; align-content: start; }
+.person { display: flex; align-items: center; gap: 7px; padding: 6px; border-radius: 9px; background: rgba(255, 255, 255, 0.04); }
+.avatar { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; font-size: 0.58rem; font-weight: 800; color: #fff; flex-shrink: 0; }
+.avatar--a { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
+.avatar--b { background: linear-gradient(135deg, #059669, #34d399); }
+.person .name { font-size: 0.7rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.person .role { margin-left: auto; padding: 2px 6px; border-radius: 6px; background: rgba(99, 102, 241, 0.16); color: var(--accent-text); font: 600 0.6rem var(--font-mono); }
+.app-sk { display: grid; gap: 6px; align-content: start; }
+.sk {
+  display: block;
+  height: 36px;
+  border-radius: 9px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
+  background-size: 200% 100%;
+  animation: shimmer 1.3s linear infinite;
+}
+@keyframes shimmer { to { background-position: -200% 0; } }
+.app-error {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(248, 113, 113, 0.45);
+  background: rgba(248, 113, 113, 0.08);
+  font-size: 0.68rem;
+  line-height: 1.4;
+}
+.err-line { display: flex; gap: 6px; align-items: flex-start; }
+.err-line .ic { font-size: 0.95rem; color: var(--danger); }
+.btn-retry { height: 28px; background: var(--surface-2); font-size: 0.68rem; }
+
+/* ---------- Capa superpuesta: paquetes de datos, cursores, cierre ---------- */
+.packet {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(165, 180, 252, 0.65);
+  background: rgba(79, 70, 229, 0.94);
+  color: #fff;
+  font: 700 0.68rem var(--font-mono);
+  white-space: nowrap;
+  box-shadow: 0 0 18px var(--glow-accent);
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+.packet--bundle { border-color: rgba(52, 211, 153, 0.7); background: rgba(4, 120, 87, 0.95); box-shadow: 0 0 20px var(--glow-ok); }
+.packet .ic { font-size: 0.8rem; }
+
+.cursor { position: absolute; left: 0; top: 0; z-index: 6; width: 22px; height: 22px; opacity: 0; pointer-events: none; will-change: transform, opacity; }
+.cursor-ic { width: 22px; height: 22px; fill: #fff; stroke: #0b0b0e; stroke-width: 1.6; stroke-linejoin: round; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.6)); }
+.click-ring { position: absolute; left: -10px; top: -10px; width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--accent-text); }
+
+.endcard {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  background: radial-gradient(closest-side, rgba(9, 9, 11, 0.96), rgba(9, 9, 11, 0.86) 60%, rgba(9, 9, 11, 0.4));
+}
+.end-inner { display: grid; justify-items: center; gap: 12px; padding: 0 16px; text-align: center; }
+.end-inner .brand { font-size: clamp(1.8rem, 1.2rem + 3cqi, 3rem); }
+.end-inner .brand-mark { height: 1.4em; padding: 0 0.3em; border-radius: 0.35em; font-size: 0.8em; }
+.end-tag { margin: 0; font-size: clamp(1.05rem, 0.9rem + 1.1cqi, 1.5rem); font-weight: 800; letter-spacing: -0.01em; }
+.end-sub { margin: 0; color: var(--muted); font-size: clamp(0.85rem, 0.8rem + 0.4cqi, 1rem); }
+
+/* ===================================================================
+   4. CONTROLES — reproducir/pausa, anterior/siguiente y barra segmentada
+   =================================================================== */
+.controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: rgba(24, 24, 27, 0.85);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.ctl-btns { display: flex; gap: 6px; }
+.ctl {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+  color: var(--text);
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s, transform 0.2s var(--ease-out);
+}
+.ctl:hover { background: #323238; border-color: var(--border-strong); }
+.ctl:active { transform: scale(0.94); }
+.ctl .ic { font-size: 18px; }
+.ctl--play { background: var(--accent-solid); border-color: var(--accent-solid); }
+.ctl--play:hover { background: var(--accent); border-color: var(--accent); }
+.ctl--play .i-play { display: none; }
+.ctl--play[data-state='paused'] .i-play { display: block; }
+.ctl--play[data-state='paused'] .i-pause { display: none; }
+
+.segments { flex: 1 1 320px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.seg {
+  display: grid;
+  gap: 7px;
+  min-height: 44px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  text-align: left;
+  font: 600 0.78rem var(--font-ui);
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+.seg:hover { background: rgba(255, 255, 255, 0.05); color: var(--text); }
+.seg[aria-current='step'] { color: var(--text); }
+.seg-label { display: flex; align-items: baseline; gap: 7px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.seg-num { font-family: var(--font-mono); color: var(--accent-text); }
+.seg-track { display: block; height: 4px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+.seg-fill { display: block; width: 100%; height: 100%; border-radius: inherit; transform: scaleX(0); transform-origin: left center; background: linear-gradient(90deg, var(--accent), var(--ok)); }
+
+/* ===================================================================
+   5. RESPONSIVE — por debajo de 920 px de ancho del componente,
+      las estaciones se superponen y solo se ve la activa (modo "foco")
+   =================================================================== */
+@container explainer (max-width: 920px) {
+  .stage { grid-template-columns: minmax(0, 1fr); padding: 16px 0 46px; }
+  .station {
+    grid-area: 1 / 1;
+    width: 100%;
+    max-width: 440px;
+    justify-self: center;
+    opacity: 0;
+    visibility: hidden;
+    filter: none;
+    transform: translateY(14px) scale(0.985);
+    transition: opacity 0.45s var(--ease-out), transform 0.55s var(--ease-out), visibility 0s linear 0.45s;
+  }
+  .station.is-active {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    transition: opacity 0.45s var(--ease-out) 0.1s, transform 0.55s var(--ease-out) 0.1s, visibility 0s;
+  }
+  .station.is-done { opacity: 0; }
+  .station.is-done.is-active { opacity: 1; }
+  .wires, .packet { display: none; }
+  .pad { bottom: -26px; width: 112%; }
+  .app { right: -8px; bottom: -30px; width: min(54%, 206px); }
+}
+
+@container explainer (max-width: 520px) {
+  .ex-head { flex-wrap: nowrap; }
+  .eyebrow { display: none; }
+  .lang button { min-width: 38px; padding: 0 8px; }
+  .caption { grid-template-columns: minmax(0, 1fr); }
+  .caption-num { font-size: 1.1rem; margin-bottom: 4px; }
+  .caption p { grid-column: 1; }
+  .segments { flex-basis: 100%; }
+  .ctl-btns { width: 100%; justify-content: center; }
+  .seg-label [data-i18n] { display: none; }
+  .seg-label::after { content: attr(data-short); }
+  .ai-top { grid-template-columns: 96px minmax(0, 1fr); }
+  .core { width: 96px; height: 96px; }
+}
+
+@media (pointer: coarse) {
+  .lang button { min-height: 44px; }
+}
+
+/* Movimiento reducido: sin bucles decorativos (la animación no arranca sola) */
+@media (prefers-reduced-motion: reduce) {
+  .typing-caret, .live-dot, .sk, .spin, .wire-flow { animation: none !important; }
+  .caption, .station, .stage { transition-duration: 0.01ms !important; }
+}
+
+/* Sin GSAP (CDN caído): composición estática con el resultado final de cada paso */
+.static .alt, .static .typing-caret, .static .scan, .static .cursor,
+.static .packet, .static .endcard, .static .controls, .static .wires,
+.static .ripple, .static .log .spin { display: none !important; }
+.static .captions { gap: 14px; }
+.static .caption { grid-area: auto; opacity: 1; visibility: visible; transform: none; }
+.static .station { opacity: 1; filter: none; visibility: visible; transform: none; }
+@container explainer (max-width: 920px) {
+  .static .station { grid-area: auto; margin-bottom: 56px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Iconos: Lucide (ISC, https://lucide.dev) incrustados como sprite; logo de GitHub tomado de los assets de Mockia -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="i-sparkles" viewBox="0 0 24 24"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z" /><path d="M20 2v4" /><path d="M22 4h-4" /><circle cx="4" cy="20" r="2" /></symbol>
+    <symbol id="i-braces" viewBox="0 0 24 24"><path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5c0 1.1.9 2 2 2h1" /><path d="M16 21h1a2 2 0 0 0 2-2v-5c0-1.1.9-2 2-2a2 2 0 0 1-2-2V5a2 2 0 0 0-2-2h-1" /></symbol>
+    <symbol id="i-zap" viewBox="0 0 24 24"><path d="M15.914 4a1.5 1.5 0 00-2.474-1.561l-9 9A1.5 1.5 0 005.5 14h4.002a.5.5 0 01.471.666L8.086 20a1.5 1.5 0 002.475 1.56l9-9A1.5 1.5 0 0018.5 10h-3.997a.5.5 0 01-.472-.667z" /></symbol>
+    <symbol id="i-key-round" viewBox="0 0 24 24"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z" /><circle cx="16.5" cy="7.5" r=".5" fill="currentColor" /></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z" /><path d="m21.854 2.147-10.94 10.939" /></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" /></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z" /></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><rect x="14" y="3" width="5" height="18" rx="1" /><rect x="5" y="3" width="5" height="18" rx="1" /></symbol>
+    <symbol id="i-chevron-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6" /></symbol>
+    <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6" /></symbol>
+    <symbol id="i-circle-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="8" y2="12" /><line x1="12" x2="12.01" y1="16" y2="16" /></symbol>
+    <symbol id="i-loader-circle" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></symbol>
+    <symbol id="i-file-code" viewBox="0 0 24 24"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" /><path d="M14 2v5a1 1 0 0 0 1 1h5" /><path d="M10 12.5 8 15l2 2.5" /><path d="m14 12.5 2 2.5-2 2.5" /></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></symbol>
+    <symbol id="i-rotate-ccw" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></symbol>
+    <symbol id="i-pointer" viewBox="0 0 24 24"><path d="M4.037 4.688a.495.495 0 0 1 .651-.651l16 6.5a.5.5 0 0 1-.063.947l-6.124 1.58a2 2 0 0 0-1.438 1.435l-1.579 6.126a.5.5 0 0 1-.947.063z"/></symbol>
+    <symbol id="i-github" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></symbol>
+  </defs>
+</svg>
+
+<section class="explainer" id="explainer" aria-labelledby="ex-title">
+  <h1 class="sr-only" id="ex-title" data-i18n="title">Cómo funciona Mockia</h1>
+
+  <header class="ex-head">
+    <div class="head-left">
+      <div class="brand" aria-hidden="true">
+        <span class="brand-mark"><span>{</span><svg class="ic"><use href="#i-sparkles"/></svg><span>}</span></span>
+        <span class="brand-name">Mock<span>IA</span></span>
+      </div>
+      <span class="eyebrow" data-i18n="eyebrow">Cómo funciona</span>
+    </div>
+    <div class="lang" role="group" aria-label="Idioma" data-i18n-aria="ctl.lang">
+      <button type="button" data-lang="es" lang="es">ES</button>
+      <button type="button" data-lang="en" lang="en">EN</button>
+      <button type="button" data-lang="zh" lang="zh-CN">中文</button>
+    </div>
+  </header>
+
+  <!-- Narración accesible: el escenario es decorativo (aria-hidden), estos rótulos cuentan lo que pasa -->
+  <div class="captions" id="captions" aria-live="off">
+    <article class="caption is-active">
+      <span class="caption-num" aria-hidden="true">01</span>
+      <div><h2 data-i18n="s1.title">Conecta tu repositorio</h2><p data-i18n="s1.text">Pega la URL de tu repo de GitHub. Mockia lee tus tipos, interfaces y controladores.</p></div>
+    </article>
+    <article class="caption">
+      <span class="caption-num" aria-hidden="true">02</span>
+      <div><h2 data-i18n="s2.title">La IA diseña tu API</h2><p data-i18n="s2.text">Mockia IA crea los endpoints REST y los rellena con datos realistas, en segundos.</p></div>
+    </article>
+    <article class="caption">
+      <span class="caption-num" aria-hidden="true">03</span>
+      <div><h2 data-i18n="s3.title">Úsala desde tu frontend</h2><p data-i18n="s3.text">Llama a tus endpoints con tu API key y fuerza errores o latencia para probar cada estado de tu interfaz.</p></div>
+    </article>
+  </div>
+
+  <div class="stage" id="stage" aria-hidden="true">
+    <svg class="wires" id="wires">
+      <defs>
+        <linearGradient id="wireGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#818cf8"/>
+          <stop offset="1" stop-color="#34d399"/>
+        </linearGradient>
+      </defs>
+      <path class="wire-base" id="w1b"/>
+      <path class="wire-flow" id="w1f"/>
+      <path class="wire-base" id="w2b"/>
+      <path class="wire-flow" id="w2f"/>
+      <!-- Rutas invisibles de los paquetes: salen de su etiqueta, siguen el cable y entran en su destino -->
+      <path class="route" id="r0"/>
+      <path class="route" id="r1"/>
+      <path class="route" id="r2"/>
+      <path class="route" id="rb"/>
+      <circle class="port" id="p1a" r="4"/>
+      <circle class="port" id="p1b" r="4"/>
+      <circle class="port" id="p2a" r="4"/>
+      <circle class="port" id="p2b" r="4"/>
+    </svg>
+
+    <!-- ======================= ESTACIÓN 1 · CONECTA ======================= -->
+    <div class="station" data-step="0">
+      <svg class="pad" viewBox="0 0 200 60" preserveAspectRatio="none"><polygon class="pad-outer" points="100,1 199,30 100,59 1,30"/><polygon class="pad-inner" points="100,13 162,30 100,47 38,30"/></svg>
+      <div class="float">
+        <div class="card" id="card1">
+          <div class="card-head"><svg class="ic ic--fill"><use href="#i-github"/></svg><span data-i18n="st1.head">Importar desde GitHub</span><span class="step-tag">01</span></div>
+          <span class="field-label" id="s1Label" data-i18n="st1.label">URL del repositorio</span>
+          <div class="field" id="field">
+            <svg class="ic"><use href="#i-link"/></svg>
+            <span class="typing"><span class="typing-text" id="repoText">github.com/acme/shop</span><span class="typing-caret" id="repoCaret"></span></span>
+          </div>
+          <div class="btn btn-import" id="importBtn">
+            <span class="btn-label" id="importIdle" data-i18n="st1.button">Importar</span>
+            <span class="btn-label alt" id="importBusy"><svg class="ic spin"><use href="#i-loader-circle"/></svg><span data-i18n="st1.analyzing">Analizando…</span></span>
+            <span class="btn-label alt" id="importDone"><svg class="ic"><use href="#i-check"/></svg><span data-i18n="st1.done">3 interfaces</span></span>
+            <span class="ripple" id="importRipple"></span>
+          </div>
+          <div class="code" id="codeWin">
+            <div class="code-head"><svg class="ic"><use href="#i-file-code"/></svg>src/types.ts</div>
+            <div class="code-lines">
+              <span class="ln"><span class="tk-k">export interface</span> <span class="tk-t">User</span> {</span>
+              <span class="ln">  id: <span class="tk-t">string</span>;</span>
+              <span class="ln">  name: <span class="tk-t">string</span>;</span>
+              <span class="ln">  role: <span class="tk-s">'admin'</span> | <span class="tk-s">'dev'</span>;</span>
+              <span class="ln">}</span>
+              <span class="scan" id="scan"></span>
+            </div>
+          </div>
+          <div class="chips">
+            <span class="chips-label" id="chipsLabel" data-i18n="st1.found">Detectadas</span>
+            <span class="chip"><svg class="ic"><use href="#i-check"/></svg>User</span>
+            <span class="chip"><svg class="ic"><use href="#i-check"/></svg>Order</span>
+            <span class="chip"><svg class="ic"><use href="#i-check"/></svg>Product</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================= ESTACIÓN 2 · GENERA ======================= -->
+    <div class="station" data-step="1">
+      <svg class="pad" viewBox="0 0 200 60" preserveAspectRatio="none"><polygon class="pad-outer" points="100,1 199,30 100,59 1,30"/><polygon class="pad-inner" points="100,13 162,30 100,47 38,30"/></svg>
+      <div class="float">
+        <div class="card" id="card2">
+          <div class="card-head"><svg class="ic"><use href="#i-sparkles"/></svg><span>Mockia IA</span><span class="step-tag">02</span></div>
+          <div class="ai-top">
+            <!-- Núcleo isométrico: cubo de tres caras, órbitas y pulsos al recibir datos -->
+            <svg class="core" id="core" viewBox="0 0 160 160">
+              <defs>
+                <radialGradient id="coreGlowGrad"><stop offset="0" stop-color="#6366f1" stop-opacity="0.75"/><stop offset="1" stop-color="#6366f1" stop-opacity="0"/></radialGradient>
+                <linearGradient id="faceTop" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c7d2fe"/><stop offset="1" stop-color="#6366f1"/></linearGradient>
+                <linearGradient id="faceLeft" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4f46e5"/><stop offset="1" stop-color="#312e81"/></linearGradient>
+                <linearGradient id="faceRight" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4338ca"/><stop offset="1" stop-color="#1e1b4b"/></linearGradient>
+              </defs>
+              <circle id="coreGlow" cx="80" cy="84" r="74" fill="url(#coreGlowGrad)" opacity="0.5"/>
+              <ellipse class="orbit" id="ringA" cx="80" cy="84" rx="68" ry="24"/>
+              <ellipse class="orbit orbit--b" id="ringB" cx="80" cy="84" rx="58" ry="19" transform="rotate(-28 80 84)"/>
+              <circle class="pulse" id="pulse0" cx="80" cy="84" r="30" opacity="0"/>
+              <circle class="pulse" id="pulse1" cx="80" cy="84" r="30" opacity="0"/>
+              <circle class="pulse" id="pulse2" cx="80" cy="84" r="30" opacity="0"/>
+              <g id="cube">
+                <polygon points="80,48 112,66 80,84 48,66" fill="url(#faceTop)"/>
+                <polygon points="48,66 80,84 80,120 48,102" fill="url(#faceLeft)"/>
+                <polygon points="112,66 80,84 80,120 112,102" fill="url(#faceRight)"/>
+                <polyline class="edge" points="48,66 80,84 112,66"/>
+                <line class="edge" x1="80" y1="84" x2="80" y2="120"/>
+                <use class="cube-spark" href="#i-sparkles" x="71" y="57" width="18" height="18" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+              </g>
+              <circle class="sat" id="satA" r="3.6" cx="148" cy="84"/>
+              <circle class="sat sat--ok" id="satB" r="3.2" cx="30" cy="84"/>
+            </svg>
+            <ul class="log">
+              <li><span class="state"><svg class="ic spin"><use href="#i-loader-circle"/></svg><svg class="ic ok"><use href="#i-check"/></svg></span><span class="log-text" data-i18n="st2.log.0">Leyendo tipos e interfaces</span></li>
+              <li><span class="state"><svg class="ic spin"><use href="#i-loader-circle"/></svg><svg class="ic ok"><use href="#i-check"/></svg></span><span class="log-text" data-i18n="st2.log.1">Diseñando endpoints REST</span></li>
+              <li><span class="state"><svg class="ic spin"><use href="#i-loader-circle"/></svg><svg class="ic ok"><use href="#i-check"/></svg></span><span class="log-text" data-i18n="st2.log.2">Generando datos realistas</span></li>
+            </ul>
+          </div>
+          <ul class="endpoints">
+            <li><span class="m m-get">GET</span>/users</li>
+            <li><span class="m m-post">POST</span>/users</li>
+            <li><span class="m m-get">GET</span>/orders/:id</li>
+            <li><span class="m m-put">PUT</span>/products/:id</li>
+            <li><span class="m m-del">DELETE</span>/products/:id</li>
+          </ul>
+          <div class="ep-ready" id="ready"><svg class="ic"><use href="#i-check"/></svg><span id="readyText">5 endpoints listos</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================= ESTACIÓN 3 · ÚSALA ======================= -->
+    <div class="station" data-step="2">
+      <svg class="pad" viewBox="0 0 200 60" preserveAspectRatio="none"><polygon class="pad-outer" points="100,1 199,30 100,59 1,30"/><polygon class="pad-inner" points="100,13 162,30 100,47 38,30"/></svg>
+      <div class="float">
+        <div class="card" id="card3">
+          <div class="card-head"><svg class="ic"><use href="#i-zap"/></svg><span data-i18n="st3.head">API en vivo</span><span class="live"><span class="live-dot"></span><span data-i18n="st3.live">En vivo</span></span></div>
+          <div class="row" id="urlRow"><svg class="ic"><use href="#i-link"/></svg><span class="typing"><span class="typing-text" id="urlText">https://api.mockia.io/mock/shop</span></span></div>
+          <div class="row" id="keyRow"><svg class="ic"><use href="#i-key-round"/></svg><span class="k">X-Mockia-API-Key:</span><span>mk_••••••••</span></div>
+          <div class="ctrls" id="ctrlsRow">
+            <span class="pill" id="statusPill"><span data-i18n="st3.status">Estado</span><span class="pill-val"><span class="v-ok" id="st200">200</span><span class="v-err alt" id="st503">503</span></span></span>
+            <span class="pill"><svg class="ic"><use href="#i-clock"/></svg><span data-i18n="st3.delay">Retardo</span><span class="pill-val"><span>120 ms</span></span></span>
+          </div>
+          <div class="req" id="reqRow">
+            <div class="row"><span class="m m-get">GET</span>/users</div>
+            <div class="btn btn-send" id="sendBtn"><span class="btn-label"><svg class="ic"><use href="#i-send"/></svg><span data-i18n="st3.send">Enviar</span></span><span class="ripple" id="sendRipple"></span></div>
+          </div>
+          <div class="resp" id="resp">
+            <div class="resp-head">
+              <span class="head-states">
+                <span class="alt" id="hLoad"><svg class="ic spin"><use href="#i-loader-circle"/></svg>GET /users</span>
+                <span class="b-ok" id="h200">200 OK</span>
+                <span class="b-err alt" id="h503">503 Service Unavailable</span>
+              </span>
+              <span class="ms" id="msText">118 ms</span>
+            </div>
+            <div class="resp-body">
+              <pre class="json" id="jsonOk"><span class="ln"><span class="j-p">[</span></span><span class="ln">  <span class="j-p">{</span> <span class="j-k">"name"</span>: <span class="j-s">"Alex Rivers"</span>,</span><span class="ln">    <span class="j-k">"role"</span>: <span class="j-s">"admin"</span> <span class="j-p">},</span></span><span class="ln">  <span class="j-p">{</span> <span class="j-k">"name"</span>: <span class="j-s">"Lucía Ortega"</span>,</span><span class="ln">    <span class="j-k">"role"</span>: <span class="j-s">"dev"</span> <span class="j-p">}</span></span><span class="ln"><span class="j-p">]</span></span></pre>
+              <pre class="json alt" id="jsonErr"><span class="ln"><span class="j-p">{</span></span><span class="ln">  <span class="j-k">"status"</span>: <span class="j-n">503</span>,</span><span class="ln">  <span class="j-k">"error"</span>: <span class="j-s">"unavailable"</span></span><span class="ln"><span class="j-p">}</span></span></pre>
+            </div>
+          </div>
+
+          <!-- Tu frontend consumiendo el mock -->
+          <div class="app" id="app">
+            <div class="app-bar"><i></i><i></i><i></i><em data-i18n="st3.app">Tu app</em><span class="app-refresh" id="appRefresh"><svg class="ic" id="refreshIcon"><use href="#i-rotate-ccw"/></svg></span></div>
+            <strong class="app-title" data-i18n="st3.team">Equipo</strong>
+            <div class="app-body">
+              <div class="app-sk alt" id="appSk"><span class="sk"></span><span class="sk"></span></div>
+              <div class="app-list" id="appList">
+                <div class="person"><span class="avatar avatar--a">AR</span><span class="name">Alex Rivers</span><span class="role">admin</span></div>
+                <div class="person"><span class="avatar avatar--b">LO</span><span class="name">Lucía Ortega</span><span class="role">dev</span></div>
+              </div>
+              <div class="app-error alt" id="appErr">
+                <div class="err-line"><svg class="ic"><use href="#i-circle-alert"/></svg><span data-i18n="st3.error">No se pudo cargar el equipo</span></div>
+                <div class="btn btn-retry" id="retryBtn"><span class="btn-label"><svg class="ic"><use href="#i-rotate-ccw"/></svg><span data-i18n="st3.retry">Reintentar</span></span><span class="ripple" id="retryRipple"></span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Capa superpuesta -->
+    <span class="packet" id="pk0">User</span>
+    <span class="packet" id="pk1">Order</span>
+    <span class="packet" id="pk2">Product</span>
+    <span class="packet packet--bundle" id="pkb"><svg class="ic"><use href="#i-braces"/></svg>API</span>
+    <div class="cursor" id="cur1"><svg class="cursor-ic" viewBox="0 0 24 24"><use href="#i-pointer"/></svg><span class="click-ring"></span></div>
+    <div class="cursor" id="cur3"><svg class="cursor-ic" viewBox="0 0 24 24"><use href="#i-pointer"/></svg><span class="click-ring"></span></div>
+
+    <div class="endcard" id="endcard">
+      <div class="end-inner" id="endInner">
+        <div class="brand"><span class="brand-mark"><span>{</span><svg class="ic"><use href="#i-sparkles"/></svg><span>}</span></span><span class="brand-name">Mock<span>IA</span></span></div>
+        <p class="end-tag" data-i18n="end.tagline">Deja de esperar al backend.</p>
+        <p class="end-sub" data-i18n="end.sub">APIs mock con IA, listas en segundos.</p>
+      </div>
+    </div>
+  </div>
+
+  <nav class="controls" aria-label="Controles de la animación" data-i18n-aria="ctl.controls">
+    <div class="ctl-btns">
+      <button type="button" class="ctl" id="ctlPrev" aria-label="Paso anterior" data-i18n-aria="ctl.prev"><svg class="ic"><use href="#i-chevron-left"/></svg></button>
+      <button type="button" class="ctl ctl--play" id="ctlPlay" data-state="playing" aria-label="Pausar"><svg class="ic i-pause"><use href="#i-pause"/></svg><svg class="ic i-play"><use href="#i-play"/></svg></button>
+      <button type="button" class="ctl" id="ctlNext" aria-label="Paso siguiente" data-i18n-aria="ctl.next"><svg class="ic"><use href="#i-chevron-right"/></svg></button>
+    </div>
+    <div class="segments">
+      <button type="button" class="seg" data-step="0"><span class="seg-label"><span class="seg-num">01</span><span data-i18n="steps.0">Conecta</span></span><span class="seg-track"><span class="seg-fill"></span></span></button>
+      <button type="button" class="seg" data-step="1"><span class="seg-label"><span class="seg-num">02</span><span data-i18n="steps.1">Genera</span></span><span class="seg-track"><span class="seg-fill"></span></span></button>
+      <button type="button" class="seg" data-step="2"><span class="seg-label"><span class="seg-num">03</span><span data-i18n="steps.2">Úsala</span></span><span class="seg-track"><span class="seg-fill"></span></span></button>
+    </div>
+  </nav>
+</section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.15.0/gsap.min.js" integrity="sha512-oJ8QbaQThQoJZ7oEv+29jfPM6CcP+zUxh3PKJs1vyOhx0UraUrE7PQgeItu3dOuCJyrzWpoYMsVjkkPEBzbUqw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* =================================================================
+   * 0. TEXTOS — ES / EN / ZH (los mismos idiomas que la web)
+   *    Idioma: ?lang=es|en|zh > elección guardada > navegador > inglés
+   * ================================================================= */
+  const I18N = {
+    es: {
+      title: 'Cómo funciona Mockia',
+      eyebrow: 'Cómo funciona',
+      steps: ['Conecta', 'Genera', 'Úsala'],
+      s1: { title: 'Conecta tu repositorio', text: 'Pega la URL de tu repo de GitHub. Mockia lee tus tipos, interfaces y controladores.' },
+      s2: { title: 'La IA diseña tu API', text: 'Mockia IA crea los endpoints REST y los rellena con datos realistas, en segundos.' },
+      s3: { title: 'Úsala desde tu frontend', text: 'Llama a tus endpoints con tu API key y fuerza errores o latencia para probar cada estado de tu interfaz.' },
+      st1: { head: 'Importar desde GitHub', label: 'URL del repositorio', button: 'Importar', analyzing: 'Analizando…', done: '3 interfaces', found: 'Detectadas' },
+      st2: { log: ['Leyendo tipos e interfaces', 'Diseñando endpoints REST', 'Generando datos realistas'], ready: (n) => `${n} endpoints listos` },
+      st3: { head: 'API en vivo', live: 'En vivo', status: 'Estado', delay: 'Retardo', send: 'Enviar', app: 'Tu app', team: 'Equipo', error: 'No se pudo cargar el equipo', retry: 'Reintentar' },
+      end: { tagline: 'Deja de esperar al backend.', sub: 'APIs mock con IA, listas en segundos.' },
+      ctl: { controls: 'Controles de la animación', prev: 'Paso anterior', next: 'Paso siguiente', play: 'Reproducir', pause: 'Pausar', lang: 'Idioma', step: (n, l) => `Paso ${n}: ${l}` },
+    },
+    en: {
+      title: 'How Mockia works',
+      eyebrow: 'How it works',
+      steps: ['Connect', 'Generate', 'Use'],
+      s1: { title: 'Connect your repository', text: 'Paste your GitHub repo URL. Mockia reads your types, interfaces and controllers.' },
+      s2: { title: 'AI designs your API', text: 'Mockia AI creates the REST endpoints and fills them with realistic data, in seconds.' },
+      s3: { title: 'Use it from your frontend', text: 'Call your endpoints with your API key and force errors or latency to test every state of your UI.' },
+      st1: { head: 'Import from GitHub', label: 'Repository URL', button: 'Import', analyzing: 'Analyzing…', done: '3 interfaces', found: 'Found' },
+      st2: { log: ['Reading types and interfaces', 'Designing REST endpoints', 'Generating realistic data'], ready: (n) => `${n} endpoints ready` },
+      st3: { head: 'Live API', live: 'Live', status: 'Status', delay: 'Delay', send: 'Send', app: 'Your app', team: 'Team', error: "Couldn't load the team", retry: 'Retry' },
+      end: { tagline: 'Stop waiting for the backend.', sub: 'AI mock APIs, ready in seconds.' },
+      ctl: { controls: 'Animation controls', prev: 'Previous step', next: 'Next step', play: 'Play', pause: 'Pause', lang: 'Language', step: (n, l) => `Step ${n}: ${l}` },
+    },
+    zh: {
+      title: 'Mockia 工作原理',
+      eyebrow: '工作原理',
+      steps: ['连接', '生成', '使用'],
+      s1: { title: '连接你的仓库', text: '粘贴 GitHub 仓库地址，Mockia 会读取你的类型、接口和控制器。' },
+      s2: { title: 'AI 为你设计 API', text: 'Mockia AI 几秒内创建 REST 接口，并填充真实感数据。' },
+      s3: { title: '在前端直接使用', text: '用 API 密钥调用接口，还能强制返回错误或模拟延迟，测试界面的每种状态。' },
+      st1: { head: '从 GitHub 导入', label: '仓库地址', button: '导入', analyzing: '正在分析…', done: '3 个接口类型', found: '已发现' },
+      st2: { log: ['读取类型与接口', '设计 REST 接口', '生成真实感数据'], ready: (n) => `${n} 个接口已就绪` },
+      st3: { head: '实时 API', live: '在线', status: '状态', delay: '延迟', send: '发送', app: '你的应用', team: '团队', error: '无法加载团队', retry: '重试' },
+      end: { tagline: '不必再等后端。', sub: 'AI 模拟 API，几秒即可就绪。' },
+      ctl: { controls: '动画控制', prev: '上一步', next: '下一步', play: '播放', pause: '暂停', lang: '语言', step: (n, l) => `第 ${n} 步：${l}` },
+    },
+  };
+  const LANGS = Object.keys(I18N);
+  const LANG_KEY = 'mockia-explainer-lang';
+
+  const root = document.getElementById('explainer');
+  const $ = (sel) => root.querySelector(sel);
+  const $$ = (sel) => Array.from(root.querySelectorAll(sel));
+
+  function pickLang() {
+    const q = new URLSearchParams(location.search).get('lang');
+    if (LANGS.includes(q)) return q;
+    try {
+      const saved = localStorage.getItem(LANG_KEY);
+      if (LANGS.includes(saved)) return saved;
+    } catch (e) { /* almacenamiento bloqueado */ }
+    for (const l of navigator.languages || [navigator.language]) {
+      const base = String(l || '').slice(0, 2).toLowerCase();
+      if (LANGS.includes(base)) return base;
+    }
+    return 'en';
+  }
+
+  let lang = pickLang();
+  const tr = (path) => path.split('.').reduce((o, k) => (o == null ? o : o[k]), I18N[lang]);
+
+  const segs = $$('.seg');
+  const langBtns = $$('.lang button');
+  const playBtn = $('#ctlPlay');
+  const captionsBox = $('#captions');
+  let refreshText = () => {};
+
+  function applyLang() {
+    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : lang;
+    document.title = I18N[lang].title;
+    $$('[data-i18n]').forEach((el) => {
+      const v = tr(el.dataset.i18n);
+      if (typeof v === 'string') el.textContent = v;
+    });
+    $$('[data-i18n-aria]').forEach((el) => el.setAttribute('aria-label', tr(el.dataset.i18nAria)));
+    segs.forEach((b, i) => {
+      b.setAttribute('aria-label', I18N[lang].ctl.step(i + 1, I18N[lang].steps[i]));
+      b.querySelector('.seg-label').dataset.short = I18N[lang].steps[i];
+    });
+    langBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.lang === lang)));
+    refreshText();
+  }
+
+  langBtns.forEach((b) =>
+    b.addEventListener('click', () => {
+      lang = b.dataset.lang;
+      try { localStorage.setItem(LANG_KEY, lang); } catch (e) { /* sin persistencia */ }
+      applyLang();
+    })
+  );
+
+  applyLang();
+
+  /* Sin GSAP (CDN no disponible): composición estática y legible */
+  if (!window.gsap) {
+    root.classList.add('static', 'is-ready');
+    return;
+  }
+
+  /* =================================================================
+   * 1. REFERENCIAS
+   * ================================================================= */
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const stage = $('#stage');
+  const stations = $$('.station');
+  const captions = $$('.caption');
+  const segFills = $$('.seg-fill');
+  const cards = [$('#card1'), $('#card2'), $('#card3')];
+  const [card1, card2, card3] = cards;
+
+  const el = (id) => root.querySelector('#' + id);
+  // Estación 1
+  const s1Label = el('s1Label'), field = el('field'), repoText = el('repoText'), repoCaret = el('repoCaret');
+  const importBtn = el('importBtn'), importIdle = el('importIdle'), importBusy = el('importBusy'), importDone = el('importDone');
+  const importRipple = el('importRipple'), codeWin = el('codeWin'), scan = el('scan'), chipsLabel = el('chipsLabel');
+  const codeLines = $$('.code-lines .ln');
+  const chips = $$('.chip');
+  // Estación 2
+  const logRows = $$('.log li'), logSpins = $$('.log .spin'), logOks = $$('.log .ok'), logTexts = $$('.log .log-text');
+  const epRows = $$('.endpoints li'), ready = el('ready'), readyText = el('readyText');
+  const cube = el('cube'), coreGlow = el('coreGlow'), ringA = el('ringA'), ringB = el('ringB'), satA = el('satA'), satB = el('satB');
+  const pulses = [el('pulse0'), el('pulse1'), el('pulse2')];
+  // Estación 3
+  const urlRow = el('urlRow'), urlText = el('urlText'), keyRow = el('keyRow'), ctrlsRow = el('ctrlsRow'), reqRow = el('reqRow'), resp = el('resp');
+  const statusPill = el('statusPill'), st200 = el('st200'), st503 = el('st503');
+  const sendBtn = el('sendBtn'), sendRipple = el('sendRipple');
+  const hLoad = el('hLoad'), h200 = el('h200'), h503 = el('h503'), msText = el('msText');
+  const jsonOkLines = $$('#jsonOk .ln'), jsonErrLines = $$('#jsonErr .ln');
+  const app = el('app'), appRefresh = el('appRefresh'), refreshIcon = el('refreshIcon');
+  const appSk = el('appSk'), appErr = el('appErr'), retryBtn = el('retryBtn'), retryRipple = el('retryRipple');
+  const persons = $$('.person');
+  // Capa superpuesta
+  const w1b = el('w1b'), w1f = el('w1f'), w2b = el('w2b'), w2f = el('w2f');
+  const ports = [el('p1a'), el('p1b'), el('p2a'), el('p2b')];
+  const routes = [el('r0'), el('r1'), el('r2')], routeB = el('rb');
+  const coreSvg = el('core');
+  const packetEls = [el('pk0'), el('pk1'), el('pk2')], bundleEl = el('pkb');
+  const cur1 = el('cur1'), cur3 = el('cur3');
+  const ring1 = cur1.querySelector('.click-ring'), ring3 = cur3.querySelector('.click-ring');
+  const endcard = el('endcard'), endInner = el('endInner');
+
+  /* =================================================================
+   * 2. GUION (segundos) — cada paso tiene inicio y un punto "asentado"
+   *    que es el que se muestra al saltar a mano a ese paso
+   * ================================================================= */
+  const S1 = 0, S1_DONE = 6.3;
+  const S2 = 6.4, S2_DONE = S2 + 4.3;
+  const S3 = S2 + 4.5, S3_DONE = S3 + 4.3;
+  const OUTRO = S3 + 11.2, END = OUTRO + 2.9;
+  const STEP_START = [S1, S2, S3];
+  const STEP_DONE = [S1_DONE, S2_DONE, S3_DONE];
+  const STEP_RANGE = [[S1, S2], [S2, S3], [S3, OUTRO]];
+
+  /* Valores que mueve la línea de tiempo y que el bucle de render (ticker) aplica cada frame.
+     Así cualquier salto (seek) deja la escena coherente sin depender de callbacks. */
+  const P = {
+    cur1: { pos: 0, o: 0 },
+    cur3: { pos: 0, o: 0 },
+    packets: [{ p: 0, o: 0 }, { p: 0, o: 0 }, { p: 0, o: 0 }],
+    bundle: { p: 0, o: 0 },
+    core: { speed: 0.35 },
+    lat: { ms: 0 },
+    eps: { n: 0 },
+  };
+
+  /* Recorridos de los cursores: [elemento, x relativa, y relativa] */
+  const W1 = [[card1, 0.92, 1.06], [field, 0.72, 0.55], [importBtn, 0.5, 0.55], [importBtn, 0.86, 1.9]];
+  const W3 = [[card3, 1.02, 0.08], [sendBtn, 0.5, 0.55], [statusPill, 0.72, 0.55], [appRefresh, 0.5, 0.55], [statusPill, 0.72, 0.55], [retryBtn, 0.5, 0.55], [retryBtn, 0.9, 1.9]];
+
+  /* =================================================================
+   * 3. ESTADO INICIAL
+   * ================================================================= */
+  const hiddenIn = (targets, from) => gsap.set(targets, Object.assign({ opacity: 0 }, from));
+  hiddenIn(cards, { y: 28 });
+  hiddenIn([s1Label, field, importBtn], { y: 10 });
+  gsap.set([repoText, urlText], { clipPath: 'inset(0px 100% 0px 0px)' });
+  gsap.set(repoCaret, { left: '0%', opacity: 0 });
+  gsap.set(field, { borderColor: '#8a8a94', boxShadow: '0 0 0 0px rgba(99,102,241,0)' });
+  hiddenIn([importBusy, importDone], { y: 8 });
+  gsap.set(importBtn, { backgroundColor: '#4f46e5' });
+  gsap.set([importRipple, sendRipple, retryRipple], { scale: 0, opacity: 0 });
+  hiddenIn(codeWin, { y: 10 });
+  hiddenIn(codeLines, { x: -8 });
+  gsap.set(scan, { opacity: 0, yPercent: 0 });
+  hiddenIn([chipsLabel].concat(chips), { scale: 0.85 });
+  hiddenIn(logRows, { x: -8 });
+  hiddenIn(logOks, { scale: 0.4 });
+  gsap.set(logTexts, { color: '#b4b4bd' });
+  hiddenIn(epRows, { x: -14 });
+  hiddenIn(ready, { y: 8 });
+  gsap.set(pulses, { opacity: 0, attr: { r: 30 } });
+  gsap.set([w1f, w2f], { opacity: 0 });
+  hiddenIn([urlRow, keyRow, ctrlsRow, reqRow, resp], { y: 10 });
+  hiddenIn([st503, hLoad, h200, h503], { y: 6 });
+  gsap.set(msText, { opacity: 0 });
+  hiddenIn(jsonOkLines.concat(jsonErrLines), { x: -6 });
+  gsap.set(statusPill, { borderColor: '#3f3f46', backgroundColor: '#0d0d10' });
+  hiddenIn(app, { y: 26 });
+  hiddenIn([appSk, appErr], { y: 6 });
+  hiddenIn(persons, { y: 8 });
+  gsap.set([ring1, ring3], { opacity: 0, scale: 0.4 });
+  gsap.set(endcard, { opacity: 0 });
+  gsap.set(endInner, { y: 16, scale: 0.97 });
+
+  /* =================================================================
+   * 4. LÍNEA DE TIEMPO MAESTRA (en bucle)
+   * ================================================================= */
+  const tl = gsap.timeline({ paused: true, repeat: -1, defaults: { duration: 0.5, ease: 'power3.out' } });
+
+  const show = (targets, t, vars) => tl.to(targets, Object.assign({ opacity: 1, x: 0, y: 0, scale: 1 }, vars), t);
+  const fade = (targets, t, vars) => tl.to(targets, Object.assign({ opacity: 0, duration: 0.2, ease: 'power2.in' }, vars), t);
+  const swap = (from, to, t) => { fade(from, t, { y: -6, duration: 0.18 }); show(to, t + 0.1, { duration: 0.3 }); };
+  // Pulsación de botón: se hunde y rebota con un "spring"
+  const press = (btn, t, ripple) => {
+    tl.to(btn, { scale: 0.93, duration: 0.08, ease: 'power1.in' }, t)
+      .to(btn, { scale: 1, duration: 0.34, ease: 'back.out(3)' }, t + 0.08);
+    if (ripple) tl.set(ripple, { scale: 0, opacity: 0.5 }, t).to(ripple, { scale: 3.4, opacity: 0, duration: 0.65, ease: 'power2.out' }, t);
+  };
+  const click = (ring, t) => tl.set(ring, { scale: 0.4, opacity: 0.95 }, t).to(ring, { scale: 1.8, opacity: 0, duration: 0.45, ease: 'power2.out' }, t);
+  // Llamada a la API mock: carga + contador de latencia + respuesta
+  const apiCall = (t, ok, ms, prevHead, prevLines) => {
+    if (prevHead) fade(prevHead, t, { y: -6, duration: 0.18 });
+    if (prevLines) fade(prevLines, t, { duration: 0.15 });
+    show(hLoad, t + 0.05, { duration: 0.2 });
+    tl.to(msText, { opacity: 1, duration: 0.2 }, t + 0.05)
+      .set(P.lat, { ms: 0 }, t + 0.05)
+      .to(P.lat, { ms: ms, duration: 0.5, ease: 'none' }, t + 0.05);
+    fade(hLoad, t + 0.55, { y: -6, duration: 0.15 });
+    show(ok ? h200 : h503, t + 0.6, { duration: 0.3 });
+    show(ok ? jsonOkLines : jsonErrLines, t + 0.65, { stagger: 0.06, duration: 0.25 });
+  };
+
+  /* ---------- Intro: aparecen las tres estaciones (el pipeline completo) ---------- */
+  tl.to(cards, { opacity: 1, y: 0, duration: 0.8, stagger: 0.12 }, S1);
+
+  /* ---------- PASO 1 · Conecta ---------- */
+  show([s1Label, field, importBtn], S1 + 0.35, { stagger: 0.07, duration: 0.45 });
+  tl.to(P.cur1, { o: 1, duration: 0.25 }, S1 + 0.7)
+    .to(P.cur1, { pos: 1, duration: 0.6, ease: 'power2.inOut' }, S1 + 0.75)
+    .to(field, { borderColor: '#a5b4fc', boxShadow: '0 0 0 3px rgba(99,102,241,0.3)', duration: 0.25 }, S1 + 1.4)
+    .to(repoCaret, { opacity: 1, duration: 0.1 }, S1 + 1.4)
+    .to(repoText, { clipPath: 'inset(0px 0% 0px 0px)', duration: 1.2, ease: 'steps(20)' }, S1 + 1.5)
+    .to(repoCaret, { left: '100%', duration: 1.2, ease: 'steps(20)' }, S1 + 1.5)
+    .to(P.cur1, { pos: 2, duration: 0.5, ease: 'power2.inOut' }, S1 + 2.95);
+  click(ring1, S1 + 3.5);
+  press(importBtn, S1 + 3.5, importRipple);
+  tl.to(field, { borderColor: '#8a8a94', boxShadow: '0 0 0 0px rgba(99,102,241,0)', duration: 0.3 }, S1 + 3.55)
+    .to(repoCaret, { opacity: 0, duration: 0.2 }, S1 + 3.55);
+  swap(importIdle, importBusy, S1 + 3.6);
+  tl.to(P.cur1, { pos: 3, duration: 0.5, ease: 'power2.in' }, S1 + 3.75)
+    .to(P.cur1, { o: 0, duration: 0.3 }, S1 + 3.95);
+  show(codeWin, S1 + 3.8, { duration: 0.45 });
+  show(codeLines, S1 + 3.95, { stagger: 0.07, duration: 0.3 });
+  // Barrido de lectura sobre la interfaz (líneas 1 a 4)
+  tl.to(scan, { opacity: 1, duration: 0.15 }, S1 + 4.5)
+    .to(scan, { yPercent: 300, duration: 1.0, ease: 'none' }, S1 + 4.55)
+    .to(scan, { opacity: 0, duration: 0.2 }, S1 + 5.5);
+  show([chipsLabel].concat(chips), S1 + 5.2, { stagger: 0.1, duration: 0.4, ease: 'back.out(2.2)' });
+  swap(importBusy, importDone, S1 + 5.8);
+  tl.to(importBtn, { backgroundColor: '#047857', duration: 0.3 }, S1 + 5.8);
+
+  /* ---------- PASO 2 · Genera ---------- */
+  tl.to(w1f, { opacity: 1, duration: 0.3 }, S2);
+  P.packets.forEach((pk, i) => {
+    const t = S2 + i * 0.2;
+    tl.to(pk, { o: 1, duration: 0.15 }, t)
+      .to(pk, { p: 1, duration: 1.0, ease: 'power2.inOut' }, t)
+      .to(pk, { o: 0, duration: 0.12 }, t + 0.92)
+      .to(chips[i], { opacity: 0.4, duration: 0.3 }, t)
+      // Pulso del núcleo al absorber cada interfaz
+      .set(pulses[i], { opacity: 0.9, attr: { r: 30 } }, t + 1.0)
+      .to(pulses[i], { opacity: 0, attr: { r: 70 }, duration: 0.7, ease: 'power2.out' }, t + 1.0)
+      .to(cube, { scale: 1.07, svgOrigin: '80 84', duration: 0.12, ease: 'power2.out' }, t + 1.0)
+      .to(cube, { scale: 1, svgOrigin: '80 84', duration: 0.35, ease: 'back.out(3)' }, t + 1.12);
+  });
+  tl.to(P.core, { speed: 3.2, duration: 0.5, ease: 'power2.in' }, S2 + 1.1);
+  logRows.forEach((row, i) => {
+    const t = S2 + 1.3 + i * 0.8;
+    show(row, t, { duration: 0.3 });
+    fade(logSpins[i], t + 0.7, { scale: 0.5, duration: 0.15 });
+    tl.to(logOks[i], { opacity: 1, scale: 1, duration: 0.3, ease: 'back.out(3)' }, t + 0.72)
+      .to(logTexts[i], { color: '#f4f4f5', duration: 0.3 }, t + 0.72);
+  });
+  show(epRows, S2 + 2.5, { stagger: 0.22, duration: 0.4, ease: 'back.out(1.6)' });
+  show(ready, S2 + 2.5, { duration: 0.35 });
+  tl.to(P.eps, { n: 5, duration: 1.28, ease: 'none' }, S2 + 2.5)
+    .to(P.core, { speed: 0.35, duration: 0.8, ease: 'power2.out' }, S2 + 4.0)
+    .to(w1f, { opacity: 0, duration: 0.4 }, S2 + 4.0);
+
+  /* ---------- PASO 3 · Úsala ---------- */
+  tl.to(w2f, { opacity: 1, duration: 0.3 }, S3)
+    .to(P.bundle, { o: 1, duration: 0.15 }, S3)
+    .to(P.bundle, { p: 1, duration: 1.0, ease: 'power1.inOut' }, S3)
+    .to(P.bundle, { o: 0, duration: 0.15 }, S3 + 0.95)
+    .to(w2f, { opacity: 0, duration: 0.5 }, S3 + 1.4);
+  show(urlRow, S3 + 0.8);
+  tl.to(urlText, { clipPath: 'inset(0px 0% 0px 0px)', duration: 0.7, ease: 'steps(31)' }, S3 + 0.9);
+  show(keyRow, S3 + 1.4);
+  show(ctrlsRow, S3 + 1.55);
+  show(reqRow, S3 + 1.7);
+  show(resp, S3 + 1.85);
+  show(app, S3 + 1.8, { duration: 0.7 });
+  show(appSk, S3 + 2.0, { duration: 0.3 });
+  // 1ª llamada: 200 OK y la app pinta los datos
+  tl.to(P.cur3, { o: 1, duration: 0.25 }, S3 + 2.0)
+    .to(P.cur3, { pos: 1, duration: 0.7, ease: 'power2.inOut' }, S3 + 2.0);
+  click(ring3, S3 + 2.75);
+  press(sendBtn, S3 + 2.75, sendRipple);
+  apiCall(S3 + 2.85, true, 118);
+  fade(appSk, S3 + 3.4);
+  show(persons, S3 + 3.45, { stagger: 0.14, duration: 0.35 });
+  // Forzar 503: la app muestra su estado de error
+  tl.to(P.cur3, { pos: 2, duration: 0.55, ease: 'power2.inOut' }, S3 + 4.5);
+  click(ring3, S3 + 5.1);
+  press(statusPill, S3 + 5.1);
+  swap(st200, st503, S3 + 5.15);
+  tl.to(statusPill, { borderColor: 'rgba(248,113,113,0.7)', backgroundColor: 'rgba(248,113,113,0.1)', duration: 0.25 }, S3 + 5.15)
+    .to(P.cur3, { pos: 3, duration: 0.6, ease: 'power2.inOut' }, S3 + 5.5);
+  click(ring3, S3 + 6.15);
+  press(appRefresh, S3 + 6.15);
+  tl.fromTo(refreshIcon, { rotation: 0 }, { rotation: -360, duration: 0.6, ease: 'power2.inOut', immediateRender: false }, S3 + 6.15);
+  fade(persons, S3 + 6.2);
+  show(appSk, S3 + 6.25, { duration: 0.25 });
+  apiCall(S3 + 6.2, false, 124, h200, jsonOkLines);
+  fade(appSk, S3 + 6.75);
+  show(appErr, S3 + 6.8, { duration: 0.35, ease: 'back.out(1.8)' });
+  // Vuelta a 200 y "Reintentar" desde la app
+  tl.to(P.cur3, { pos: 4, duration: 0.6, ease: 'power2.inOut' }, S3 + 7.7);
+  click(ring3, S3 + 8.35);
+  press(statusPill, S3 + 8.35);
+  swap(st503, st200, S3 + 8.4);
+  tl.to(statusPill, { borderColor: '#3f3f46', backgroundColor: '#0d0d10', duration: 0.25 }, S3 + 8.4)
+    .to(P.cur3, { pos: 5, duration: 0.55, ease: 'power2.inOut' }, S3 + 8.7);
+  click(ring3, S3 + 9.3);
+  press(retryBtn, S3 + 9.3, retryRipple);
+  fade(appErr, S3 + 9.35);
+  show(appSk, S3 + 9.45, { duration: 0.25 });
+  apiCall(S3 + 9.35, true, 118, h503, jsonErrLines);
+  fade(appSk, S3 + 9.9);
+  show(persons, S3 + 9.95, { stagger: 0.14, duration: 0.35 });
+  tl.to(P.cur3, { pos: 6, duration: 0.5, ease: 'power2.in' }, S3 + 10.4)
+    .to(P.cur3, { o: 0, duration: 0.35 }, S3 + 10.55);
+
+  /* ---------- Cierre (tarjeta final) y vuelta al inicio ---------- */
+  tl.to(cards, { opacity: 0, y: -16, duration: 0.6, ease: 'power2.in', stagger: 0.06 }, OUTRO)
+    .to(endcard, { opacity: 1, duration: 0.6, ease: 'power2.out' }, OUTRO + 0.5)
+    .to(endInner, { y: 0, scale: 1, duration: 0.9 }, OUTRO + 0.5)
+    .to(endcard, { opacity: 0, duration: 0.5, ease: 'power2.in' }, OUTRO + 2.3)
+    .set({}, {}, END);
+
+  /* =================================================================
+   * 5. MOVIMIENTO AMBIENTAL (independiente del guion: tarjetas que flotan)
+   * ================================================================= */
+  const ambient = [];
+  if (!reduceMotion) {
+    $$('.float').forEach((f, i) =>
+      ambient.push(gsap.to(f, { y: -7, duration: 2.6 + i * 0.4, ease: 'sine.inOut', yoyo: true, repeat: -1, delay: i * 0.35 }))
+    );
+    ambient.push(gsap.to(cube, { y: -4, duration: 1.9, ease: 'sine.inOut', yoyo: true, repeat: -1 }));
+  }
+
+  /* =================================================================
+   * 6. RENDER POR FRAME: cables, paquetes, cursores, núcleo e interfaz
+   * ================================================================= */
+  let narrow = false;
+  const detectLayout = () => {
+    narrow = getComputedStyle(stage).gridTemplateColumns.trim().split(/\s+/).length === 1;
+  };
+  detectLayout();
+  if ('ResizeObserver' in window) new ResizeObserver(detectLayout).observe(stage);
+  else window.addEventListener('resize', detectLayout);
+
+  const clamp01 = (v) => Math.max(0, Math.min(1, v));
+  const pointIn = (spec, s) => {
+    const r = spec[0].getBoundingClientRect();
+    return { x: r.left - s.left + r.width * spec[1], y: r.top - s.top + r.height * spec[2] };
+  };
+  const cursorAt = (wps, pos, s) => {
+    const i = Math.max(0, Math.min(Math.floor(pos), wps.length - 2));
+    const f = clamp01(pos - i);
+    const a = pointIn(wps[i], s), b = pointIn(wps[i + 1], s);
+    return { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f };
+  };
+  const bez = (a, b) => {
+    const dx = Math.max(24, (b.x - a.x) * 0.55);
+    return `C ${a.x + dx} ${a.y}, ${b.x - dx} ${b.y}, ${b.x} ${b.y}`;
+  };
+  const curve = (a, b) => `M ${a.x} ${a.y} ${bez(a, b)}`;
+  // Ruta completa de un paquete: origen -> entrada del cable -> cable -> destino
+  const route = (from, a, b, to) => `M ${from.x} ${from.y} L ${a.x} ${a.y} ${bez(a, b)} L ${to.x} ${to.y}`;
+  const centerOf = (r, s, fy) => ({ x: r.left - s.left + r.width / 2, y: r.top - s.top + r.height * (fy == null ? 0.5 : fy) });
+  const placeOnPath = (node, path, p, o) => {
+    if (o <= 0.001) { node.style.opacity = '0'; return; }
+    const pt = path.getPointAtLength(path.getTotalLength() * clamp01(p));
+    const w = node.offsetWidth, h = node.offsetHeight;
+    node.style.opacity = String(o);
+    node.style.transform = `translate(${pt.x - w / 2}px, ${pt.y - h / 2}px) scale(${0.6 + 0.4 * o})`;
+  };
+  const placeCursor = (node, proxy, pt) => {
+    node.style.opacity = String(proxy.o);
+    if (pt) node.style.transform = `translate(${pt.x - 3}px, ${pt.y - 3}px)`;
+  };
+
+  let running = true;
+  let angle = 0;
+  let lastNow = performance.now();
+  let lastIdx = -1, lastEps = -1, lastMs = -1;
+
+  refreshText = () => { lastEps = -1; lastMs = -1; };
+
+  function syncUI(t) {
+    const idx = t < S2 ? 0 : t < S3 ? 1 : 2;
+    if (idx !== lastIdx) {
+      lastIdx = idx;
+      stations.forEach((st, i) => {
+        st.classList.toggle('is-active', i === idx);
+        st.classList.toggle('is-done', i < idx);
+      });
+      captions.forEach((c, i) => c.classList.toggle('is-active', i === idx));
+      segs.forEach((b, i) => (i === idx ? b.setAttribute('aria-current', 'step') : b.removeAttribute('aria-current')));
+    }
+    STEP_RANGE.forEach(([a, b], i) => {
+      segFills[i].style.transform = `scaleX(${clamp01((t - a) / (b - a))})`;
+    });
+    const n = Math.max(0, Math.ceil(P.eps.n - 0.001));
+    if (n !== lastEps) { lastEps = n; readyText.textContent = I18N[lang].st2.ready(n); }
+    const ms = Math.round(P.lat.ms);
+    if (ms !== lastMs) { lastMs = ms; msText.textContent = `${ms} ms`; }
+  }
+
+  function frame() {
+    const now = performance.now();
+    const dt = Math.min(0.05, (now - lastNow) / 1000);
+    lastNow = now;
+    if (!running) return;
+
+    const t = tl.time();
+    syncUI(t);
+
+    /* --- lecturas de layout (todas antes de escribir) --- */
+    const s = stage.getBoundingClientRect();
+    let a1, b1, a2, b2, chipPts, corePt, readyPt, urlPt;
+    if (!narrow) {
+      const r1 = card1.getBoundingClientRect(), r2 = card2.getBoundingClientRect(), r3 = card3.getBoundingClientRect();
+      chipPts = chips.map((c) => centerOf(c.getBoundingClientRect(), s));
+      corePt = centerOf(coreSvg.getBoundingClientRect(), s, 0.53);
+      readyPt = centerOf(ready.getBoundingClientRect(), s);
+      urlPt = centerOf(urlRow.getBoundingClientRect(), s);
+      a1 = { x: r1.right - s.left + 7, y: r1.top - s.top + r1.height * 0.56 };
+      b1 = { x: r2.left - s.left - 7, y: r2.top - s.top + r2.height * 0.36 };
+      a2 = { x: r2.right - s.left + 7, y: r2.top - s.top + r2.height * 0.62 };
+      b2 = { x: r3.left - s.left - 7, y: r3.top - s.top + r3.height * 0.3 };
+    }
+    const c1 = P.cur1.o > 0.001 ? cursorAt(W1, P.cur1.pos, s) : null;
+    const c3 = P.cur3.o > 0.001 ? cursorAt(W3, P.cur3.pos, s) : null;
+
+    /* --- escrituras --- */
+    if (!narrow) {
+      const d1 = curve(a1, b1), d2 = curve(a2, b2);
+      w1b.setAttribute('d', d1); w1f.setAttribute('d', d1);
+      w2b.setAttribute('d', d2); w2f.setAttribute('d', d2);
+      [a1, b1, a2, b2].forEach((p, i) => { ports[i].setAttribute('cx', p.x); ports[i].setAttribute('cy', p.y); });
+      P.packets.forEach((pk, i) => {
+        if (pk.o > 0.001) routes[i].setAttribute('d', route(chipPts[i], a1, b1, corePt));
+        placeOnPath(packetEls[i], routes[i], pk.p, pk.o);
+      });
+      if (P.bundle.o > 0.001) routeB.setAttribute('d', route(readyPt, a2, b2, urlPt));
+      placeOnPath(bundleEl, routeB, P.bundle.p, P.bundle.o);
+    }
+    placeCursor(cur1, P.cur1, c1);
+    placeCursor(cur3, P.cur3, c3);
+
+    // Núcleo: los satélites orbitan más rápido mientras la IA "piensa"
+    if (!reduceMotion) angle += dt * P.core.speed * 60;
+    const th = (angle * Math.PI) / 180;
+    satA.setAttribute('cx', 80 + 68 * Math.cos(th * 1.3));
+    satA.setAttribute('cy', 84 + 24 * Math.sin(th * 1.3));
+    const lx = 58 * Math.cos(-th * 1.6), ly = 19 * Math.sin(-th * 1.6), rot = (-28 * Math.PI) / 180;
+    satB.setAttribute('cx', 80 + lx * Math.cos(rot) - ly * Math.sin(rot));
+    satB.setAttribute('cy', 84 + lx * Math.sin(rot) + ly * Math.cos(rot));
+    ringA.style.strokeDashoffset = String(-angle * 0.5);
+    ringB.style.strokeDashoffset = String(angle * 0.6);
+    coreGlow.setAttribute('opacity', String(0.45 + clamp01((P.core.speed - 0.35) / 2.85) * 0.5));
+  }
+  gsap.ticker.add(frame);
+
+  /* =================================================================
+   * 7. CONTROLES
+   * ================================================================= */
+  let userPaused = false;
+
+  function updatePlayButton() {
+    const playing = !tl.paused();
+    playBtn.dataset.state = playing ? 'playing' : 'paused';
+    playBtn.setAttribute('aria-label', playing ? I18N[lang].ctl.pause : I18N[lang].ctl.play);
+    // Solo se anuncia el paso cuando el usuario explora a mano (en bucle sería ruido)
+    captionsBox.setAttribute('aria-live', playing ? 'off' : 'polite');
+  }
+  const baseRefresh = refreshText;
+  refreshText = () => { baseRefresh(); updatePlayButton(); };
+
+  function currentStep() {
+    const t = tl.time();
+    return t < S2 ? 0 : t < S3 ? 1 : 2;
+  }
+
+  /* Saltar a un paso: pausa y muestra su estado "asentado" para explorarlo; Play reanuda el bucle desde ahí */
+  function goToStep(i) {
+    const step = (i + 3) % 3;
+    userPaused = true;
+    tl.pause();
+    updatePlayButton();
+    const target = STEP_DONE[step];
+    if (reduceMotion) { tl.seek(target, false); return; }
+    stage.classList.add('is-jumping');
+    window.setTimeout(() => {
+      tl.seek(target, false);
+      stage.classList.remove('is-jumping');
+    }, 170);
+  }
+
+  function togglePlay() {
+    if (tl.paused()) {
+      userPaused = false;
+      if (running) tl.play();
+    } else {
+      userPaused = true;
+      tl.pause();
+    }
+    updatePlayButton();
+  }
+
+  playBtn.addEventListener('click', togglePlay);
+  $('#ctlPrev').addEventListener('click', () => goToStep(currentStep() - 1));
+  $('#ctlNext').addEventListener('click', () => goToStep(currentStep() + 1));
+  segs.forEach((b, i) => b.addEventListener('click', () => goToStep(i)));
+
+  // Teclado dentro del componente: ← → cambian de paso; Espacio o K, reproducir/pausar
+  root.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight') { e.preventDefault(); goToStep(currentStep() + 1); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); goToStep(currentStep() - 1); }
+    else if ((e.key === ' ' || e.key === 'k' || e.key === 'K') && !(e.target instanceof HTMLButtonElement)) {
+      e.preventDefault();
+      togglePlay();
+    }
+  });
+
+  /* Fuera de pantalla o en otra pestaña: se detiene todo (sin gastar CPU) y se reanuda al volver */
+  function applyRunState(visible) {
+    running = visible && !document.hidden;
+    ambient.forEach((a) => (running ? a.resume() : a.pause()));
+    if (!running) tl.pause();
+    else if (!userPaused) tl.play();
+    lastNow = performance.now();
+    updatePlayButton();
+  }
+  let inView = true;
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver((entries) => { inView = entries[0].isIntersecting; applyRunState(inView); }, { threshold: 0.1 }).observe(root);
+  }
+  document.addEventListener('visibilitychange', () => applyRunState(inView));
+
+  /* API para quien incruste la animación: window.MockiaExplainer.goToStep(1), .play(), .pause(), .seek(s) */
+  window.MockiaExplainer = {
+    play: () => { if (tl.paused()) togglePlay(); },
+    pause: () => { if (!tl.paused()) togglePlay(); },
+    goToStep: (i) => goToStep(i),
+    seek: (seconds) => { userPaused = true; tl.pause(); tl.seek(seconds, false); updatePlayButton(); },
+    duration: END,
+    steps: { start: STEP_START.slice(), settled: STEP_DONE.slice() },
+  };
+
+  /* =================================================================
+   * 8. ARRANQUE
+   * ================================================================= */
+  root.classList.add('is-ready');
+  if (reduceMotion) {
+    // Sin reproducción automática: se muestra el primer paso completo y se explora con los controles
+    userPaused = true;
+    tl.seek(S1_DONE, false);
+  } else {
+    tl.play(0);
+  }
+  updatePlayButton();
+})();
+</script>
+</body>
+</html>
