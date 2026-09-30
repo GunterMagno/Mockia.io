@@ -1,5 +1,6 @@
 import React, { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { PATHS } from '../../routes/paths'
 import { useAuth } from '../../contexts/AuthContext'
 import { useRevealFallback } from '../../hooks/useRevealFallback'
 import BuilderPreview from './BuilderPreview'
@@ -86,7 +87,7 @@ const Index: React.FC = () => {
               from your GitHub repositories. Sync your schemas and start coding in seconds.
             </p>
             <nav className={styles.heroActions} aria-label="Primary">
-              <button className={styles.primaryBtn} onClick={() => navigate(isAuthenticated ? '/dashboard' : '/signup')}>
+              <button className={styles.primaryBtn} onClick={() => navigate(isAuthenticated ? PATHS.dashboard : PATHS.signup)}>
                 <span>{isAuthenticated ? 'Go to Dashboard' : 'Start for free'}</span>
                 <img src={arrowRight} alt="" />
               </button>

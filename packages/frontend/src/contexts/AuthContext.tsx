@@ -48,7 +48,10 @@ const USER_KEY = 'mockia_user'
 export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [accessToken, setAccessToken] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  // Solo hay carga si hay sesion guardada que verificar; sin token el home carga al instante
+  const [isLoading, setIsLoading] = useState(
+    () => !!(localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY))
+  )
 
   // Initialize from storage and verify session
   useEffect(() => {

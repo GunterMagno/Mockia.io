@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { Input } from '../../components/ui/Input/Input'
 import { Button } from '../../components/ui/Button/Button'
 import { api } from '../../services/api'
@@ -7,6 +7,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { getBackendErrorMessage } from '../../utils/error'
 import { validateEmail, validatePassword, validateUsername } from '../../utils/validation'
 import { playErrorSound } from '../../utils/audio'
+import { PATHS, postLoginTarget } from '../../routes/paths'
 
 import ModalErrorAlert from '../../components/ui/ModalErrorAlert/ModalErrorAlert'
 
@@ -14,6 +15,7 @@ import styles from './Auth.module.scss'
 
 const Signup: React.FC = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { login } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -43,7 +45,7 @@ const Signup: React.FC = () => {
       await api.post('/auth/register', { email, password, username })
       // Auto login
       await login({ email, password }, rememberMe)
-      navigate('/dashboard')
+      navigate(postLoginTarget(location.state), { replace: true })
     } catch (err: any) {
       setError(getBackendErrorMessage(err))
       playErrorSound()
@@ -114,7 +116,7 @@ const Signup: React.FC = () => {
           <footer className={styles.footer}>
             <span>
               <span>Already have an account? </span>
-              <Link to="/login">
+              <Link to={PATHS.login}>
                 Log in
               </Link>
             </span>
