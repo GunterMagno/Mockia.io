@@ -32,7 +32,8 @@ const Scene: React.FC<{ count: number }> = ({ count }) => {
   })
   return (
     <group ref={group}>
-      <Points positions={positions} stride={3} frustumCulled={false}>
+      {/* key: un buffer de three.js no puede cambiar de tamano; si cambia count se crea geometria nueva */}
+      <Points key={count} positions={positions} stride={3} frustumCulled={false}>
         <PointMaterial transparent color="#10b981" size={0.035} sizeAttenuation depthWrite={false} />
       </Points>
       <Float speed={1.2} rotationIntensity={0.6} floatIntensity={0.8}>
@@ -53,7 +54,9 @@ const Scene: React.FC<{ count: number }> = ({ count }) => {
 const HeroScene: React.FC = () => {
   const wrap = useRef<HTMLDivElement>(null)
   const [active, setActive] = useState(true)
-  const narrow = typeof window !== 'undefined' && window.innerWidth < 640
+  // Densidad fijada al montar: recalcularla en cada render cambiaba el tamano del buffer al cruzar 640px
+  // y three.js lanzaba "Resizing buffer attributes is not supported" en cada frame
+  const [count] = useState(() => (typeof window !== 'undefined' && window.innerWidth < 640 ? 500 : 1400))
 
   useEffect(() => {
     const el = wrap.current
@@ -80,7 +83,7 @@ const HeroScene: React.FC = () => {
         camera={{ position: [0, 0, 6], fov: 50 }}
         gl={{ antialias: false, alpha: true, powerPreference: 'low-power' }}
       >
-        <Scene count={narrow ? 500 : 1400} />
+        <Scene count={count} />
       </Canvas>
     </div>
   )
