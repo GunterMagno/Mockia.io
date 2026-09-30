@@ -11,6 +11,7 @@ interface User {
   updatedAt?: string
 }
 import { api } from '../services/api'
+import { TOKEN_KEY, USER_KEY } from '../services/session'
 
 type Credentials = { email: string; password: string }
 
@@ -38,8 +39,6 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-const TOKEN_KEY = 'mockia_token'
-const USER_KEY = 'mockia_user'
 
 /**
  * Global authentication state provider.

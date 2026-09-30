@@ -34,4 +34,23 @@ describe('Authentication Flow', () => {
     cy.url().should('include', '/dashboard');
     cy.contains('My projects').should('be.visible');
   });
+
+  it('Keeps a working session without "Remember me" (token in sessionStorage)', () => {
+    cy.visit('/login');
+    cy.get('input[name="email"]').type(randomEmail);
+    cy.get('input[name="password"]').type(password);
+    cy.contains('label', 'Remember me').find('input[type="checkbox"]').uncheck();
+    cy.intercept('GET', '/api/projects*').as('projects');
+    cy.get('button[type="submit"]').click();
+
+    cy.url().should('include', '/dashboard');
+    // Antes el cliente HTTP solo leia localStorage: esta llamada salia sin token y daba 401
+    cy.wait('@projects').its('response.statusCode').should('eq', 200);
+    cy.window().then((win) => {
+      expect(win.localStorage.getItem('mockia_token')).to.be.null;
+      expect(win.sessionStorage.getItem('mockia_token')).to.be.a('string');
+    });
+    cy.reload();
+    cy.contains('My projects').should('be.visible');
+  });
 });

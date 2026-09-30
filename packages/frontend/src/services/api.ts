@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { getStoredToken } from './session'
 
 // Axios instance for frontend API calls
 export const api = axios.create({
@@ -7,7 +8,7 @@ export const api = axios.create({
 
 // Attach Bearer token if available, but skip login/register requests
 api.interceptors.request.use((config) => {
-  const token = typeof window !== 'undefined' ? window.localStorage.getItem('mockia_token') : null
+  const token = getStoredToken()
   const url = (config.url ?? '') as string
   const isAuthRoute = url.includes('/auth/login') || url.includes('/auth/register')
   if (token && config.headers && !isAuthRoute) {

@@ -21,6 +21,7 @@ import ProjectSettingsModal from '../../components/projects/ProjectSettingsModal
 import { getBackendErrorMessage } from '../../utils/error'
 import { PATHS } from '../../routes/paths'
 import { useI18n } from '../../i18n/I18nProvider'
+import { useAuth } from '../../contexts/AuthContext'
 
 const MockEditor: React.FC = () => {
   const { id } = useParams<{ id: string }>()
@@ -48,21 +49,8 @@ const MockEditor: React.FC = () => {
   const [aiRequirement, setAiRequirement] = useState('')
   const [isAiGenerating, setIsAiGenerating] = useState(false)
   const [aiStatusMessage, setAiStatusMessage] = useState('')
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const currentUserId = useAuth().user?.id ?? null
   const [endpointToDelete, setEndpointToDelete] = useState<string | null>(null)
-
-  // Get current user ID from token
-  useEffect(() => {
-    const token = localStorage.getItem('mockia_token')
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]))
-        setCurrentUserId(payload.sub)
-      } catch (e) {
-        console.error("Error decoding token:", e)
-      }
-    }
-  }, [])
 
   const userRole = project?.members?.find(m => String(m.userId) === String(currentUserId))?.role
   const isViewer = userRole === 'VIEWER'

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useId } from 'react'
+import React, { useState, useId } from 'react'
 import { Modal } from '../../ui/Modal/Modal'
 import { Icon } from '../../ui/Icon/Icon'
 import { updateProject, archiveProject, addProjectMember, removeProjectMember, regenerateApiKey, leaveProject } from '../../../services/projectService'
@@ -14,6 +14,7 @@ import externalLinkIcon from '../../../assets/external-link.svg'
 import { playErrorSound } from '../../../utils/audio'
 import ModalErrorAlert from '../../ui/ModalErrorAlert/ModalErrorAlert'
 import { useI18n } from '../../../i18n/I18nProvider'
+import { useAuth } from '../../../contexts/AuthContext'
 
 type Props = {
   isOpen: boolean
@@ -46,20 +47,8 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
   const [showConfirmDelete, setShowConfirmDelete] = useState(false)
   const [showConfirmLeave, setShowConfirmLeave] = useState(false)
   
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
-
-  // Get current user ID from token
-  useEffect(() => {
-    const token = localStorage.getItem('mockia_token')
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]))
-        setCurrentUserId(payload.sub)
-      } catch (e) {
-        console.error("Error decoding token:", e)
-      }
-    }
-  }, [])
+  // Del usuario de la sesion (antes se decodificaba el JWT de localStorage y fallaba sin "Recordarme")
+  const currentUserId = useAuth().user?.id ?? null
 
   const handleSaveGeneral = async () => {
     setLoading(true)
