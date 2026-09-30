@@ -133,6 +133,8 @@ const Billing: React.FC = () => {
   }
 
   const planName = (plan: Plan) => t(`pricing.plans.${plan}.name`)
+  // Tras cancelar, el usuario esta en Free y Free esta activo: "Cancelado" junto a Free confundia
+  const shownStatus = overview?.billingStatus === 'canceled' ? 'active' : overview?.billingStatus ?? 'active'
   const date = (iso: string) => formatDate(iso, { dateStyle: 'long' })
   const count = (n: number) => formatNumber(n)
 
@@ -194,9 +196,7 @@ const Billing: React.FC = () => {
               <p className={styles.eyebrow}>{t('billing.currentPlan')}</p>
               <div className={styles.planLine}>
                 <h2>{planName(overview.plan)}</h2>
-                <span className={`${styles.status} ${styles[overview.billingStatus]}`}>
-                  {t(`billing.status.${overview.billingStatus}`)}
-                </span>
+                <span className={`${styles.status} ${styles[shownStatus]}`}>{t(`billing.status.${shownStatus}`)}</span>
               </div>
               {overview.subscribedPlan !== 'free' && overview.currentPeriodEnd && overview.billingStatus === 'active' && (
                 <p className={styles.muted}>
