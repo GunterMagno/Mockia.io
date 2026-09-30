@@ -10,6 +10,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import folderIcon from '../../assets/folder.svg'
 import { PATHS } from '../../routes/paths'
 import { useI18n } from '../../i18n/I18nProvider'
+import { getBillingOverview, type BillingOverview } from '../../services/billingService'
 
 import styles from './Dashboard.module.scss'
 
@@ -20,6 +21,7 @@ const Dashboard: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
+  const [billing, setBilling] = useState<BillingOverview | null>(null)
 
   const fetchProjects = (silent = false) => {
     if (!silent) setLoading(true)
@@ -57,6 +59,16 @@ const Dashboard: React.FC = () => {
     return () => clearInterval(interval)
   }, [])
 
+  // Plan y uso: se refresca cuando cambia el numero de proyectos (crear, archivar, compartir)
+  useEffect(() => {
+    getBillingOverview()
+      .then(setBilling)
+      .catch(() => setBilling(null))
+  }, [projects.length])
+
+  const projectLimit = billing?.limits.maxActiveProjects ?? null
+  const atLimit = billing !== null && projectLimit !== null && billing.usage.activeProjects >= projectLimit
+
   const handleCreated = (p: Project) => {
     setProjects((prev) => [p, ...prev])
     navigate(PATHS.editor(p.slug))
@@ -68,6 +80,17 @@ const Dashboard: React.FC = () => {
         <article className={styles.titleSection}>
           <h1>{t('dashboard.title')}</h1>
           <p>{t('dashboard.subtitle')}</p>
+          {billing && (
+            <Link to={PATHS.billing} className={`${styles.planChip} ${atLimit ? styles.planChipWarn : ''}`}>
+              <span>{t('billing.planBadge', { plan: t(`pricing.plans.${billing.plan}.name`) })}</span>
+              {projectLimit !== null && (
+                <span>· {t('billing.projectsUsage', { used: billing.usage.activeProjects, limit: projectLimit })}</span>
+              )}
+              {billing.plan !== 'team' && (atLimit || billing.plan === 'free') && (
+                <strong className={styles.planChipCta}>{t('billing.upgradeCta')} →</strong>
+              )}
+            </Link>
+          )}
         </article>
         <Button size="lg" onClick={() => setOpen(true)}>
           <span className={styles.plus} aria-hidden="true">+</span> {t('dashboard.newProject')}

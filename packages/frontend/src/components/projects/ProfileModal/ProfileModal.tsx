@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useId } from 'react'
 import { Modal } from '../../ui/Modal/Modal'
 import { getProfile, updateProfile, changePassword } from '../../../services/userService'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../contexts/AuthContext'
 import { PATHS } from '../../../routes/paths'
 import { Input } from '../../ui/Input/Input'
@@ -130,6 +130,11 @@ const ProfileModal: React.FC<Props> = ({ isOpen, onClose }) => {
               </article>
             </fieldset>
           </section>
+
+          <Link to={PATHS.billing} className={styles.billingLink} onClick={onClose}>
+            <span>{t('billing.title')}</span>
+            <span aria-hidden="true">→</span>
+          </Link>
 
           {status.message && status.type === 'error' && (
             <ModalErrorAlert message={status.message} />

@@ -188,3 +188,23 @@
     width: 100%;
   }
 }
+
+/* Enlace a plan y facturacion: fila completa, objetivo tactil de 44px */
+.billingLink {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: var(--tap);
+  margin-top: var(--spacing-4);
+  padding: 0 var(--spacing-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  font-weight: 700;
+  text-decoration: none;
+  transition: border-color var(--transition-fast);
+
+  &:hover { border-color: var(--color-border-strong); }
+  &:focus-visible { outline: 2px solid var(--color-accent-text); outline-offset: 2px; }
+}

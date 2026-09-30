@@ -8,6 +8,7 @@ type Translate = (key: MessageKey, vars?: Record<string, string | number>) => st
  */
 const KNOWN: ReadonlyArray<readonly [RegExp, MessageKey]> = [
   [/^Backend server is unreachable/i, 'errors.network'],
+  [/^Could not (create checkout session|open the billing portal)$/i, 'billing.errors.stripe'],
   [/^Invalid email or password$/i, 'errors.invalidCredentials'],
   [/is already registered$/i, 'errors.emailTaken'],
   [/^Too many requests/i, 'errors.tooManyRequests'],
@@ -34,10 +35,34 @@ const translateKnown = (message: string, t: Translate): string => {
   return hit ? t(hit[1]) : message
 }
 
+const PLAN_NAMES: Record<string, string> = { free: 'Free', pro: 'Pro', team: 'Team' }
+
+/** Errores de facturacion con codigo propio: sus details son datos (plan, limite), no mensajes. */
+function billingError(code: unknown, details: any, t: Translate): string | null {
+  switch (code) {
+    case 'PLAN_LIMIT_REACHED':
+      return t('billing.errors.limitReached', { plan: PLAN_NAMES[details?.plan] ?? String(details?.plan ?? ''), limit: details?.limit ?? '' })
+    case 'ALREADY_SUBSCRIBED':
+      return t('billing.errors.alreadySubscribed')
+    case 'NO_BILLING_ACCOUNT':
+      return t('billing.errors.noAccount')
+    case 'BILLING_NOT_CONFIGURED':
+      return t('billing.errors.notConfigured')
+    default:
+      return null
+  }
+}
+
+/** Codigo de error de la API ('PLAN_LIMIT_REACHED'...), si lo hay. */
+export const getBackendErrorCode = (err: any): string | undefined => err?.response?.data?.error?.code
+
 export function getBackendErrorMessage(err: any, t: Translate): string {
   // Axios error with response payload
   if (err?.response?.data) {
     const data = err.response.data
+
+    const billing = billingError(data?.error?.code, data?.error?.details, t)
+    if (billing) return billing
     
     // 1. Try normalized error structure: { error: { message: "...", details: { ... } } }
     if (data?.error?.message && typeof data.error.message === 'string') {

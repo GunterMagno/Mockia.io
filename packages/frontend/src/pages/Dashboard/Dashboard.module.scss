@@ -23,6 +23,44 @@
   margin-right: var(--spacing-2);
 }
 
+/* Plan y uso en la cabecera del panel: enlaza a /billing */
+.planChip {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-1) var(--spacing-2);
+  margin-top: var(--spacing-3);
+  min-height: 2rem;
+  padding: var(--spacing-1) var(--spacing-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  text-decoration: none;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+
+  &:hover {
+    border-color: var(--color-border-strong);
+    color: var(--color-text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-accent-text);
+    outline-offset: 2px;
+  }
+}
+
+.planChipWarn {
+  border-color: var(--color-warn);
+  background: var(--color-warn-soft);
+  color: var(--color-text);
+}
+
+.planChipCta {
+  color: var(--color-accent-text);
+}
+
 .loadingWrapper {
   display: flex;
   justify-content: center;

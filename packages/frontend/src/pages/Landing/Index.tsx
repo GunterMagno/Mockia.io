@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useRevealFallback } from '../../hooks/useRevealFallback'
 import { useI18n, type MessageKey } from '../../i18n/I18nProvider'
 import BuilderPreview from './BuilderPreview'
+import PricingPlans from '../../components/billing/PricingPlans/PricingPlans'
 import styles from './Index.module.scss'
 
 import arrowRight from '../../assets/arrow-right.svg'
@@ -61,7 +62,7 @@ const FEATURES = [
 const Index: React.FC = () => {
   const navigate = useNavigate()
   const { isAuthenticated } = useAuth()
-  const { t, tl, rich } = useI18n()
+  const { t, rich } = useI18n()
   const rootRef = useRef<HTMLElement>(null)
   const sceneOn = useHeroScene()
   useRevealFallback(rootRef)
@@ -251,32 +252,13 @@ const Index: React.FC = () => {
 
       {/* Pricing */}
       <section className={styles.pricingSection} aria-labelledby="pricing-title">
-        <div className={styles.comingSoonOverlay} aria-hidden="true">
-          <span className={styles.overlayText}>{t('landing.pricing.comingSoon')}</span>
-        </div>
         <div className={styles.container}>
-          <header className={styles.pricingHeader}>
-            <h2 id="pricing-title">{t('landing.pricing.title')}</h2>
-            <p>{t('landing.pricing.subtitle')}</p>
+          <header className={styles.pricingHeader} data-reveal>
+            <h2 id="pricing-title">{t('pricing.title')}</h2>
+            <p>{t('pricing.subtitle')}</p>
           </header>
-          <div className={styles.pricingGrid}>
-            <article className={styles.priceCard}>
-              <h3>{t('landing.pricing.developer')}</h3>
-              <p className={styles.price}><span className={styles.amount}>$0</span><span className={styles.period}>{t('landing.pricing.perMonth')}</span></p>
-              <ul className={styles.planFeatures}>
-                {tl('landing.pricing.devFeatures').map((f) => <li key={f}>{f}</li>)}
-              </ul>
-              <button className={styles.planBtn} tabIndex={-1}>{t('landing.pricing.getStarted')}</button>
-            </article>
-            <article className={`${styles.priceCard} ${styles.proCard}`}>
-              <h3>{t('landing.pricing.pro')}</h3>
-              <p className={styles.price}><span className={styles.amount}>$19</span><span className={styles.period}>{t('landing.pricing.perMonth')}</span></p>
-              <ul className={styles.planFeatures}>
-                {tl('landing.pricing.proFeatures').map((f) => <li key={f}>{f}</li>)}
-              </ul>
-              <button className={`${styles.planBtn} ${styles.primaryPlanBtn}`} tabIndex={-1}>{t('landing.pricing.startTrial')}</button>
-            </article>
-          </div>
+          <PricingPlans mode="public" />
+          <p className={styles.pricingNote}>{t('pricing.note')}</p>
         </div>
       </section>
     </div>

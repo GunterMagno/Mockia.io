@@ -17,6 +17,9 @@
   }
 }
 .modal {
+  /* recibe foco programatico al abrir (sin controles): sin anillo sobre todo el panel */
+  &:focus { outline: none; }
+
   width: var(--modal-width, 600px);
   max-width: 95vw;
   min-width: min(100%, var(--modal-width, 600px));

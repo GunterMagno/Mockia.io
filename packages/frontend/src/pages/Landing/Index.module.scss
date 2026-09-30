@@ -551,36 +551,11 @@
 .role { color: var(--color-on-banner); font-size: var(--text-sm); }
 
 /* -----------------------------------------
-   Pricing (overlay PROXIMAMENTE conservado)
+   Pricing (tarjetas en components/billing/PricingPlans)
 ----------------------------------------- */
 .pricingSection {
   position: relative;
-  overflow: hidden;
   padding-block: var(--space-section);
-}
-
-.comingSoonOverlay {
-  position: absolute;
-  inset: 0;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.02) 0 10px, rgba(255, 255, 255, 0.06) 10px 20px);
-  backdrop-filter: blur(2px);
-  pointer-events: none;
-}
-
-.overlayText {
-  padding: var(--spacing-2) var(--spacing-4);
-  background: var(--color-text);
-  color: var(--color-bg);
-  border: 3px solid var(--color-text);
-  transform: rotate(-5deg);
-  font-size: clamp(1.5rem, 1rem + 5vw, 5rem);
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  white-space: nowrap;
 }
 
 .pricingHeader {
@@ -589,56 +564,12 @@
   p { color: var(--color-text-muted); margin-top: var(--spacing-3); font-size: var(--step-1); }
 }
 
-.pricingGrid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-gap);
-  max-width: 62rem;
-  margin: 0 auto;
-
-  @media (min-width: 48rem) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.pricingNote {
+  margin-top: var(--space-gap) !important;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
 }
-
-.priceCard {
-  display: flex;
-  flex-direction: column;
-  padding: var(--space-card);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-
-  h3 { font-size: var(--step-1); margin-bottom: var(--spacing-4); }
-}
-
-.proCard { border: 2px solid var(--color-accent); box-shadow: 0 0 40px var(--color-glow-accent); }
-
-.price { display: flex; align-items: baseline; gap: var(--spacing-1); margin-bottom: var(--spacing-6); }
-.amount { font-size: var(--step-4); font-weight: 800; font-family: var(--font-mono); }
-.period { color: var(--color-text-muted); }
-
-.planFeatures {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-3);
-  margin-bottom: var(--spacing-8) !important;
-  font-weight: 600;
-
-  li::before { content: '\2713'; color: var(--color-ok); margin-right: var(--spacing-2); }
-}
-
-.planBtn {
-  margin-top: auto;
-  min-height: var(--tap);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface-2);
-  color: var(--color-text);
-  font: inherit;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.primaryPlanBtn { background: var(--color-accent-solid); border-color: var(--color-accent-solid); color: var(--color-on-accent); }
 
 /* -----------------------------------------
    Movimiento reducido: fallback estatico, sin animaciones

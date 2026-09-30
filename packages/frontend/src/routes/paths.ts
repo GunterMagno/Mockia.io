@@ -8,6 +8,7 @@ export const PATHS = {
   terms: '/terms',
   privacy: '/privacy',
   dashboard: '/dashboard',
+  billing: '/billing',
   editorPattern: '/editor/:id',
   editor: (slug: string) => `/editor/${slug}`,
 } as const
@@ -15,7 +16,7 @@ export const PATHS = {
 /** Publicas: accesibles sin cuenta (el home muestra como funciona la app). */
 const PUBLIC = [PATHS.home, PATHS.login, PATHS.signup, PATHS.terms, PATHS.privacy]
 /** Requieren cuenta: solo estas piden login. */
-const PROTECTED = [PATHS.dashboard, PATHS.editorPattern]
+const PROTECTED = [PATHS.dashboard, PATHS.billing, PATHS.editorPattern]
 
 const matches = (patterns: string[], path: string) =>
   patterns.some((pattern) => matchPath({ path: pattern, end: true }, path))

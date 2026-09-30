@@ -421,3 +421,21 @@
   }
 }
 
+
+.upgradeLink {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  padding: 0 var(--spacing-5);
+  border-radius: var(--radius-lg);
+  background: var(--color-accent-solid);
+  color: var(--color-on-accent);
+  font-weight: 700;
+  text-decoration: none;
+
+  &:focus-visible {
+    outline: 2px solid var(--color-accent-text);
+    outline-offset: 2px;
+  }
+}

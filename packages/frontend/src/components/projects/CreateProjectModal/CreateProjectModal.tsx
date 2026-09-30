@@ -3,7 +3,9 @@ import { Modal } from '../../ui/Modal/Modal'
 import { createProject, importFromGitHub, hardDeleteProject } from '../../../services/projectService'
 import { parseGithubUrl } from '../../../services/githubService'
 import { generateAndSaveEndpoints } from '../../../services/aiService'
-import { getBackendErrorMessage } from '../../../utils/error'
+import { getBackendErrorCode, getBackendErrorMessage } from '../../../utils/error'
+import { Link } from 'react-router-dom'
+import { PATHS } from '../../../routes/paths'
 import type { Project } from '../../../services/projectService'
 import styles from './CreateProjectModal.module.scss'
 import { Icon } from '../../ui/Icon/Icon'
@@ -49,6 +51,7 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
   const [validating, setValidating] = useState(false)
   const [statusMessage, setStatusMessage] = useState('')
   const [error, setError] = useState('')
+  const [limitReached, setLimitReached] = useState(false)
   const [createdProject, setCreatedProject] = useState<Project | null>(null)
   const [copiedUrl, setCopiedUrl] = useState(false)
   const [copiedKey, setCopiedKey] = useState(false)
@@ -73,6 +76,7 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
     setValidating(false)
     setStatusMessage('')
     setError('')
+    setLimitReached(false)
     setCreatedProject(null)
     setCopiedUrl(false)
     setCopiedKey(false)
@@ -173,6 +177,7 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
     } catch (err: any) {
       clearInterval(interval)
       setError(getBackendErrorMessage(err, t))
+      setLimitReached(getBackendErrorCode(err) === 'PLAN_LIMIT_REACHED')
       playErrorSound()
       setLoading(false)
     }
@@ -326,7 +331,12 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
               )}
 
               <ModalErrorAlert message={error} />
-              
+              {limitReached && (
+                <Link to={PATHS.billing} className={styles.upgradeLink} onClick={closeAndReset}>
+                  {t('billing.upgradeCta')} →
+                </Link>
+              )}
+
               {loading && (
                 <article className={styles.statusMessage} role="status">
                   <Icon src={loaderIcon} size={20} className={styles.spinner} /> {statusMessage}

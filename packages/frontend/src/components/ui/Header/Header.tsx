@@ -56,6 +56,7 @@ const Header: React.FC = () => {
     { href: '#story-title', label: t('nav.howItWorks') },
     { href: '#builder-title', label: t('nav.tryBuilder') },
     { href: '#features-title', label: t('nav.features') },
+    { href: '#pricing-title', label: t('nav.pricing') },
   ];
 
   const openSettings = () => {

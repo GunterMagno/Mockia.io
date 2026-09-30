@@ -5,6 +5,7 @@ import AuthProvider from './contexts/AuthContext'
 import Login from './pages/Auth/Login'
 import Signup from './pages/Auth/Signup'
 import Dashboard from './pages/Dashboard/Dashboard'
+import Billing from './pages/Billing/Billing'
 import ProtectedRoute from './routes/ProtectedRoute'
 import Index from './pages/Landing/Index'
 import MockEditor from './pages/MockEditor/MockEditor'
@@ -41,6 +42,7 @@ const AppShell: React.FC = () => {
           <Route path={PATHS.privacy} element={<Privacy />} />
           <Route element={<ProtectedRoute />}>
             <Route path={PATHS.dashboard} element={<Dashboard />} />
+            <Route path={PATHS.billing} element={<Billing />} />
             <Route path={PATHS.editorPattern} element={<MockEditor />} />
           </Route>
           <Route path="*" element={<NotFound />} />
