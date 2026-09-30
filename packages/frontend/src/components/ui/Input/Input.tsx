@@ -1,15 +1,20 @@
-import React, { useState } from 'react';
+import React, { useId, useState } from 'react';
 import { Icon } from '../Icon/Icon';
 import eyeIcon from '../../../assets/eye.svg';
 import eyeOffIcon from '../../../assets/eye-off.svg';
 import styles from './Input.module.scss';
+import { useI18n } from '../../../i18n/I18nProvider';
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
 }
 
-export const Input: React.FC<InputProps> = ({ label, error, type, ...rest }) => {
+export const Input: React.FC<InputProps> = ({ label, error, type, id, className, ...rest }) => {
+  const { t } = useI18n();
+  const autoId = useId();
+  const inputId = id ?? autoId;
+  const errorId = `${inputId}-error`;
   const [showPassword, setShowPassword] = useState(false);
   const isPassword = type === 'password';
   const inputType = isPassword ? (showPassword ? 'text' : 'password') : type;
@@ -21,9 +26,12 @@ export const Input: React.FC<InputProps> = ({ label, error, type, ...rest }) => 
   const content = (
     <article className={styles.inputWrapper}>
       <input 
-        className={`${styles.input} ${isPassword ? styles.passwordInput : ''} ${rest.className || ''}`} 
+        {...rest}
+        id={inputId}
+        className={`${styles.input} ${isPassword ? styles.passwordInput : ''} ${className || ''}`} 
         type={inputType} 
-        {...rest} 
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? errorId : undefined}
       />
       {isPassword && (
         <button 
@@ -31,7 +39,7 @@ export const Input: React.FC<InputProps> = ({ label, error, type, ...rest }) => 
           className={styles.toggleButton} 
           onClick={togglePassword}
           tabIndex={-1}
-          aria-label={showPassword ? "Hide password" : "Show password"}
+          aria-label={showPassword ? t('input.hidePassword') : t('input.showPassword')}
         >
           <Icon src={showPassword ? eyeOffIcon : eyeIcon} size={20} />
         </button>
@@ -43,9 +51,9 @@ export const Input: React.FC<InputProps> = ({ label, error, type, ...rest }) => 
 
   return (
     <fieldset className={styles.field}>
-      <label className={styles.label}>{label}</label>
+      <label className={styles.label} htmlFor={inputId}>{label}</label>
       {content}
-      {error && <span className={styles.error}>{error}</span>}
+      {error && <span id={errorId} className={styles.error}>{error}</span>}
     </fieldset>
   );
 };

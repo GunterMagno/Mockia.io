@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useId, useState } from 'react'
 import { Modal } from '../../ui/Modal/Modal'
 import { createProject, importFromGitHub, hardDeleteProject } from '../../../services/projectService'
 import { parseGithubUrl } from '../../../services/githubService'
@@ -15,6 +15,7 @@ import eyeIcon from '../../../assets/eye.svg'
 import eyeOffIcon from '../../../assets/eye-off.svg'
 import { playErrorSound } from '../../../utils/audio'
 import ModalErrorAlert from '../../ui/ModalErrorAlert/ModalErrorAlert'
+import { useI18n } from '../../../i18n/I18nProvider'
 
 type Props = {
   isOpen: boolean
@@ -25,7 +26,11 @@ type Props = {
 type Mode = 'empty' | 'github'
 type Step = 'select' | 'config' | 'ai_prompt' | 'success'
 
+const STEPS: Step[] = ['select', 'config', 'ai_prompt']
+
 const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => {
+  const { t, tl, rich } = useI18n()
+  const uid = useId()
   const [step, setStep] = useState<Step>('select')
   const [mode, setMode] = useState<Mode | null>(null)
   
@@ -37,7 +42,7 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
   
   // AI State
   const [shouldGenerate, setShouldGenerate] = useState(true)
-  const [aiRequirement, setAiRequirement] = useState('Create a basic API for this project with common endpoints.')
+  const [aiRequirement, setAiRequirement] = useState(() => t('createProject.aiDefaultBasic'))
   
   // Progress State
   const [loading, setLoading] = useState(false)
@@ -63,7 +68,7 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
     setDescription('')
     setRepoUrl('')
     setShouldGenerate(true)
-    setAiRequirement('Create a basic API for this project with common endpoints.')
+    setAiRequirement(t('createProject.aiDefaultBasic'))
     setLoading(false)
     setValidating(false)
     setStatusMessage('')
@@ -84,9 +89,9 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
     setError('')
     setShouldGenerate(true) // Ensure it's active when switching modes
     if (m === 'github') {
-      setAiRequirement('Extract all relevant API endpoints, interfaces and controllers to create a complete mock API.')
+      setAiRequirement(t('createProject.aiDefaultGithub'))
     } else {
-      setAiRequirement('Create a complete REST API with GET, POST, PUT, DELETE endpoints for a simple resource (e.g., Tasks, Users, or Products).')
+      setAiRequirement(t('createProject.aiDefaultEmpty'))
     }
   }
 
@@ -101,7 +106,7 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
         setStep('ai_prompt')
         setShouldGenerate(true) // Ensure it's active when moving to next step
       } catch (err) {
-        setError(getBackendErrorMessage(err))
+        setError(getBackendErrorMessage(err, t))
         playErrorSound()
       } finally {
         setValidating(false)
@@ -117,9 +122,7 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
     setLoading(true)
     setError('')
     
-    const messages = mode === 'github' 
-      ? ['Analyzing repository...', 'Cloning source code...', 'Extracting interfaces and types...', 'Mockia AI is generating your endpoints...', 'Preparing your workspace...']
-      : ['Creating project structure...', 'Initializing API...', 'Mockia AI is generating your endpoints...', 'Almost ready...', 'Finalizing details...']
+    const messages = mode === 'github' ? tl('createProject.progressGithub') : tl('createProject.progressEmpty')
 
     let currentIdx = 0
     setStatusMessage(messages[0])
@@ -136,8 +139,8 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
       if (mode === 'github') {
         const info = githubInfo || await parseGithubUrl(repoUrl)
         proj = await createProject({ 
-          title: info.repo || 'Imported Project', 
-          description: `Imported from ${repoUrl}` 
+          title: info.repo || t('createProject.importedTitle'),
+          description: t('createProject.importedFrom', { url: repoUrl }) 
         })
         
         try {
@@ -164,12 +167,12 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
       }
 
       clearInterval(interval)
-      setStatusMessage('Finishing up...')
+      setStatusMessage(t('createProject.finishing'))
       setCreatedProject(proj)
       setStep('success')
     } catch (err: any) {
       clearInterval(interval)
-      setError(getBackendErrorMessage(err))
+      setError(getBackendErrorMessage(err, t))
       playErrorSound()
       setLoading(false)
     }
@@ -179,37 +182,39 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
     <Modal isOpen={isOpen} onClose={closeAndReset} noPadding maxWidth="900px">
       <article className={styles.modalContent}>
         {/* Step Indicator */}
-        <nav className={styles.stepIndicator}>
-          <span className={`${styles.dot} ${step === 'select' ? styles.active : ''}`} />
-          <span className={`${styles.dot} ${step === 'config' ? styles.active : ''}`} />
-          <span className={`${styles.dot} ${step === 'ai_prompt' ? styles.active : ''}`} />
-        </nav>
+        {STEPS.includes(step) && (
+          <nav className={styles.stepIndicator} aria-label={t('createProject.steps', { current: STEPS.indexOf(step) + 1, total: STEPS.length })}>
+            {STEPS.map((s) => (
+              <span key={s} className={`${styles.dot} ${step === s ? styles.active : ''}`} aria-hidden="true" />
+            ))}
+          </nav>
+        )}
 
         {/* Step 1: Selection */}
         {step === 'select' && (
           <>
             <header className={styles.header}>
-              <h2>Create New Project</h2>
-              <p>Choose how you want to start your next mock API.</p>
+              <h2>{t('createProject.title')}</h2>
+              <p>{t('createProject.subtitle')}</p>
             </header>
             <section className={styles.selectionGrid}>
-              <article className={styles.selectionCard} onClick={() => handleSelectMode('empty')}>
+              <button type="button" className={styles.selectionCard} onClick={() => handleSelectMode('empty')}>
                 <figure className={styles.icon}>
                   <Icon src={emptyProjectIcon} size={48} color="black" />
                 </figure>
-                <h3>Empty Project</h3>
-                <p>Start from scratch and define your endpoints manually or with AI.</p>
-              </article>
-              <article className={styles.selectionCard} onClick={() => handleSelectMode('github')}>
+                <h3>{t('createProject.emptyTitle')}</h3>
+                <p>{t('createProject.emptyText')}</p>
+              </button>
+              <button type="button" className={styles.selectionCard} onClick={() => handleSelectMode('github')}>
                 <figure className={styles.icon}>
                   <Icon src={githubIcon} size={48} color="var(--color-border)" />
                 </figure>
-                <h3>GitHub Import</h3>
-                <p>Clone a repository and let Mockia analyze its structure automatically.</p>
-              </article>
+                <h3>{t('createProject.githubTitle')}</h3>
+                <p>{t('createProject.githubText')}</p>
+              </button>
             </section>
             <nav className={styles.actions}>
-              <button className={styles.cancelBtn} onClick={closeAndReset}>Cancel</button>
+              <button className={styles.cancelBtn} onClick={closeAndReset}>{t('common.cancel')}</button>
             </nav>
           </>
         )}
@@ -218,15 +223,17 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
         {step === 'config' && (
           <>
             <header className={styles.header}>
-              <h2>{mode === 'github' ? 'GitHub Repository' : 'Project Details'}</h2>
-              <p>{mode === 'github' ? 'Enter the public URL of the repository you want to import.' : 'Give your new project a name and description.'}</p>
+              <h2>{mode === 'github' ? t('createProject.githubStepTitle') : t('createProject.detailsTitle')}</h2>
+              <p>{mode === 'github' ? t('createProject.githubStepText') : t('createProject.detailsText')}</p>
             </header>
             
             <section className={styles.stepContent}>
               {mode === 'github' ? (
                 <article className={styles.formGroup}>
-                  <label>Repository URL</label>
-                  <input 
+                  <label htmlFor={`${uid}-repo`}>{t('createProject.repoUrl')}</label>
+                  <input
+                    id={`${uid}-repo`}
+                    type="url"
                     className={styles.input}
                     placeholder="https://github.com/username/repo"
                     value={repoUrl}
@@ -237,20 +244,22 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
               ) : (
                 <>
                   <article className={styles.formGroup}>
-                    <label>Project Title</label>
-                    <input 
+                    <label htmlFor={`${uid}-title`}>{t('createProject.projectTitle')}</label>
+                    <input
+                      id={`${uid}-title`}
                       className={styles.input}
-                      placeholder="My Awesome API"
+                      placeholder={t('createProject.projectTitlePlaceholder')}
                       value={title}
                       onChange={e => setTitle(e.target.value)}
                       autoFocus
                     />
                   </article>
                   <article className={styles.formGroup}>
-                    <label>Description (Optional)</label>
-                    <input 
+                    <label htmlFor={`${uid}-description`}>{t('createProject.description')}</label>
+                    <input
+                      id={`${uid}-description`}
                       className={styles.input}
-                      placeholder="A short description of what this API does..."
+                      placeholder={t('createProject.descriptionPlaceholder')}
                       value={description}
                       onChange={e => setDescription(e.target.value)}
                     />
@@ -261,13 +270,13 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
             </section>
 
             <nav className={styles.actions}>
-              <button className={styles.cancelBtn} onClick={() => setStep('select')} disabled={validating}>Back</button>
+              <button className={styles.cancelBtn} onClick={() => setStep('select')} disabled={validating}>{t('common.back')}</button>
               <button 
                 className={styles.primaryBtn} 
                 onClick={handleConfigNext}
                 disabled={(mode === 'github' && !repoUrl) || (mode === 'empty' && !title) || validating}
               >
-                {validating ? 'Checking...' : 'Continue'}
+                {validating ? t('createProject.checking') : t('common.continue')}
               </button>
             </nav>
           </>
@@ -277,8 +286,8 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
         {step === 'ai_prompt' && (
           <>
             <header className={styles.header}>
-              <h2>AI Generation</h2>
-              <p>Do you want Mockia AI to generate endpoints for you?</p>
+              <h2>{t('createProject.aiTitle')}</h2>
+              <p>{t('createProject.aiText')}</p>
             </header>
 
             <section className={styles.stepContent}>
@@ -287,8 +296,8 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
                   <Icon src={aiSparkleIcon} size={52} color="var(--color-surface)" />
                 </figure>
                 <article className={styles.aiText}>
-                  <h4>Smart API Generation</h4>
-                  <p>Mockia will use LLMs to create realistic endpoints and data structures based on your input.</p>
+                  <h4>{t('createProject.aiCardTitle')}</h4>
+                  <p>{t('createProject.aiCardText')}</p>
                 </article>
               </article>
 
@@ -300,17 +309,18 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
                   onChange={e => setShouldGenerate(e.target.checked)}
                   className={styles.checkbox}
                 />
-                <label htmlFor="shouldGenerate" className={styles.checkboxLabel}>Generate endpoints with AI</label>
+                <label htmlFor="shouldGenerate" className={styles.checkboxLabel}>{t('createProject.aiToggle')}</label>
               </article>
 
               {shouldGenerate && (
                 <article className={styles.formGroup}>
-                  <label>What should the AI generate?</label>
-                  <textarea 
+                  <label htmlFor={`${uid}-prompt`}>{t('createProject.aiPrompt')}</label>
+                  <textarea
+                    id={`${uid}-prompt`}
                     className={styles.textarea}
                     value={aiRequirement}
                     onChange={e => setAiRequirement(e.target.value)}
-                    placeholder="Describe the endpoints you want (e.g. A user management API with login, register and profile endpoints...)"
+                    placeholder={t('createProject.aiPromptPlaceholder')}
                   />
                 </article>
               )}
@@ -318,20 +328,20 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
               <ModalErrorAlert message={error} />
               
               {loading && (
-                <article className={styles.statusMessage}>
+                <article className={styles.statusMessage} role="status">
                   <Icon src={loaderIcon} size={20} className={styles.spinner} /> {statusMessage}
                 </article>
               )}
             </section>
 
             <nav className={styles.actions}>
-              <button className={styles.cancelBtn} onClick={() => setStep('config')} disabled={loading}>Back</button>
+              <button className={styles.cancelBtn} onClick={() => setStep('config')} disabled={loading}>{t('common.back')}</button>
               <button 
                 className={styles.primaryBtn} 
                 onClick={createProjectFlow}
                 disabled={loading}
               >
-                {loading ? 'Creating...' : 'Create Project'}
+                {loading ? t('createProject.creating') : t('createProject.create')}
               </button>
             </nav>
           </>
@@ -341,15 +351,15 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
         {step === 'success' && createdProject && (
           <article className={styles.successContent}>
             <header className={styles.header}>
-              <figure className={styles.successBadge}>✓</figure>
-              <h2>Project Ready!</h2>
-              <p>Your mock API has been created successfully.</p>
+              <figure className={styles.successBadge} aria-hidden="true">✓</figure>
+              <h2>{t('createProject.successTitle')}</h2>
+              <p>{t('createProject.successText')}</p>
             </header>
 
             <section className={styles.stepContent}>
               <article className={styles.connectionCard}>
                 <article className={styles.infoGroup}>
-                  <label>Mock Base URL</label>
+                  <label>{t('createProject.mockBaseUrl')}</label>
                   <article className={styles.infoDisplay}>
                     <section className={styles.infoBox}>
                       <code>{mockBaseUrl}</code>
@@ -362,13 +372,13 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
                       }}
                       className={`${styles.copyBtn} ${copiedUrl ? styles.copied : ''}`}
                     >
-                      {copiedUrl ? 'Copied!' : 'Copy'}
+                      {copiedUrl ? t('common.copied') : t('common.copy')}
                     </button>
                   </article>
                 </article>
 
                 <article className={styles.infoGroup}>
-                  <label>Project API Key</label>
+                  <label>{t('createProject.apiKey')}</label>
                   <article className={styles.infoDisplay}>
                     <section className={styles.infoBox}>
                       <code>
@@ -379,7 +389,8 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
                       <button 
                         className={styles.toggleBtn}
                         onClick={() => setShowApiKey(!showApiKey)}
-                        title={showApiKey ? 'Hide API Key' : 'Show API Key'}
+                        title={showApiKey ? t('common.hideApiKey') : t('common.showApiKey')}
+                        aria-label={showApiKey ? t('common.hideApiKey') : t('common.showApiKey')}
                       >
                         <Icon src={showApiKey ? eyeOffIcon : eyeIcon} size={16} />
                       </button>
@@ -392,15 +403,16 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
                       }}
                       className={`${styles.copyBtn} ${copiedKey ? styles.copied : ''}`}
                     >
-                      {copiedKey ? 'Copied!' : 'Copy'}
+                      {copiedKey ? t('common.copied') : t('common.copy')}
                     </button>
                   </article>
                 </article>
 
                 <article className={styles.instructionNote}>
-                  <figure className={styles.noteIcon}>!</figure>
+                  <figure className={styles.noteIcon} aria-hidden="true">!</figure>
                   <span className={styles.noteText}>
-                    <strong>Important:</strong> Include the <code>X-Mockia-API-Key</code> header in your requests to authenticate.
+                    <strong>{t('createProject.important')}</strong>{' '}
+                    {rich('createProject.headerNote', { code: (chunk) => <code>{chunk}</code> })}
                   </span>
                 </article>
               </article>
@@ -414,7 +426,7 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
                   closeAndReset()
                 }}
               >
-                Go to Editor &rarr;
+                {t('createProject.goToEditor')}
               </button>
             </nav>
           </article>

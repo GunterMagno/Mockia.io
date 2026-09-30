@@ -1,3 +1,6 @@
+// La UI elige idioma segun el navegador: estos tests fijan ingles (tambien en los hooks before)
+Cypress.on('window:before:load', (win) => win.localStorage.setItem('mockia_locale', 'en'));
+
 describe('Dashboard Flow', () => {
   const randomEmail = `dashuser${Date.now()}@example.com`;
   const password = 'Password123!';
@@ -22,14 +25,14 @@ describe('Dashboard Flow', () => {
     const projectName = `New Project ${Date.now()}`;
     
     // Click on create project button
-    cy.contains('button', 'New Project').click();
+    cy.contains('button', 'New project').click();
     
     // Step 1: Select Empty Project card
-    cy.contains('Empty Project').click();
+    cy.contains('Empty project').click();
     
     // Step 2: Fill Details (using placeholder selectors as name attribute is not present)
-    cy.get('input[placeholder="My Awesome API"]').type(projectName);
-    cy.get('input[placeholder="A short description of what this API does..."]').type('E2E Test Project');
+    cy.get('input[placeholder="My awesome API"]').type(projectName);
+    cy.get('input[placeholder="A short description of what this API does…"]').type('E2E Test Project');
     
     // Click Continue
     cy.contains('button', 'Continue').click();
@@ -38,10 +41,10 @@ describe('Dashboard Flow', () => {
     cy.get('#shouldGenerate').uncheck({ force: true });
     
     // Click Create Project
-    cy.contains('button', 'Create Project').click();
+    cy.contains('button', 'Create project').click();
     
     // Step 4: Click Go to Editor on success screen
-    cy.contains('button', 'Go to Editor').click();
+    cy.contains('button', 'Go to editor').click();
     
     // Should be redirected to the editor view
     cy.url().should('include', '/editor/');

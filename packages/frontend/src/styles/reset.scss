@@ -59,3 +59,12 @@ pre {
   white-space: nowrap;
   border: 0;
 }
+
+/* Chino: sin cursiva sintetica ni tracking negativo en titulares (los glifos CJK no lo admiten bien) */
+html:lang(zh) :is(em, i, [class*='gradientText']) {
+  font-style: normal;
+}
+
+html:lang(zh) :is(h1, h2, h3) {
+  letter-spacing: 0;
+}

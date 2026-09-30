@@ -1,34 +1,71 @@
-export function getBackendErrorMessage(err: any): string {
+import type { MessageKey } from '../i18n/I18nProvider'
+
+type Translate = (key: MessageKey, vars?: Record<string, string | number>) => string
+
+/**
+ * Mensajes del backend (en ingles) que el usuario ve a menudo, mapeados a su clave i18n.
+ * Lo que no esta aqui se muestra tal cual lo manda el servidor.
+ */
+const KNOWN: ReadonlyArray<readonly [RegExp, MessageKey]> = [
+  [/^Backend server is unreachable/i, 'errors.network'],
+  [/^Invalid email or password$/i, 'errors.invalidCredentials'],
+  [/is already registered$/i, 'errors.emailTaken'],
+  [/^Too many requests/i, 'errors.tooManyRequests'],
+  [/^Project not found$/i, 'errors.projectNotFound'],
+  [/^Endpoint not found$/i, 'errors.endpointNotFound'],
+  [/^User not found$/i, 'errors.userNotFound'],
+  [/^You do not have access to this project$/i, 'errors.noProjectAccess'],
+  [/^User is already a member of this project$/i, 'errors.alreadyMember'],
+  [/^Owners cannot leave the project/i, 'errors.ownerCannotLeave'],
+  [/^Invalid GitHub URL format$/i, 'errors.invalidGithubUrl'],
+  [/^Invalid or expired refresh token$/i, 'errors.sessionExpired'],
+  // Joi (mismos textos que la validacion del frontend)
+  [/^Email must be valid$/i, 'validation.emailInvalid'],
+  [/^Email is required$/i, 'validation.emailRequired'],
+  [/^Email or Username is required$/i, 'validation.emailOrUsernameRequired'],
+  [/^Password must be at least 8 characters$/i, 'validation.passwordMin'],
+  [/^Password is required$/i, 'validation.passwordRequired'],
+  [/^Username must be at least 2 characters$/i, 'validation.usernameMin'],
+  [/^Username is required$/i, 'validation.usernameRequired'],
+]
+
+const translateKnown = (message: string, t: Translate): string => {
+  const hit = KNOWN.find(([re]) => re.test(message.trim()))
+  return hit ? t(hit[1]) : message
+}
+
+export function getBackendErrorMessage(err: any, t: Translate): string {
   // Axios error with response payload
   if (err?.response?.data) {
     const data = err.response.data
     
     // 1. Try normalized error structure: { error: { message: "...", details: { ... } } }
     if (data?.error?.message && typeof data.error.message === 'string') {
-      // If it's a validation error with details, format them
+      // Validation error with details: the details are what the user needs to read
       if (data.error.details && typeof data.error.details === 'object') {
-        const details = data.error.details
-        const messages = Object.values(details).flat()
+        const messages = Object.values(data.error.details)
+          .flat()
+          .filter((m): m is string => typeof m === 'string')
         if (messages.length > 0) {
-          return `${data.error.message}: ${messages.join(', ')}`
+          return messages.map((m) => translateKnown(m, t)).join(', ')
         }
       }
-      return data.error.message
+      return translateKnown(data.error.message, t)
     }
 
     // 2. Try simple message property: { message: "..." }
     if (data?.message && typeof data.message === 'string') {
-      return data.message
+      return translateKnown(data.message, t)
     }
 
     // 3. Try legacy error property: { error: "..." }
     if (data?.error && typeof data.error === 'string') {
-      return data.error
+      return translateKnown(data.error, t)
     }
 
     // 4. Try array of messages (e.g. class-validator)
     if (Array.isArray(data)) {
-      const msgs = data.map((d) => (typeof d?.message === 'string' ? d.message : String(d)))
+      const msgs = data.map((d) => (typeof d?.message === 'string' ? translateKnown(d.message, t) : String(d)))
       if (msgs.length) return msgs.join('; ')
     }
 
@@ -36,38 +73,25 @@ export function getBackendErrorMessage(err: any): string {
     if (typeof data === 'string' && data.length > 0 && data.length < 200) {
       return data
     }
-
-    // 6. Fallback for object: stringify it
-    try {
-      if (typeof data === 'object' && Object.keys(data).length > 0) {
-        return JSON.stringify(data)
-      }
-    } catch {
-      // ignore
-    }
   }
 
   // Network/Timeout errors
   if (err?.code === 'ECONNREFUSED' || err?.code === 'ERR_NETWORK') {
-    return 'Connection refused. Please ensure the backend server is running and accessible.'
+    return t('errors.network')
   }
 
   // Status-based fallbacks if no data payload
   const status = err?.response?.status
   if (status) {
-    if (status === 401) return 'Unauthorized: Your session may have expired. Please login again.'
-    if (status === 403) return 'Forbidden: You do not have permission to perform this action.'
-    if (status === 404) return 'Not Found: The requested resource does not exist.'
-    if (status >= 400 && status < 500) return `Request Error (${status}): The server rejected the request.`
-    if (status >= 500) return `Server Error (${status}): Something went wrong on our side. Please try again later.`
+    if (status === 401) return t('errors.unauthorized')
+    if (status === 403) return t('errors.forbidden')
+    if (status === 404) return t('errors.notFound')
+    if (status === 429) return t('errors.tooManyRequests')
+    if (status >= 400 && status < 500) return t('errors.request', { status })
+    if (status >= 500) return t('errors.server', { status })
   }
 
-  // Generic message fallback
-  if (err?.message && typeof err.message === 'string') {
-    return err.message
-  }
-
-  return 'An unexpected error occurred. Please try again.'
+  return t('errors.unexpected')
 }
 
 export default getBackendErrorMessage

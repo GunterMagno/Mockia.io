@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useId } from 'react'
 import { Modal } from '../../ui/Modal/Modal'
 import { Icon } from '../../ui/Icon/Icon'
 import { updateProject, archiveProject, addProjectMember, removeProjectMember, regenerateApiKey, leaveProject } from '../../../services/projectService'
@@ -13,6 +13,7 @@ import githubIcon from '../../../assets/github.svg'
 import externalLinkIcon from '../../../assets/external-link.svg'
 import { playErrorSound } from '../../../utils/audio'
 import ModalErrorAlert from '../../ui/ModalErrorAlert/ModalErrorAlert'
+import { useI18n } from '../../../i18n/I18nProvider'
 
 type Props = {
   isOpen: boolean
@@ -26,6 +27,8 @@ type Props = {
 type Tab = 'general' | 'members' | 'connection'
 
 const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isViewer = false, onUpdate, onDelete }) => {
+  const { t, rich } = useI18n()
+  const uid = useId()
   const [activeTab, setActiveTab] = useState<Tab>('general')
   const [title, setTitle] = useState(project.title)
   const [description, setDescription] = useState(project.description || '')
@@ -66,7 +69,7 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
       onUpdate(updated)
       onClose()
     } catch (err: any) {
-      setError('Failed to update project')
+      setError(t('projectSettings.updateFailed'))
       playErrorSound()
     } finally {
       setLoading(false)
@@ -88,7 +91,7 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
       onDelete()
       onClose()
     } catch (err: any) {
-      setError('Failed to delete project')
+      setError(t('projectSettings.deleteFailed'))
       playErrorSound()
     } finally {
       setLoading(false)
@@ -112,7 +115,7 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
       onDelete() // Navigates to dashboard
       onClose()
     } catch (err: any) {
-      setError('Failed to leave project')
+      setError(t('projectSettings.leaveFailed'))
       playErrorSound()
     } finally {
       setLoading(false)
@@ -129,7 +132,7 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
       onUpdate(updated)
       setInviteEmail('')
     } catch (err: any) {
-      setError('Failed to invite member. Make sure the user exists.')
+      setError(t('projectSettings.inviteFailed'))
       playErrorSound()
     } finally {
       setLoading(false)
@@ -142,7 +145,7 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
       const updated = await removeProjectMember(project.id, userId)
       onUpdate(updated)
     } catch (err: any) {
-      setError('Failed to remove member')
+      setError(t('projectSettings.removeFailed'))
       playErrorSound()
     } finally {
       setLoading(false)
@@ -156,7 +159,7 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
       const updated = await regenerateApiKey(project.id)
       onUpdate(updated)
     } catch (err: any) {
-      setError('Failed to regenerate API Key')
+      setError(t('projectSettings.regenerateFailed'))
       playErrorSound()
     } finally {
       setIsRegenerating(false)
@@ -167,25 +170,28 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
     <Modal isOpen={isOpen} onClose={onClose} noPadding maxWidth="800px">
       <article className={styles.container}>
         <header className={styles.header}>
-          <h2>Project Settings</h2>
-          <nav className={styles.tabs}>
+          <h2>{t('projectSettings.title')}</h2>
+          <nav className={styles.tabs} aria-label={t('projectSettings.tabs')}>
             <button 
               className={`${styles.tab} ${activeTab === 'general' ? styles.active : ''}`}
               onClick={() => setActiveTab('general')}
+              aria-current={activeTab === 'general' ? 'page' : undefined}
             >
-              General
+              {t('projectSettings.general')}
             </button>
             <button 
               className={`${styles.tab} ${activeTab === 'members' ? styles.active : ''}`}
               onClick={() => setActiveTab('members')}
+              aria-current={activeTab === 'members' ? 'page' : undefined}
             >
-              Members
+              {t('projectSettings.members')}
             </button>
             <button 
               className={`${styles.tab} ${activeTab === 'connection' ? styles.active : ''}`}
               onClick={() => setActiveTab('connection')}
+              aria-current={activeTab === 'connection' ? 'page' : undefined}
             >
-              Connection
+              {t('projectSettings.connection')}
             </button>
           </nav>
         </header>
@@ -194,33 +200,36 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
           {activeTab === 'general' ? (
             <section className={styles.generalTab}>
               <article className={styles.formGroup}>
-                <label>Project Name</label>
-                <input 
+                <label htmlFor={`${uid}-name`}>{t('projectSettings.name')}</label>
+                <input
+                  id={`${uid}-name`}
                   value={title} 
                   onChange={e => setTitle(e.target.value)} 
                   className={styles.input}
-                  placeholder="My Awesome Project"
+                  placeholder={t('projectSettings.namePlaceholder')}
                   disabled={isViewer}
                 />
               </article>
               <article className={styles.formGroup}>
-                <label>Description</label>
-                <input 
+                <label htmlFor={`${uid}-description`}>{t('projectSettings.description')}</label>
+                <input
+                  id={`${uid}-description`}
                   value={description} 
                   onChange={e => setDescription(e.target.value)} 
                   className={styles.input}
-                  placeholder="What is this project about?"
+                  placeholder={t('projectSettings.descriptionPlaceholder')}
                   disabled={isViewer}
                 />
               </article>
 
               {project.gitHubRepo && (
                 <article className={styles.formGroup}>
-                  <label>Connected GitHub Repository</label>
+                  <label htmlFor={`${uid}-repo`}>{t('projectSettings.githubRepo')}</label>
                   <article className={styles.githubBox}>
                     <Icon src={githubIcon} size={30} className={styles.githubIconColor} />
-                    <input 
-                      type="text" 
+                    <input
+                      id={`${uid}-repo`}
+                      type="text"
                       readOnly 
                       value={project.gitHubRepo.url} 
                       className={styles.githubInput}
@@ -229,10 +238,10 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
                       type="button"
                       onClick={() => window.open(project.gitHubRepo?.url, '_blank', 'noopener,noreferrer')}
                       className={styles.githubLinkBtn}
-                      title="Open on GitHub"
+                      title={t('projectSettings.openOnGithub')}
                     >
                       <Icon src={externalLinkIcon} size={16} />
-                      <span>Open Repository</span>
+                      <span>{t('projectSettings.openRepo')}</span>
                     </button>
                   </article>
                 </article>
@@ -245,24 +254,24 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
                       <Icon src={warningIcon} size={32} />
                     </figure>
                     <article className={styles.dangerText}>
-                      <h4>Leave Project</h4>
-                      <p>Once you leave the project, you will lose all access. The owner must invite you again for access.</p>
+                      <h4>{t('projectSettings.leaveTitle')}</h4>
+                      <p>{t('projectSettings.leaveText')}</p>
                     </article>
                   </header>
                   
                   {showConfirmLeave ? (
                     <article className={styles.confirmDelete}>
-                      <p>Are you absolutely sure you want to leave this project?</p>
+                      <p>{t('projectSettings.leaveConfirm')}</p>
                       <nav className={styles.confirmActions}>
-                        <button onClick={handleCancelLeave} className={styles.cancelLeaveBtn}>No, Stay</button>
+                        <button onClick={handleCancelLeave} className={styles.cancelLeaveBtn}>{t('projectSettings.stay')}</button>
                         <button onClick={handleConfirmLeave} className={styles.confirmDeleteBtn} disabled={loading}>
-                          {loading ? 'Leaving...' : 'Yes, Leave Project'}
+                          {loading ? t('projectSettings.leaving') : t('projectSettings.confirmLeave')}
                         </button>
                       </nav>
                     </article>
                   ) : (
                     <button onClick={handleLeaveClick} className={styles.deleteBtn} disabled={loading}>
-                      Leave Project
+                      {t('projectSettings.leaveTitle')}
                     </button>
                   )}
                 </section>
@@ -274,24 +283,24 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
                         <Icon src={warningIcon} size={32} />
                       </figure>
                       <article className={styles.dangerText}>
-                        <h4>Danger Zone</h4>
-                        <p>Once you delete a project, there is no going back. please be certain</p>
+                        <h4>{t('projectSettings.dangerTitle')}</h4>
+                        <p>{t('projectSettings.dangerText')}</p>
                       </article>
                     </header>
                     
                     {showConfirmDelete ? (
                       <article className={styles.confirmDelete}>
-                        <p>Are you absolutely sure?</p>
+                        <p>{t('projectSettings.deleteConfirm')}</p>
                         <nav className={styles.confirmActions}>
-                          <button onClick={handleCancelDelete} className={styles.cancelDeleteBtn}>No, Keep it</button>
+                          <button onClick={handleCancelDelete} className={styles.cancelDeleteBtn}>{t('projectSettings.keep')}</button>
                           <button onClick={handleConfirmDelete} className={styles.confirmDeleteBtn} disabled={loading}>
-                            {loading ? 'Deleting...' : 'Yes, Delete Project'}
+                            {loading ? t('common.deleting') : t('projectSettings.confirmDelete')}
                           </button>
                         </nav>
                       </article>
                     ) : (
                       <button onClick={handleDeleteClick} className={styles.deleteBtn} disabled={loading}>
-                        Delete Project
+                        {t('projectSettings.deleteProject')}
                       </button>
                     )}
                   </section>
@@ -302,52 +311,55 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
             <section className={styles.membersTab}>
               {!isViewer && (
                 <section className={styles.inviteSection}>
-                  <label>Invite new members</label>
+                  <label htmlFor={`${uid}-invite`}>{t('projectSettings.invite')}</label>
                   <article className={styles.inviteForm}>
-                    <input 
+                    <input
+                      id={`${uid}-invite`}
                       type="email" 
                       value={inviteEmail} 
                       onChange={e => setInviteEmail(e.target.value)}
                       placeholder="user@example.com"
                       className={styles.input}
                     />
-                    <select 
+                    <select
+                      aria-label={t('projectSettings.inviteRole')}
                       value={inviteRole} 
                       onChange={e => setInviteRole(e.target.value as any)}
                       className={styles.select}
                     >
-                      <option value="VIEWER">Viewer</option>
-                      <option value="EDITOR">Editor</option>
+                      <option value="VIEWER">{t('projectSettings.roleViewer')}</option>
+                      <option value="EDITOR">{t('projectSettings.roleEditor')}</option>
                     </select>
                     <button onClick={handleInvite} className={styles.inviteBtn} disabled={loading || !inviteEmail}>
-                      Invite
+                      {t('projectSettings.inviteButton')}
                     </button>
                   </article>
                 </section>
               )}
 
               <section className={styles.membersList}>
-                <h4>ACTIVE MEMBERS ( {project.members.length} )</h4>
+                <h4>{t('projectSettings.activeMembers', { count: project.members.length })}</h4>
                 {project.members.map((member) => (
                   <article key={member.userId} className={styles.memberItem}>
                     <article className={styles.memberInfo}>
-                      <figure className={styles.memberAvatar}>
+                      <figure className={styles.memberAvatar} aria-hidden="true">
                         {member.username ? member.username[0].toUpperCase() : 'U'}
                       </figure>
                       <article className={styles.memberDetails}>
-                        <span className={styles.memberName}>{member.username || 'Unknown User'}</span>
-                        <span className={styles.memberEmail}>{member.email || 'No email available'}</span>
+                        <span className={styles.memberName}>{member.username || t('projectSettings.unknownUser')}</span>
+                        <span className={styles.memberEmail}>{member.email || t('projectSettings.noEmail')}</span>
                       </article>
                     </article>
                     <nav className={styles.memberActions}>
                       <span className={`${styles.roleBadge} ${styles[member.role]}`}>
-                        {member.role.toUpperCase()}
+                        {member.role === 'OWNER' ? t('projectSettings.roleOwner') : member.role === 'EDITOR' ? t('projectSettings.roleEditor') : t('projectSettings.roleViewer')}
                       </span>
                       {member.role !== 'OWNER' && member.userId !== currentUserId && !isViewer && (
                         <button 
                           onClick={() => handleRemoveMember(member.userId)} 
                           className={styles.removeBtn}
-                          title="Remove member"
+                          title={t('projectSettings.removeMember')}
+                          aria-label={`${t('projectSettings.removeMember')}: ${member.username || member.email || ''}`}
                         >
                           &times;
                         </button>
@@ -360,19 +372,20 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
           ) : (
             <section className={styles.connectionTab}>
               <section className={styles.apiKeySection}>
-                <h4>Project API Key</h4>
-                <p>Use this key in the <code>X-Mockia-API-Key</code> header to authenticate your requests.</p>
+                <h4>{t('projectSettings.apiKeyTitle')}</h4>
+                <p>{rich('projectSettings.apiKeyText', { code: (chunk) => <code>{chunk}</code> })}</p>
                 <article className={styles.apiKeyDisplay}>
                   <article className={styles.apiKeyBox}>
                     <code>
                       {showApiKey 
-                        ? (project.apiKey || 'No API Key generated') 
-                        : (project.apiKey ? '•'.repeat(project.apiKey.length) : 'No API Key generated')}
+                        ? (project.apiKey || t('projectSettings.noApiKey'))
+                        : (project.apiKey ? '•'.repeat(project.apiKey.length) : t('projectSettings.noApiKey'))}
                     </code>
                     <button 
                       className={styles.toggleBtn}
                       onClick={() => setShowApiKey(!showApiKey)}
-                      title={showApiKey ? 'Hide API Key' : 'Show API Key'}
+                      title={showApiKey ? t('common.hideApiKey') : t('common.showApiKey')}
+                      aria-label={showApiKey ? t('common.hideApiKey') : t('common.showApiKey')}
                     >
                       <Icon src={showApiKey ? eyeOffIcon : eyeIcon} size={16} />
                     </button>
@@ -388,21 +401,21 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
                     }}
                   >
                     <Icon src={copiedKey ? checkIcon : copyIcon} size={16} />
-                    {copiedKey ? 'Copied' : 'Copy'}
+                    {copiedKey ? t('common.copied') : t('common.copy')}
                   </button>
                 </article>
               </section>
 
               {!isViewer && (
                 <section className={styles.regenerateSection}>
-                  <h4>Regenerate API Key</h4>
-                  <p>Warning: This will immediately invalidate the current key. Any frontend using the old key will lose access.</p>
+                  <h4>{t('projectSettings.regenerateTitle')}</h4>
+                  <p>{t('projectSettings.regenerateText')}</p>
                   <button 
                     className={styles.regenerateBtn} 
                     onClick={handleRegenerateKey}
                     disabled={isRegenerating}
                   >
-                    {isRegenerating ? 'Regenerating...' : 'Regenerate API Key'}
+                    {isRegenerating ? t('projectSettings.regenerating') : t('projectSettings.regenerate')}
                   </button>
                 </section>
               )}
@@ -412,10 +425,10 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
         </section>
 
         <footer className={styles.footer}>
-          <button className={styles.cancelBtn} onClick={onClose}>{isViewer ? 'Close' : 'Cancel'}</button>
+          <button className={styles.cancelBtn} onClick={onClose}>{isViewer ? t('common.close') : t('common.cancel')}</button>
           {!isViewer && (
             <button className={styles.saveBtn} onClick={handleSaveGeneral} disabled={loading}>
-              {loading ? 'Saving...' : 'Save Changes'}
+              {loading ? t('common.saving') : t('common.saveChanges')}
             </button>
           )}
         </footer>

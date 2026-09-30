@@ -19,10 +19,13 @@ import checkIcon from '../../assets/check.svg'
 import styles from './MockEditor.module.scss'
 import ProjectSettingsModal from '../../components/projects/ProjectSettingsModal'
 import { getBackendErrorMessage } from '../../utils/error'
+import { PATHS } from '../../routes/paths'
+import { useI18n } from '../../i18n/I18nProvider'
 
 const MockEditor: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { t, tl } = useI18n()
   
   const [endpoints, setEndpoints] = useState<EndpointData[]>([])
   const [project, setProject] = useState<Project | null>(null)
@@ -170,7 +173,7 @@ const MockEditor: React.FC = () => {
 
   const handleSelectEndpoint = (ep: EndpointData) => {
     if (isDirty) {
-      const confirm = window.confirm("You have unsaved changes. Discard?")
+      const confirm = window.confirm(t('editor.confirmDiscard'))
       if (!confirm) return
     }
     
@@ -185,7 +188,7 @@ const MockEditor: React.FC = () => {
 
   const handleAddEndpoint = async () => {
     if (isDirty) {
-      const confirm = window.confirm("You have unsaved changes. Discard?")
+      const confirm = window.confirm(t('editor.confirmDiscard'))
       if (!confirm) return
     }
     if (!id) return
@@ -194,13 +197,13 @@ const MockEditor: React.FC = () => {
       const newEp = await createEndpoint(id, {
         path: '/new-endpoint',
         method: 'GET',
-        description: 'New endpoint description'
+        description: t('editor.newEndpointDescription')
       })
       setEndpoints(prev => [...prev, newEp])
       handleSelectEndpoint(newEp)
     } catch (error) {
       console.error("Error creating endpoint:", error)
-      alert("Failed to create endpoint.")
+      alert(t('editor.createFailed'))
     }
   }
 
@@ -224,7 +227,7 @@ const MockEditor: React.FC = () => {
       setEndpointToDelete(null)
     } catch (error) {
       console.error("Error deleting endpoint:", error)
-      alert("Failed to delete endpoint.")
+      alert(t('editor.deleteFailed'))
     } finally {
       setIsDeleting(false)
     }
@@ -234,14 +237,7 @@ const MockEditor: React.FC = () => {
     if (!id || !aiRequirement) return
     setIsAiGenerating(true)
     
-    const messages = [
-      'Analyzing current project structure...',
-      'Mapping repository context...',
-      'Mockia AI is designing new endpoints...',
-      'Generating realistic response data...',
-      'Validating JSON structure...',
-      'Almost there...'
-    ]
+    const messages = tl('editor.aiProgress')
     
     let currentIdx = 0
     setAiStatusMessage(messages[0])
@@ -262,7 +258,7 @@ const MockEditor: React.FC = () => {
     } catch (error: any) {
       clearInterval(interval)
       console.error("AI Generation failed:", error)
-      alert(`AI Generation failed: ${getBackendErrorMessage(error)}`)
+      alert(t('editor.aiFailed', { message: getBackendErrorMessage(error, t) }))
     } finally {
       setIsAiGenerating(false)
     }
@@ -288,7 +284,7 @@ const MockEditor: React.FC = () => {
       try {
         parsedJson = JSON.parse(jsonContent)
       } catch (e) {
-        alert("Invalid JSON. Please fix errors before saving.")
+        alert(t('editor.invalidJson'))
         setIsSaving(false)
         return
       }
@@ -314,7 +310,7 @@ const MockEditor: React.FC = () => {
       setIsDirty(false)
     } catch (err) {
       console.error("Save failed:", err)
-      alert("Failed to save endpoint. Please check the backend connection.")
+      alert(t('editor.saveFailed'))
     } finally {
       setIsSaving(false)
     }
@@ -325,7 +321,7 @@ const MockEditor: React.FC = () => {
       <header className={styles.header}>
         <section className={styles.leftHeader}>
           <article className={styles.urlSection}>
-            <span className={styles.urlLabel}>Mock Base URL:</span>
+            <span className={styles.urlLabel}>{t('editor.mockBaseUrl')}:</span>
             <code className={styles.urlDisplay}>
               {mockBaseUrl}
             </code>
@@ -339,7 +335,8 @@ const MockEditor: React.FC = () => {
                   setTimeout(() => setCopiedUrl(false), 2000);
                 }
               }}
-              title="Copy URL"
+              title={t('editor.copyUrl')}
+              aria-label={t('editor.copyUrl')}
               className={`${styles.copyBtn} ${copiedUrl ? styles.copied : ''}`}
             >
               <Icon src={copiedUrl ? checkIcon : copyIcon} size={16} />
@@ -347,7 +344,7 @@ const MockEditor: React.FC = () => {
           </article>
 
           <article className={styles.authInfo}>
-            <span className={styles.authLabel}>Header:</span>
+            <span className={styles.authLabel}>{t('editor.header')}:</span>
             <code>X-Mockia-API-Key</code>
             <Button 
               variant="ghost" 
@@ -359,14 +356,14 @@ const MockEditor: React.FC = () => {
                   setTimeout(() => setCopiedKey(false), 2000);
                 }
               }}
-              title="Copy API Key"
+              title={t('editor.copyApiKey')}
               className={`${styles.copyBtn} ${copiedKey ? styles.copied : ''}`}
             >
               <Icon src={copiedKey ? checkIcon : copyIcon} size={16} />
-              {copiedKey ? 'Key Copied!' : 'Copy Key'}
+              {copiedKey ? t('editor.keyCopied') : t('editor.copyKey')}
             </Button>
           </article>
-          {isDirty && <span className={styles.unsaved}>• Unsaved changes</span>}
+          {isDirty && <span className={styles.unsaved} role="status">• {t('editor.unsaved')}</span>}
         </section>
         <section className={styles.rightHeader}>
           {!isViewer && (
@@ -376,14 +373,14 @@ const MockEditor: React.FC = () => {
                 onClick={() => setShowAiModal(true)}
                 className={styles.aiBtn}
               >
-                <Icon src={aiSparkleIcon} size={18} /> Generate more with AI
+                <Icon src={aiSparkleIcon} size={18} /> {t('editor.generateAi')}
               </Button>
               <Button onClick={handleSave} disabled={!isDirty || isSaving}>
-                {isSaving ? 'Saving...' : 'Save Changes'}
+                {isSaving ? t('common.saving') : t('common.saveChanges')}
               </Button>
             </>
           )}
-          {isViewer && <span className={styles.viewerBadge}>VIEW ONLY MODE</span>}
+          {isViewer && <span className={styles.viewerBadge}>{t('editor.viewOnly')}</span>}
         </section>
       </header>
 
@@ -407,13 +404,13 @@ const MockEditor: React.FC = () => {
           {activeEndpoint ? (
             <>
               <header>
-                <h3>Response Data (JSON)</h3>
+                <h3>{t('editor.responseData')}</h3>
               </header>
               <JsonEditor value={jsonContent} onChange={handleJsonChange} readOnly={isViewer} />
             </>
           ) : (
             <article className={styles.emptyState}>
-              Select an endpoint from the left to edit.
+              {t('editor.selectEndpoint')}
             </article>
           )}
         </section>
@@ -434,21 +431,19 @@ const MockEditor: React.FC = () => {
       {/* AI Generation Modal */}
       <Modal isOpen={showAiModal} onClose={() => setShowAiModal(false)}>
         <article className={styles.aiModalContent}>
-          <h3>Generate endpoints with AI</h3>
-          <p>
-            Tell Mockia AI what endpoints you want to create. You can describe the business logic, 
-            data models, or specific routes you need.
-          </p>
+          <h3>{t('editor.aiModalTitle')}</h3>
+          <p>{t('editor.aiModalText')}</p>
           <textarea
             value={aiRequirement}
             onChange={(e) => setAiRequirement(e.target.value)}
-            placeholder="e.g. Create endpoints for a shopping cart with add, remove, and checkout functionality..."
+            placeholder={t('editor.aiModalPlaceholder')}
+            aria-label={t('editor.aiModalTitle')}
             className={styles.aiTextarea}
           />
           <nav className={styles.modalActions}>
-            <Button variant="ghost" onClick={() => setShowAiModal(false)} disabled={isAiGenerating}>Cancel</Button>
+            <Button variant="ghost" onClick={() => setShowAiModal(false)} disabled={isAiGenerating}>{t('common.cancel')}</Button>
             <Button onClick={handleAiGenerate} isLoading={isAiGenerating} disabled={!aiRequirement || isAiGenerating}>
-              {isAiGenerating ? aiStatusMessage : 'Generate'}
+              {isAiGenerating ? aiStatusMessage : t('editor.generate')}
             </Button>
           </nav>
         </article>
@@ -464,23 +459,21 @@ const MockEditor: React.FC = () => {
             setProject(updated)
             // If slug changed, we need to update the URL
             if (updated.slug !== project.slug) {
-              navigate(`/editor/${updated.slug}`, { replace: true })
+              navigate(PATHS.editor(updated.slug), { replace: true })
             }
           }}
-          onDelete={() => navigate('/dashboard')}
+          onDelete={() => navigate(PATHS.dashboard)}
         />
       )}
       {/* Delete Confirmation Modal */}
       <Modal isOpen={!!endpointToDelete} onClose={() => setEndpointToDelete(null)}>
         <article className={styles.aiModalContent}>
-          <h3>Confirm deletion</h3>
-          <p>
-            Are you sure you want to delete this endpoint? This action cannot be undone.
-          </p>
+          <h3>{t('editor.confirmDeleteTitle')}</h3>
+          <p>{t('editor.confirmDeleteText')}</p>
           <nav className={styles.modalActions}>
-            <Button variant="ghost" onClick={() => setEndpointToDelete(null)} disabled={isDeleting}>Cancel</Button>
+            <Button variant="ghost" onClick={() => setEndpointToDelete(null)} disabled={isDeleting}>{t('common.cancel')}</Button>
             <Button variant="danger" onClick={() => endpointToDelete && handleDeleteEndpoint(endpointToDelete)} isLoading={isDeleting} disabled={isDeleting}>
-              {isDeleting ? 'Deleting...' : 'Delete'}
+              {isDeleting ? t('common.deleting') : t('common.delete')}
             </Button>
           </nav>
         </article>

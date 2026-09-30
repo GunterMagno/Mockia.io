@@ -5,6 +5,7 @@ import NotificationPanel from '../NotificationPanel/NotificationPanel';
 import NotificationToast from '../NotificationToast/NotificationToast';
 import { useNotifications } from '../../../hooks/useNotifications';
 import styles from './NotificationBell.module.scss';
+import { useI18n } from '../../../i18n/I18nProvider';
 
 interface NotificationBellProps {
   className?: string;
@@ -13,6 +14,7 @@ interface NotificationBellProps {
 const NotificationBell: React.FC<NotificationBellProps> = ({ className }) => {
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef<HTMLElement>(null);
+  const { t } = useI18n();
   const { 
     notifications, 
     activeToast, 
@@ -45,7 +47,9 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className }) => {
       <button 
         className={`${styles.bellBtn} ${unreadCount > 0 ? styles.hasUnread : ''}`} 
         onClick={() => setIsOpen(!isOpen)}
-        title="Notifications"
+        title={t('notifications.title')}
+        aria-label={unreadCount > 0 ? `${t('notifications.title')}: ${t('notifications.unread', { count: unreadCount })}` : t('notifications.title')}
+        aria-expanded={isOpen}
       >
         <Icon src={bellIcon} />
         {unreadCount > 0 && <span className={styles.badge}>{unreadCount}</span>}

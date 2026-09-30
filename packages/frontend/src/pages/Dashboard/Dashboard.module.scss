@@ -107,6 +107,28 @@
   flex: 1;
 }
 
+/* Enlace real en el titulo que cubre toda la tarjeta: teclado, lector de pantalla y abrir en pestana nueva */
+.cardLink {
+  color: inherit;
+  text-decoration: none;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+  }
+
+  &:focus-visible {
+    outline: none;
+  }
+}
+
+.projectCard:has(.cardLink:focus-visible) {
+  outline: 2px solid var(--color-accent-text);
+  outline-offset: 3px;
+}
+
 .description {
   color: var(--muted);
   font-size: 0.9rem;

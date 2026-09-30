@@ -2,6 +2,7 @@ import React from 'react'
 import type { EndpointData } from '../../../services/endpointService'
 
 import { Button } from '../../ui/Button/Button'
+import { useI18n } from '../../../i18n/I18nProvider'
 
 export interface EndpointTreeProps {
   endpoints: EndpointData[]
@@ -14,14 +15,15 @@ export interface EndpointTreeProps {
 import styles from './EndpointTree.module.scss'
 
 export const EndpointTree: React.FC<EndpointTreeProps> = ({ endpoints, selectedId, onSelect, onAdd, onDelete }) => {
+  const { t } = useI18n()
   return (
     <nav className={styles.nav}>
       <header className={styles.header}>
-        <h4>Endpoints</h4>
-        {onAdd && <Button onClick={onAdd} size="sm">+ New Endpoint</Button>}
+        <h4>{t('tree.title')}</h4>
+        {onAdd && <Button onClick={onAdd} size="sm">{t('tree.newEndpoint')}</Button>}
       </header>
       
-      {endpoints.length === 0 && <p className={styles.empty}>No endpoints found.</p>}
+      {endpoints.length === 0 && <p className={styles.empty}>{t('tree.empty')}</p>}
       
       {endpoints.map(ep => (
         <article key={ep.id} className={styles.itemWrapper}>
@@ -45,7 +47,8 @@ export const EndpointTree: React.FC<EndpointTreeProps> = ({ endpoints, selectedI
                 e.stopPropagation();
                 onDelete(ep.id);
               }}
-              title="Delete endpoint"
+              title={t('tree.delete', { method: ep.method.toUpperCase(), path: ep.path })}
+              aria-label={t('tree.delete', { method: ep.method.toUpperCase(), path: ep.path })}
             >
               &times;
             </button>

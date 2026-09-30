@@ -1,5 +1,6 @@
 import React, { useId, useState } from 'react'
 import styles from './BuilderPreview.module.scss'
+import { useI18n } from '../../i18n/I18nProvider'
 
 const METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'] as const
 type Method = (typeof METHODS)[number]
@@ -22,6 +23,7 @@ const MAX_DELAY = 10000
  */
 const BuilderPreview: React.FC = () => {
   const uid = useId()
+  const { t } = useI18n()
   const [method, setMethod] = useState<Method>('GET')
   const [path, setPath] = useState('/users/me')
   const [delay, setDelay] = useState(12)
@@ -39,9 +41,9 @@ const BuilderPreview: React.FC = () => {
   return (
     <div className={styles.builderWrap}>
     <div className={styles.builder}>
-      <form className={styles.form} onSubmit={(e) => e.preventDefault()} aria-label="Endpoint builder preview">
+      <form className={styles.form} onSubmit={(e) => e.preventDefault()} aria-label={t('landing.builder.formLabel')}>
         <div className={styles.field}>
-          <label htmlFor={`${uid}-method`}>Method</label>
+          <label htmlFor={`${uid}-method`}>{t('landing.builder.method')}</label>
           <select id={`${uid}-method`} value={method} onChange={(e) => setMethod(e.target.value as Method)}>
             {METHODS.map((m) => (
               <option key={m} value={m}>{m}</option>
@@ -50,7 +52,7 @@ const BuilderPreview: React.FC = () => {
         </div>
 
         <div className={styles.field}>
-          <label htmlFor={`${uid}-path`}>Path</label>
+          <label htmlFor={`${uid}-path`}>{t('landing.builder.path')}</label>
           <input
             id={`${uid}-path`}
             type="text"
@@ -65,7 +67,7 @@ const BuilderPreview: React.FC = () => {
         </div>
 
         <div className={styles.field}>
-          <label htmlFor={`${uid}-delay`}>Delay (ms)</label>
+          <label htmlFor={`${uid}-delay`}>{t('landing.builder.delay')}</label>
           <input
             id={`${uid}-delay`}
             type="number"
@@ -79,7 +81,7 @@ const BuilderPreview: React.FC = () => {
         </div>
 
         <div className={styles.field}>
-          <label htmlFor={`${uid}-status`}>Force HTTP Status</label>
+          <label htmlFor={`${uid}-status`}>{t('landing.builder.status')}</label>
           <select id={`${uid}-status`} value={status} onChange={(e) => setStatus(Number(e.target.value))}>
             {STATUSES.map((s) => (
               <option key={s.code} value={s.code}>{s.label}</option>

@@ -1,3 +1,6 @@
+// La UI elige idioma segun el navegador: estos tests fijan ingles (tambien en los hooks before)
+Cypress.on('window:before:load', (win) => win.localStorage.setItem('mockia_locale', 'en'));
+
 describe('Authentication Flow', () => {
   const randomEmail = `testuser${Date.now()}@example.com`;
   const password = 'Password123!';
@@ -29,6 +32,6 @@ describe('Authentication Flow', () => {
     
     // Should be redirected to dashboard
     cy.url().should('include', '/dashboard');
-    cy.contains('My Projects').should('be.visible');
+    cy.contains('My projects').should('be.visible');
   });
 });

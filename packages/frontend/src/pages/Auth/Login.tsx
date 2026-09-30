@@ -7,6 +7,7 @@ import { getBackendErrorMessage } from '../../utils/error'
 import { validatePassword } from '../../utils/validation'
 import { playErrorSound } from '../../utils/audio'
 import { PATHS, postLoginTarget } from '../../routes/paths'
+import { useI18n } from '../../i18n/I18nProvider'
 
 import ModalErrorAlert from '../../components/ui/ModalErrorAlert/ModalErrorAlert'
 
@@ -16,6 +17,7 @@ const Login: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { login } = useAuth()
+  const { t } = useI18n()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(true)
@@ -29,13 +31,13 @@ const Login: React.FC = () => {
     const passwordError = validatePassword(password);
     
     if (!email) {
-      setError('Email or Username is required');
+      setError(t('validation.emailOrUsernameRequired'));
       playErrorSound();
       return;
     }
 
     if (passwordError) {
-      setError(passwordError);
+      setError(t(passwordError));
       playErrorSound();
       return;
     }
@@ -46,7 +48,7 @@ const Login: React.FC = () => {
       await login({ email, password }, rememberMe)
       navigate(postLoginTarget(location.state), { replace: true })
     } catch (err: any) {
-      setError(getBackendErrorMessage(err))
+      setError(getBackendErrorMessage(err, t))
       playErrorSound()
     } finally {
       setLoading(false)
@@ -57,23 +59,23 @@ const Login: React.FC = () => {
     <main className={styles.wrapper}>
       <section className={styles.container}>
         <header className={styles.header}>
-          <p>Login</p>
+          <h1>{t('auth.loginTitle')}</h1>
         </header>
         
         <article className={styles.authCard}>
           <form onSubmit={onSubmit} className={styles.form}>
             <Input 
-              label="Email Address" 
+              label={t('auth.email')}
               type="email" 
               name="email"
               autoComplete="email"
-              placeholder="you@email.com"
+              placeholder={t('auth.emailPlaceholder')}
               value={email} 
               onChange={(e) => setEmail(e.target.value)} 
               required
             />
             <Input 
-              label="Password" 
+              label={t('auth.password')}
               type="password" 
               name="password"
               autoComplete="current-password"
@@ -90,7 +92,7 @@ const Login: React.FC = () => {
                   checked={rememberMe} 
                   onChange={(e) => setRememberMe(e.target.checked)} 
                 />
-                <span>Remember me</span>
+                <span>{t('auth.rememberMe')}</span>
               </label>
             </fieldset>
             
@@ -99,15 +101,15 @@ const Login: React.FC = () => {
             )}
             
             <Button type="submit" isLoading={loading} className={styles.submitBtn}>
-              Sign In
+              {t('auth.signIn')}
             </Button>
           </form>
           
           <footer className={styles.footer}>
             <span>
-              <span>Don't have an account? </span>
+              <span>{t('auth.noAccount')} </span>
               <Link to={PATHS.signup}>
-                Create an account
+                {t('auth.createOne')}
               </Link>
             </span>
           </footer>

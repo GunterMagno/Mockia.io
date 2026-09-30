@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useId } from 'react'
 import { Modal } from '../../ui/Modal/Modal'
 import { getProfile, updateProfile, changePassword } from '../../../services/userService'
 import { useNavigate } from 'react-router-dom'
@@ -9,6 +9,7 @@ import styles from './ProfileModal.module.scss'
 import { playErrorSound } from '../../../utils/audio'
 import { getBackendErrorMessage } from '../../../utils/error'
 import ModalErrorAlert from '../../ui/ModalErrorAlert/ModalErrorAlert'
+import { useI18n } from '../../../i18n/I18nProvider'
 
 type Props = {
   isOpen: boolean
@@ -17,6 +18,8 @@ type Props = {
 
 const ProfileModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const { logout } = useAuth()
+  const { t } = useI18n()
+  const uid = useId()
   const navigate = useNavigate()
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
@@ -52,13 +55,13 @@ const ProfileModal: React.FC<Props> = ({ isOpen, onClose }) => {
         setNewPassword('')
       }
       
-      setStatus({ type: 'success', message: 'Profile updated successfully!' })
+      setStatus({ type: 'success', message: t('profile.updated') })
       setTimeout(() => {
         setStatus({ type: '', message: '' })
         onClose()
       }, 1500)
     } catch (err: any) {
-      setStatus({ type: 'error', message: getBackendErrorMessage(err) })
+      setStatus({ type: 'error', message: getBackendErrorMessage(err, t) })
       playErrorSound()
     } finally {
       setLoading(false)
@@ -75,49 +78,53 @@ const ProfileModal: React.FC<Props> = ({ isOpen, onClose }) => {
     <Modal isOpen={isOpen} onClose={onClose} noPadding maxWidth="800px">
       <article className={styles.container}>
         <section className={styles.innerContent}>
-          <h2 className={styles.title}>Account Settings</h2>
+          <h2 className={styles.title}>{t('profile.title')}</h2>
           
           <section className={styles.formSection}>
             <article className={styles.formGroup}>
-              <label>Username</label>
+              <label htmlFor={`${uid}-username`}>{t('profile.username')}</label>
               <input 
+                id={`${uid}-username`}
                 value={username}
                 onChange={e => setUsername(e.target.value)}
                 className={styles.input}
-                placeholder="yourusername"
+                placeholder={t('profile.usernamePlaceholder')}
               />
             </article>
 
             <article className={styles.formGroup}>
-              <label>Email</label>
+              <label htmlFor={`${uid}-email`}>{t('profile.email')}</label>
               <input 
+                id={`${uid}-email`}
                 value={email}
                 readOnly
                 className={`${styles.input} ${styles.readOnly}`}
-                placeholder="your@email.com"
+                placeholder={t('auth.emailPlaceholder')}
               />
             </article>
 
             <fieldset className={styles.passwordGrid}>
               <article className={styles.formGroup}>
-                <label>Current Password</label>
+                <label htmlFor={`${uid}-current`}>{t('profile.currentPassword')}</label>
                 <Input 
+                  id={`${uid}-current`}
                   type="password"
                   value={currentPassword}
                   onChange={e => setCurrentPassword(e.target.value)}
                   className={styles.input}
-                  placeholder="Current Password"
+                  placeholder={t('profile.currentPassword')}
                   autoComplete="one-time-code"
                 />
               </article>
               <article className={styles.formGroup}>
-                <label>New Password</label>
+                <label htmlFor={`${uid}-new`}>{t('profile.newPassword')}</label>
                 <Input 
+                  id={`${uid}-new`}
                   type="password"
                   value={newPassword}
                   onChange={e => setNewPassword(e.target.value)}
                   className={styles.input}
-                  placeholder="New Password"
+                  placeholder={t('profile.newPassword')}
                   autoComplete="new-password"
                 />
               </article>
@@ -136,18 +143,18 @@ const ProfileModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
           <nav className={styles.actions}>
             <button className={styles.logoutBtn} onClick={handleLogout}>
-              Log Out
+              {t('profile.logOut')}
             </button>
             <nav className={styles.rightActions}>
               <button className={styles.cancelBtn} onClick={onClose}>
-                Cancel
+                {t('common.cancel')}
               </button>
               <button 
                 className={styles.saveBtn} 
                 onClick={handleSave} 
                 disabled={loading || (!!newPassword && !currentPassword)}
               >
-                {loading ? 'Saving...' : 'Save'}
+                {loading ? t('common.saving') : t('common.save')}
               </button>
             </nav>
           </nav>

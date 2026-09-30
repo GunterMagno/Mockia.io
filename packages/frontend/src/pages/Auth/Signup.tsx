@@ -8,6 +8,7 @@ import { getBackendErrorMessage } from '../../utils/error'
 import { validateEmail, validatePassword, validateUsername } from '../../utils/validation'
 import { playErrorSound } from '../../utils/audio'
 import { PATHS, postLoginTarget } from '../../routes/paths'
+import { useI18n } from '../../i18n/I18nProvider'
 
 import ModalErrorAlert from '../../components/ui/ModalErrorAlert/ModalErrorAlert'
 
@@ -17,6 +18,7 @@ const Signup: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { login } = useAuth()
+  const { t } = useI18n()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [username, setUsername] = useState('')
@@ -32,8 +34,9 @@ const Signup: React.FC = () => {
     const passwordError = validatePassword(password);
     const usernameError = validateUsername(username);
     
-    if (emailError || passwordError || usernameError) {
-      setError(emailError || passwordError || usernameError);
+    const firstError = usernameError || emailError || passwordError;
+    if (firstError) {
+      setError(t(firstError));
       playErrorSound();
       return;
     }
@@ -47,7 +50,7 @@ const Signup: React.FC = () => {
       await login({ email, password }, rememberMe)
       navigate(postLoginTarget(location.state), { replace: true })
     } catch (err: any) {
-      setError(getBackendErrorMessage(err))
+      setError(getBackendErrorMessage(err, t))
       playErrorSound()
     } finally {
       setLoading(false)
@@ -58,32 +61,32 @@ const Signup: React.FC = () => {
     <main className={styles.wrapper}>
       <section className={styles.container}>
         <header className={styles.header}>
-          <p>Sign Up</p>
+          <h1>{t('auth.signupTitle')}</h1>
         </header>
         
         <article className={styles.authCard}>
           <form onSubmit={onSubmit} className={styles.form}>
             <Input 
-              label="Username" 
+              label={t('auth.username')}
               name="username"
               autoComplete="username"
-              placeholder="your_username"
+              placeholder={t('auth.usernamePlaceholder')}
               value={username} 
               onChange={(e) => setUsername(e.target.value)} 
               required
             />
             <Input 
-              label="Email Address" 
+              label={t('auth.email')}
               type="email" 
               name="email"
               autoComplete="email"
-              placeholder="you@email.com"
+              placeholder={t('auth.emailPlaceholder')}
               value={email} 
               onChange={(e) => setEmail(e.target.value)} 
               required
             />
             <Input 
-              label="Password" 
+              label={t('auth.password')}
               type="password" 
               name="new-password"
               autoComplete="new-password"
@@ -100,7 +103,7 @@ const Signup: React.FC = () => {
                   checked={rememberMe} 
                   onChange={(e) => setRememberMe(e.target.checked)} 
                 />
-                <span>Remember me</span>
+                <span>{t('auth.rememberMe')}</span>
               </label>
             </fieldset>
             
@@ -109,15 +112,15 @@ const Signup: React.FC = () => {
             )}
             
             <Button type="submit" isLoading={loading} className={styles.submitBtn}>
-              Create Account
+              {t('auth.createAccount')}
             </Button>
           </form>
           
           <footer className={styles.footer}>
             <span>
-              <span>Already have an account? </span>
+              <span>{t('auth.haveAccount')} </span>
               <Link to={PATHS.login}>
-                Log in
+                {t('auth.logIn')}
               </Link>
             </span>
           </footer>

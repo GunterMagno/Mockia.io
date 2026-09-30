@@ -1,3 +1,6 @@
+// La UI elige idioma segun el navegador: estos tests fijan ingles (tambien en los hooks before)
+Cypress.on('window:before:load', (win) => win.localStorage.setItem('mockia_locale', 'en'));
+
 describe('Routing: home publico y login solo donde hace falta', () => {
   beforeEach(() => cy.clearLocalStorage());
 

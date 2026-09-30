@@ -1,22 +1,33 @@
 .legalPage {
   color: var(--color-text);
   min-height: 100%;
-  padding: 120px 0 100px;
+  padding-block: var(--space-section);
   font-family: var(--font-ui);
 }
 
+/* Gutter fluido: antes 5rem fijos por lado dejaban ~215px de texto en un movil de 375px */
 .container {
   max-width: 800px;
   margin: 0 auto;
-  padding: 0 var(--spacing-20);
+  padding-inline: var(--space-gutter);
+}
+
+.langNotice {
+  margin: 0 0 var(--spacing-8);
+  padding: var(--spacing-3) var(--spacing-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
 }
 
 .header {
-  margin-bottom: 80px;
+  margin-bottom: var(--space-section);
   text-align: center;
   
   h1 {
-    font-size: 4rem;
+    font-size: var(--step-4);
     font-weight: 800;
     letter-spacing: -0.04em;
     margin-bottom: var(--spacing-4);
@@ -87,10 +98,6 @@
 }
 
 @media (max-width: 768px) {
-  .header h1 {
-    font-size: 3rem;
-  }
-  
   .content {
     font-size: 1.1rem;
   }

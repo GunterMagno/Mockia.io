@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from 'react'
+import React, { useId, useMemo, useState } from 'react'
 import { generateSnippets, type CodeSnippets } from '@mockia/shared'
 import type { EndpointData } from '../../../services/endpointService'
 import { Input } from '../../ui/Input/Input'
+import { useI18n } from '../../../i18n/I18nProvider'
 
 export interface EndpointInspectorProps {
   endpoint: EndpointData
@@ -21,6 +22,8 @@ const LANGS: Array<{ key: keyof CodeSnippets; label: string }> = [
 import styles from './EndpointInspector.module.scss'
 
 export const EndpointInspector: React.FC<EndpointInspectorProps> = ({ endpoint, onChangeMeta, readOnly, mockBaseUrl }) => {
+  const { t } = useI18n()
+  const uid = useId()
   const [lang, setLang] = useState<keyof CodeSnippets>('curl')
   const [copied, setCopied] = useState(false)
   const snippets = useMemo(
@@ -40,15 +43,16 @@ export const EndpointInspector: React.FC<EndpointInspectorProps> = ({ endpoint, 
   return (
     <section className={styles.inspector}>
       <header className={styles.header}>
-        <h3>HTTP Configuration</h3>
+        <h3>{t('inspector.title')}</h3>
       </header>
 
       <fieldset className={styles.fieldset} disabled={readOnly}>
         <article className={styles.field}>
-          <label className={styles.label}>
-            HTTP Method
+          <label className={styles.label} htmlFor={`${uid}-method`}>
+            {t('inspector.method')}
           </label>
-          <select 
+          <select
+            id={`${uid}-method`}
             value={endpoint.method} 
             onChange={(e) => onChangeMeta({ method: e.target.value })}
             className={styles.select}
@@ -62,13 +66,13 @@ export const EndpointInspector: React.FC<EndpointInspectorProps> = ({ endpoint, 
         </article>
 
         <Input 
-          label="Path" 
+          label={t('inspector.path')}
           value={endpoint.path} 
           onChange={(e) => onChangeMeta({ path: e.target.value })} 
         />
 
         <Input 
-          label="Description" 
+          label={t('inspector.description')}
           value={endpoint.description} 
           onChange={(e) => onChangeMeta({ description: e.target.value })} 
         />
@@ -77,12 +81,12 @@ export const EndpointInspector: React.FC<EndpointInspectorProps> = ({ endpoint, 
 
         <header className={styles.header}>
           <h4 style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Simulation & Overrides
+            {t('inspector.simulation')}
           </h4>
         </header>
 
         <Input 
-          label="Simulate Delay (ms)" 
+          label={t('inspector.delay')}
           type="number"
           min={0}
           max={10000}
@@ -92,28 +96,29 @@ export const EndpointInspector: React.FC<EndpointInspectorProps> = ({ endpoint, 
         />
 
         <article className={styles.field}>
-          <label className={styles.label}>
-            Force HTTP Status
+          <label className={styles.label} htmlFor={`${uid}-status`}>
+            {t('inspector.forceStatus')}
           </label>
-          <select 
+          <select
+            id={`${uid}-status`}
             value={endpoint.force_status_code || 0} 
             onChange={(e) => onChangeMeta({ force_status_code: parseInt(e.target.value) || 0 })}
             className={styles.select}
           >
-            <option value="0">None (Use default response code)</option>
-            <optgroup label="2xx Success">
+            <option value="0">{t('inspector.none')}</option>
+            <optgroup label={t('inspector.group2xx')}>
               <option value="200">200 OK</option>
               <option value="201">201 Created</option>
               <option value="204">204 No Content</option>
             </optgroup>
-            <optgroup label="4xx Client Error">
+            <optgroup label={t('inspector.group4xx')}>
               <option value="400">400 Bad Request</option>
               <option value="401">401 Unauthorized</option>
               <option value="403">403 Forbidden</option>
               <option value="404">404 Not Found</option>
               <option value="409">409 Conflict</option>
             </optgroup>
-            <optgroup label="5xx Server Error">
+            <optgroup label={t('inspector.group5xx')}>
               <option value="500">500 Internal Server Error</option>
               <option value="503">503 Service Unavailable</option>
             </optgroup>
@@ -123,9 +128,9 @@ export const EndpointInspector: React.FC<EndpointInspectorProps> = ({ endpoint, 
       </fieldset>
 
       {snippets && (
-        <section className={styles.snippets} aria-label="Code snippets">
+        <section className={styles.snippets} aria-label={t('inspector.snippets')}>
           <header className={styles.snippetsHeader}>
-            <div role="tablist" className={styles.tabs}>
+            <div role="tablist" className={styles.tabs} aria-label={t('inspector.snippets')}>
               {LANGS.map(({ key, label }) => (
                 <button
                   key={key}
@@ -140,7 +145,7 @@ export const EndpointInspector: React.FC<EndpointInspectorProps> = ({ endpoint, 
               ))}
             </div>
             <button type="button" className={styles.copyBtn} onClick={copy}>
-              {copied ? 'Copied' : 'Copy'}
+              {copied ? t('common.copied') : t('common.copy')}
             </button>
           </header>
           <pre className={styles.code}><code>{snippets[lang]}</code></pre>

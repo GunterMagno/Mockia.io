@@ -63,6 +63,10 @@
 }
 
 .selectionCard {
+  /* es un <button>: hereda tipografia y color como el resto de la tarjeta */
+  font: inherit;
+  color: inherit;
+  width: 100%;
   background: var(--color-glass);
   border: var(--glass-border);
   border-radius: var(--radius-lg);
@@ -79,6 +83,11 @@
     transform: translateY(-4px);
     background: var(--color-glass);
     border-color: var(--color-accent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-accent-text);
+    outline-offset: 3px;
   }
 
   .icon {

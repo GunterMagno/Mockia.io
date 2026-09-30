@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Notification, NotificationType } from '@mockia/shared';
 import { markAsRead, deleteNotification } from '../../../services/notificationService';
 import styles from './NotificationPanel.module.scss';
+import { useI18n } from '../../../i18n/I18nProvider';
 import { Icon } from '../../ui/Icon/Icon';
 import bellIcon from '../../../assets/bell.svg';
 import warningIcon from '../../../assets/warning.svg';
@@ -18,6 +19,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
   onClose,
   onRefresh 
 }) => {
+  const { t, formatDate: format } = useI18n();
   const navigate = useNavigate();
   const panelRef = useRef<HTMLElement>(null);
 
@@ -67,23 +69,22 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return format(dateString, { dateStyle: 'short', timeStyle: 'short' });
   };
 
   return (
     <aside className={styles.panel} ref={panelRef}>
       <header className={styles.header}>
-        <h3>Notifications</h3>
+        <h3>{t('notifications.title')}</h3>
         {notifications.some(n => !n.isRead) && (
           <button onClick={handleMarkAllAsRead} className={styles.markAllBtn}>
-            Mark all as read
+            {t('notifications.markAllRead')}
           </button>
         )}
       </header>
       <section className={styles.list}>
         {notifications.length === 0 ? (
-          <article className={styles.empty}>No notifications yet</article>
+          <article className={styles.empty}>{t('notifications.empty')}</article>
         ) : (
           notifications.map(notification => (
             <article 
@@ -103,7 +104,8 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
               <button 
                 className={styles.deleteBtn} 
                 onClick={(e) => handleDelete(e, notification.id)}
-                title="Delete"
+                title={t('notifications.delete')}
+                aria-label={t('notifications.delete')}
               >
                 ×
               </button>

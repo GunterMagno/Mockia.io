@@ -23,7 +23,32 @@
 }
 
 .authHeader {
+  position: relative;
   justify-content: center;
+
+  /* En movil no cabe centrado + absoluto: logo a la izquierda e idioma a la derecha */
+  @include respond-to('md') {
+    justify-content: space-between;
+  }
+}
+
+/* Idioma en paginas de auth: a la derecha sin descentrar el logo */
+.authLanguage {
+  position: absolute;
+  right: var(--spacing-6);
+
+  @include respond-to('md') {
+    position: static;
+  }
+}
+
+/* En el menu movil ocupa todo el ancho, como el resto de entradas */
+.language {
+  @include respond-to('md') {
+    width: 100%;
+
+    select { width: 100%; }
+  }
 }
 
 .headerContainer {

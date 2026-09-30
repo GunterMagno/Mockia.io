@@ -1,3 +1,6 @@
+// La UI elige idioma segun el navegador: estos tests fijan ingles (tambien en los hooks before)
+Cypress.on('window:before:load', (win) => win.localStorage.setItem('mockia_locale', 'en'));
+
 describe('Editor Flow', () => {
   const randomEmail = `editoruser${Date.now()}@example.com`;
   const password = 'Password123!';
@@ -55,7 +58,7 @@ describe('Editor Flow', () => {
     cy.contains('Editor Test Project').click();
     
     // Click on New Endpoint button in the sidebar
-    cy.contains('button', '+ New Endpoint').click();
+    cy.contains('button', '+ New endpoint').click();
     
     // Check that default endpoint is rendered
     cy.contains('/new-endpoint').should('be.visible');
@@ -64,13 +67,13 @@ describe('Editor Flow', () => {
     cy.contains('fieldset', 'Path').find('input').clear().type('/hello');
     
     // Update HTTP method
-    cy.contains('article', 'HTTP Method').find('select').select('POST');
+    cy.contains('article', 'HTTP method').find('select').select('POST');
     
     // Update status code using Force HTTP Status to 201 Created
-    cy.contains('article', 'Force HTTP Status').find('select').select('201');
+    cy.contains('article', 'Force HTTP status').find('select').select('201');
     
     // Save changes
-    cy.contains('button', 'Save Changes').click();
+    cy.contains('button', 'Save changes').click();
     
     // Assert that the unsaved changes dot is no longer present
     cy.contains('• Unsaved changes').should('not.exist');

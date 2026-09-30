@@ -1,14 +1,23 @@
 import React, { useEffect } from 'react';
 import styles from './LegalPage.module.scss';
+import { htmlLangOf, useI18n } from '../../i18n/I18nProvider';
 
 const Privacy: React.FC = () => {
+  const { locale, t } = useI18n();
+
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
   return (
-    <article className={styles.legalPage}>
+    // El texto legal solo existe en ingles por ahora (traduccion pendiente de #legal-advisor)
+    <article className={styles.legalPage} lang="en">
       <section className={styles.container}>
+        {locale !== 'en' && (
+          <p className={styles.langNotice} role="note" lang={htmlLangOf(locale)}>
+            {t('legal.englishOnly')}
+          </p>
+        )}
         <header className={styles.header}>
           <h1>Privacy Policy</h1>
           <p className={styles.lastUpdated}>Last updated: May 15, 2026</p>
