@@ -157,6 +157,31 @@ describe('POST /api/billing/webhook', () => {
     );
   });
 
+  it('guards against replays and out-of-order events using event id and created time', async () => {
+    const res = await post({
+      id: 'evt_9',
+      created: 1_700_000_000,
+      type: 'customer.subscription.deleted',
+      data: { object: { customer: 'cus_1' } },
+    });
+    expect(res.body.result).toBe('handled');
+    const at = new Date(1_700_000_000_000);
+    expect(findOneAndUpdate).toHaveBeenCalledWith(
+      {
+        stripeCustomerId: 'cus_1',
+        stripeLastEventId: { $ne: 'evt_9' },
+        $or: [{ stripeEventAt: { $exists: false } }, { stripeEventAt: { $lte: at } }],
+      },
+      { $set: { plan: 'free', billingStatus: 'canceled', stripeEventAt: at, stripeLastEventId: 'evt_9' } },
+      { new: true }
+    );
+    // Stale/duplicate event: DB matches nothing -> acked, no retry storm
+    updateResolves(null);
+    const stale = await post({ id: 'evt_9', created: 1, type: 'customer.subscription.deleted', data: { object: { customer: 'cus_1' } } });
+    expect(stale.status).toBe(200);
+    expect(stale.body.result).toBe('ignored');
+  });
+
   it('acks unsupported events with 200 and does not touch users', async () => {
     const res = await post({ type: 'invoice.paid', data: { object: {} } });
     expect(res.status).toBe(200);

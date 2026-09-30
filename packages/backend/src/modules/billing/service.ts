@@ -6,6 +6,8 @@ import { asPaidPlan, invalidatePlanCache, type BillingStatus, type PaidPlan } fr
 export interface StripeEvent {
   id: string;
   type: string;
+  /** Unix seconds when Stripe created the event. */
+  created?: number;
   data: { object: Record<string, any> };
 }
 
@@ -31,19 +33,31 @@ function userFilter(obj: Record<string, any>): Record<string, string> | null {
   return null;
 }
 
-async function updateUser(obj: Record<string, any>, set: Record<string, unknown>): Promise<boolean> {
-  const filter = userFilter(obj);
-  if (!filter) return false;
-  const user = await UserModel.findOneAndUpdate(filter, { $set: set }, { new: true }).select('_id');
+async function updateUser(event: StripeEvent, obj: Record<string, any>, set: Record<string, unknown>): Promise<boolean> {
+  const base = userFilter(obj);
+  if (!base) return false;
+  let filter: Record<string, unknown> = base;
+  let update = set;
+  // Replay / out-of-order guard: skip an event already applied or older than the last one applied for this user
+  // (a delayed subscription.updated(active) must not resurrect a plan after subscription.deleted).
+  if (typeof event.id === 'string' && Number.isFinite(event.created)) {
+    const at = new Date(event.created! * 1000);
+    filter = {
+      ...base,
+      stripeLastEventId: { $ne: event.id },
+      $or: [{ stripeEventAt: { $exists: false } }, { stripeEventAt: { $lte: at } }],
+    };
+    update = { ...set, stripeEventAt: at, stripeLastEventId: event.id };
+  }
+  const user = await UserModel.findOneAndUpdate(filter, { $set: update }, { new: true }).select('_id');
   if (!user) return false;
   invalidatePlanCache(user._id.toString());
   return true;
 }
 
 /**
- * Applies a verified Stripe event. Idempotent (only $set), so Stripe retries are safe.
- * ponytail: no out-of-order guard (event.created vs stored); add a stripeEventAt field if reordering shows up in practice.
- * @returns 'handled' | 'ignored' (unsupported type or nothing to apply)
+ * Applies a verified Stripe event. Idempotent: only $set, plus a per-user event id / timestamp guard against replays and out-of-order delivery.
+ * @returns 'handled' | 'ignored' (unsupported type or nothing to apply, or stale/duplicate event)
  */
 export async function handleStripeEvent(event: StripeEvent): Promise<'handled' | 'ignored'> {
   const obj = event.data?.object ?? {};
@@ -54,7 +68,7 @@ export async function handleStripeEvent(event: StripeEvent): Promise<'handled' |
       const plan = asPaidPlan(obj.metadata?.plan);
       // Skip non-subscription sessions and delayed payments not yet paid; subscription.updated(active) follows.
       if (!plan || (obj.mode && obj.mode !== 'subscription') || obj.payment_status === 'unpaid') break;
-      applied = await updateUser(obj, {
+      applied = await updateUser(event, obj, {
         plan,
         billingStatus: 'active',
         ...(typeof obj.customer === 'string' && { stripeCustomerId: obj.customer }),
@@ -64,7 +78,7 @@ export async function handleStripeEvent(event: StripeEvent): Promise<'handled' |
     }
     case 'customer.subscription.updated': {
       const plan = asPaidPlan(obj.metadata?.plan);
-      applied = await updateUser(obj, {
+      applied = await updateUser(event, obj, {
         billingStatus: STATUS_MAP[obj.status] ?? 'past_due',
         stripeSubscriptionId: obj.id,
         ...(typeof obj.customer === 'string' && { stripeCustomerId: obj.customer }),
@@ -73,7 +87,7 @@ export async function handleStripeEvent(event: StripeEvent): Promise<'handled' |
       break;
     }
     case 'customer.subscription.deleted':
-      applied = await updateUser(obj, { plan: 'free', billingStatus: 'canceled' });
+      applied = await updateUser(event, obj, { plan: 'free', billingStatus: 'canceled' });
       break;
     default:
       return 'ignored';

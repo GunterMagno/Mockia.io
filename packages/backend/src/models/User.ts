@@ -14,6 +14,9 @@ interface UserDocument extends Document {
   billingStatus: 'active' | 'past_due' | 'canceled';
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
+  /** Last Stripe event applied (id + created time): guards against replays and out-of-order webhooks. */
+  stripeLastEventId?: string;
+  stripeEventAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -51,6 +54,8 @@ const userSchema = new Schema<UserDocument>(
     },
     stripeCustomerId: { type: String, index: true, sparse: true },
     stripeSubscriptionId: { type: String },
+    stripeLastEventId: { type: String },
+    stripeEventAt: { type: Date },
   },
   {
     timestamps: true,
