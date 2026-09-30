@@ -17,6 +17,10 @@ interface UserDocument extends Document {
   /** Last Stripe event applied (id + created time): guards against replays and out-of-order webhooks. */
   stripeLastEventId?: string;
   stripeEventAt?: Date;
+  /** The subscription ends at currentPeriodEnd (cancelled from the customer portal). */
+  cancelAtPeriodEnd: boolean;
+  /** End of the current billing period, mirrored from the Stripe subscription. */
+  currentPeriodEnd?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -56,6 +60,8 @@ const userSchema = new Schema<UserDocument>(
     stripeSubscriptionId: { type: String },
     stripeLastEventId: { type: String },
     stripeEventAt: { type: Date },
+    cancelAtPeriodEnd: { type: Boolean, default: false },
+    currentPeriodEnd: { type: Date, default: null },
   },
   {
     timestamps: true,

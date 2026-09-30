@@ -3,6 +3,7 @@ import type { AuthenticatedRequest } from './authenticateToken.js';
 import { ProjectModel } from '../models/Project.js';
 import { mockCache } from '../modules/mock/mockCache.service.js';
 import { PLAN_LIMITS, getUserPlan } from '../modules/billing/plans.js';
+import { consumeQuota, nextPeriodStart } from '../modules/billing/usage.js';
 
 const body = (code: string, message: string, details: Record<string, unknown>) => ({
   success: false,
@@ -13,7 +14,7 @@ const body = (code: string, message: string, details: Record<string, unknown>) =
 /**
  * Blocks creating a project when the owner is at the active-project limit of their effective plan.
  * Mount after authenticateToken on POST /api/projects. Responds 402 PLAN_LIMIT_REACHED.
- * Archived projects do not count. Pro/team are unlimited (no DB query).
+ * Archived projects do not count. Unlimited plans (team) skip the count query.
  *
  * ponytail: count-then-create is not atomic; two concurrent creates at limit-1 can both pass.
  * Acceptable for a soft commercial limit; use a transaction/unique counter if it must be strict.
@@ -44,37 +45,8 @@ export const enforceProjectLimit: RequestHandler = async (req: Request, res: Res
 };
 
 // ---------------------------------------------------------------------------
-// Monthly mock request quota
+// Monthly mock request quota (counter persisted in Mongo, see modules/billing/usage.ts)
 // ---------------------------------------------------------------------------
-
-// ponytail: in-memory counter, single process only. Resets on restart and is not shared across
-// instances (each would allow the full quota). Move to Redis INCR with monthly key or a Mongo $inc doc when scaling.
-// Size is bounded by the number of free-plan owners that received traffic this month.
-const usage = new Map<string, { period: string; count: number }>();
-
-const periodOf = (d: Date) => `${d.getUTCFullYear()}-${d.getUTCMonth() + 1}`;
-
-/** Consumes one request for `ownerId` if under `limit`. Rejected requests are not counted. */
-export function consumeQuota(ownerId: string, limit: number, now = new Date()): { allowed: boolean; used: number } {
-  const period = periodOf(now);
-  let entry = usage.get(ownerId);
-  if (!entry || entry.period !== period) {
-    entry = { period, count: 0 };
-    usage.set(ownerId, entry);
-  }
-  if (entry.count >= limit) return { allowed: false, used: entry.count };
-  entry.count += 1;
-  return { allowed: true, used: entry.count };
-}
-
-export function getUsage(ownerId: string, now = new Date()): number {
-  const entry = usage.get(ownerId);
-  return entry && entry.period === periodOf(now) ? entry.count : 0;
-}
-
-export function resetUsage(): void {
-  usage.clear();
-}
 
 const RESERVED_API_MOCK = new Set(['resolve-route', 'endpoints']); // authenticated management routes under /api/mock
 
@@ -95,7 +67,7 @@ export function extractMockSlug(path: string): string | null {
 /**
  * Global middleware: counts public mock calls per project owner and answers 429 QUOTA_EXCEEDED
  * once the owner's effective plan quota is spent. It ignores every non-mock path, so it can be
- * mounted once with app.use(). Pro/team are unlimited and not counted.
+ * mounted once with app.use(). Every plan has a finite monthly quota (see PLAN_LIMITS).
  *
  * - Calls with a wrong API key are not counted (the mock router answers 401), so strangers
  *   cannot burn an owner's quota by guessing.
@@ -117,12 +89,12 @@ export const mockQuotaGate: RequestHandler = async (req: Request, res: Response,
     if (!Number.isFinite(limit)) return next();
 
     const now = new Date();
-    const { allowed, used } = consumeQuota(ownerId, limit, now);
+    const { allowed, used } = await consumeQuota(ownerId, limit, now);
     res.setHeader('X-Quota-Limit', String(limit));
     res.setHeader('X-Quota-Remaining', String(Math.max(0, limit - used)));
     if (allowed) return next();
 
-    const resetAt = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+    const resetAt = nextPeriodStart(now);
     res.setHeader('Retry-After', String(Math.ceil((resetAt.getTime() - now.getTime()) / 1000)));
     // This runs before the mock routes' own cors(origin '*'), so browsers need the header here to read the 429.
     res.setHeader('Access-Control-Allow-Origin', '*');

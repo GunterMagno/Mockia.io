@@ -5,6 +5,8 @@ import request from 'supertest';
 jest.mock('../models/User.js', () => ({
   UserModel: { findOneAndUpdate: jest.fn(), findById: jest.fn() },
 }));
+jest.mock('../models/Project.js', () => ({ ProjectModel: { countDocuments: jest.fn() } }));
+jest.mock('../models/Usage.js', () => ({ UsageModel: { findOne: jest.fn(), findOneAndUpdate: jest.fn() } }));
 jest.mock('../middlewares/authenticateToken.js', () => ({
   authenticateToken: (req: any, _res: unknown, next: () => void) => {
     req.user = { id: 'aaaaaaaaaaaaaaaaaaaaaaaa' };
@@ -13,6 +15,9 @@ jest.mock('../middlewares/authenticateToken.js', () => ({
 }));
 
 import { UserModel } from '../models/User.js';
+import { ProjectModel } from '../models/Project.js';
+import { UsageModel } from '../models/Usage.js';
+import { resetUsage } from '../modules/billing/usage.js';
 import { errorHandler } from '../middlewares/errorHandler.js';
 import { billingRouter } from '../modules/billing/routes.js';
 import { getUserPlan } from '../modules/billing/plans.js';
@@ -152,7 +157,7 @@ describe('POST /api/billing/webhook', () => {
     expect(res.body.result).toBe('handled');
     expect(findOneAndUpdate).toHaveBeenCalledWith(
       { stripeCustomerId: 'cus_1' },
-      { $set: { plan: 'free', billingStatus: 'canceled' } },
+      { $set: { plan: 'free', billingStatus: 'canceled', cancelAtPeriodEnd: false, currentPeriodEnd: null } },
       { new: true }
     );
   });
@@ -172,7 +177,16 @@ describe('POST /api/billing/webhook', () => {
         stripeLastEventId: { $ne: 'evt_9' },
         $or: [{ stripeEventAt: { $exists: false } }, { stripeEventAt: { $lte: at } }],
       },
-      { $set: { plan: 'free', billingStatus: 'canceled', stripeEventAt: at, stripeLastEventId: 'evt_9' } },
+      {
+        $set: {
+          plan: 'free',
+          billingStatus: 'canceled',
+          cancelAtPeriodEnd: false,
+          currentPeriodEnd: null,
+          stripeEventAt: at,
+          stripeLastEventId: 'evt_9',
+        },
+      },
       { new: true }
     );
     // Stale/duplicate event: DB matches nothing -> acked, no retry storm
@@ -217,6 +231,69 @@ describe('POST /api/billing/webhook', () => {
   });
 });
 
+describe('subscription details', () => {
+  it('takes the plan from the price (portal plan switch) over stale metadata', async () => {
+    process.env.STRIPE_PRICE_PRO = 'price_pro';
+    process.env.STRIPE_PRICE_TEAM = 'price_team';
+    await post({
+      type: 'customer.subscription.updated',
+      data: {
+        object: {
+          id: 'sub_1',
+          customer: 'cus_1',
+          status: 'active',
+          metadata: { plan: 'pro' },
+          items: { data: [{ price: { id: 'price_team' }, current_period_end: 1_790_000_000 }] },
+          cancel_at_period_end: false,
+        },
+      },
+    });
+    expect(findOneAndUpdate).toHaveBeenCalledWith(
+      { stripeCustomerId: 'cus_1' },
+      {
+        $set: {
+          billingStatus: 'active',
+          stripeSubscriptionId: 'sub_1',
+          stripeCustomerId: 'cus_1',
+          plan: 'team',
+          currentPeriodEnd: new Date(1_790_000_000_000),
+          cancelAtPeriodEnd: false,
+        },
+      },
+      { new: true }
+    );
+  });
+
+  it('customer.subscription.created is applied like an update and records a scheduled cancellation', async () => {
+    const res = await post({
+      type: 'customer.subscription.created',
+      data: {
+        object: {
+          id: 'sub_2',
+          customer: 'cus_2',
+          status: 'active',
+          metadata: { plan: 'pro', userId: UID },
+          current_period_end: 1_790_000_000,
+          cancel_at: 1_790_000_000,
+        },
+      },
+    });
+    expect(res.body.result).toBe('handled');
+    expect(findOneAndUpdate).toHaveBeenCalledWith(
+      { _id: UID },
+      {
+        $set: expect.objectContaining({
+          plan: 'pro',
+          billingStatus: 'active',
+          currentPeriodEnd: new Date(1_790_000_000_000),
+          cancelAtPeriodEnd: true,
+        }),
+      },
+      { new: true }
+    );
+  });
+});
+
 describe('POST /api/billing/checkout', () => {
   const userDoc = { email: 'a@b.co', stripeCustomerId: undefined };
   beforeEach(() => {
@@ -258,6 +335,44 @@ describe('POST /api/billing/checkout', () => {
     expect(sent.get('client_reference_id')).toBe(UID);
     expect(sent.get('subscription_data[metadata][plan]')).toBe('pro');
     expect(sent.get('customer_email')).toBe('a@b.co');
+    expect(sent.get('allow_promotion_codes')).toBe('true');
+    expect(sent.get('success_url')).toMatch(/\/billing\?checkout=success$/);
+    expect(sent.get('cancel_url')).toMatch(/\/billing\?checkout=cancel$/);
+  });
+
+  it('409 ALREADY_SUBSCRIBED for a user with an open subscription (no second subscription)', async () => {
+    process.env.STRIPE_SECRET_KEY = 'sk_test_123';
+    process.env.STRIPE_PRICE_TEAM = 'price_team';
+    const fetchMock = jest.fn();
+    (global as any).fetch = fetchMock;
+    for (const billingStatus of ['active', 'past_due']) {
+      findById.mockReturnValue({
+        select: () => ({
+          lean: () => Promise.resolve({ email: 'a@b.co', plan: 'pro', billingStatus, stripeSubscriptionId: 'sub_1', stripeCustomerId: 'cus_1' }),
+        }),
+      });
+      const res = await request(app).post('/api/billing/checkout').send({ plan: 'team' });
+      expect(res.status).toBe(409);
+      expect(res.body.error.code).toBe('ALREADY_SUBSCRIBED');
+    }
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('a canceled subscriber can check out again with the existing customer', async () => {
+    process.env.STRIPE_SECRET_KEY = 'sk_test_123';
+    process.env.STRIPE_PRICE_PRO = 'price_pro';
+    findById.mockReturnValue({
+      select: () => ({
+        lean: () => Promise.resolve({ email: 'a@b.co', plan: 'free', billingStatus: 'canceled', stripeSubscriptionId: 'sub_old', stripeCustomerId: 'cus_1' }),
+      }),
+    });
+    const fetchMock = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ id: 'cs_2', url: 'https://checkout.stripe.com/c/cs_2' }) });
+    (global as any).fetch = fetchMock;
+    const res = await request(app).post('/api/billing/checkout').send({ plan: 'pro' });
+    expect(res.status).toBe(200);
+    const sent = fetchMock.mock.calls[0][1].body as URLSearchParams;
+    expect(sent.get('customer')).toBe('cus_1');
+    expect(sent.get('customer_email')).toBeNull();
   });
 
   it('502 without leaking Stripe details when Stripe rejects the request', async () => {
@@ -271,5 +386,109 @@ describe('POST /api/billing/checkout', () => {
     const res = await request(app).post('/api/billing/checkout').send({ plan: 'team' });
     expect(res.status).toBe(502);
     expect(JSON.stringify(res.body)).not.toContain('sk_test_123');
+  });
+});
+
+describe('POST /api/billing/portal', () => {
+  const withCustomer = (stripeCustomerId?: string) =>
+    findById.mockReturnValue({ select: () => ({ lean: () => Promise.resolve({ stripeCustomerId }) }) });
+
+  it('501 without STRIPE_SECRET_KEY', async () => {
+    delete process.env.STRIPE_SECRET_KEY;
+    const res = await request(app).post('/api/billing/portal');
+    expect(res.status).toBe(501);
+  });
+
+  it('409 NO_BILLING_ACCOUNT for a user that never subscribed', async () => {
+    process.env.STRIPE_SECRET_KEY = 'sk_test_123';
+    withCustomer(undefined);
+    const res = await request(app).post('/api/billing/portal');
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('NO_BILLING_ACCOUNT');
+  });
+
+  it('creates a portal session for the Stripe customer and returns its url', async () => {
+    process.env.STRIPE_SECRET_KEY = 'sk_test_123';
+    process.env.FRONTEND_URL = 'https://app.mockia.io/';
+    withCustomer('cus_1');
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ url: 'https://billing.stripe.com/p/session/x' }),
+    });
+    (global as any).fetch = fetchMock;
+    const res = await request(app).post('/api/billing/portal');
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual({ url: 'https://billing.stripe.com/p/session/x' });
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('https://api.stripe.com/v1/billing_portal/sessions');
+    const sent = init.body as URLSearchParams;
+    expect(sent.get('customer')).toBe('cus_1');
+    expect(sent.get('return_url')).toBe('https://app.mockia.io/billing');
+  });
+
+  it('502 without leaking Stripe details', async () => {
+    process.env.STRIPE_SECRET_KEY = 'sk_test_123';
+    withCustomer('cus_1');
+    (global as any).fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: async () => ({ error: { message: 'No configuration provided for sk_test_123' } }),
+    });
+    const res = await request(app).post('/api/billing/portal');
+    expect(res.status).toBe(502);
+    expect(JSON.stringify(res.body)).not.toContain('sk_test_123');
+  });
+});
+
+describe('GET /api/billing/me', () => {
+  const countDocuments = ProjectModel.countDocuments as unknown as jest.Mock;
+  const usageFindOne = UsageModel.findOne as unknown as jest.Mock;
+  const userIs = (user: unknown) => findById.mockReturnValue({ select: () => ({ lean: () => Promise.resolve(user) }) });
+
+  beforeEach(() => {
+    resetUsage();
+    countDocuments.mockResolvedValue(3);
+    usageFindOne.mockReturnValue({ select: () => ({ lean: () => Promise.resolve({ requests: 1234 }) }) });
+  });
+
+  it('returns plan, limits (null = unlimited) and usage of the month', async () => {
+    delete process.env.STRIPE_SECRET_KEY;
+    userIs({ plan: 'team', billingStatus: 'active', stripeCustomerId: 'cus_1', cancelAtPeriodEnd: true, currentPeriodEnd: new Date('2026-10-30T00:00:00Z') });
+    const res = await request(app).get('/api/billing/me');
+    expect(res.status).toBe(200);
+    expect(res.body.data).toMatchObject({
+      plan: 'team',
+      subscribedPlan: 'team',
+      billingStatus: 'active',
+      cancelAtPeriodEnd: true,
+      currentPeriodEnd: '2026-10-30T00:00:00.000Z',
+      limits: { maxActiveProjects: null, maxMonthlyRequests: 10_000_000 },
+      usage: { activeProjects: 3, monthlyRequests: 1234 },
+      canManageBilling: false, // Stripe not configured
+      checkoutAvailable: { pro: false, team: false },
+    });
+    expect(countDocuments).toHaveBeenCalledWith({ ownerId: UID, isArchived: { $ne: true } });
+  });
+
+  it('a past_due subscriber is enforced as free but still sees the plan they pay for', async () => {
+    process.env.STRIPE_SECRET_KEY = 'sk_test_123';
+    process.env.STRIPE_PRICE_PRO = 'price_pro';
+    userIs({ plan: 'pro', billingStatus: 'past_due', stripeCustomerId: 'cus_1' });
+    const res = await request(app).get('/api/billing/me');
+    expect(res.body.data).toMatchObject({
+      plan: 'free',
+      subscribedPlan: 'pro',
+      billingStatus: 'past_due',
+      limits: { maxActiveProjects: 5, maxMonthlyRequests: 10_000 },
+      canManageBilling: true,
+      checkoutAvailable: { pro: true, team: false },
+    });
+  });
+
+  it('404 when the user no longer exists', async () => {
+    userIs(null);
+    const res = await request(app).get('/api/billing/me');
+    expect(res.status).toBe(404);
   });
 });

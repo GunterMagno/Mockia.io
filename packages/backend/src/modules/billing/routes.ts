@@ -2,9 +2,18 @@ import express, { Router } from 'express';
 import { asyncHandler } from '../../middlewares/errorHandler.js';
 import { authenticateToken, type AuthenticatedRequest } from '../../middlewares/authenticateToken.js';
 import { UserModel } from '../../models/User.js';
+import { rateLimit } from '../../middlewares/rateLimit.js';
 import { asPaidPlan } from './plans.js';
 import { verifyStripeSignature } from './stripeSignature.js';
-import { checkoutConfig, createCheckoutSession, handleStripeEvent, type StripeEvent } from './service.js';
+import {
+  checkoutConfig,
+  createCheckoutSession,
+  createPortalSession,
+  getBillingOverview,
+  handleStripeEvent,
+  hasOpenSubscription,
+  type StripeEvent,
+} from './service.js';
 
 /**
  * Billing router, mounted at /api/billing.
@@ -14,9 +23,17 @@ import { checkoutConfig, createCheckoutSession, handleStripeEvent, type StripeEv
  * Body parsers skip requests already parsed, so /checkout carries its own express.json().
  *
  * Env: STRIPE_WEBHOOK_SECRET, STRIPE_SECRET_KEY, STRIPE_PRICE_PRO, STRIPE_PRICE_TEAM,
- *      optional FRONTEND_URL / STRIPE_SUCCESS_URL / STRIPE_CANCEL_URL.
+ *      optional FRONTEND_URL / STRIPE_SUCCESS_URL / STRIPE_CANCEL_URL / STRIPE_PORTAL_RETURN_URL.
+ * The global /api limiter skips /api/billing (the webhook must never be throttled), so the
+ * user-facing Stripe calls get their own per-user limiter here.
  */
 export const billingRouter = Router();
+
+const stripeCallLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  keyFn: (req) => (req as AuthenticatedRequest).user?.id ?? req.ip ?? 'unknown',
+});
 
 const fail = (code: string, message: string) => ({
   success: false,
@@ -64,12 +81,26 @@ billingRouter.post(
 );
 
 /**
+ * GET /api/billing/me  plan, limits and usage of the current month (see BillingOverview in @mockia/shared).
+ */
+billingRouter.get(
+  '/me',
+  authenticateToken,
+  asyncHandler(async (req: AuthenticatedRequest, res) => {
+    const data = await getBillingOverview(req.user!.id);
+    res.status(200).json({ success: true, data, timestamp: new Date().toISOString() });
+  })
+);
+
+/**
  * POST /api/billing/checkout  body: { plan: 'pro' | 'team' }
- * 200 { url } (redirect the browser there), 400 invalid plan, 401, 501 Stripe not configured, 502 Stripe error.
+ * 200 { url } (redirect the browser there), 400 invalid plan, 401, 409 already subscribed (use the portal),
+ * 501 Stripe not configured, 502 Stripe error.
  */
 billingRouter.post(
   '/checkout',
   authenticateToken,
+  stripeCallLimiter,
   express.json({ limit: '10kb' }),
   asyncHandler(async (req: AuthenticatedRequest, res) => {
     const plan = asPaidPlan(req.body?.plan);
@@ -84,9 +115,16 @@ billingRouter.post(
         .json(fail('BILLING_NOT_CONFIGURED', 'Stripe checkout is not configured (STRIPE_SECRET_KEY / STRIPE_PRICE_*)'));
       return;
     }
-    const user = await UserModel.findById(req.user!.id).select('email stripeCustomerId').lean();
+    const user = await UserModel.findById(req.user!.id)
+      .select('email stripeCustomerId stripeSubscriptionId plan billingStatus')
+      .lean();
     if (!user) {
       res.status(404).json(fail('NOT_FOUND', 'User not found'));
+      return;
+    }
+    if (hasOpenSubscription(user)) {
+      // A second Checkout would create a second subscription: switching plans or fixing a payment is done in the portal.
+      res.status(409).json(fail('ALREADY_SUBSCRIBED', 'You already have a subscription. Manage it from the billing portal.'));
       return;
     }
     const session = await createCheckoutSession({
@@ -96,6 +134,30 @@ billingRouter.post(
       stripeCustomerId: user.stripeCustomerId,
       ...config,
     });
+    res.status(200).json({ success: true, data: session, timestamp: new Date().toISOString() });
+  })
+);
+
+/**
+ * POST /api/billing/portal  Stripe customer portal session for the current user.
+ * 200 { url }, 401, 409 NO_BILLING_ACCOUNT (never subscribed), 501 Stripe not configured, 502 Stripe error.
+ */
+billingRouter.post(
+  '/portal',
+  authenticateToken,
+  stripeCallLimiter,
+  asyncHandler(async (req: AuthenticatedRequest, res) => {
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    if (!secretKey) {
+      res.status(501).json(fail('BILLING_NOT_CONFIGURED', 'Stripe is not configured (STRIPE_SECRET_KEY)'));
+      return;
+    }
+    const user = await UserModel.findById(req.user!.id).select('stripeCustomerId').lean();
+    if (!user?.stripeCustomerId) {
+      res.status(409).json(fail('NO_BILLING_ACCOUNT', 'There is no billing account yet. Subscribe to a plan first.'));
+      return;
+    }
+    const session = await createPortalSession({ customerId: user.stripeCustomerId, secretKey });
     res.status(200).json({ success: true, data: session, timestamp: new Date().toISOString() });
   })
 );

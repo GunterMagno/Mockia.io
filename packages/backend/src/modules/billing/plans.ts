@@ -1,18 +1,12 @@
 import { UserModel } from '../../models/User.js';
-
-export type Plan = 'free' | 'pro' | 'team';
-export type BillingStatus = 'active' | 'past_due' | 'canceled';
-export type PaidPlan = Exclude<Plan, 'free'>;
+import { PLAN_LIMITS, type BillingStatus, type PaidPlan, type Plan } from '@mockia/shared';
 
 /**
- * Single source of truth for plan limits. Infinity = unlimited.
- * Edit here to change pricing tiers; nothing else hardcodes numbers.
+ * Plan limits and prices live in @mockia/shared (billing.ts): one catalog for what the backend
+ * enforces and what the frontend advertises. Re-exported here so existing imports keep working.
  */
-export const PLAN_LIMITS: Record<Plan, { maxActiveProjects: number; maxMonthlyRequests: number }> = {
-  free: { maxActiveProjects: 5, maxMonthlyRequests: 10_000 },
-  pro: { maxActiveProjects: Infinity, maxMonthlyRequests: Infinity },
-  team: { maxActiveProjects: Infinity, maxMonthlyRequests: Infinity },
-};
+export { PLAN_LIMITS };
+export type { BillingStatus, PaidPlan, Plan };
 
 export function asPaidPlan(value: unknown): PaidPlan | undefined {
   return value === 'pro' || value === 'team' ? value : undefined;

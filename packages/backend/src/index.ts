@@ -21,6 +21,7 @@ import swaggerUi from 'swagger-ui-express';
 import { specs } from './config/swagger.js';
 import { billingRouter } from './modules/billing/routes.js';
 import { mockQuotaGate } from './middlewares/planGate.js';
+import { flushUsage } from './modules/billing/usage.js';
 import { rateLimit } from './middlewares/rateLimit.js';
 import { authenticateToken } from './middlewares/authenticateToken.js';
 import { authorizeRole } from './middlewares/authorizeRole.js';
@@ -241,6 +242,8 @@ const startServer = async (): Promise<void> => {
         console.log('[Backend] HTTP server closed');
 
         try {
+          // Persist the mock requests counted since the last flush (billing quota)
+          await flushUsage().catch((err) => console.error('[Backend] Could not flush usage:', err));
           // Disconnect from MongoDB
           await disconnectDB();
           console.log('[Backend] Application closed successfully');
