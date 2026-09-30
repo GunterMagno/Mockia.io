@@ -53,7 +53,7 @@ const Header: React.FC = () => {
   }, [isProjectPage]);
 
   const sectionLinks = [
-    { href: '#story-title', label: t('nav.howItWorks') },
+    { href: '#how-title', label: t('nav.howItWorks') },
     { href: '#builder-title', label: t('nav.tryBuilder') },
     { href: '#features-title', label: t('nav.features') },
     { href: '#pricing-title', label: t('nav.pricing') },

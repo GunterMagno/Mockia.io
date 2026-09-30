@@ -66,6 +66,11 @@ const zh: Messages = {
       ctaDashboard: '进入控制台',
       actions: '主要操作',
     },
+    how: {
+      title: '25 秒看懂工作原理。',
+      text: '从你的 GitHub 仓库到在线模拟 API，一步一步来。',
+      frameTitle: '动画演示：连接仓库、用 AI 生成 API，并在前端中使用',
+    },
     story: {
       title: '告别 “Lorem Ipsum”。',
       text: '指向任意仓库，我们的 AI 会解析你的类型、接口和数据结构，几秒内生成一套镜像 API。Mockia 会为你的接口填充贴合上下文、如同生产环境般真实的数据。',
@@ -271,6 +276,7 @@ const zh: Messages = {
     title: '新建项目',
     subtitle: '选择你想如何开始下一个模拟 API。',
     steps: '第 {current} 步，共 {total} 步',
+    stepNames: ['来源', '详情', 'AI'],
     emptyTitle: '空项目',
     emptyText: '从零开始，手动或借助 AI 定义你的接口。',
     githubTitle: '从 GitHub 导入',

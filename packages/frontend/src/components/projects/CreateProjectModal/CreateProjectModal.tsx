@@ -13,6 +13,9 @@ import emptyProjectIcon from '../../../assets/empty-project.svg'
 import githubIcon from '../../../assets/github.svg'
 import aiSparkleIcon from '../../../assets/ai-sparkle.svg'
 import loaderIcon from '../../../assets/loader.svg'
+import checkIcon from '../../../assets/check.svg'
+import linkIcon from '../../../assets/link.svg'
+import folderIcon from '../../../assets/folder.svg'
 import eyeIcon from '../../../assets/eye.svg'
 import eyeOffIcon from '../../../assets/eye-off.svg'
 import { playErrorSound } from '../../../utils/audio'
@@ -49,7 +52,8 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
   // Progress State
   const [loading, setLoading] = useState(false)
   const [validating, setValidating] = useState(false)
-  const [statusMessage, setStatusMessage] = useState('')
+  const [progress, setProgress] = useState<string[]>([])
+  const [progressIdx, setProgressIdx] = useState(0)
   const [error, setError] = useState('')
   const [limitReached, setLimitReached] = useState(false)
   const [createdProject, setCreatedProject] = useState<Project | null>(null)
@@ -74,7 +78,8 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
     setAiRequirement(t('createProject.aiDefaultBasic'))
     setLoading(false)
     setValidating(false)
-    setStatusMessage('')
+    setProgress([])
+    setProgressIdx(0)
     setError('')
     setLimitReached(false)
     setCreatedProject(null)
@@ -128,12 +133,12 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
     
     const messages = mode === 'github' ? tl('createProject.progressGithub') : tl('createProject.progressEmpty')
 
-    let currentIdx = 0
-    setStatusMessage(messages[0])
-    
+    setProgress(messages)
+    setProgressIdx(0)
+
+    // Avanza por los pasos y se queda en el ultimo hasta que termine (antes rotaba en bucle)
     const interval = setInterval(() => {
-      currentIdx = (currentIdx + 1) % messages.length
-      setStatusMessage(messages[currentIdx])
+      setProgressIdx((i) => Math.min(i + 1, messages.length - 1))
     }, 3500)
     
     
@@ -171,7 +176,7 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
       }
 
       clearInterval(interval)
-      setStatusMessage(t('createProject.finishing'))
+      setProgressIdx(messages.length)
       setCreatedProject(proj)
       setStep('success')
     } catch (err: any) {
@@ -189,8 +194,15 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
         {/* Step Indicator */}
         {STEPS.includes(step) && (
           <nav className={styles.stepIndicator} aria-label={t('createProject.steps', { current: STEPS.indexOf(step) + 1, total: STEPS.length })}>
-            {STEPS.map((s) => (
-              <span key={s} className={`${styles.dot} ${step === s ? styles.active : ''}`} aria-hidden="true" />
+            {tl('createProject.stepNames').map((name, i) => (
+              <span
+                key={name}
+                className={`${styles.seg} ${step === STEPS[i] ? styles.active : ''} ${i < STEPS.indexOf(step) ? styles.done : ''}`}
+                aria-current={step === STEPS[i] ? 'step' : undefined}
+              >
+                <span className={styles.segLabel}><b>0{i + 1}</b>{name}</span>
+                <span className={styles.segTrack}><span /></span>
+              </span>
             ))}
           </nav>
         )}
@@ -205,14 +217,14 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
             <section className={styles.selectionGrid}>
               <button type="button" className={styles.selectionCard} onClick={() => handleSelectMode('empty')}>
                 <figure className={styles.icon}>
-                  <Icon src={emptyProjectIcon} size={48} color="black" />
+                  <Icon src={emptyProjectIcon} size={36} color="var(--color-accent-text)" />
                 </figure>
                 <h3>{t('createProject.emptyTitle')}</h3>
                 <p>{t('createProject.emptyText')}</p>
               </button>
               <button type="button" className={styles.selectionCard} onClick={() => handleSelectMode('github')}>
                 <figure className={styles.icon}>
-                  <Icon src={githubIcon} size={48} color="var(--color-border)" />
+                  <Icon src={githubIcon} size={36} color="var(--color-text)" />
                 </figure>
                 <h3>{t('createProject.githubTitle')}</h3>
                 <p>{t('createProject.githubText')}</p>
@@ -236,28 +248,34 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
               {mode === 'github' ? (
                 <article className={styles.formGroup}>
                   <label htmlFor={`${uid}-repo`}>{t('createProject.repoUrl')}</label>
-                  <input
-                    id={`${uid}-repo`}
-                    type="url"
-                    className={styles.input}
-                    placeholder="https://github.com/username/repo"
-                    value={repoUrl}
-                    onChange={e => setRepoUrl(e.target.value)}
-                    autoFocus
-                  />
+                  <div className={styles.fieldWrap}>
+                    <Icon src={linkIcon} size={18} />
+                    <input
+                      id={`${uid}-repo`}
+                      type="url"
+                      className={styles.input}
+                      placeholder="https://github.com/username/repo"
+                      value={repoUrl}
+                      onChange={e => setRepoUrl(e.target.value)}
+                      autoFocus
+                    />
+                  </div>
                 </article>
               ) : (
                 <>
                   <article className={styles.formGroup}>
                     <label htmlFor={`${uid}-title`}>{t('createProject.projectTitle')}</label>
-                    <input
-                      id={`${uid}-title`}
-                      className={styles.input}
-                      placeholder={t('createProject.projectTitlePlaceholder')}
-                      value={title}
-                      onChange={e => setTitle(e.target.value)}
-                      autoFocus
-                    />
+                    <div className={styles.fieldWrap}>
+                      <Icon src={folderIcon} size={18} />
+                      <input
+                        id={`${uid}-title`}
+                        className={styles.input}
+                        placeholder={t('createProject.projectTitlePlaceholder')}
+                        value={title}
+                        onChange={e => setTitle(e.target.value)}
+                        autoFocus
+                      />
+                    </div>
                   </article>
                   <article className={styles.formGroup}>
                     <label htmlFor={`${uid}-description`}>{t('createProject.description')}</label>
@@ -298,7 +316,7 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
             <section className={styles.stepContent}>
               <article className={styles.aiCard}>
                 <figure className={styles.aiIcon}>
-                  <Icon src={aiSparkleIcon} size={52} color="var(--color-surface)" />
+                  <Icon src={aiSparkleIcon} size={34} color="var(--color-accent-text)" />
                 </figure>
                 <article className={styles.aiText}>
                   <h4>{t('createProject.aiCardTitle')}</h4>
@@ -338,9 +356,17 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
               )}
 
               {loading && (
-                <article className={styles.statusMessage} role="status">
-                  <Icon src={loaderIcon} size={20} className={styles.spinner} /> {statusMessage}
-                </article>
+                <ul className={styles.log} role="status" ref={(el) => el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })}>
+                  {progress.map((message, i) => (
+                    <li key={message} className={i < progressIdx ? styles.logDone : i === progressIdx ? styles.logNow : undefined}>
+                      <span className={styles.logState} aria-hidden="true">
+                        {i < progressIdx && <Icon src={checkIcon} size={16} />}
+                        {i === progressIdx && <Icon src={loaderIcon} size={16} className={styles.spinner} />}
+                      </span>
+                      {message}
+                    </li>
+                  ))}
+                </ul>
               )}
             </section>
 

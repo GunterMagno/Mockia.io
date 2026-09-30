@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useRevealFallback } from '../../hooks/useRevealFallback'
 import { useI18n, type MessageKey } from '../../i18n/I18nProvider'
 import BuilderPreview from './BuilderPreview'
+import HowItWorks from './HowItWorks'
 import PricingPlans from '../../components/billing/PricingPlans/PricingPlans'
 import styles from './Index.module.scss'
 
@@ -126,6 +127,8 @@ const Index: React.FC = () => {
           </figure>
         </div>
       </section>
+
+      <HowItWorks />
 
       {/* Story: el diff se revela con el scroll */}
       <section className={styles.story} aria-labelledby="story-title">

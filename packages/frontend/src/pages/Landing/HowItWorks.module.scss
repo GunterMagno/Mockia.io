@@ -1,0 +1,27 @@
+.how {
+  padding-block: var(--space-section);
+}
+
+.container {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding-inline: var(--space-gutter);
+}
+
+.head {
+  margin-bottom: var(--space-gap);
+  text-align: center;
+
+  h2 { margin: 0; font-size: var(--step-3); font-weight: 800; letter-spacing: -0.02em; }
+  p { margin: var(--spacing-3) auto 0; max-width: 40rem; color: var(--color-text-muted); font-size: var(--step-1); }
+}
+
+.frame {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-radius: 28px;
+  background: transparent;
+  color-scheme: dark;
+}

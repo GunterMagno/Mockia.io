@@ -67,6 +67,11 @@ const es: Messages = {
       ctaDashboard: 'Ir al panel',
       actions: 'Principal',
     },
+    how: {
+      title: 'Mira cómo funciona en 25 segundos.',
+      text: 'De tu repositorio de GitHub a una API mock en vivo, paso a paso.',
+      frameTitle: 'Animación: conecta un repositorio, genera la API con IA y úsala desde tu frontend',
+    },
     story: {
       title: 'Adiós al «Lorem Ipsum».',
       text:
@@ -273,6 +278,7 @@ const es: Messages = {
     title: 'Crear proyecto',
     subtitle: 'Elige cómo quieres empezar tu próxima API mock.',
     steps: 'Paso {current} de {total}',
+    stepNames: ['Origen', 'Detalles', 'IA'],
     emptyTitle: 'Proyecto vacío',
     emptyText: 'Empieza desde cero y define tus endpoints a mano o con IA.',
     githubTitle: 'Importar desde GitHub',

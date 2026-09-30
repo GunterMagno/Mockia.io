@@ -72,6 +72,11 @@ const en = {
       ctaDashboard: 'Go to dashboard',
       actions: 'Primary',
     },
+    how: {
+      title: 'See how it works in 25 seconds.',
+      text: 'From your GitHub repository to a live mock API, step by step.',
+      frameTitle: 'Animation: connect a repository, generate the API with AI and use it from your frontend',
+    },
     story: {
       title: 'No more “Lorem Ipsum”.',
       text:
@@ -278,6 +283,7 @@ const en = {
     title: 'Create new project',
     subtitle: 'Choose how you want to start your next mock API.',
     steps: 'Step {current} of {total}',
+    stepNames: ['Start', 'Details', 'AI'],
     emptyTitle: 'Empty project',
     emptyText: 'Start from scratch and define your endpoints manually or with AI.',
     githubTitle: 'GitHub import',
