@@ -46,6 +46,11 @@ services:
       MAIL_FROM: ${MAIL_FROM:-}
       # Vacio = el correo verificado (IA y facturacion) solo se exige en produccion, que es este caso
       REQUIRE_EMAIL_VERIFICATION: ${REQUIRE_EMAIL_VERIFICATION:-}
+      # Cobros con Stripe (ver docs/pagos.md). Vacias = sin checkout (501) y webhook desactivado.
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      STRIPE_PRICE_PRO: ${STRIPE_PRICE_PRO:-}
+      STRIPE_PRICE_TEAM: ${STRIPE_PRICE_TEAM:-}
     depends_on:
       mongo:
         condition: service_healthy
