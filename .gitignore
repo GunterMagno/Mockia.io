@@ -90,3 +90,7 @@ Makefile
 # Archived
 .archived/
 .oculto/
+# Cypress downloaded files (e.g. data exports); never commit
+packages/frontend/cypress/downloads/
+packages/frontend/cypress/screenshots/
+packages/frontend/cypress/videos/
