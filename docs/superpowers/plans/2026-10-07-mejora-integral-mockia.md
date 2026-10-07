@@ -128,6 +128,28 @@ Entradas/condiciones que el plan no cubre con una tarea propia pero que el usuar
 - [ ] **Step 4:** Proveedor SMTP: documentar en `.env.example` (`SMTP_URL`, `MAIL_FROM`); recomendar Resend o Brevo (plan gratuito) y SPF/DKIM del dominio.
 - [ ] **Step 5: Commit** `feat(auth): recuperar contraseña y verificacion de email`.
 
+### Task 16: Preferencias de usuario (idioma guardado) y estética morada
+
+*Añadida el 2026-10-07 a petición de la propietaria; se ejecuta justo después de la Task 4 (necesita el modelo `User` y las respuestas de auth ya estables).*
+
+**Files:**
+- Modify: `packages/backend/src/models/User.ts` (`locale?: 'en' | 'es' | 'zh'`), `modules/users/{routes,controller,service,validation}.ts`, `packages/shared` (`UserDTO.locale?`), `modules/auth/service.ts` (el DTO de login/me incluye `locale`)
+- Modify: `packages/frontend/src/i18n/I18nProvider.tsx`, `services/authService.ts`, `pages/Auth/{Login,Signup}.tsx`, `components/ui/Header/Header.module.scss`, `pages/Landing/Index.module.scss`
+- Test: `packages/backend/src/tests/users.locale.test.ts`, `packages/frontend/cypress/e2e/i18n.cy.ts` (ampliar)
+
+**Interfaces:**
+- Produces: `PATCH /users/me/preferences` body `{ locale: 'en'|'es'|'zh' }` → 200 `{ locale }` (autenticado; otro valor → 400); `UserDTO.locale?: Locale`.
+- Reglas de sincronización (frontend): idioma guardado en el usuario > idioma guardado en el navegador > navegador > `en`. Al iniciar sesión o recuperar sesión, si `user.locale` existe y difiere del actual, se aplica; si no existe, se envía el actual al backend. Si el usuario cambia de idioma estando autenticado, se hace `PATCH` en segundo plano (los errores se ignoran, no bloquean la UI).
+- Estética: "Backend." del título del héroe y los botones "Ir al panel"/"Go to dashboard" (héroe y cabecera) dejan el verde y usan el acento morado: `.gradientText` → `var(--color-accent-text)`; `.primaryBtn` fondo `var(--color-accent-solid)`, texto `var(--color-on-accent)`, brillo `var(--color-glow-accent)`, flecha blanca (`filter: brightness(0) invert(1)`); contraste AA (≥ 4,5:1).
+
+- [ ] **Step 1: Tests backend** `users.locale.test.ts`: PATCH con `es` guarda y devuelve `es`; `fr` → 400; sin token → 401; el login devuelve `user.locale` tras guardarlo.
+- [ ] **Step 2:** Ejecutar → FALLA.
+- [ ] **Step 3:** Implementar modelo, ruta/controlador/servicio/validación y DTO compartido (reconstruir `@mockia/shared`).
+- [ ] **Step 4: Tests Cypress** (`i18n.cy.ts`): (a) usuario con `locale: 'es'` guardado entra con navegador en inglés y ve la UI en español; (b) cambiar a `zh` autenticado hace `PATCH` y al recargar sigue en `zh`; (c) en `/login` y `/signup`, a 375, 768 y 1440 px el selector de idioma es visible, está dentro del viewport y no solapa el logo ni el formulario; (d) el color calculado de `.gradientText` es `rgb(165, 180, 252)` y el del botón principal del héroe autenticado `rgb(79, 70, 229)`.
+- [ ] **Step 5:** Implementar la sincronización en el frontend, corregir el layout del selector en las páginas de auth (si solapa o queda mal) y el cambio de color; revisar visualmente en el navegador a 375 y 1440 px.
+- [ ] **Step 6:** `npm run build`, backend completo y Cypress completo en verde.
+- [ ] **Step 7: Commit** `feat: idioma guardado por usuario y botones/titulo en morado`.
+
 ---
 
 ## Fase B — Cumplimiento legal y RGPD
@@ -333,7 +355,7 @@ Entradas/condiciones que el plan no cubre con una tarea propia pero que el usuar
 | Orden | Tareas | Por qué primero |
 |-------|--------|-----------------|
 | 1 | T1, T5 (paso 4) | Riesgo inmediato: Mongo expuesto y una afirmación legal falsa. Horas de trabajo. |
-| 2 | T2, T3, T4 | Sesión segura y recuperar contraseña: sin esto no se puede abrir al público. |
+| 2 | T2, T3, T4, T16 | Sesión segura y recuperar contraseña: sin esto no se puede abrir al público. |
 | 3 | T5, T6 | Cumplimiento: necesario antes de recoger datos de usuarios reales. |
 | 4 | T7, T8, T9 | Cobrar con impuestos y gestionar impagos. Requiere alta fiscal tuya (manual). |
 | 5 | T12, T13 | Abstracción y línea base de IA: bajo riesgo, desbloquea la T14. |
