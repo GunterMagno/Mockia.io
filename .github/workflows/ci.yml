@@ -211,6 +211,8 @@ jobs:
           E2E: 'true'
           # The suite logs in more than the 20-per-15-min brute-force limit of /auth/login and /auth/register
           AUTH_RATE_LIMIT_MAX: 500
+          # No SMTP in CI: emails are kept in memory and read by cypress/e2e/passwordReset.cy.ts at /api/__test__/outbox
+          E2E_EXPOSE_MAIL_OUTBOX: 'true'
           BACKEND_URL: http://localhost:3000
           JWT_ACCESS_SECRET: test-secret-key-super-secure-for-testing
           JWT_REFRESH_SECRET: test-refresh-secret-key-for-testing

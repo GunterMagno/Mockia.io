@@ -38,6 +38,29 @@ Optimizado para rendimiento, seguridad y empaquetamiento estático:
 
 ---
 
+### Correo transaccional (verificación y recuperación de contraseña)
+
+El backend envía dos correos: el enlace de **verificación de email** (24 h) y el de **recuperar contraseña** (30 min). Se envían con `nodemailer` por SMTP, configurado con tres variables:
+
+| Variable | Valor |
+|---|---|
+| `SMTP_URL` | URL del servidor SMTP, p. ej. `smtp://resend:<API_KEY>@smtp.resend.com:465` (Resend) o `smtp://<login>:<clave SMTP>@smtp-relay.brevo.com:587` (Brevo) |
+| `MAIL_FROM` | Remitente, p. ej. `Mockia.io <no-reply@tudominio.com>`; debe ser una dirección de un dominio verificado en el proveedor |
+| `APP_URL` | URL pública de la aplicación: los enlaces del correo son `${APP_URL}/reset-password?token=...` y `${APP_URL}/verify-email?token=...` |
+
+**Proveedor recomendado:** Resend o Brevo; ambos tienen plan gratuito suficiente para el volumen de un proyecto de este tamaño. Pasos (manuales, no automatizables desde el repositorio):
+
+1. Crear la cuenta en el proveedor y **verificar el dominio** del remitente.
+2. Publicar en el DNS del dominio los registros que indica el proveedor: **SPF** (`TXT`) y **DKIM** (`TXT`/`CNAME`). Sin ellos los correos acaban en spam o son rechazados; conviene añadir también un registro **DMARC** (`_dmarc`, `v=DMARC1; p=none; rua=mailto:...`) y endurecerlo cuando los informes salgan limpios.
+3. Crear una clave de API/SMTP con permiso solo de envío y guardarla en `SMTP_URL` (nunca en el repositorio).
+4. Probar el flujo completo: registrarse, recibir el correo de verificación, pedir "¿Olvidaste tu contraseña?".
+
+Sin `SMTP_URL`: en desarrollo el enlace se imprime en la consola del backend; en producción se registra un error y **no se envía nada** (la petición sigue respondiendo igual para no revelar qué correos existen), así que los usuarios no podrían verificarse ni recuperar la contraseña. El backend avisa de ello al arrancar.
+
+**Verificación obligatoria.** La generación con IA y el checkout/portal de facturación exigen el correo verificado (`403` con código `EMAIL_NOT_VERIFIED`) cuando `REQUIRE_EMAIL_VERIFICATION=true`; sin definir, solo se exige en `NODE_ENV=production`. **Antes de activarlo en una base de datos con usuarios existentes** hay que ejecutar una vez `npm run backfill:email-verified -w @mockia/backend` (con `MONGODB_URI` apuntando a esa base), que marca como verificadas las cuentas anteriores; es idempotente.
+
+---
+
 ## 8.4 Configuración del Servidor Web y Proxy Inverso (Nginx)
 
 Se utiliza **Nginx** como único punto de entrada de tráfico web de producción, actuando como servidor estático de la SPA y como proxy inverso inteligente para redirigir las peticiones dinámicas.

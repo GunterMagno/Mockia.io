@@ -27,6 +27,12 @@ services:
         value: https://mockia-frontend.onrender.com
       - key: OPENROUTER_API_KEY
         sync: false
+      # Transactional email (verification and password reset links). Without SMTP_URL nobody receives them and
+      # unverified users cannot use AI generation or billing. Resend or Brevo (free plan); see docs/08_despliegue.md.
+      - key: SMTP_URL
+        sync: false
+      - key: MAIL_FROM
+        sync: false
 
   # Frontend Static Site
   - type: web

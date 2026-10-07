@@ -55,6 +55,8 @@ Las pruebas del cliente se implementan bajo el marco de **Cypress**, garantizand
   - *Workspace CRUD:* Creación de un proyecto -> Edición del título -> Archivado del proyecto -> Recuperación del listado.
   - *Flujo Mock Editor:* Modificación manual de un esquema JSON de respuesta -> Guardar cambios -> Consumo del mock en local verificando el cambio sin recargar.
 
+**Correo en las pruebas E2E.** No hay servidor SMTP en el entorno de pruebas. Con `E2E_EXPOSE_MAIL_OUTBOX=true` el backend guarda los correos en memoria y los sirve en `GET /api/__test__/outbox` (`DELETE` los vacía); la spec `passwordReset.cy.ts` lee de ahí el enlace de verificación o de recuperación y lo abre como lo haría el usuario. Ese endpoint solo existe con `NODE_ENV=test` o con esa variable, y `assertProdConfig` impide arrancar en producción si está activa (los correos contienen enlaces que dan acceso a cuentas). Las pruebas de backend usan el mismo buzón (`getTestOutbox()`/`clearTestOutbox()` en `services/mailer.ts`).
+
 ![Resultados Cypress](./assets/test_cypress_results.png)
 *(Panel de ejecución de pruebas End-to-End simulando flujos de usuario en Cypress)*
 

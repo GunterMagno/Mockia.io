@@ -41,6 +41,11 @@ services:
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       CORS_ORIGIN: ${CORS_ORIGIN:?falta CORS_ORIGIN (origen publico del frontend, p. ej. https://app.midominio.com)}
       APP_URL: ${APP_URL:?falta APP_URL (URL publica de la aplicacion)}
+      # Correo transaccional (verificacion de email y recuperar contrasena). Sin SMTP_URL no se envia nada.
+      SMTP_URL: ${SMTP_URL:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      # Vacio = el correo verificado (IA y facturacion) solo se exige en produccion, que es este caso
+      REQUIRE_EMAIL_VERIFICATION: ${REQUIRE_EMAIL_VERIFICATION:-}
     depends_on:
       mongo:
         condition: service_healthy
