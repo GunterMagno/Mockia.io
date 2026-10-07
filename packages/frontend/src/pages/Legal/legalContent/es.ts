@@ -571,6 +571,12 @@ const es: LegalContent = {
                     'Hasta que lo borres.',
                   ],
                   [
+                    '`mockia_cookie_notice_dismissed`',
+                    'Almacenamiento local (localStorage).',
+                    'Recordar que has cerrado el aviso informativo sobre cookies para no mostrártelo de nuevo.',
+                    'Hasta que lo borres.',
+                  ],
+                  [
                     '`mockia_verify_banner_dismissed`',
                     'Almacenamiento de sesión (sessionStorage).',
                     'Recordar que has cerrado el aviso de verificación del email mientras la pestaña siga abierta.',
@@ -585,10 +591,10 @@ const es: LegalContent = {
           ],
         },
         {
-          heading: 'Por qué no mostramos un banner de cookies',
+          heading: 'Aviso informativo, no banner de consentimiento',
           blocks: [
             {
-              p: 'El artículo 22.2 de la LSSI-CE exige consentimiento previo para las cookies y tecnologías similares, salvo las estrictamente necesarias para prestar un servicio que el usuario ha solicitado expresamente (como mantener la sesión o recordar el idioma). Como solo usamos de ese tipo, no necesitamos pedir tu consentimiento ni mostrar un banner.',
+              p: 'Al entrar en el sitio mostramos un aviso informativo con un único botón «Entendido». Lo mostramos solo por transparencia, no para pedirte consentimiento: el artículo 22.2 de la LSSI-CE exige consentimiento previo para las cookies y tecnologías similares, salvo las estrictamente necesarias para prestar un servicio que el usuario ha solicitado expresamente (como mantener la sesión o recordar el idioma). Como solo usamos de ese tipo, no necesitamos tu consentimiento y no hay nada que aceptar ni rechazar. Al pulsar «Entendido» solo guardamos que has cerrado el aviso (`mockia_cookie_notice_dismissed`).',
             },
             {
               p: 'Si en el futuro añadiéramos analítica, publicidad o contenido de terceros no esencial, pediremos tu consentimiento antes de activarlos, con una opción de rechazar tan sencilla como la de aceptar, y actualizaremos esta política.',

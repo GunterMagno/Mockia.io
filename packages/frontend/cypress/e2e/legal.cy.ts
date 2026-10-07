@@ -58,7 +58,10 @@ describe('Legal: contenido segun el idioma', () => {
   it('Cookies lista la cookie de sesion mockia_rt y la clave de idioma que usa la app', () => {
     for (const lang of ['es', 'en', 'zh'] as Lang[]) {
       visitIn('/cookies', lang);
-      cy.get('article').should('contain.text', 'mockia_rt').and('contain.text', 'mockia_locale');
+      cy.get('article')
+        .should('contain.text', 'mockia_rt')
+        .and('contain.text', 'mockia_locale')
+        .and('contain.text', 'mockia_cookie_notice_dismissed');
     }
   });
 

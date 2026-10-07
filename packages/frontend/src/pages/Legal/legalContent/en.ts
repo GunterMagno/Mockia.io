@@ -567,6 +567,12 @@ const en: LegalContent = {
                     "Until you delete it.",
                   ],
                   [
+                    "`mockia_cookie_notice_dismissed`",
+                    "Local storage (localStorage).",
+                    "Remembering that you closed the informational cookie notice so we do not show it again.",
+                    "Until you delete it.",
+                  ],
+                  [
                     "`mockia_verify_banner_dismissed`",
                     "Session storage (sessionStorage).",
                     "Remembering that you closed the email verification notice while the tab stays open.",
@@ -581,10 +587,10 @@ const en: LegalContent = {
           ],
         },
         {
-          heading: "Why we do not show a cookie banner",
+          heading: "An informational notice, not a consent banner",
           blocks: [
             {
-              p: "Article 22.2 of the Spanish LSSI-CE requires prior consent for cookies and similar technologies, except those strictly necessary to provide a service the user has expressly requested (such as keeping the session or remembering the language). Since we only use that kind, we do not need to ask for your consent or show a banner.",
+              p: "When you visit the site we show an informational notice with a single \"Got it\" button. We show it only for transparency, not to ask for your consent: Article 22.2 of the Spanish LSSI-CE requires prior consent for cookies and similar technologies, except those strictly necessary to provide a service the user has expressly requested (such as keeping the session or remembering the language). Since we only use that kind, we do not need your consent and there is nothing to accept or reject. When you press \"Got it\" we only store that you closed the notice (`mockia_cookie_notice_dismissed`).",
             },
             {
               p: "If in the future we add analytics, advertising or non-essential third-party content, we will ask for your consent before enabling them, with an option to reject that is as easy as the one to accept, and we will update this policy.",
