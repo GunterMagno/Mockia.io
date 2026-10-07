@@ -22,6 +22,11 @@ interface UserDocument extends Document {
   stripeLastEventId?: string;
   stripeEventAt?: Date;
   /**
+   * Ids of the last notice-only Stripe events announced (trial ending, refunds). They change no billing state, so they are
+   * deduplicated here and never advance stripeEventAt / stripeLastEventId (which would make an older real change look stale).
+   */
+  noticeEventIds?: string[];
+  /**
    * When the first payment failure of the current sequence happened (event time). Set once on entering past_due and never
    * extended by retries or later failed invoices; null when billing returns to active or the subscription is canceled.
    */
@@ -78,6 +83,7 @@ const userSchema = new Schema<UserDocument>(
     stripeSubscriptionId: { type: String },
     stripeLastEventId: { type: String },
     stripeEventAt: { type: Date },
+    noticeEventIds: { type: [String], default: [] },
     pastDueSince: { type: Date, default: null },
     lastPaymentFailedInvoiceId: { type: String, default: null },
     cancelAtPeriodEnd: { type: Boolean, default: false },

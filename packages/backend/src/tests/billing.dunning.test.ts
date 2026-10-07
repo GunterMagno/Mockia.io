@@ -260,6 +260,91 @@ describe('Impagos: periodo de gracia, avisos y recuperacion (MongoDB real)', () 
     expect(await reload()).toMatchObject({ plan: 'pro', billingStatus: 'active' }); // refund changes no plan
   });
 
+  describe('notice-only events do not consume the replay / out-of-order guard', () => {
+    const deleted = (created: number) => ({
+      id: `evt_del_${created}`,
+      created,
+      type: 'customer.subscription.deleted',
+      data: { object: { id: 'sub_dun', customer: 'cus_dun' } },
+    });
+    const refund = (created: number, id = `evt_ref_${created}`) => ({
+      id,
+      created,
+      type: 'charge.refunded',
+      data: { object: { id: 'ch_1', customer: 'cus_dun', amount_refunded: 2900, currency: 'usd' } },
+    });
+    const trial = (created: number, id = `evt_tr_${created}`) => ({
+      id,
+      created,
+      type: 'customer.subscription.trial_will_end',
+      data: { object: { id: 'sub_dun', customer: 'cus_dun', trial_end: created + 3 * DAY } },
+    });
+
+    it('charge.refunded (created T) delivered BEFORE customer.subscription.deleted (created T-1): the deletion still applies', async () => {
+      const T = nowSec() - 60;
+      await send(refund(T));
+      const res = await send(deleted(T - 1));
+      expect(res.body.result).toBe('handled');
+      expect(await reload()).toMatchObject({ plan: 'free', billingStatus: 'canceled' });
+    });
+
+    it('trial_will_end (created T) delivered BEFORE customer.subscription.deleted (created T-1): the deletion still applies', async () => {
+      const T = nowSec() - 60;
+      await send(trial(T));
+      const res = await send(deleted(T - 1));
+      expect(res.body.result).toBe('handled');
+      expect(await reload()).toMatchObject({ plan: 'free', billingStatus: 'canceled' });
+    });
+
+    it('a notice-only event leaves stripeEventAt / stripeLastEventId untouched', async () => {
+      const T = nowSec() - 3600;
+      await send(subscriptionEvent('active', T));
+      const before = (await reload())!;
+      expect(before.stripeLastEventId).toBeTruthy();
+
+      await send(refund(T + 100));
+      await send(trial(T + 200));
+      const after = (await reload())!;
+      expect(after.stripeEventAt?.getTime()).toBe(before.stripeEventAt?.getTime());
+      expect(after.stripeLastEventId).toBe(before.stripeLastEventId);
+      expect(await notices()).toHaveLength(2);
+    });
+
+    it('a delayed payment_failed still applies after a refund notice that is newer', async () => {
+      const T = nowSec() - 120;
+      await send(refund(T));
+      await send(failedInvoice('in_late', T - 30));
+      expect(await reload()).toMatchObject({ billingStatus: 'past_due', pastDueSince: new Date((T - 30) * 1000) });
+      expect(mails()).toHaveLength(1);
+    });
+
+    it('replaying the same refund event (and interleaving another notice) yields ONE notice each', async () => {
+      const T = nowSec() - 60;
+      const r = refund(T, 'evt_ref_same');
+      await send(r);
+      await send(trial(T + 1, 'evt_tr_between'));
+      const again = await send(r);
+      expect(again.status).toBe(200);
+      expect(again.body.result).toBe('ignored');
+      expect(await notices()).toHaveLength(2); // one refund + one trial
+    });
+
+    it('simultaneous deliveries of the same notice event announce once', async () => {
+      const r = refund(nowSec() - 30, 'evt_ref_race');
+      await Promise.all([send(r), send(r), send(r)]);
+      expect(await notices()).toHaveLength(1);
+    });
+
+    it('payment_failed still announces once per sequence (unchanged)', async () => {
+      const t0 = nowSec() - 2 * DAY;
+      await send(failedInvoice('in_1', t0, 'evt_pf_same'));
+      await send(failedInvoice('in_1', t0, 'evt_pf_same'));
+      await send(failedInvoice('in_1', t0 + 60));
+      expect(mails()).toHaveLength(1);
+      expect(await notices()).toHaveLength(1);
+    });
+  });
+
   it('unknown customer: 500 for a young event, 200 for an old one', async () => {
     const ghost = (created: number) => ({
       id: `evt_ghost_${created}`,

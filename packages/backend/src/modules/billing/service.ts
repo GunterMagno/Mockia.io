@@ -82,7 +82,7 @@ async function updateUser(
     };
     fields = { ...fields, stripeEventAt: at, stripeLastEventId: event.id };
   }
-  if (Object.keys(fields).length === 0) return 'skipped'; // a notice-only event without id/timestamp cannot be deduplicated: do nothing
+  if (Object.keys(fields).length === 0) return 'skipped'; // nothing to write (defensive: every caller sets something)
 
   // The grace period starts at the FIRST failure and a later failure never extends it: pastDueSince only takes the event time
   // while it is empty. That needs an update pipeline ($ifNull); every value goes through $literal so nothing is read as an expression.
@@ -126,6 +126,27 @@ function periodFields(sub: Record<string, any>): Record<string, unknown> {
     ...(Number.isFinite(end) && { currentPeriodEnd: new Date(end * 1000) }),
     ...(hasCancelInfo && { cancelAtPeriodEnd: sub.cancel_at_period_end === true || Number.isFinite(sub.cancel_at) }),
   };
+}
+
+/** How many notice-only event ids are remembered per user (enough to absorb Stripe's redeliveries; the oldest are dropped). */
+const NOTICE_IDS_KEPT = 20;
+
+/**
+ * Claims a notice-only event (trial ending, refund) for its user: atomically, once per event id. It changes NO billing state, so
+ * it deliberately stays out of the stripeEventAt / stripeLastEventId guard: otherwise a refund created a second after a cancellation
+ * but delivered first would make the (older) subscription.deleted look stale and leave the user on a paid plan for good.
+ * Same result contract as updateUser; an event without id cannot be deduplicated and is skipped.
+ */
+async function claimNoticeEvent(event: StripeEvent, obj: Record<string, any>): Promise<UserHit | 'unknown' | 'skipped'> {
+  const base = userFilter(obj);
+  if (!base || typeof event.id !== 'string') return 'skipped';
+  const user = await UserModel.findOneAndUpdate(
+    { ...base, noticeEventIds: { $ne: event.id } },
+    { $push: { noticeEventIds: { $each: [event.id], $slice: -NOTICE_IDS_KEPT } } },
+    { new: true }
+  ).select('_id email username locale plan pastDueSince');
+  if (!user) return (await UserModel.exists(base)) ? 'skipped' : 'unknown';
+  return user;
 }
 
 /** First failed invoice of a sequence announces itself once: claim the sequence atomically, then email + in-app. */
@@ -216,13 +237,13 @@ export async function handleStripeEvent(event: StripeEvent): Promise<'handled' |
     }
     case 'customer.subscription.trial_will_end': {
       if (!Number.isFinite(obj.trial_end)) break;
-      result = await updateUser(event, obj, {});
+      result = await claimNoticeEvent(event, obj);
       afterApplied = (user) => notifyTrialWillEnd(user, new Date(obj.trial_end * 1000));
       break;
     }
     case 'charge.refunded':
       // Notice only: a cancellation that goes with a refund arrives as customer.subscription.deleted.
-      result = await updateUser(event, obj, {});
+      result = await claimNoticeEvent(event, obj);
       afterApplied = (user) => notifyRefund(user, { amount: obj.amount_refunded, currency: obj.currency });
       break;
     default:

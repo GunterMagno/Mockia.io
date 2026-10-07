@@ -479,10 +479,19 @@ describe('recovery: invoice.paid / invoice.payment_succeeded', () => {
       id: 'evt_s2',
       created: 1_790_200_000,
       type: 'customer.subscription.updated',
-      data: { object: { id: 'sub_1', customer: 'cus_1', status: 'past_due', metadata: { plan: 'pro' } } },
+      data: {
+        object: { id: 'sub_1', customer: 'cus_1', status: 'past_due', metadata: { plan: 'pro' }, current_period_end: 1_790_500_000, cancel_at_period_end: false },
+      },
     });
     const update = findOneAndUpdate.mock.calls[1][1];
     expect(update[0].$set.billingStatus).toEqual({ $literal: 'past_due' });
+    expect(update[0].$set).toMatchObject({
+      plan: { $literal: 'pro' },
+      stripeSubscriptionId: { $literal: 'sub_1' },
+      stripeCustomerId: { $literal: 'cus_1' },
+      currentPeriodEnd: { $literal: new Date(1_790_500_000_000) },
+      cancelAtPeriodEnd: { $literal: false },
+    });
     expect(update[0].$set.pastDueSince).toEqual({ $ifNull: ['$pastDueSince', new Date(1_790_200_000_000)] });
     // subscription events do not notify by themselves: invoice.payment_failed does
     expect(sendMailMock).not.toHaveBeenCalled();
@@ -501,8 +510,10 @@ describe('customer.subscription.trial_will_end and charge.refunded', () => {
       data: { object: { id: 'sub_1', customer: 'cus_1', trial_end: trialEnd } },
     });
     expect(res.body.result).toBe('handled');
-    const [, update] = findOneAndUpdate.mock.calls[0];
-    expect(Object.keys(update.$set).sort()).toEqual(['stripeEventAt', 'stripeLastEventId']); // guard only
+    const [filter, update] = findOneAndUpdate.mock.calls[0];
+    expect(filter).toMatchObject({ stripeCustomerId: 'cus_1', noticeEventIds: { $ne: 'evt_t1' } });
+    expect(filter).not.toHaveProperty('stripeLastEventId'); // the billing replay guard is not consulted...
+    expect(update).toEqual({ $push: { noticeEventIds: { $each: ['evt_t1'], $slice: -20 } } }); // ...nor advanced
     const date = new Intl.DateTimeFormat('en', { dateStyle: 'long', timeZone: 'UTC' }).format(new Date(trialEnd * 1000));
     expect(sendMailMock).toHaveBeenCalledWith('ana@example.com', 'trial_will_end', expect.objectContaining({ locale: 'en', date }));
     expect(createNotificationMock).toHaveBeenCalledWith(expect.objectContaining({ type: NotificationType.BILLING, link: '/billing' }));
@@ -527,12 +538,20 @@ describe('customer.subscription.trial_will_end and charge.refunded', () => {
       data: { object: { id: 'ch_1', customer: 'cus_1', amount_refunded: 2900, currency: 'usd' } },
     });
     expect(res.body.result).toBe('handled');
-    const [, update] = findOneAndUpdate.mock.calls[0];
-    expect(Object.keys(update.$set).sort()).toEqual(['stripeEventAt', 'stripeLastEventId']);
+    const [filter, update] = findOneAndUpdate.mock.calls[0];
+    expect(filter).toMatchObject({ noticeEventIds: { $ne: 'evt_r1' } });
+    expect(update).toEqual({ $push: { noticeEventIds: { $each: ['evt_r1'], $slice: -20 } } });
     expect(sendMailMock).not.toHaveBeenCalled();
     expect(createNotificationMock).toHaveBeenCalledTimes(1);
     expect(createNotificationMock.mock.calls[0][0]).toMatchObject({ userId: UID, type: NotificationType.BILLING });
     expect(createNotificationMock.mock.calls[0][0].message).toContain('$29.00');
+  });
+
+  it('a notice-only event without an id cannot be deduplicated: nothing is sent', async () => {
+    const res = await post({ created: 1_790_000_000, type: 'charge.refunded', data: { object: { customer: 'cus_1', amount_refunded: 100, currency: 'usd' } } });
+    expect(res.body.result).toBe('ignored');
+    expect(findOneAndUpdate).not.toHaveBeenCalled();
+    expect(createNotificationMock).not.toHaveBeenCalled();
   });
 
   it('charge.refunded without an amount still produces a generic notice; replay produces none', async () => {
