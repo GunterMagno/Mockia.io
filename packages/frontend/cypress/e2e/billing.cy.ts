@@ -12,6 +12,8 @@ describe('Billing: planes, limites y facturacion', () => {
     cy.clearCookies();
     cy.visit('/');
     cy.get('#pricing-title').scrollIntoView();
+    // Los Terminos prometen precios sin IVA; la nota bajo las tarjetas lo dice
+    cy.contains('p', 'excluding VAT where applicable').should('be.visible');
     cy.contains('li', 'Team').within(() => cy.contains('button', 'Choose Team').click());
 
     cy.location('pathname').should('eq', '/signup');

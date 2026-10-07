@@ -132,7 +132,7 @@ const zh: Messages = {
     subtitle: '免费开始，需要时再升级，随时可以取消。',
     perMonth: '/月',
     recommended: '推荐',
-    note: '价格以美元按月计费，结账时可能另行计税。',
+    note: '价格以美元按月计费，不含增值税（如适用）。税额在结账时按你所在的国家计算。',
     plans: {
       free: { name: 'Free', tagline: '适合个人项目和初次体验 Mockia。' },
       pro: { name: 'Pro', tagline: '适合每周都在交付前端的开发者。' },

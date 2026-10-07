@@ -139,7 +139,7 @@ const en = {
     subtitle: 'Start free. Upgrade when your mocks get serious. Cancel anytime.',
     perMonth: '/month',
     recommended: 'Recommended',
-    note: 'Prices in USD per month. Taxes may apply at checkout.',
+    note: 'Prices in USD per month, excluding VAT where applicable. Tax is calculated at checkout based on your country.',
     plans: {
       free: { name: 'Free', tagline: 'For side projects and trying Mockia out.' },
       pro: { name: 'Pro', tagline: 'For developers shipping frontends every week.' },

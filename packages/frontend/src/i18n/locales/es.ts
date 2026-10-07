@@ -134,7 +134,7 @@ const es: Messages = {
     subtitle: 'Empieza gratis. Sube de plan cuando tus mocks vayan en serio. Cancela cuando quieras.',
     perMonth: '/mes',
     recommended: 'Recomendado',
-    note: 'Precios en USD al mes. Los impuestos pueden aplicarse al pagar.',
+    note: 'Precios en USD al mes, sin IVA cuando proceda. El impuesto se calcula al pagar según tu país.',
     plans: {
       free: { name: 'Free', tagline: 'Para proyectos personales y para probar Mockia.' },
       pro: { name: 'Pro', tagline: 'Para quien entrega frontends cada semana.' },
