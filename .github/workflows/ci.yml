@@ -24,7 +24,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Resolver issues de formateo y linting (prettier/ESLint)
+      # TODO(H10): estos tres pasos siguen en continue-on-error SOLO por la deuda previa del repo (medida al hacer
+      # la Tarea 1): Prettier 244 ficheros sin formatear; ESLint backend 1210 errores (1162 de prettier/prettier) y
+      # ESLint frontend 2050 errores (1971 de prettier/prettier). Hacer un barrido unico (`npm run format` +
+      # `npm run lint:fix`, corrigiendo a mano los ~130 errores no autofixables) en un commit aparte y entonces
+      # quitar continue-on-error de los tres pasos para que bloqueen.
       - name: Run Prettier format check
         run: npm run format:check
         continue-on-error: true
@@ -38,6 +42,50 @@ jobs:
         working-directory: ./packages/frontend
         run: npm run lint
         continue-on-error: true
+
+  build:
+    name: Build (shared + backend + frontend)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build all workspaces
+        run: npm run build
+
+  compose-prod-config:
+    name: Validate docker-compose.prod.yml
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Fails without required variables (no insecure defaults)
+        run: |
+          : > "$RUNNER_TEMP/empty.env"
+          if docker compose --env-file "$RUNNER_TEMP/empty.env" -f docker-compose.prod.yml config -q; then
+            echo "docker-compose.prod.yml must require its secrets, but it rendered without them"
+            exit 1
+          fi
+
+      - name: Valid when every variable of .env.example is provided
+        run: docker compose --env-file .env.example -f docker-compose.prod.yml config -q
+
+      - name: MongoDB is not published to the host
+        run: |
+          docker compose --env-file .env.example -f docker-compose.prod.yml config --format json |
+            node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const p=JSON.parse(s).services.mongo.ports||[];if(p.length){console.error('mongo must not publish ports',p);process.exit(1)}})"
 
   test-backend:
     name: Test - Backend
