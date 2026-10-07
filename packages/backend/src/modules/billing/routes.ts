@@ -44,7 +44,8 @@ const fail = (code: string, message: string) => ({
 
 /**
  * POST /api/billing/webhook  (called by Stripe, no JWT; authenticity = Stripe-Signature)
- * 200 handled/ignored, 400 bad signature or payload, 501 webhook secret not configured.
+ * 200 handled/ignored, 400 bad signature or payload, 500 temporary failure (DB error, or a young event for a customer not linked to
+ * a user yet: Stripe retries), 501 webhook secret not configured.
  */
 billingRouter.post(
   '/webhook',
@@ -77,6 +78,11 @@ billingRouter.post(
       return;
     }
     const result = await handleStripeEvent(event); // throws -> 500 -> Stripe retries
+    if (result === 'retry') {
+      // A young event for a customer no user is linked to yet (it overtook checkout.session.completed): Stripe delivers it again later
+      res.status(500).json(fail('BILLING_USER_NOT_LINKED', 'No user is linked to this Stripe customer yet'));
+      return;
+    }
     res.status(200).json({ received: true, result });
   })
 );

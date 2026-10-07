@@ -11,13 +11,23 @@ interface UserDocument extends Document {
   passwordHash: string;
   /** Subscription tier. Effective tier also depends on billingStatus (see modules/billing/plans.ts). */
   plan: 'free' | 'pro' | 'team';
-  /** Mirrors Stripe subscription state. Anything but 'active' degrades to the free tier. */
+  /**
+   * Mirrors Stripe subscription state. 'canceled' is free at once; 'past_due' keeps the paid plan during the grace period
+   * (PAST_DUE_GRACE_DAYS from pastDueSince) and is free afterwards.
+   */
   billingStatus: 'active' | 'past_due' | 'canceled';
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
   /** Last Stripe event applied (id + created time): guards against replays and out-of-order webhooks. */
   stripeLastEventId?: string;
   stripeEventAt?: Date;
+  /**
+   * When the first payment failure of the current sequence happened (event time). Set once on entering past_due and never
+   * extended by retries or later failed invoices; null when billing returns to active or the subscription is canceled.
+   */
+  pastDueSince?: Date | null;
+  /** Invoice whose failure was already announced (email + in-app) in the current sequence; null once the sequence ends. */
+  lastPaymentFailedInvoiceId?: string | null;
   /** The subscription ends at currentPeriodEnd (cancelled from the customer portal). */
   cancelAtPeriodEnd: boolean;
   /** End of the current billing period, mirrored from the Stripe subscription. */
@@ -68,6 +78,8 @@ const userSchema = new Schema<UserDocument>(
     stripeSubscriptionId: { type: String },
     stripeLastEventId: { type: String },
     stripeEventAt: { type: Date },
+    pastDueSince: { type: Date, default: null },
+    lastPaymentFailedInvoiceId: { type: String, default: null },
     cancelAtPeriodEnd: { type: Boolean, default: false },
     currentPeriodEnd: { type: Date, default: null },
     emailVerifiedAt: { type: Date, default: null },

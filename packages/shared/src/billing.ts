@@ -23,6 +23,12 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
   team: { maxActiveProjects: Infinity, maxMonthlyRequests: 10_000_000 },
 };
 
+/**
+ * Dias que se conserva el plan de pago tras el primer cobro fallido (estado past_due) antes de pasar a Free.
+ * Es lo que prometen los Terminos (seccion de pagos): mantener sincronizado con ellos.
+ */
+export const PAST_DUE_GRACE_DAYS = 7;
+
 /** Precio mensual anunciado en USD (sin impuestos). */
 export const PLAN_PRICE_USD: Record<Plan, number> = {
   free: 0,
@@ -52,6 +58,11 @@ export interface BillingOverview {
   cancelAtPeriodEnd: boolean;
   /** Fin del periodo de facturacion actual (ISO), si hay suscripcion. */
   currentPeriodEnd: string | null;
+  /**
+   * Fin del periodo de gracia (ISO) cuando billingStatus es past_due y se conoce el primer cobro fallido; null en el resto.
+   * Hasta esa fecha `plan` sigue siendo el de pago; pasada, `plan` es free (y esta fecha queda como dato informativo).
+   */
+  pastDueUntil: string | null;
   limits: PlanLimitsDTO;
   usage: {
     activeProjects: number;

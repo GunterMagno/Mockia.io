@@ -2,7 +2,8 @@ import { UserModel } from '../../models/User.js';
 import { ProjectModel } from '../../models/Project.js';
 import { AppError } from '../../middlewares/errorHandler.js';
 import { ErrorCode, toLimitsDTO, type BillingOverview } from '@mockia/shared';
-import { PLAN_LIMITS, asPaidPlan, effectivePlan, invalidatePlanCache, type BillingStatus, type PaidPlan } from './plans.js';
+import { PLAN_LIMITS, asPaidPlan, effectivePlan, graceEndsAt, invalidatePlanCache, type BillingStatus, type PaidPlan } from './plans.js';
+import { notifyPaymentFailed, notifyRefund, notifyTrialWillEnd, type NoticeUser } from './notices.js';
 import { getMonthlyUsage, nextPeriodStart } from './usage.js';
 import { stripeCheckoutLocale, termsAcceptanceMessage } from './checkoutText.js';
 import { appBaseUrl } from '../auth/passwordReset.js';
@@ -37,26 +38,70 @@ function userFilter(obj: Record<string, any>): Record<string, string> | null {
   return null;
 }
 
-async function updateUser(event: StripeEvent, obj: Record<string, any>, set: Record<string, unknown>): Promise<boolean> {
+/** The user a Stripe event was applied to, with the fields the notices need. */
+type UserHit = NoticeUser & { pastDueSince?: Date | null };
+
+/** The payment-failure sequence is over (billing healthy again, or the subscription is gone). */
+const SEQUENCE_OVER = { pastDueSince: null, lastPaymentFailedInvoiceId: null };
+
+const PAID_PLANS = ['pro', 'team'];
+
+/** Events younger than this may still be racing checkout.session.completed, which is what links a Stripe customer to a user. */
+const LINK_RACE_WINDOW_MS = 60 * 60 * 1000;
+
+interface UpdateOptions {
+  /** 'start': enter past_due (the grace begins at the event time and never moves once set). 'clear': the failure sequence is over. */
+  pastDue?: 'start' | 'clear';
+  /** Extra conditions of the atomic update (e.g. only paying users; only past_due users). */
+  where?: Record<string, unknown>;
+}
+
+/**
+ * Applies `set` to the user of the Stripe object, atomically and at most once per event.
+ * Resolves to the user document when applied; 'unknown' when no user is linked to the object (handleStripeEvent decides whether
+ * Stripe should retry); 'skipped' when a user exists but nothing was applied (replay, out-of-order, not applicable).
+ */
+async function updateUser(
+  event: StripeEvent,
+  obj: Record<string, any>,
+  set: Record<string, unknown>,
+  { pastDue, where }: UpdateOptions = {}
+): Promise<UserHit | 'unknown' | 'skipped'> {
   const base = userFilter(obj);
-  if (!base) return false;
-  let filter: Record<string, unknown> = base;
-  let update = set;
+  if (!base) return 'skipped'; // nothing to identify a user by (e.g. a guest charge)
+  let filter: Record<string, unknown> = { ...base, ...where };
+  let fields: Record<string, unknown> = { ...set, ...(pastDue === 'clear' && SEQUENCE_OVER) };
   // Replay / out-of-order guard: skip an event already applied or older than the last one applied for this user
   // (a delayed subscription.updated(active) must not resurrect a plan after subscription.deleted).
   if (typeof event.id === 'string' && Number.isFinite(event.created)) {
     const at = new Date(event.created! * 1000);
     filter = {
-      ...base,
+      ...filter,
       stripeLastEventId: { $ne: event.id },
       $or: [{ stripeEventAt: { $exists: false } }, { stripeEventAt: { $lte: at } }],
     };
-    update = { ...set, stripeEventAt: at, stripeLastEventId: event.id };
+    fields = { ...fields, stripeEventAt: at, stripeLastEventId: event.id };
   }
-  const user = await UserModel.findOneAndUpdate(filter, { $set: update }, { new: true }).select('_id');
-  if (!user) return false;
+  if (Object.keys(fields).length === 0) return 'skipped'; // a notice-only event without id/timestamp cannot be deduplicated: do nothing
+
+  // The grace period starts at the FIRST failure and a later failure never extends it: pastDueSince only takes the event time
+  // while it is empty. That needs an update pipeline ($ifNull); every value goes through $literal so nothing is read as an expression.
+  const update =
+    pastDue === 'start'
+      ? [
+          {
+            $set: {
+              ...Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, { $literal: v }])),
+              pastDueSince: { $ifNull: ['$pastDueSince', Number.isFinite(event.created) ? new Date(event.created! * 1000) : new Date()] },
+            },
+          },
+        ]
+      : { $set: fields };
+
+  const user = await UserModel.findOneAndUpdate(filter, update, { new: true }).select('_id email username locale plan pastDueSince');
+  if (!user) return (await UserModel.exists(base)) ? 'skipped' : 'unknown';
   invalidatePlanCache(user._id.toString());
-  return true;
+  return user;
 }
 
 /**
@@ -83,53 +128,122 @@ function periodFields(sub: Record<string, any>): Record<string, unknown> {
   };
 }
 
+/** First failed invoice of a sequence announces itself once: claim the sequence atomically, then email + in-app. */
+async function announcePaymentFailure(user: UserHit, invoiceId: string, failedAt: Date): Promise<void> {
+  const claim = await UserModel.updateOne({ _id: user._id, lastPaymentFailedInvoiceId: null }, { $set: { lastPaymentFailedInvoiceId: invoiceId } });
+  if (claim.modifiedCount !== 1) return; // this sequence was already announced (retry of the same invoice, or a second failed invoice)
+  await notifyPaymentFailed(user, user.pastDueSince ? new Date(user.pastDueSince) : failedAt);
+}
+
 /**
- * Applies a verified Stripe event. Idempotent: only $set, plus a per-user event id / timestamp guard against replays and out-of-order delivery.
- * @returns 'handled' | 'ignored' (unsupported type or nothing to apply, or stale/duplicate event)
+ * Applies a verified Stripe event. Idempotent: only $set (plus the $ifNull pipeline that starts the grace period), with a per-user
+ * event id / timestamp guard against replays and out-of-order delivery. Notices (email, in-app) go out only when an event is applied.
+ * @returns 'handled' | 'ignored' (unsupported type, nothing to apply, stale/duplicate event, or an old event of an unknown customer)
+ *          | 'retry' (a young event for a customer that is not linked to a user yet: the route answers 500 so Stripe delivers it again)
  */
-export async function handleStripeEvent(event: StripeEvent): Promise<'handled' | 'ignored'> {
+export async function handleStripeEvent(event: StripeEvent): Promise<'handled' | 'ignored' | 'retry'> {
   const obj = event.data?.object ?? {};
-  let applied = false;
+  const eventAt = Number.isFinite(event.created) ? new Date(event.created! * 1000) : new Date();
+  let result: Awaited<ReturnType<typeof updateUser>> = 'skipped';
+  let afterApplied: ((user: UserHit) => Promise<void>) | undefined;
 
   switch (event.type) {
     case 'checkout.session.completed': {
       const plan = asPaidPlan(obj.metadata?.plan);
       // Skip non-subscription sessions and delayed payments not yet paid; subscription.updated(active) follows.
       if (!plan || (obj.mode && obj.mode !== 'subscription') || obj.payment_status === 'unpaid') break;
-      applied = await updateUser(event, obj, {
-        plan,
-        billingStatus: 'active',
-        ...(typeof obj.customer === 'string' && { stripeCustomerId: obj.customer }),
-        ...(typeof obj.subscription === 'string' && { stripeSubscriptionId: obj.subscription }),
-      });
+      result = await updateUser(
+        event,
+        obj,
+        {
+          plan,
+          billingStatus: 'active',
+          ...(typeof obj.customer === 'string' && { stripeCustomerId: obj.customer }),
+          ...(typeof obj.subscription === 'string' && { stripeSubscriptionId: obj.subscription }),
+        },
+        { pastDue: 'clear' }
+      );
       break;
     }
     case 'customer.subscription.created':
     case 'customer.subscription.updated': {
       const plan = planFromSubscription(obj);
-      applied = await updateUser(event, obj, {
-        billingStatus: STATUS_MAP[obj.status] ?? 'past_due',
-        stripeSubscriptionId: obj.id,
-        ...(typeof obj.customer === 'string' && { stripeCustomerId: obj.customer }),
-        ...(plan && { plan }),
-        ...periodFields(obj),
-      });
+      const billingStatus = STATUS_MAP[obj.status] ?? 'past_due';
+      // Only Stripe's own past_due (a renewal failed, retries pending) opens a grace period. unpaid / incomplete / paused / unknown
+      // statuses have no paid access to extend (a half-finished first checkout must not buy 7 days of a paid plan).
+      const pastDue = obj.status === 'past_due' ? 'start' : billingStatus === 'past_due' ? undefined : 'clear';
+      result = await updateUser(
+        event,
+        obj,
+        {
+          billingStatus,
+          stripeSubscriptionId: obj.id,
+          ...(typeof obj.customer === 'string' && { stripeCustomerId: obj.customer }),
+          ...(plan && { plan }),
+          ...periodFields(obj),
+        },
+        { pastDue }
+      );
       break;
     }
     case 'customer.subscription.deleted':
-      applied = await updateUser(event, obj, {
-        plan: 'free',
-        billingStatus: 'canceled',
-        cancelAtPeriodEnd: false,
-        currentPeriodEnd: null,
-      });
+      result = await updateUser(
+        event,
+        obj,
+        { plan: 'free', billingStatus: 'canceled', cancelAtPeriodEnd: false, currentPeriodEnd: null },
+        { pastDue: 'clear' }
+      );
+      break;
+    case 'invoice.payment_failed': {
+      // The very first invoice of a subscription failing means checkout never completed: no paid access was granted, nothing to degrade.
+      if (obj.billing_reason === 'subscription_create') return 'ignored';
+      const invoiceId = typeof obj.id === 'string' ? obj.id : String(event.id);
+      result = await updateUser(event, obj, { billingStatus: 'past_due' }, { pastDue: 'start', where: { plan: { $in: PAID_PLANS } } });
+      afterApplied = (user) => announcePaymentFailure(user, invoiceId, eventAt);
+      break;
+    }
+    case 'invoice.paid':
+    case 'invoice.payment_succeeded': {
+      const invoiceId = typeof obj.id === 'string' ? obj.id : null;
+      // Back to active only from past_due, and not because of an unrelated invoice while the failed one is still open.
+      result = await updateUser(
+        event,
+        obj,
+        { billingStatus: 'active' },
+        { pastDue: 'clear', where: { billingStatus: 'past_due', lastPaymentFailedInvoiceId: { $in: [invoiceId, null] } } }
+      );
+      break;
+    }
+    case 'customer.subscription.trial_will_end': {
+      if (!Number.isFinite(obj.trial_end)) break;
+      result = await updateUser(event, obj, {});
+      afterApplied = (user) => notifyTrialWillEnd(user, new Date(obj.trial_end * 1000));
+      break;
+    }
+    case 'charge.refunded':
+      // Notice only: a cancellation that goes with a refund arrives as customer.subscription.deleted.
+      result = await updateUser(event, obj, {});
+      afterApplied = (user) => notifyRefund(user, { amount: obj.amount_refunded, currency: obj.currency });
       break;
     default:
       return 'ignored';
   }
 
-  if (!applied) console.warn(`[Billing] ${event.type} (${event.id}) matched no user or was not applicable`);
-  return applied ? 'handled' : 'ignored';
+  if (typeof result !== 'string') {
+    await afterApplied?.(result);
+    return 'handled';
+  }
+  if (result === 'unknown') {
+    // Event ids only in the logs: a Stripe customer id or an address would be personal data in the log files.
+    if (Number.isFinite(event.created) && Date.now() - event.created! * 1000 < LINK_RACE_WINDOW_MS) {
+      console.warn(`[Billing] ${event.type} (${event.id}): no user is linked to the customer yet, asking Stripe to retry`);
+      return 'retry';
+    }
+    console.warn(`[Billing] ${event.type} (${event.id}): no user is linked to the customer, dropping the event`);
+    return 'ignored';
+  }
+  console.warn(`[Billing] ${event.type} (${event.id}) was not applicable or already applied`);
+  return 'ignored';
 }
 
 const frontendBase = () =>
@@ -268,11 +382,11 @@ export async function cancelSubscriptionNow(subscriptionId: string, secretKey: s
 /** Plan, limits and usage of the current billing period, for the billing page. */
 export async function getBillingOverview(userId: string, now = new Date()): Promise<BillingOverview> {
   const user = await UserModel.findById(userId)
-    .select('plan billingStatus stripeCustomerId cancelAtPeriodEnd currentPeriodEnd')
+    .select('plan billingStatus pastDueSince stripeCustomerId cancelAtPeriodEnd currentPeriodEnd')
     .lean();
   if (!user) throw new AppError('User not found', ErrorCode.NOT_FOUND, 404);
 
-  const plan = effectivePlan(user);
+  const plan = effectivePlan(user, now.getTime());
   const [activeProjects, monthlyRequests] = await Promise.all([
     ProjectModel.countDocuments({ ownerId: userId, isArchived: { $ne: true } }),
     getMonthlyUsage(userId, now),
@@ -285,6 +399,7 @@ export async function getBillingOverview(userId: string, now = new Date()): Prom
     billingStatus: (user.billingStatus as BillingStatus) ?? 'active',
     cancelAtPeriodEnd: Boolean(user.cancelAtPeriodEnd),
     currentPeriodEnd: user.currentPeriodEnd ? new Date(user.currentPeriodEnd).toISOString() : null,
+    pastDueUntil: graceEndsAt(user)?.toISOString() ?? null,
     limits: toLimitsDTO(PLAN_LIMITS[plan]),
     usage: { activeProjects, monthlyRequests, periodResetAt: nextPeriodStart(now).toISOString() },
     canManageBilling: stripeReady && Boolean(user.stripeCustomerId),

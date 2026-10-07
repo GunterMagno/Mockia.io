@@ -3,7 +3,14 @@ import express from 'express';
 import request from 'supertest';
 
 jest.mock('../models/User.js', () => ({
-  UserModel: { findOneAndUpdate: jest.fn(), findById: jest.fn() },
+  UserModel: { findOneAndUpdate: jest.fn(), findById: jest.fn(), exists: jest.fn(), updateOne: jest.fn() },
+}));
+jest.mock('../services/mailer.js', () => ({
+  ...jest.requireActual('../services/mailer.js'),
+  sendMail: jest.fn().mockResolvedValue(undefined),
+}));
+jest.mock('../services/notification.service.js', () => ({
+  createNotification: jest.fn().mockResolvedValue({}),
 }));
 jest.mock('../models/Project.js', () => ({ ProjectModel: { countDocuments: jest.fn() } }));
 jest.mock('../models/Usage.js', () => ({ UsageModel: { findOne: jest.fn(), findOneAndUpdate: jest.fn() } }));
@@ -21,9 +28,16 @@ import { resetUsage } from '../modules/billing/usage.js';
 import { errorHandler } from '../middlewares/errorHandler.js';
 import { billingRouter } from '../modules/billing/routes.js';
 import { getUserPlan } from '../modules/billing/plans.js';
+import { sendMail } from '../services/mailer.js';
+import { createNotification } from '../services/notification.service.js';
+import { NotificationType } from '@mockia/shared';
 
 const findOneAndUpdate = UserModel.findOneAndUpdate as unknown as jest.Mock;
 const findById = UserModel.findById as unknown as jest.Mock;
+const exists = UserModel.exists as unknown as jest.Mock;
+const updateOne = UserModel.updateOne as unknown as jest.Mock;
+const sendMailMock = sendMail as unknown as jest.Mock;
+const createNotificationMock = createNotification as unknown as jest.Mock;
 
 const SECRET = 'whsec_webhook_test';
 const UID = 'aaaaaaaaaaaaaaaaaaaaaaaa';
@@ -50,12 +64,19 @@ const post = (event: object, header?: (body: string) => string) => {
 const updateResolves = (doc: unknown) =>
   findOneAndUpdate.mockReturnValue({ select: () => Promise.resolve(doc) });
 
+/** Becoming active (or canceled) closes any payment-failure sequence. */
+const NO_DUNNING = { pastDueSince: null, lastPaymentFailedInvoiceId: null };
+
 const env = { ...process.env };
 const realFetch = global.fetch;
 beforeEach(() => {
   jest.clearAllMocks();
   process.env.STRIPE_WEBHOOK_SECRET = SECRET;
   updateResolves({ _id: { toString: () => UID } });
+  exists.mockResolvedValue({ _id: UID }); // a user exists for the customer unless a test says otherwise
+  updateOne.mockResolvedValue({ modifiedCount: 1 });
+  sendMailMock.mockResolvedValue(undefined);
+  createNotificationMock.mockResolvedValue({});
   jest.spyOn(console, 'warn').mockImplementation(() => undefined);
   jest.spyOn(console, 'error').mockImplementation(() => undefined);
 });
@@ -112,7 +133,7 @@ describe('POST /api/billing/webhook', () => {
     expect(res.body).toMatchObject({ received: true, result: 'handled' });
     expect(findOneAndUpdate).toHaveBeenCalledWith(
       { _id: UID },
-      { $set: { plan: 'pro', billingStatus: 'active', stripeCustomerId: 'cus_1', stripeSubscriptionId: 'sub_1' } },
+      { $set: { plan: 'pro', billingStatus: 'active', stripeCustomerId: 'cus_1', stripeSubscriptionId: 'sub_1', ...NO_DUNNING } },
       { new: true }
     );
   });
@@ -130,13 +151,15 @@ describe('POST /api/billing/webhook', () => {
   });
 
   it.each([
-    ['active', 'active'],
-    ['trialing', 'active'],
-    ['past_due', 'past_due'],
-    ['unpaid', 'past_due'],
-    ['canceled', 'canceled'],
-    ['something_new', 'past_due'],
-  ])('customer.subscription.updated status %s -> billingStatus %s (found by customer id)', async (status, expected) => {
+    ['active', 'active', NO_DUNNING],
+    ['trialing', 'active', NO_DUNNING],
+    ['canceled', 'canceled', NO_DUNNING],
+    ['incomplete_expired', 'canceled', NO_DUNNING],
+    // unpaid / incomplete / paused / unknown: no access and NO grace period either (they never had a failing-but-paid state)
+    ['unpaid', 'past_due', {}],
+    ['incomplete', 'past_due', {}],
+    ['something_new', 'past_due', {}],
+  ])('customer.subscription.updated status %s -> billingStatus %s (found by customer id)', async (status, expected, extra) => {
     const res = await post({
       type: 'customer.subscription.updated',
       data: { object: { id: 'sub_1', customer: 'cus_1', status, metadata: { plan: 'team' } } },
@@ -144,7 +167,7 @@ describe('POST /api/billing/webhook', () => {
     expect(res.status).toBe(200);
     expect(findOneAndUpdate).toHaveBeenCalledWith(
       { stripeCustomerId: 'cus_1' },
-      { $set: { billingStatus: expected, stripeSubscriptionId: 'sub_1', stripeCustomerId: 'cus_1', plan: 'team' } },
+      { $set: { billingStatus: expected, stripeSubscriptionId: 'sub_1', stripeCustomerId: 'cus_1', plan: 'team', ...extra } },
       { new: true }
     );
   });
@@ -157,7 +180,7 @@ describe('POST /api/billing/webhook', () => {
     expect(res.body.result).toBe('handled');
     expect(findOneAndUpdate).toHaveBeenCalledWith(
       { stripeCustomerId: 'cus_1' },
-      { $set: { plan: 'free', billingStatus: 'canceled', cancelAtPeriodEnd: false, currentPeriodEnd: null } },
+      { $set: { plan: 'free', billingStatus: 'canceled', cancelAtPeriodEnd: false, currentPeriodEnd: null, ...NO_DUNNING } },
       { new: true }
     );
   });
@@ -183,6 +206,7 @@ describe('POST /api/billing/webhook', () => {
           billingStatus: 'canceled',
           cancelAtPeriodEnd: false,
           currentPeriodEnd: null,
+          ...NO_DUNNING,
           stripeEventAt: at,
           stripeLastEventId: 'evt_9',
         },
@@ -197,14 +221,15 @@ describe('POST /api/billing/webhook', () => {
   });
 
   it('acks unsupported events with 200 and does not touch users', async () => {
-    const res = await post({ type: 'invoice.paid', data: { object: {} } });
+    const res = await post({ type: 'customer.created', data: { object: {} } });
     expect(res.status).toBe(200);
     expect(res.body.result).toBe('ignored');
     expect(findOneAndUpdate).not.toHaveBeenCalled();
   });
 
-  it('acks with 200 when no user matches (avoids a Stripe retry storm)', async () => {
+  it('acks with 200 when no user matches and the event carries no timestamp (avoids a Stripe retry storm)', async () => {
     updateResolves(null);
+    exists.mockResolvedValue(null);
     const res = await post({ type: 'customer.subscription.deleted', data: { object: { customer: 'cus_ghost' } } });
     expect(res.status).toBe(200);
     expect(res.body.result).toBe('ignored');
@@ -258,6 +283,7 @@ describe('subscription details', () => {
           plan: 'team',
           currentPeriodEnd: new Date(1_790_000_000_000),
           cancelAtPeriodEnd: false,
+          ...NO_DUNNING,
         },
       },
       { new: true }
@@ -291,6 +317,293 @@ describe('subscription details', () => {
       },
       { new: true }
     );
+  });
+});
+
+const nowSec = () => Math.floor(Date.now() / 1000);
+const DAY_S = 24 * 60 * 60;
+
+/** The user document `findOneAndUpdate(...).select(...)` returns after an applied event. */
+const userDoc = (extra: Record<string, unknown> = {}) => ({
+  _id: { toString: () => UID },
+  email: 'ana@example.com',
+  username: 'Ana',
+  locale: 'es',
+  plan: 'pro',
+  ...extra,
+});
+
+describe('invoice.payment_failed: past_due with grace period and notices', () => {
+  const failedAt = 1_790_000_000;
+  const failed = (extra: Record<string, unknown> = {}, eventExtra: Record<string, unknown> = {}) => ({
+    id: 'evt_f1',
+    created: failedAt,
+    type: 'invoice.payment_failed',
+    data: { object: { id: 'in_1', customer: 'cus_1', subscription: 'sub_1', billing_reason: 'subscription_cycle', ...extra } },
+    ...eventExtra,
+  });
+  const graceEnd = new Date((failedAt + 7 * DAY_S) * 1000);
+
+  beforeEach(() => updateResolves(userDoc({ pastDueSince: new Date(failedAt * 1000) })));
+
+  it('moves a paying user to past_due, starting the grace period only if it is not already running', async () => {
+    const res = await post(failed());
+    expect(res.status).toBe(200);
+    expect(res.body.result).toBe('handled');
+    const [filter, update, options] = findOneAndUpdate.mock.calls[0];
+    expect(filter).toMatchObject({
+      stripeCustomerId: 'cus_1',
+      plan: { $in: ['pro', 'team'] },
+      stripeLastEventId: { $ne: 'evt_f1' },
+    });
+    expect(options).toEqual({ new: true });
+    // pipeline update: pastDueSince keeps its previous value when there is one ($ifNull), so a retry or a second invoice cannot extend the grace
+    expect(Array.isArray(update)).toBe(true);
+    expect(update[0].$set).toMatchObject({
+      billingStatus: { $literal: 'past_due' },
+      pastDueSince: { $ifNull: ['$pastDueSince', new Date(failedAt * 1000)] },
+      stripeLastEventId: { $literal: 'evt_f1' },
+    });
+  });
+
+  it('emails the user once (in their language, with the grace end and a link to /billing) and creates an in-app notification', async () => {
+    process.env.APP_URL = 'https://app.mockia.test';
+    await post(failed());
+
+    expect(updateOne).toHaveBeenCalledWith({ _id: expect.anything(), lastPaymentFailedInvoiceId: null }, { $set: { lastPaymentFailedInvoiceId: 'in_1' } });
+    expect(sendMailMock).toHaveBeenCalledTimes(1);
+    const [to, template, data] = sendMailMock.mock.calls[0];
+    expect(to).toBe('ana@example.com');
+    expect(template).toBe('payment_failed');
+    expect(data).toMatchObject({ locale: 'es', username: 'Ana', link: 'https://app.mockia.test/billing' });
+    expect(data.date).toMatch(/2026/); // grace end formatted for the user
+    expect(data.date).toBe(new Intl.DateTimeFormat('es', { dateStyle: 'long', timeZone: 'UTC' }).format(graceEnd));
+
+    expect(createNotificationMock).toHaveBeenCalledTimes(1);
+    expect(createNotificationMock).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: UID, type: NotificationType.BILLING, link: '/billing' })
+    );
+    expect(createNotificationMock.mock.calls[0][0].message).toContain(data.date);
+  });
+
+  it('sends nothing when the failure sequence was already notified (same invoice retried, or a second invoice)', async () => {
+    updateOne.mockResolvedValue({ modifiedCount: 0 }); // lastPaymentFailedInvoiceId already set
+    const res = await post(failed());
+    expect(res.status).toBe(200);
+    expect(sendMailMock).not.toHaveBeenCalled();
+    expect(createNotificationMock).not.toHaveBeenCalled();
+  });
+
+  it('replaying the same event twice sends ONE email (the event guard stops the second delivery)', async () => {
+    const first = await post(failed());
+    updateResolves(null); // DB: stripeLastEventId == evt_f1 -> nothing matches
+    const second = await post(failed());
+    expect(first.body.result).toBe('handled');
+    expect(second.status).toBe(200);
+    expect(second.body.result).toBe('ignored');
+    expect(sendMailMock).toHaveBeenCalledTimes(1);
+    expect(createNotificationMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores the failure of the very first invoice of a subscription (no paid access was ever granted)', async () => {
+    const res = await post(failed({ billing_reason: 'subscription_create' }));
+    expect(res.body.result).toBe('ignored');
+    expect(findOneAndUpdate).not.toHaveBeenCalled();
+    expect(sendMailMock).not.toHaveBeenCalled();
+  });
+
+  it('a mail or notification failure never fails the webhook (the state change is already stored)', async () => {
+    sendMailMock.mockRejectedValue(new Error('smtp down'));
+    createNotificationMock.mockRejectedValue(new Error('db hiccup'));
+    const res = await post(failed());
+    expect(res.status).toBe(200);
+    expect(res.body.result).toBe('handled');
+    expect(JSON.stringify((console.error as jest.Mock).mock.calls)).not.toContain('ana@example.com');
+  });
+
+  it('English is the fallback language of the notices', async () => {
+    updateResolves(userDoc({ locale: undefined, pastDueSince: new Date(failedAt * 1000) }));
+    await post(failed());
+    expect(sendMailMock.mock.calls[0][2].locale).toBe('en');
+    expect(createNotificationMock.mock.calls[0][0].title).toMatch(/payment/i);
+  });
+
+  it('uses the stored pastDueSince (the first failure) to compute the grace end shown to the user', async () => {
+    const first = failedAt - 3 * DAY_S;
+    updateResolves(userDoc({ locale: 'en', pastDueSince: new Date(first * 1000) }));
+    await post(failed());
+    expect(sendMailMock.mock.calls[0][2].date).toBe(
+      new Intl.DateTimeFormat('en', { dateStyle: 'long', timeZone: 'UTC' }).format(new Date((first + 7 * DAY_S) * 1000))
+    );
+  });
+});
+
+describe('recovery: invoice.paid / invoice.payment_succeeded', () => {
+  it.each(['invoice.paid', 'invoice.payment_succeeded'])('%s brings a past_due user back to active and clears the grace markers', async (type) => {
+    const res = await post({
+      id: 'evt_p1',
+      created: 1_790_100_000,
+      type,
+      data: { object: { id: 'in_1', customer: 'cus_1', billing_reason: 'subscription_cycle' } },
+    });
+    expect(res.body.result).toBe('handled');
+    const [filter, update] = findOneAndUpdate.mock.calls[0];
+    expect(filter).toMatchObject({
+      stripeCustomerId: 'cus_1',
+      billingStatus: 'past_due',
+      lastPaymentFailedInvoiceId: { $in: ['in_1', null] }, // not an unrelated invoice while another one still fails
+    });
+    expect(update).toEqual({
+      $set: expect.objectContaining({ billingStatus: 'active', pastDueSince: null, lastPaymentFailedInvoiceId: null }),
+    });
+    expect(sendMailMock).not.toHaveBeenCalled();
+  });
+
+  it('is a no-op (200, ignored) for a user that is not past_due', async () => {
+    updateResolves(null); // the billingStatus filter matches nothing
+    const res = await post({ id: 'evt_p2', created: 1, type: 'invoice.paid', data: { object: { id: 'in_2', customer: 'cus_1' } } });
+    expect(res.status).toBe(200);
+    expect(res.body.result).toBe('ignored');
+  });
+
+  it('customer.subscription.updated(active) also clears the markers; (past_due) starts the grace via the pipeline', async () => {
+    await post({
+      id: 'evt_s1',
+      created: 1_790_100_000,
+      type: 'customer.subscription.updated',
+      data: { object: { id: 'sub_1', customer: 'cus_1', status: 'active', metadata: { plan: 'pro' } } },
+    });
+    expect(findOneAndUpdate.mock.calls[0][1].$set).toMatchObject({ billingStatus: 'active', ...NO_DUNNING });
+
+    await post({
+      id: 'evt_s2',
+      created: 1_790_200_000,
+      type: 'customer.subscription.updated',
+      data: { object: { id: 'sub_1', customer: 'cus_1', status: 'past_due', metadata: { plan: 'pro' } } },
+    });
+    const update = findOneAndUpdate.mock.calls[1][1];
+    expect(update[0].$set.billingStatus).toEqual({ $literal: 'past_due' });
+    expect(update[0].$set.pastDueSince).toEqual({ $ifNull: ['$pastDueSince', new Date(1_790_200_000_000)] });
+    // subscription events do not notify by themselves: invoice.payment_failed does
+    expect(sendMailMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('customer.subscription.trial_will_end and charge.refunded', () => {
+  const trialEnd = 1_790_300_000;
+
+  it('trial_will_end: emails the user and leaves an in-app notice with the trial end date, without touching the plan', async () => {
+    updateResolves(userDoc({ locale: 'en' }));
+    const res = await post({
+      id: 'evt_t1',
+      created: 1_790_000_000,
+      type: 'customer.subscription.trial_will_end',
+      data: { object: { id: 'sub_1', customer: 'cus_1', trial_end: trialEnd } },
+    });
+    expect(res.body.result).toBe('handled');
+    const [, update] = findOneAndUpdate.mock.calls[0];
+    expect(Object.keys(update.$set).sort()).toEqual(['stripeEventAt', 'stripeLastEventId']); // guard only
+    const date = new Intl.DateTimeFormat('en', { dateStyle: 'long', timeZone: 'UTC' }).format(new Date(trialEnd * 1000));
+    expect(sendMailMock).toHaveBeenCalledWith('ana@example.com', 'trial_will_end', expect.objectContaining({ locale: 'en', date }));
+    expect(createNotificationMock).toHaveBeenCalledWith(expect.objectContaining({ type: NotificationType.BILLING, link: '/billing' }));
+    expect(createNotificationMock.mock.calls[0][0].message).toContain(date);
+  });
+
+  it('trial_will_end replayed: one email', async () => {
+    updateResolves(userDoc());
+    const event = { id: 'evt_t2', created: 1_790_000_000, type: 'customer.subscription.trial_will_end', data: { object: { customer: 'cus_1', trial_end: trialEnd } } };
+    await post(event);
+    updateResolves(null);
+    await post(event);
+    expect(sendMailMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('charge.refunded: in-app notification with the refunded amount, no email and no plan change', async () => {
+    updateResolves(userDoc({ locale: 'en' }));
+    const res = await post({
+      id: 'evt_r1',
+      created: 1_790_000_000,
+      type: 'charge.refunded',
+      data: { object: { id: 'ch_1', customer: 'cus_1', amount_refunded: 2900, currency: 'usd' } },
+    });
+    expect(res.body.result).toBe('handled');
+    const [, update] = findOneAndUpdate.mock.calls[0];
+    expect(Object.keys(update.$set).sort()).toEqual(['stripeEventAt', 'stripeLastEventId']);
+    expect(sendMailMock).not.toHaveBeenCalled();
+    expect(createNotificationMock).toHaveBeenCalledTimes(1);
+    expect(createNotificationMock.mock.calls[0][0]).toMatchObject({ userId: UID, type: NotificationType.BILLING });
+    expect(createNotificationMock.mock.calls[0][0].message).toContain('$29.00');
+  });
+
+  it('charge.refunded without an amount still produces a generic notice; replay produces none', async () => {
+    updateResolves(userDoc());
+    const event = { id: 'evt_r2', created: 1_790_000_000, type: 'charge.refunded', data: { object: { customer: 'cus_1' } } };
+    await post(event);
+    expect(createNotificationMock).toHaveBeenCalledTimes(1);
+    updateResolves(null);
+    await post(event);
+    expect(createNotificationMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('unknown customer: let Stripe retry only while a checkout may still be linking the customer', () => {
+  const ghost = (ageSeconds: number) => ({
+    id: 'evt_ghost',
+    created: nowSec() - ageSeconds,
+    type: 'invoice.payment_failed',
+    data: { object: { id: 'in_9', customer: 'cus_ghost', billing_reason: 'subscription_cycle' } },
+  });
+
+  beforeEach(() => {
+    updateResolves(null);
+    exists.mockResolvedValue(null);
+  });
+
+  it('500 for an event younger than one hour (checkout.session.completed may not have linked the customer yet)', async () => {
+    const res = await post(ghost(60));
+    expect(res.status).toBe(500);
+    expect(res.body.error.code).toBe('BILLING_USER_NOT_LINKED');
+    expect(sendMailMock).not.toHaveBeenCalled();
+  });
+
+  it('200 and a warning without personal data for an older event (orphan Stripe customers of deleted accounts)', async () => {
+    const res = await post(ghost(2 * 3600));
+    expect(res.status).toBe(200);
+    expect(res.body.result).toBe('ignored');
+    const logged = JSON.stringify((console.warn as jest.Mock).mock.calls);
+    expect(logged).toContain('evt_ghost');
+    expect(logged).not.toContain('cus_ghost');
+  });
+
+  it('the boundary is one hour', async () => {
+    expect((await post(ghost(3600 - 30))).status).toBe(500);
+    expect((await post(ghost(3600 + 30))).status).toBe(200);
+  });
+
+  it('a stale or duplicate event of an EXISTING user is acknowledged (200), never retried', async () => {
+    exists.mockResolvedValue({ _id: UID });
+    const res = await post(ghost(10));
+    expect(res.status).toBe(200);
+    expect(res.body.result).toBe('ignored');
+  });
+
+  it('other event types behave the same (subscription.updated, trial_will_end, refunds, invoice.paid)', async () => {
+    for (const type of ['customer.subscription.updated', 'customer.subscription.trial_will_end', 'charge.refunded', 'invoice.paid']) {
+      const res = await post({ id: `evt_${type}`, created: nowSec() - 10, type, data: { object: { id: 'x', customer: 'cus_ghost', status: 'active', trial_end: nowSec() + 3 * DAY_S } } });
+      expect(res.status).toBe(500);
+    }
+  });
+
+  it('the signature is verified first: a forged young event for an unknown customer is a 400 and looks nothing up', async () => {
+    const body = JSON.stringify(ghost(10));
+    const res = await request(app)
+      .post('/api/billing/webhook')
+      .set('Content-Type', 'application/json')
+      .set('Stripe-Signature', 't=1,v1=abcd')
+      .send(body);
+    expect(res.status).toBe(400);
+    expect(exists).not.toHaveBeenCalled();
+    expect(findOneAndUpdate).not.toHaveBeenCalled();
   });
 });
 
@@ -484,6 +797,31 @@ describe('GET /api/billing/me', () => {
       canManageBilling: true,
       checkoutAvailable: { pro: true, team: false },
     });
+  });
+
+  it('a past_due subscriber inside the grace period keeps the paid plan and sees when it ends', async () => {
+    process.env.STRIPE_SECRET_KEY = 'sk_test_123';
+    const pastDueSince = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+    userIs({ plan: 'pro', billingStatus: 'past_due', pastDueSince, stripeCustomerId: 'cus_1' });
+    const res = await request(app).get('/api/billing/me');
+    expect(res.body.data).toMatchObject({
+      plan: 'pro',
+      subscribedPlan: 'pro',
+      billingStatus: 'past_due',
+      pastDueUntil: new Date(pastDueSince.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      limits: { maxActiveProjects: 50, maxMonthlyRequests: 1_000_000 },
+    });
+  });
+
+  it('after the grace period the plan is free while pastDueUntil stays as information; non past_due users get null', async () => {
+    userIs({ plan: 'pro', billingStatus: 'past_due', pastDueSince: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000) });
+    const expired = await request(app).get('/api/billing/me');
+    expect(expired.body.data).toMatchObject({ plan: 'free', subscribedPlan: 'pro', billingStatus: 'past_due' });
+    expect(typeof expired.body.data.pastDueUntil).toBe('string');
+
+    userIs({ plan: 'pro', billingStatus: 'active', pastDueSince: new Date() });
+    const active = await request(app).get('/api/billing/me');
+    expect(active.body.data.pastDueUntil).toBeNull();
   });
 
   it('404 when the user no longer exists', async () => {

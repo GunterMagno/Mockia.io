@@ -9,7 +9,8 @@ import { UserModel } from '../models/User.js';
 import { ProjectModel } from '../models/Project.js';
 import { UsageModel } from '../models/Usage.js';
 import { mockCache } from '../modules/mock/mockCache.service.js';
-import { PLAN_LIMITS, effectivePlan, invalidatePlanCache } from '../modules/billing/plans.js';
+import { PLAN_LIMITS, effectivePlan, getUserPlan, graceEndsAt, invalidatePlanCache } from '../modules/billing/plans.js';
+import { PAST_DUE_GRACE_DAYS } from '@mockia/shared';
 import { consumeQuota, flushUsage, getMonthlyUsage, periodOf, resetUsage } from '../modules/billing/usage.js';
 import { enforceProjectLimit, extractMockSlug, mockQuotaGate } from '../middlewares/planGate.js';
 
@@ -73,6 +74,88 @@ describe('effectivePlan', () => {
     expect(PLAN_LIMITS.free).toEqual({ maxActiveProjects: 5, maxMonthlyRequests: 10_000 });
     expect(PLAN_LIMITS.pro).toEqual({ maxActiveProjects: 50, maxMonthlyRequests: 1_000_000 });
     expect(PLAN_LIMITS.team).toEqual({ maxActiveProjects: Infinity, maxMonthlyRequests: 10_000_000 });
+  });
+});
+
+describe('effectivePlan: periodo de gracia del impago', () => {
+  const DAY = 24 * 60 * 60 * 1000;
+  const since = new Date('2026-10-01T10:00:00Z');
+  const user = { plan: 'pro', billingStatus: 'past_due', pastDueSince: since };
+  const at = (days: number) => since.getTime() + days * DAY;
+
+  it('the grace period is 7 days (what the Terms promise)', () => {
+    expect(PAST_DUE_GRACE_DAYS).toBe(7);
+    expect(graceEndsAt(user)?.getTime()).toBe(at(7));
+  });
+
+  it('keeps the paid plan on day 0 and on day 6.9, and degrades to free from day 7.1', () => {
+    expect(effectivePlan(user, at(0))).toBe('pro');
+    expect(effectivePlan(user, at(6.9))).toBe('pro');
+    expect(effectivePlan({ ...user, plan: 'team' }, at(6.9))).toBe('team');
+    expect(effectivePlan(user, at(7))).toBe('free'); // the instant the grace ends is already free
+    expect(effectivePlan(user, at(7.1))).toBe('free');
+    expect(effectivePlan(user, at(8))).toBe('free');
+  });
+
+  it('past_due without a known start (legacy rows) has no grace: free', () => {
+    expect(effectivePlan({ plan: 'pro', billingStatus: 'past_due' }, at(0))).toBe('free');
+    expect(effectivePlan({ plan: 'pro', billingStatus: 'past_due', pastDueSince: null }, at(0))).toBe('free');
+  });
+
+  it('canceled is free even right after, active ignores pastDueSince', () => {
+    expect(effectivePlan({ ...user, billingStatus: 'canceled' }, at(1))).toBe('free');
+    expect(effectivePlan({ ...user, billingStatus: 'active' }, at(30))).toBe('pro');
+  });
+
+  it('defaults "now" to the current time', () => {
+    const recent = { plan: 'pro', billingStatus: 'past_due', pastDueSince: new Date(Date.now() - DAY) };
+    expect(effectivePlan(recent)).toBe('pro');
+    expect(effectivePlan({ ...recent, pastDueSince: new Date(Date.now() - 8 * DAY) })).toBe('free');
+  });
+
+  it('accepts an ISO string for pastDueSince (lean/JSON)', () => {
+    expect(effectivePlan({ ...user, pastDueSince: since.toISOString() }, at(6.9))).toBe('pro');
+  });
+});
+
+describe('getUserPlan cache vs grace period', () => {
+  const DAY = 24 * 60 * 60 * 1000;
+  afterEach(() => jest.restoreAllMocks());
+
+  it('never keeps a cached "paid" answer beyond the end of the grace period', async () => {
+    const now = new Date('2026-10-08T00:00:00Z').getTime();
+    const dateNow = jest.spyOn(Date, 'now').mockReturnValue(now);
+    // 5 s of grace left, well under the 30 s TTL
+    userIs({ plan: 'pro', billingStatus: 'past_due', pastDueSince: new Date(now - 7 * DAY + 5_000) });
+    expect(await getUserPlan('u-grace')).toBe('pro');
+
+    dateNow.mockReturnValue(now + 4_000);
+    expect(await getUserPlan('u-grace')).toBe('pro'); // still cached, still inside the grace
+    expect(findById).toHaveBeenCalledTimes(1);
+
+    dateNow.mockReturnValue(now + 6_000); // grace over, cache TTL (30 s) not
+    expect(await getUserPlan('u-grace')).toBe('free');
+    expect(findById).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps the normal 30 s TTL for active users', async () => {
+    const now = new Date('2026-10-08T00:00:00Z').getTime();
+    const dateNow = jest.spyOn(Date, 'now').mockReturnValue(now);
+    userIs({ plan: 'pro', billingStatus: 'active' });
+    await getUserPlan('u-active');
+    dateNow.mockReturnValue(now + 29_000);
+    await getUserPlan('u-active');
+    expect(findById).toHaveBeenCalledTimes(1);
+    dateNow.mockReturnValue(now + 31_000);
+    await getUserPlan('u-active');
+    expect(findById).toHaveBeenCalledTimes(2);
+  });
+
+  it('asks the DB for pastDueSince', async () => {
+    const select = jest.fn(() => ({ lean: () => Promise.resolve({ plan: 'free' }) }));
+    findById.mockReturnValue({ select });
+    await getUserPlan('u-select');
+    expect(select).toHaveBeenCalledWith(expect.stringContaining('pastDueSince'));
   });
 });
 
