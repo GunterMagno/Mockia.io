@@ -13,9 +13,20 @@ export const validateEmail = (email: string): MessageKey | null => {
   return null;
 };
 
+/** Login: only "not empty". The length policy applies to NEW passwords; older accounts may have shorter ones. */
 export const validatePassword = (password: string): MessageKey | null => {
   if (!password) return 'validation.passwordRequired';
-  if (password.length < 8) return 'validation.passwordMin';
+  return null;
+};
+
+/** Password policy of the backend for new passwords (register, reset, change): 10 to 128 characters. */
+export const PASSWORD_MIN_LENGTH = 10;
+export const PASSWORD_MAX_LENGTH = 128;
+
+export const validateNewPassword = (password: string): MessageKey | null => {
+  if (!password) return 'validation.passwordRequired';
+  if (password.length < PASSWORD_MIN_LENGTH) return 'validation.passwordMin';
+  if (password.length > PASSWORD_MAX_LENGTH) return 'validation.passwordMax';
   return null;
 };
 

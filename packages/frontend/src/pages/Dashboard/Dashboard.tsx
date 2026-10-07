@@ -4,6 +4,7 @@ import { Button } from '../../components/ui/Button/Button'
 import { getProjects } from '../../services/projectService'
 import type { Project } from '../../services/projectService'
 import CreateProjectModal from '../../components/projects/CreateProjectModal'
+import EmailVerificationBanner from '../../components/ui/EmailVerificationBanner/EmailVerificationBanner'
 import { Link, useNavigate } from 'react-router-dom'
 import { Icon } from '../../components/ui/Icon/Icon'
 import { useAuth } from '../../contexts/AuthContext'
@@ -76,6 +77,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <Layout>
+      <EmailVerificationBanner />
       <header className={styles.header}>
         <article className={styles.titleSection}>
           <h1>{t('dashboard.title')}</h1>

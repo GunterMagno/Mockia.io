@@ -4,6 +4,9 @@ import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import AuthProvider from './contexts/AuthContext'
 import Login from './pages/Auth/Login'
 import Signup from './pages/Auth/Signup'
+import ForgotPassword from './pages/Auth/ForgotPassword'
+import ResetPassword from './pages/Auth/ResetPassword'
+import VerifyEmail from './pages/Auth/VerifyEmail'
 import Dashboard from './pages/Dashboard/Dashboard'
 import Billing from './pages/Billing/Billing'
 import ProtectedRoute from './routes/ProtectedRoute'
@@ -38,6 +41,9 @@ const AppShell: React.FC = () => {
           <Route path={PATHS.home} element={<Index />} />
           <Route path={PATHS.login} element={<Login />} />
           <Route path={PATHS.signup} element={<Signup />} />
+          <Route path={PATHS.forgotPassword} element={<ForgotPassword />} />
+          <Route path={PATHS.resetPassword} element={<ResetPassword />} />
+          <Route path={PATHS.verifyEmail} element={<VerifyEmail />} />
           <Route path={PATHS.terms} element={<Terms />} />
           <Route path={PATHS.privacy} element={<Privacy />} />
           <Route element={<ProtectedRoute />}>

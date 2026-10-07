@@ -12,6 +12,8 @@ export interface SessionUser {
   id: string
   email: string
   username: string
+  /** ISO date de la verificacion del correo; ausente o null = sin verificar. */
+  emailVerifiedAt?: string | null
   createdAt?: string
   updatedAt?: string
 }

@@ -24,7 +24,9 @@ const KNOWN: ReadonlyArray<readonly [RegExp, MessageKey]> = [
   [/^Email must be valid$/i, 'validation.emailInvalid'],
   [/^Email is required$/i, 'validation.emailRequired'],
   [/^Email or Username is required$/i, 'validation.emailOrUsernameRequired'],
-  [/^Password must be at least 8 characters$/i, 'validation.passwordMin'],
+  [/^(New )?password must be at least 10 characters$/i, 'validation.passwordMin'],
+  [/^(New )?password cannot exceed 128 characters$/i, 'validation.passwordMax'],
+  [/^Invalid or expired token$/i, 'errors.invalidToken'],
   [/^Password is required$/i, 'validation.passwordRequired'],
   [/^Username must be at least 2 characters$/i, 'validation.usernameMin'],
   [/^Username is required$/i, 'validation.usernameRequired'],
@@ -60,6 +62,8 @@ export function getBackendErrorMessage(err: any, t: Translate): string {
   // Axios error with response payload
   if (err?.response?.data) {
     const data = err.response.data
+
+    if (data?.error?.code === 'EMAIL_NOT_VERIFIED') return t('errors.emailNotVerified')
 
     const billing = billingError(data?.error?.code, data?.error?.details, t)
     if (billing) return billing

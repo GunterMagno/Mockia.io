@@ -31,7 +31,7 @@ export const Input: React.FC<InputProps> = ({ label, error, type, id, className,
         className={`${styles.input} ${isPassword ? styles.passwordInput : ''} ${className || ''}`} 
         type={inputType} 
         aria-invalid={error ? true : undefined}
-        aria-describedby={error ? errorId : undefined}
+        aria-describedby={[rest['aria-describedby'], error ? errorId : undefined].filter(Boolean).join(' ') || undefined}
       />
       {isPassword && (
         <button 

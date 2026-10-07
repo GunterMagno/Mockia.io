@@ -46,3 +46,27 @@ export async function logoutRequest(): Promise<void> {
     // Best effort: sin red la cookie caduca sola y el refresh token queda revocado al siguiente intento
   }
 }
+
+/**
+ * Pide el correo de restablecimiento. El backend responde SIEMPRE 202, exista o no la cuenta: la pantalla
+ * muestra el mismo mensaje en ambos casos y no hay nada que comparar.
+ */
+export async function requestPasswordReset(email: string, locale: string): Promise<void> {
+  await api.post('/auth/forgot', { email, locale })
+}
+
+/** Cambia la contrasena con el token del correo. Cierra todas las sesiones del usuario en el servidor. */
+export async function resetPassword(token: string, password: string): Promise<void> {
+  await api.post('/auth/reset', { token, password })
+}
+
+/** Confirma el correo con el token del enlace de verificacion (no requiere sesion). */
+export async function verifyEmailToken(token: string): Promise<void> {
+  await api.post('/auth/verify', { token })
+}
+
+/** Reenvia el correo de verificacion al usuario autenticado. Devuelve true si ya estaba verificado (no se envia nada). */
+export async function resendVerificationEmail(locale: string): Promise<boolean> {
+  const res = await api.post('/auth/verify/resend', { locale })
+  return res?.data?.data?.alreadyVerified === true
+}

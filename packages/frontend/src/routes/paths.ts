@@ -5,6 +5,9 @@ export const PATHS = {
   home: '/',
   login: '/login',
   signup: '/signup',
+  forgotPassword: '/forgot-password',
+  resetPassword: '/reset-password',
+  verifyEmail: '/verify-email',
   terms: '/terms',
   privacy: '/privacy',
   dashboard: '/dashboard',
@@ -14,7 +17,16 @@ export const PATHS = {
 } as const
 
 /** Publicas: accesibles sin cuenta (el home muestra como funciona la app). */
-const PUBLIC = [PATHS.home, PATHS.login, PATHS.signup, PATHS.terms, PATHS.privacy]
+const PUBLIC = [
+  PATHS.home,
+  PATHS.login,
+  PATHS.signup,
+  PATHS.forgotPassword,
+  PATHS.resetPassword,
+  PATHS.verifyEmail,
+  PATHS.terms,
+  PATHS.privacy,
+]
 /** Requieren cuenta: solo estas piden login. */
 const PROTECTED = [PATHS.dashboard, PATHS.billing, PATHS.editorPattern]
 
@@ -28,4 +40,5 @@ export const postLoginTarget = (state: unknown): string => {
   const from = (state as { from?: { pathname?: string; search?: string } } | null)?.from
   return from?.pathname && isProtectedPath(from.pathname) ? from.pathname + (from.search ?? '') : PATHS.dashboard
 }
-export const isAuthPath = (path: string) => path === PATHS.login || path === PATHS.signup
+export const isAuthPath = (path: string) =>
+  path === PATHS.login || path === PATHS.signup || path === PATHS.forgotPassword || path === PATHS.resetPassword

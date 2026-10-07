@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { SESSION_EXPIRED_EVENT, purgeLegacyStorage, type SessionUser } from '../services/session'
 import { loginRequest, logoutRequest, restoreSession, type Credentials } from '../services/authService'
 
@@ -23,6 +23,8 @@ type AuthContextType = {
   isAuthenticated: boolean
   /** True while the session is being restored from the refresh cookie at startup */
   isLoading: boolean
+  /** Marks the current user's email as verified (after the verification link or a "resend" that found it already verified) */
+  markEmailVerified: () => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -64,13 +66,19 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
     return logoutRequest()
   }
 
+  /** The verification happened on the server: reflect it without another round trip. */
+  const markEmailVerified = useCallback(() => {
+    setUser((prev) => (prev && !prev.emailVerifiedAt ? { ...prev, emailVerifiedAt: new Date().toISOString() } : prev))
+  }, [])
+
   const value = useMemo<AuthContextType>( () => ({
     user,
     login,
     logout,
     isAuthenticated: !!user,
     isLoading,
-  }), [user, isLoading] )
+    markEmailVerified,
+  }), [user, isLoading, markEmailVerified] )
 
   return (
     <AuthContext.Provider value={value}>

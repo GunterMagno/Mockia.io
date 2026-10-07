@@ -5,7 +5,7 @@ import { Button } from '../../components/ui/Button/Button'
 import { api } from '../../services/api'
 import { useAuth } from '../../contexts/AuthContext'
 import { getBackendErrorMessage } from '../../utils/error'
-import { validateEmail, validatePassword, validateUsername } from '../../utils/validation'
+import { validateEmail, validateNewPassword, validateUsername } from '../../utils/validation'
 import { playErrorSound } from '../../utils/audio'
 import { PATHS, postLoginTarget } from '../../routes/paths'
 import { useI18n } from '../../i18n/I18nProvider'
@@ -18,7 +18,7 @@ const Signup: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { login } = useAuth()
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [username, setUsername] = useState('')
@@ -31,7 +31,7 @@ const Signup: React.FC = () => {
     
     // Frontend Validation
     const emailError = validateEmail(email);
-    const passwordError = validatePassword(password);
+    const passwordError = validateNewPassword(password);
     const usernameError = validateUsername(username);
     
     const firstError = usernameError || emailError || passwordError;
@@ -45,7 +45,7 @@ const Signup: React.FC = () => {
     setError(null)
     try {
       // Call signup endpoint
-      await api.post('/auth/register', { email, password, username })
+      await api.post('/auth/register', { email, password, username, locale })
       // Auto login
       await login({ email, password }, rememberMe)
       navigate(postLoginTarget(location.state), { replace: true })
@@ -93,8 +93,10 @@ const Signup: React.FC = () => {
               placeholder="••••••••"
               value={password} 
               onChange={(e) => setPassword(e.target.value)} 
+              aria-describedby="signup-password-hint"
               required
             />
+            <p id="signup-password-hint" className={styles.hint}>{t('auth.passwordHint')}</p>
             
             <fieldset className={styles.options}>
               <label className={styles.rememberMe}>

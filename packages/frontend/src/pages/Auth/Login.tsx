@@ -94,6 +94,9 @@ const Login: React.FC = () => {
                 />
                 <span>{t('auth.rememberMe')}</span>
               </label>
+              <Link to={PATHS.forgotPassword} className={styles.forgotPassword}>
+                {t('auth.forgotLink')}
+              </Link>
             </fieldset>
             
             {error && (

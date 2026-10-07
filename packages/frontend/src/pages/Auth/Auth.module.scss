@@ -162,12 +162,95 @@
 
 .forgotPassword {
   font-size: var(--text-xs);
-  color: var(--muted);
+  font-weight: 600;
+  color: var(--color-accent-text);
   text-decoration: none;
-  
+
   &:hover {
-    color: var(--color-accent-text);
     text-decoration: underline;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-accent-text);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+}
+
+/* Texto de apoyo bajo el titulo de las pantallas de recuperacion */
+.intro {
+  max-width: 24rem;
+  margin: 0 auto var(--spacing-5);
+  text-align: center;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.hint {
+  margin: calc(var(--spacing-2) * -1) 0 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+/* Resultado de una accion (correo enviado, contrasena cambiada, correo verificado). Se anuncia con role="status". */
+.notice {
+  max-width: 24rem;
+  margin: 0 auto;
+  padding: var(--spacing-3) var(--spacing-4);
+  border: 1px solid var(--color-ok);
+  border-radius: var(--radius-lg);
+  background: var(--color-ok-soft);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.5;
+  text-align: center;
+
+  &:focus {
+    outline: none;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-accent-text);
+    outline-offset: 2px;
+  }
+}
+
+.noticeError {
+  border-color: var(--color-danger);
+  background: var(--color-danger-soft);
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-3);
+  max-width: 24rem;
+  margin: var(--spacing-5) auto 0;
+}
+
+.linkButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--color-accent-solid);
+  color: var(--color-on-accent);
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-decoration: none;
+
+  &:hover {
+    background: var(--color-accent-solid-hover);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-accent-text);
+    outline-offset: 2px;
   }
 }
 
