@@ -105,10 +105,6 @@ const es: Messages = {
         title: 'Datos realistas',
         text: 'Adiós al «Lorem Ipsum». Mockia rellena tus endpoints con datos coherentes con el contexto que parecen de producción.',
       },
-      cli: {
-        title: 'Flujo de trabajo desde la terminal',
-        text: 'Despliega, actualiza y gestiona tus mocks directamente desde la terminal. Hecho para quien odia cambiar de contexto.',
-      },
     },
     bento: {
       teamTitle: 'Colaboración en equipo',

@@ -103,10 +103,6 @@ const zh: Messages = {
         title: '真实感数据',
         text: '告别 “Lorem Ipsum”。Mockia 会为你的接口填充贴合上下文、如同生产环境般真实的数据。',
       },
-      cli: {
-        title: '命令行优先的工作流',
-        text: '直接在终端中部署、更新和管理你的模拟接口。专为讨厌频繁切换上下文的开发者打造。',
-      },
     },
     bento: {
       teamTitle: '团队协作',

@@ -12,7 +12,6 @@ import styles from './Index.module.scss'
 import arrowRight from '../../assets/arrow-right.svg'
 import sparkles from '../../assets/sparkles.svg'
 import codeIcon from '../../assets/code-icon.svg'
-import terminalIcon from '../../assets/terminal.svg'
 import shieldIcon from '../../assets/shield.svg'
 
 // three.js solo se descarga cuando hay movimiento permitido y el navegador esta ocioso
@@ -56,7 +55,6 @@ const SR: Record<DiffKind, MessageKey | null> = { ctx: null, add: 'landing.story
 const FEATURES = [
   { id: 'sync', icon: sparkles },
   { id: 'data', icon: codeIcon },
-  { id: 'cli', icon: terminalIcon },
 ] as const
 
 const Index: React.FC = () => {

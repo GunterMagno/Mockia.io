@@ -110,10 +110,6 @@ const en = {
         title: 'Realistic data',
         text: 'No more “Lorem Ipsum”. Mockia populates your endpoints with context-aware data that looks and feels like production.',
       },
-      cli: {
-        title: 'CLI-first workflow',
-        text: 'Deploy, update and manage your mocks directly from your terminal. Built for developers who hate context switching.',
-      },
     },
     bento: {
       teamTitle: 'Team collaboration',

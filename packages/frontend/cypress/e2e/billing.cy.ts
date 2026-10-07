@@ -226,7 +226,8 @@ describe('Billing: planes, limites y facturacion', () => {
   });
 
   describe('landing sin cifras ni testimonios inventados', () => {
-    const FAKE = /Sarah Chen|Veloce|100\+|99\.9|edge locations/i;
+    // Tampoco se anuncian capacidades que no existen: no hay CLI (en/es/zh: CLI, terminal, linea de comandos)
+    const FAKE = /Sarah Chen|Veloce|100\+|99\.9|edge locations|CLI-first|(^|[^a-z])CLI([^a-z]|$)|terminal|终端|命令行/i;
 
     it('no muestra regiones, uptime ni la cita falsa, y no desborda en 375 px', () => {
       cy.viewport(375, 812);
