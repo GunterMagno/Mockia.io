@@ -11,7 +11,14 @@ interface User {
   updatedAt?: string
 }
 import { api } from '../services/api'
-import { TOKEN_KEY, USER_KEY } from '../services/session'
+import {
+  TOKEN_KEY,
+  REFRESH_KEY,
+  USER_KEY,
+  SESSION_EXPIRED_EVENT,
+  clearStoredSession,
+  getStoredRefreshToken,
+} from '../services/session'
 
 type Credentials = { email: string; password: string }
 
@@ -87,6 +94,16 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
     initAuth()
   }, [])
 
+  // El cliente HTTP avisa cuando el refresh token ya no sirve (revocado, caducado o reutilizado)
+  useEffect(() => {
+    const onExpired = () => {
+      setUser(null)
+      setAccessToken(null)
+    }
+    window.addEventListener(SESSION_EXPIRED_EVENT, onExpired)
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired)
+  }, [])
+
   /**
    * Performs authentication request and handles session storage binding
    */
@@ -94,6 +111,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
     const res = await api.post('/auth/login', credentials)
     const data = res?.data as any
     const tokenFromServer: string | null = data?.token ?? data?.accessToken ?? data?.jwt ?? data?.data?.accessToken ?? data?.data?.token ?? data?.data?.tokens?.accessToken ?? null
+    const refreshFromServer: string | null = data?.data?.tokens?.refreshToken ?? null
     let userFromServer: User | null = data?.user ?? data?.userInfo ?? data?.data?.user ?? null
 
     if (!userFromServer && tokenFromServer) {
@@ -115,25 +133,30 @@ export const AuthProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }
     const otherStorage = rememberMe ? sessionStorage : localStorage
     otherStorage.removeItem(USER_KEY)
     otherStorage.removeItem(TOKEN_KEY)
+    otherStorage.removeItem(REFRESH_KEY)
 
     try {
       storage.setItem(USER_KEY, JSON.stringify(userFromServer))
       storage.setItem(TOKEN_KEY, tokenFromServer ?? '')
+      if (refreshFromServer) storage.setItem(REFRESH_KEY, refreshFromServer)
+      else storage.removeItem(REFRESH_KEY)
     } catch (err) {
       console.warn('Could not save auth data to storage:', err)
     }
   }
 
   /**
-   * Resets active session and destroys stored tokens
+   * Resets active session and destroys stored tokens.
+   * Also revokes the refresh token on the server (best effort: the local session is cleared either way).
    */
   const logout = () => {
+    const refreshToken = getStoredRefreshToken()
+    if (refreshToken) {
+      api.post('/auth/logout', { refreshToken }).catch(() => {})
+    }
     setUser(null)
     setAccessToken(null)
-    localStorage.removeItem(USER_KEY)
-    localStorage.removeItem(TOKEN_KEY)
-    sessionStorage.removeItem(USER_KEY)
-    sessionStorage.removeItem(TOKEN_KEY)
+    clearStoredSession()
   }
 
   const value = useMemo<AuthContextType>( () => ({
