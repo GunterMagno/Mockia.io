@@ -1,5 +1,6 @@
 {
   "root": true,
+  "ignorePatterns": ["packages/backend/scratch/"],
   "env": {
     "node": true,
     "es2021": true

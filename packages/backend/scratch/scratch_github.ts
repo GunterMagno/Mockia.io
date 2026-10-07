@@ -1,4 +1,4 @@
-import { parseGitHubUrl, cloneRepository, codeAnalyzer, cleanupRepository } from '../services/github.service.js';
+import { parseGitHubUrl, cloneRepository, codeAnalyzer, cleanupRepository } from '../src/services/github.service.js';
 import fs from 'fs/promises';
 import path from 'path';
 
