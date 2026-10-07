@@ -77,13 +77,17 @@ app.use(morgan(morganFormat));
 if (process.env.NODE_ENV !== 'test') {
   const MIN15 = 15 * 60 * 1000;
   const globalLimiter = rateLimit({ windowMs: MIN15, max: 1000 });
-  const authLimiter = rateLimit({ windowMs: MIN15, max: 20 }); // login / register / refresh brute force
+  const authLimiter = rateLimit({ windowMs: MIN15, max: 20 }); // login / register brute force
   const heavyLimiter = rateLimit({ windowMs: MIN15, max: 60 }); // AI (paid upstream) and GitHub clone
   // Public mock traffic (own quota gate), Stripe webhook and health probes are not throttled here.
   app.use('/api', (req, res, next) =>
     /^\/(mock|billing|health)(\/|$)/.test(req.path) ? next() : globalLimiter(req, res, next)
   );
-  app.use('/api/auth', (req, res, next) => (req.method === 'POST' ? authLimiter(req, res, next) : next()));
+  // Only the credential endpoints get the strict bucket. /refresh and /logout need a signed token (nothing to brute-force)
+  // and every active client calls /refresh every 15 min: sharing the 20-per-IP bucket would lock out users behind one NAT.
+  app.use('/api/auth', (req, res, next) =>
+    req.method === 'POST' && /^\/(login|register)\/?$/.test(req.path) ? authLimiter(req, res, next) : next()
+  );
   app.use('/api/ai', heavyLimiter);
   app.use('/api/github', heavyLimiter);
 }
