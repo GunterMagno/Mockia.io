@@ -2,6 +2,7 @@ import React from 'react'
 import './App.css'
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import AuthProvider from './contexts/AuthContext'
+import LocaleSync from './components/LocaleSync'
 import Login from './pages/Auth/Login'
 import Signup from './pages/Auth/Signup'
 import ForgotPassword from './pages/Auth/ForgotPassword'
@@ -63,6 +64,7 @@ const AppShell: React.FC = () => {
 const App: React.FC = () => {
   return (
     <AuthProvider>
+      <LocaleSync />
       <BrowserRouter>
         <AppShell />
       </BrowserRouter>

@@ -14,6 +14,8 @@ export interface SessionUser {
   username: string
   /** ISO date de la verificacion del correo; ausente o null = sin verificar. */
   emailVerifiedAt?: string | null
+  /** Idioma guardado en la cuenta; ausente = nunca se guardo. */
+  locale?: 'en' | 'es' | 'zh'
   createdAt?: string
   updatedAt?: string
 }
