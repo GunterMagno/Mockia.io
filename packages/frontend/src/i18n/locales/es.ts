@@ -194,6 +194,8 @@ const es: Messages = {
       cancel: 'Pago cancelado. No se te ha cobrado nada.',
     },
     pastDue: 'Tu último pago falló y tu cuenta ha quedado limitada al plan Free. Actualiza tu método de pago para recuperar {plan}.',
+    pastDueGrace: 'No hemos podido cobrar tu tarjeta. Las funciones de {plan} siguen activas hasta el {date}. Actualiza tu método de pago.',
+    updatePayment: 'Actualizar método de pago',
     cancelScheduled: 'Tu suscripción {plan} termina el {date}. Puedes mantenerla desde el portal de facturación.',
     overLimit: 'Tienes más proyectos activos de los que permite tu plan. Archiva alguno o mejora el plan para crear otros nuevos.',
     atLimit: 'Has llegado a los {limit} proyectos activos de tu plan.',

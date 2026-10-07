@@ -1,0 +1,54 @@
+/* Aviso de cobro fallido: borde y fondo suaves; el texto explica el estado (no solo el color) */
+.banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-3);
+  margin: 0 0 var(--spacing-6);
+  padding: var(--spacing-3) var(--spacing-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+/* Dentro del periodo de gracia: el plan sigue activo, es un aviso */
+.grace {
+  border-color: var(--color-warn);
+  background: var(--color-warn-soft);
+}
+
+/* Pasada la gracia: la cuenta ya esta limitada a Free */
+.expired {
+  border-color: var(--color-danger);
+  background: var(--color-danger-soft);
+}
+
+.message {
+  margin: 0;
+  flex: 1 1 18rem;
+}
+
+.action {
+  min-height: var(--tap);
+  padding: 0 var(--spacing-5);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:hover:not(:disabled) { background: var(--color-border); }
+  &:focus-visible { outline: 2px solid var(--color-accent-text); outline-offset: 2px; }
+  &:disabled { cursor: progress; opacity: 0.7; }
+}
+
+.error {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--color-danger);
+  font-size: var(--text-sm);
+}

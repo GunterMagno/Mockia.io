@@ -199,6 +199,8 @@ const en = {
       cancel: 'Checkout canceled. You haven’t been charged.',
     },
     pastDue: 'Your last payment failed, so your account is limited to the Free plan. Update your payment method to restore {plan}.',
+    pastDueGrace: 'We couldn’t charge your card. Your {plan} features stay active until {date}. Update your payment method.',
+    updatePayment: 'Update payment method',
     cancelScheduled: 'Your {plan} subscription ends on {date}. You can keep it from the billing portal.',
     overLimit: 'You have more active projects than your plan allows. Archive some or upgrade to create new ones.',
     atLimit: 'You’ve reached the {limit} active projects of your plan.',

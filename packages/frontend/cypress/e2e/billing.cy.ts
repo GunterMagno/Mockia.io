@@ -67,4 +67,91 @@ describe('Billing: planes, limites y facturacion', () => {
     cy.location('pathname').should('eq', '/billing');
     cy.contains('5 of 5').should('be.visible');
   });
+  // La app no puede sembrar la base de datos desde Cypress: el estado de impago se simula interceptando GET /billing/me.
+  describe('impago dentro del periodo de gracia', () => {
+    const DAY = 24 * 60 * 60 * 1000;
+    const email = `pastdue${Date.now()}@example.com`;
+    const graceEnd = new Date(Date.now() + 4 * DAY);
+    const graceEndText = new Intl.DateTimeFormat('en', { dateStyle: 'long', timeZone: 'UTC' }).format(graceEnd);
+
+    const overview = (extra: Record<string, unknown> = {}) => ({
+      success: true,
+      timestamp: new Date().toISOString(),
+      data: {
+        plan: 'pro',
+        subscribedPlan: 'pro',
+        billingStatus: 'past_due',
+        cancelAtPeriodEnd: false,
+        currentPeriodEnd: null,
+        pastDueUntil: graceEnd.toISOString(),
+        limits: { maxActiveProjects: 50, maxMonthlyRequests: 1_000_000 },
+        usage: { activeProjects: 2, monthlyRequests: 120, periodResetAt: new Date(Date.now() + 20 * DAY).toISOString() },
+        canManageBilling: true,
+        checkoutAvailable: { pro: true, team: true },
+        ...extra,
+      },
+    });
+
+    before(() => {
+      cy.request('POST', `${API}/auth/register`, { username: 'PastDueUser', email, password });
+    });
+
+    beforeEach(() => {
+      cy.clearCookies();
+      cy.clearLocalStorage();
+      cy.visit('/login');
+      cy.get('input[name="email"]').type(email);
+      cy.get('input[name="password"]').type(password);
+      cy.get('button[type="submit"]').click();
+      cy.location('pathname').should('eq', '/dashboard');
+    });
+
+    it('la pagina de facturacion avisa de que el plan sigue activo hasta la fecha y abre el portal para actualizar la tarjeta', () => {
+      cy.intercept('GET', '**/api/billing/me', overview()).as('overview');
+      cy.intercept('POST', '**/api/billing/portal', { success: true, data: { url: '/billing?portal=returned' } }).as('portal');
+
+      cy.visit('/billing');
+      cy.wait('@overview');
+      cy.get('[role="alert"]')
+        .should('contain.text', 'We couldn’t charge your card')
+        .and('contain.text', `Your Pro features stay active until ${graceEndText}`)
+        .and('contain.text', 'Update your payment method');
+      cy.contains('[role="alert"] button', 'Update payment method').click();
+      cy.wait('@portal');
+      cy.location('search').should('eq', '?portal=returned');
+    });
+
+    it('el panel muestra el mismo aviso con el boton al portal y marca el plan como pago fallido', () => {
+      cy.intercept('GET', '**/api/billing/me', overview()).as('overview');
+      cy.intercept('POST', '**/api/billing/portal', { success: true, data: { url: '/billing?portal=returned' } }).as('portal');
+
+      cy.visit('/dashboard');
+      cy.wait('@overview');
+      cy.get('[role="alert"]').should('contain.text', `Your Pro features stay active until ${graceEndText}`);
+      cy.contains('a', 'Pro plan').should('contain.text', 'Payment failed');
+      cy.contains('[role="alert"] button', 'Update payment method').click();
+      cy.wait('@portal');
+      cy.location('pathname').should('eq', '/billing');
+    });
+
+    it('pasada la gracia el aviso dice que la cuenta esta limitada a Free', () => {
+      cy.intercept('GET', '**/api/billing/me', overview({
+        plan: 'free',
+        pastDueUntil: new Date(Date.now() - DAY).toISOString(),
+        limits: { maxActiveProjects: 5, maxMonthlyRequests: 10_000 },
+      })).as('overview');
+      cy.visit('/billing');
+      cy.wait('@overview');
+      cy.get('[role="alert"]').should('contain.text', 'limited to the Free plan').and('not.contain.text', 'stay active until');
+      cy.contains('[role="alert"] button', 'Update payment method').should('be.visible');
+    });
+
+    it('con el cobro al dia no hay aviso', () => {
+      cy.intercept('GET', '**/api/billing/me', overview({ billingStatus: 'active', pastDueUntil: null })).as('overview');
+      cy.visit('/billing');
+      cy.wait('@overview');
+      cy.contains('h2', 'Pro').should('be.visible');
+      cy.get('[data-testid="past-due-banner"]').should('not.exist');
+    });
+  });
 });

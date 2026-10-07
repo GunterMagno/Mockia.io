@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import type { BillingOverview, PaidPlan, Plan } from '@mockia/shared'
 import Layout from '../../layouts/Layout'
 import PricingPlans, { hasOpenSubscription } from '../../components/billing/PricingPlans/PricingPlans'
+import PastDueBanner from '../../components/billing/PastDueBanner/PastDueBanner'
 import ModalErrorAlert from '../../components/ui/ModalErrorAlert/ModalErrorAlert'
 import { getBillingOverview, openBillingPortal, startCheckout } from '../../services/billingService'
 import { getBackendErrorMessage } from '../../utils/error'
@@ -175,16 +176,7 @@ const Billing: React.FC = () => {
 
       {overview && (
         <>
-          {overview.billingStatus === 'past_due' && (
-            <div className={`${styles.notice} ${styles.danger}`} role="alert">
-              <span>{t('billing.pastDue', { plan: planName(overview.subscribedPlan) })}</span>
-              {overview.canManageBilling && (
-                <button type="button" className={styles.inlineBtn} onClick={() => void goPortal()} disabled={busy !== null}>
-                  {busy === 'portal' ? t('billing.opening') : t('billing.manage')}
-                </button>
-              )}
-            </div>
-          )}
+          <PastDueBanner overview={overview} />
           {overview.cancelAtPeriodEnd && overview.currentPeriodEnd && overview.billingStatus === 'active' && (
             <p className={`${styles.notice} ${styles.warn}`} role="status">
               {t('billing.cancelScheduled', { plan: planName(overview.subscribedPlan), date: date(overview.currentPeriodEnd) })}

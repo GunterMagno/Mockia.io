@@ -192,6 +192,8 @@ const zh: Messages = {
       cancel: '已取消结账，未产生任何费用。',
     },
     pastDue: '你最近一次付款失败，账户已被限制为 Free 方案。请更新付款方式以恢复 {plan}。',
+    pastDueGrace: '我们无法从你的银行卡扣款。你的 {plan} 功能将保留到 {date}。请更新付款方式。',
+    updatePayment: '更新付款方式',
     cancelScheduled: '你的 {plan} 订阅将于 {date} 结束。可在账单门户中继续保留。',
     overLimit: '你的活跃项目数已超过当前方案上限。请归档部分项目或升级方案后再新建。',
     atLimit: '你已达到当前方案的 {limit} 个活跃项目上限。',
