@@ -14,7 +14,6 @@ import sparkles from '../../assets/sparkles.svg'
 import codeIcon from '../../assets/code-icon.svg'
 import terminalIcon from '../../assets/terminal.svg'
 import shieldIcon from '../../assets/shield.svg'
-import quoteIcon from '../../assets/quote.svg'
 
 // three.js solo se descarga cuando hay movimiento permitido y el navegador esta ocioso
 const HeroScene = lazy(() => import('./HeroScene'))
@@ -206,50 +205,21 @@ const Index: React.FC = () => {
         </div>
       </section>
 
-      {/* Bento */}
-      <section className={styles.bentoSection} aria-label={t('landing.bento.label')}>
-        <div className={`${styles.container} ${styles.bentoGrid}`}>
-          <article className={styles.infraCard} data-reveal>
-            <p className={styles.eyebrow}>{t('landing.bento.eyebrow')}</p>
-            <h3>{t('landing.bento.infraTitle')}</h3>
-            <p className={styles.infraText}>{t('landing.bento.infraText')}</p>
-            <ul className={styles.stats}>
-              <li className={styles.statItem}><span className={styles.val}>100+</span><span className={styles.label}>{t('landing.bento.regions')}</span></li>
-              <li className={styles.statItem}><span className={styles.val}>&lt;15ms</span><span className={styles.label}>{t('landing.bento.latency')}</span></li>
-              <li className={styles.statItem}><span className={styles.val}>99.9%</span><span className={styles.label}>{t('landing.bento.uptime')}</span></li>
-            </ul>
-          </article>
-
+      {/* Equipos. Antes era un "bento" con cifras (regiones, latencia, disponibilidad) y una cita que no eran reales: se quitaron */}
+      <section className={styles.bentoSection} aria-labelledby="team-title">
+        <div className={styles.container}>
           <article className={styles.trustCard} data-reveal>
-            <header className={styles.trustHeader}>
+            <div className={styles.trustBody}>
               <span className={styles.trustIcon} aria-hidden="true"><img src={shieldIcon} alt="" /></span>
-              <span className={styles.badges}>
-                <span className={styles.badge}>{t('landing.bento.badgeNew')}</span>
-                <span className={styles.badge}>V2.0</span>
-              </span>
-            </header>
-            <h3>{t('landing.bento.teamTitle')}</h3>
-            <p>{t('landing.bento.teamText')}</p>
+              <h2 id="team-title">{t('landing.bento.teamTitle')}</h2>
+              <p>{t('landing.bento.teamText')}</p>
+            </div>
             <ul className={styles.securityChecklist}>
               <li>{t('landing.bento.unlimitedProjects')}</li>
               <li>{t('landing.bento.realtimeSync')}</li>
               <li>{t('landing.bento.rbac')}</li>
             </ul>
           </article>
-
-          <figure className={styles.quoteCard} data-reveal>
-            <img className={styles.quoteDecoration} src={quoteIcon} alt="" aria-hidden="true" />
-            <blockquote>
-              <p>{t('landing.bento.quote')}</p>
-            </blockquote>
-            <figcaption className={styles.author}>
-              <span className={styles.avatar} aria-hidden="true" />
-              <span className={styles.info}>
-                <span className={styles.name}>Sarah Chen</span>
-                <span className={styles.role}>{t('landing.bento.quoteRole')}</span>
-              </span>
-            </figcaption>
-          </figure>
         </div>
       </section>
 
