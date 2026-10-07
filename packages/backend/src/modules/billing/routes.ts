@@ -1,10 +1,12 @@
 import express, { Router } from 'express';
+import type { BillingInterval, PaidPlan } from '@mockia/shared';
 import { asyncHandler } from '../../middlewares/errorHandler.js';
 import { authenticateToken, type AuthenticatedRequest } from '../../middlewares/authenticateToken.js';
 import { requireVerifiedEmail } from '../../middlewares/requireVerifiedEmail.js';
 import { UserModel } from '../../models/User.js';
 import { rateLimit } from '../../middlewares/rateLimit.js';
-import { asPaidPlan } from './plans.js';
+import { validate } from '../../middlewares/validateRequest.js';
+import { checkoutSchema } from './validation.js';
 import { verifyStripeSignature } from './stripeSignature.js';
 import {
   checkoutConfig,
@@ -13,6 +15,7 @@ import {
   getBillingOverview,
   handleStripeEvent,
   hasOpenSubscription,
+  missingCheckoutConfig,
   type StripeEvent,
 } from './service.js';
 
@@ -23,7 +26,7 @@ import {
  * bytes for signature verification (express.raw here), and once a body parser has run the raw body is gone.
  * Body parsers skip requests already parsed, so /checkout carries its own express.json().
  *
- * Env: STRIPE_WEBHOOK_SECRET, STRIPE_SECRET_KEY, STRIPE_PRICE_PRO, STRIPE_PRICE_TEAM,
+ * Env: STRIPE_WEBHOOK_SECRET, STRIPE_SECRET_KEY, STRIPE_PRICE_PRO, STRIPE_PRICE_TEAM, STRIPE_PRICE_PRO_YEARLY, STRIPE_PRICE_TEAM_YEARLY,
  *      optional FRONTEND_URL / STRIPE_SUCCESS_URL / STRIPE_CANCEL_URL / STRIPE_PORTAL_RETURN_URL.
  * The global /api limiter skips /api/billing (the webhook must never be throttled), so the
  * user-facing Stripe calls get their own per-user limiter here.
@@ -100,9 +103,9 @@ billingRouter.get(
 );
 
 /**
- * POST /api/billing/checkout  body: { plan: 'pro' | 'team' }
- * 200 { url } (redirect the browser there), 400 invalid plan, 401, 403 EMAIL_NOT_VERIFIED (when email verification is required), 409 already subscribed (use the portal),
- * 501 Stripe not configured, 502 Stripe error.
+ * POST /api/billing/checkout  body: { plan: 'pro' | 'team', interval?: 'month' | 'year' }  (interval defaults to 'month')
+ * 200 { url } (redirect the browser there), 400 invalid plan or interval, 401, 403 EMAIL_NOT_VERIFIED (when email verification is required), 409 already subscribed (use the portal),
+ * 501 Stripe not configured for that plan and interval (the message names the missing env var), 502 Stripe error.
  */
 billingRouter.post(
   '/checkout',
@@ -110,17 +113,14 @@ billingRouter.post(
   requireVerifiedEmail,
   stripeCallLimiter,
   express.json({ limit: '10kb' }),
+  validate({ body: checkoutSchema }),
   asyncHandler(async (req: AuthenticatedRequest, res) => {
-    const plan = asPaidPlan(req.body?.plan);
-    if (!plan) {
-      res.status(400).json(fail('VALIDATION_ERROR', "plan must be 'pro' or 'team'"));
-      return;
-    }
-    const config = checkoutConfig(plan);
+    const { plan, interval } = req.body as { plan: PaidPlan; interval: BillingInterval };
+    const config = checkoutConfig(plan, interval);
     if (!config) {
       res
         .status(501)
-        .json(fail('BILLING_NOT_CONFIGURED', 'Stripe checkout is not configured (STRIPE_SECRET_KEY / STRIPE_PRICE_*)'));
+        .json(fail('BILLING_NOT_CONFIGURED', `Stripe checkout is not configured for this plan and billing interval (missing ${missingCheckoutConfig(plan, interval).join(', ')})`));
       return;
     }
     const user = await UserModel.findById(req.user!.id)
@@ -139,6 +139,7 @@ billingRouter.post(
       userId: req.user!.id,
       email: user.email,
       plan,
+      interval,
       stripeCustomerId: user.stripeCustomerId,
       locale: user.locale,
       ...config,

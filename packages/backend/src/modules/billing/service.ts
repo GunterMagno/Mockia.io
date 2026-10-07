@@ -1,12 +1,13 @@
 import { UserModel } from '../../models/User.js';
 import { ProjectModel } from '../../models/Project.js';
 import { AppError } from '../../middlewares/errorHandler.js';
-import { ErrorCode, toLimitsDTO, type BillingOverview } from '@mockia/shared';
+import { ErrorCode, isBillingInterval, toLimitsDTO, type BillingInterval, type BillingOverview } from '@mockia/shared';
 import { PLAN_LIMITS, asPaidPlan, effectivePlan, graceEndsAt, invalidatePlanCache, type BillingStatus, type PaidPlan } from './plans.js';
 import { notifyPaymentFailed, notifyRefund, notifyTrialWillEnd, type NoticeUser } from './notices.js';
 import { getMonthlyUsage, nextPeriodStart } from './usage.js';
 import { stripeCheckoutLocale, termsAcceptanceMessage } from './checkoutText.js';
 import { appBaseUrl } from '../auth/passwordReset.js';
+import { planAndIntervalOfPrice, priceEnvName, priceIdFor } from './prices.js';
 
 export interface StripeEvent {
   id: string;
@@ -104,16 +105,24 @@ async function updateUser(
   return user;
 }
 
+/** Price id of the first item of a subscription (the legacy `plan` object on old API versions). */
+function priceIdOf(sub: Record<string, any>): unknown {
+  return sub.items?.data?.[0]?.price?.id ?? sub.plan?.id;
+}
+
+/** Plan and billing interval of a subscription, from its price id. Only the four configured prices count; anything else is undefined. */
+export function subscriptionPrice(sub: Record<string, any>) {
+  return planAndIntervalOfPrice(priceIdOf(sub));
+}
+
 /**
  * Paid plan of a subscription. The price is the source of truth (a plan switch in the customer portal
- * changes the price but not our metadata); metadata.plan is the fallback for unknown price ids.
+ * changes the price but not our metadata). A price id we do not know NEVER grants a plan, not even through metadata.plan:
+ * metadata.plan is only the fallback when the event carries no price at all (old subscriptions, trimmed payloads).
  */
 export function planFromSubscription(sub: Record<string, any>): PaidPlan | undefined {
-  const priceId = sub.items?.data?.[0]?.price?.id ?? sub.plan?.id;
-  if (typeof priceId === 'string') {
-    if (priceId === process.env.STRIPE_PRICE_PRO) return 'pro';
-    if (priceId === process.env.STRIPE_PRICE_TEAM) return 'team';
-  }
+  const priceId = priceIdOf(sub);
+  if (typeof priceId === 'string' && priceId !== '') return planAndIntervalOfPrice(priceId)?.plan;
   return asPaidPlan(sub.metadata?.plan);
 }
 
@@ -179,6 +188,8 @@ export async function handleStripeEvent(event: StripeEvent): Promise<'handled' |
         {
           plan,
           billingStatus: 'active',
+          // The interval chosen at checkout (our own metadata); subscription.created/updated refine it from the price right after
+          ...(isBillingInterval(obj.metadata?.interval) && { billingInterval: obj.metadata.interval }),
           ...(typeof obj.customer === 'string' && { stripeCustomerId: obj.customer }),
           ...(typeof obj.subscription === 'string' && { stripeSubscriptionId: obj.subscription }),
         },
@@ -188,6 +199,7 @@ export async function handleStripeEvent(event: StripeEvent): Promise<'handled' |
     }
     case 'customer.subscription.created':
     case 'customer.subscription.updated': {
+      const priced = subscriptionPrice(obj);
       const plan = planFromSubscription(obj);
       const billingStatus = STATUS_MAP[obj.status] ?? 'past_due';
       // Only Stripe's own past_due (a renewal failed, retries pending) opens a grace period. unpaid / incomplete / paused / unknown
@@ -201,6 +213,7 @@ export async function handleStripeEvent(event: StripeEvent): Promise<'handled' |
           stripeSubscriptionId: obj.id,
           ...(typeof obj.customer === 'string' && { stripeCustomerId: obj.customer }),
           ...(plan && { plan }),
+          ...(priced && { billingInterval: priced.interval }),
           ...periodFields(obj),
         },
         { pastDue }
@@ -270,11 +283,19 @@ export async function handleStripeEvent(event: StripeEvent): Promise<'handled' |
 const frontendBase = () =>
   (process.env.FRONTEND_URL || process.env.CORS_ORIGIN?.split(',')[0] || 'http://localhost:5173').replace(/\/+$/, '');
 
-/** Checkout config from env; null when Stripe is not configured for that plan. */
-export function checkoutConfig(plan: PaidPlan): { secretKey: string; priceId: string } | null {
+/** Checkout config from env; null when Stripe is not configured for that plan and interval. */
+export function checkoutConfig(plan: PaidPlan, interval: BillingInterval = 'month'): { secretKey: string; priceId: string } | null {
   const secretKey = process.env.STRIPE_SECRET_KEY;
-  const priceId = plan === 'pro' ? process.env.STRIPE_PRICE_PRO : process.env.STRIPE_PRICE_TEAM;
+  const priceId = priceIdFor(plan, interval);
   return secretKey && priceId ? { secretKey, priceId } : null;
+}
+
+/** Names of the env vars that keep checkout from working for that plan and interval (empty = configured). */
+export function missingCheckoutConfig(plan: PaidPlan, interval: BillingInterval = 'month'): string[] {
+  return [
+    ...(process.env.STRIPE_SECRET_KEY ? [] : ['STRIPE_SECRET_KEY']),
+    ...(priceIdFor(plan, interval) ? [] : [priceEnvName(plan, interval)]),
+  ];
 }
 
 /**
@@ -289,6 +310,8 @@ export async function createCheckoutSession(input: {
   userId: string;
   email: string;
   plan: PaidPlan;
+  /** Billing interval of the chosen price (priceId must be that plan's price for it). Defaults to monthly. */
+  interval?: BillingInterval;
   stripeCustomerId?: string;
   /** Saved UI language of the user (en | es | zh); anything else lets Stripe detect it. */
   locale?: string | null;
@@ -305,8 +328,10 @@ export async function createCheckoutSession(input: {
     success_url: process.env.STRIPE_SUCCESS_URL || `${base}/billing?checkout=success`,
     cancel_url: process.env.STRIPE_CANCEL_URL || `${base}/billing?checkout=cancel`,
     'metadata[plan]': input.plan,
+    'metadata[interval]': input.interval ?? 'month',
     'metadata[userId]': input.userId,
     'subscription_data[metadata][plan]': input.plan,
+    'subscription_data[metadata][interval]': input.interval ?? 'month',
     'subscription_data[metadata][userId]': input.userId,
     'automatic_tax[enabled]': 'true',
     'tax_id_collection[enabled]': 'true',
@@ -403,7 +428,7 @@ export async function cancelSubscriptionNow(subscriptionId: string, secretKey: s
 /** Plan, limits and usage of the current billing period, for the billing page. */
 export async function getBillingOverview(userId: string, now = new Date()): Promise<BillingOverview> {
   const user = await UserModel.findById(userId)
-    .select('plan billingStatus pastDueSince stripeCustomerId cancelAtPeriodEnd currentPeriodEnd')
+    .select('plan billingStatus billingInterval pastDueSince stripeCustomerId cancelAtPeriodEnd currentPeriodEnd')
     .lean();
   if (!user) throw new AppError('User not found', ErrorCode.NOT_FOUND, 404);
 
@@ -413,17 +438,21 @@ export async function getBillingOverview(userId: string, now = new Date()): Prom
     getMonthlyUsage(userId, now),
   ]);
   const stripeReady = Boolean(process.env.STRIPE_SECRET_KEY);
+  // A canceled (or never paid) account keeps no interval, even if an old value is left over
+  const liveSubscription = asPaidPlan(user.plan) !== undefined && user.billingStatus !== 'canceled';
 
   return {
     plan,
     subscribedPlan: asPaidPlan(user.plan) ?? 'free',
     billingStatus: (user.billingStatus as BillingStatus) ?? 'active',
     cancelAtPeriodEnd: Boolean(user.cancelAtPeriodEnd),
+    interval: liveSubscription && isBillingInterval(user.billingInterval) ? user.billingInterval : null,
     currentPeriodEnd: user.currentPeriodEnd ? new Date(user.currentPeriodEnd).toISOString() : null,
     pastDueUntil: graceEndsAt(user)?.toISOString() ?? null,
     limits: toLimitsDTO(PLAN_LIMITS[plan]),
     usage: { activeProjects, monthlyRequests, periodResetAt: nextPeriodStart(now).toISOString() },
     canManageBilling: stripeReady && Boolean(user.stripeCustomerId),
     checkoutAvailable: { pro: Boolean(checkoutConfig('pro')), team: Boolean(checkoutConfig('team')) },
+    yearlyCheckoutAvailable: { pro: Boolean(checkoutConfig('pro', 'year')), team: Boolean(checkoutConfig('team', 'year')) },
   };
 }

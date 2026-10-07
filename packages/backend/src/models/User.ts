@@ -33,6 +33,8 @@ interface UserDocument extends Document {
   pastDueSince?: Date | null;
   /** Invoice whose failure was already announced (email + in-app) in the current sequence; null once the sequence ends. */
   lastPaymentFailedInvoiceId?: string | null;
+  /** Billing interval of the live subscription, deduced from its Stripe price id (null/unset when unknown). */
+  billingInterval?: 'month' | 'year' | null;
   /** The subscription ends at currentPeriodEnd (cancelled from the customer portal). */
   cancelAtPeriodEnd: boolean;
   /** End of the current billing period, mirrored from the Stripe subscription. */
@@ -86,6 +88,7 @@ const userSchema = new Schema<UserDocument>(
     noticeEventIds: { type: [String], default: [] },
     pastDueSince: { type: Date, default: null },
     lastPaymentFailedInvoiceId: { type: String, default: null },
+    billingInterval: { type: String, enum: ['month', 'year'], default: null },
     cancelAtPeriodEnd: { type: Boolean, default: false },
     currentPeriodEnd: { type: Date, default: null },
     emailVerifiedAt: { type: Date, default: null },

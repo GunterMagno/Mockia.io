@@ -281,6 +281,7 @@ describe('subscription details', () => {
           stripeSubscriptionId: 'sub_1',
           stripeCustomerId: 'cus_1',
           plan: 'team',
+          billingInterval: 'month', // price_team is the monthly Team price
           currentPeriodEnd: new Date(1_790_000_000_000),
           cancelAtPeriodEnd: false,
           ...NO_DUNNING,

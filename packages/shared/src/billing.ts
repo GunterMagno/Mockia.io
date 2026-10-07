@@ -1,7 +1,7 @@
 /**
  * Catalogo de planes: fuente unica para backend (limites que se aplican) y frontend (lo que se anuncia).
  * Cambiar un precio aqui NO cambia lo que cobra Stripe: el importe real vive en los Price de Stripe
- * (STRIPE_PRICE_PRO / STRIPE_PRICE_TEAM). Mantener ambos alineados.
+ * (STRIPE_PRICE_PRO / STRIPE_PRICE_TEAM y sus variantes *_YEARLY). Mantener ambos alineados.
  */
 
 export type Plan = 'free' | 'pro' | 'team';
@@ -29,12 +29,46 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
  */
 export const PAST_DUE_GRACE_DAYS = 7;
 
-/** Precio mensual anunciado en USD (sin impuestos). */
-export const PLAN_PRICE_USD: Record<Plan, number> = {
-  free: 0,
-  pro: 29,
-  team: 99,
+/** Intervalo de facturacion de una suscripcion (mismos valores que Stripe: price.recurring.interval). */
+export type BillingInterval = 'month' | 'year';
+export const BILLING_INTERVALS: readonly BillingInterval[] = ['month', 'year'];
+
+export const isBillingInterval = (value: unknown): value is BillingInterval => value === 'month' || value === 'year';
+
+/** Meses que se pagan al contratar un ano: 10 (dos meses gratis). */
+export const ANNUAL_MONTHS_CHARGED = 10;
+
+export interface PlanPrice {
+  /** Lo que se cobra cada mes con facturacion mensual. */
+  monthly: number;
+  /** Lo que se cobra una vez al ano con facturacion anual. */
+  annual: number;
+}
+
+const priceOf = (monthly: number): PlanPrice => ({ monthly, annual: monthly * ANNUAL_MONTHS_CHARGED });
+
+/** Precios anunciados en USD (sin impuestos). Free no tiene precio. */
+export const PLAN_PRICE_USD: Record<Plan, PlanPrice> = {
+  free: { monthly: 0, annual: 0 },
+  pro: priceOf(29),
+  team: priceOf(99),
 };
+
+/** Importe que se cobra en cada renovacion del intervalo dado. */
+export const planPriceUsd = (plan: Plan, interval: BillingInterval): number =>
+  interval === 'year' ? PLAN_PRICE_USD[plan].annual : PLAN_PRICE_USD[plan].monthly;
+
+/** Lo que cuesta cada mes con facturacion anual (anual / 12), para mostrarlo junto al precio. */
+export const annualMonthlyEquivalentUsd = (plan: Plan): number => PLAN_PRICE_USD[plan].annual / 12;
+
+/** Ahorro de pagar un ano frente a doce meses, en % redondeado al entero mas cercano (0 si el plan no tiene precio). */
+export const annualDiscountPercent = (plan: Plan): number => {
+  const { monthly, annual } = PLAN_PRICE_USD[plan];
+  return monthly > 0 ? Math.round((1 - annual / (monthly * 12)) * 100) : 0;
+};
+
+/** Descuento anual que se anuncia (igual para Pro y Team, porque ambos son 10 meses). */
+export const ANNUAL_DISCOUNT_PERCENT = annualDiscountPercent('pro');
 
 /** Limites serializables a JSON: null = ilimitado (JSON no admite Infinity). */
 export interface PlanLimitsDTO {
@@ -56,6 +90,8 @@ export interface BillingOverview {
   billingStatus: BillingStatus;
   /** La suscripcion termina al final del periodo actual (cancelada desde el portal). */
   cancelAtPeriodEnd: boolean;
+  /** Intervalo de facturacion de la suscripcion de pago viva (deducido del price de Stripe); null si no hay o no se conoce. */
+  interval: BillingInterval | null;
   /** Fin del periodo de facturacion actual (ISO), si hay suscripcion. */
   currentPeriodEnd: string | null;
   /**
@@ -72,6 +108,8 @@ export interface BillingOverview {
   };
   /** Hay cliente de Stripe y el portal esta disponible (gestionar pago, cambiar de plan, cancelar). */
   canManageBilling: boolean;
-  /** Stripe configurado para contratar cada plan de pago. */
+  /** Stripe configurado para contratar cada plan de pago con facturacion mensual. */
   checkoutAvailable: Record<PaidPlan, boolean>;
+  /** Stripe configurado para contratar cada plan de pago con facturacion anual (falta el price *_YEARLY si es false). */
+  yearlyCheckoutAvailable: Record<PaidPlan, boolean>;
 }
