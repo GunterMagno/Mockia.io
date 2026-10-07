@@ -26,6 +26,7 @@ import { rateLimit } from './middlewares/rateLimit.js';
 import { authenticateToken } from './middlewares/authenticateToken.js';
 import { authorizeRole } from './middlewares/authorizeRole.js';
 import { assertJwtConfig } from './services/jwt.service.js';
+import { assertProdConfig } from './config/assertProdConfig.js';
 import type { ProjectRole } from '@mockia/shared';
 
 dotenv.config();
@@ -214,6 +215,8 @@ const startServer = async (): Promise<void> => {
   try {
     // Fail fast on missing/weak JWT secrets
     assertJwtConfig();
+    // Fail fast on insecure production config (open CORS, default DB password, missing APP_URL, default secrets)
+    assertProdConfig();
 
     // Connect to MongoDB
     await connectDB();
