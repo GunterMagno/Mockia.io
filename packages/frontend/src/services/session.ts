@@ -1,60 +1,55 @@
 /**
- * Claves de sesion. Con "Recordarme" los tokens van a localStorage; sin el, a sessionStorage.
- * Cualquier lectura del token debe mirar ambos (antes el cliente HTTP solo miraba localStorage
- * y una sesion sin "Recordarme" recibia 401 en todas las llamadas).
+ * Estado de sesion del cliente.
  *
- * El access token dura 15 min: el refresh token (rotado en cada uso) se guarda junto a el para que el cliente
- * HTTP renueve la sesion al recibir un 401. Transitorio: la tarea de cookies HttpOnly lo saca del almacenamiento web.
+ * El access token (15 min) vive SOLO en una variable de este modulo: no se guarda en localStorage ni en
+ * sessionStorage, asi un XSS no puede leerlo del almacenamiento web. El refresh token ni siquiera pasa por JavaScript:
+ * viaja en la cookie HttpOnly `mockia_rt` que pone el backend. Al cargar la app se recupera la sesion con
+ * POST /auth/refresh (ver authService.restoreSession).
  */
-export const TOKEN_KEY = 'mockia_token'
-export const REFRESH_KEY = 'mockia_refresh'
-export const USER_KEY = 'mockia_user'
 
-/** Evento que emite el cliente HTTP cuando la sesion ya no se puede renovar (refresh revocado o caducado). */
+/** Usuario de la sesion tal como lo devuelve el backend. */
+export interface SessionUser {
+  id: string
+  email: string
+  username: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+/** Evento que emite el cliente HTTP cuando la sesion ya no se puede renovar (cookie revocada, caducada o ausente). */
 export const SESSION_EXPIRED_EVENT = 'mockia:session-expired'
 
-function read(key: string): string | null {
-  if (typeof window === 'undefined') return null
-  try {
-    return window.localStorage.getItem(key) || window.sessionStorage.getItem(key)
-  } catch {
-    return null
-  }
+/** Cabecera anti-CSRF que exigen /auth/refresh y /auth/logout (el backend rechaza con 403 cualquier otro valor). */
+export const CSRF_HEADERS = { 'X-Requested-With': 'mockia' } as const
+
+let accessToken: string | null = null
+
+export function getAccessToken(): string | null {
+  return accessToken
 }
 
-export function getStoredToken(): string | null {
-  return read(TOKEN_KEY)
+export function setAccessToken(token: string | null): void {
+  accessToken = token
 }
 
-export function getStoredRefreshToken(): string | null {
-  return read(REFRESH_KEY)
+export function clearSession(): void {
+  accessToken = null
 }
+
+/** Claves que usaban las versiones anteriores para guardar la sesion en el almacenamiento web. */
+const LEGACY_KEYS = ['mockia_token', 'mockia_refresh', 'mockia_user'] as const
 
 /**
- * Guarda un par de tokens recien rotado en el mismo almacenamiento donde ya vive la sesion
- * (localStorage si el usuario marco "Recordarme", si no sessionStorage).
+ * Migracion de una sola vez: borra de localStorage y sessionStorage los tokens y el usuario que guardaban versiones
+ * anteriores (no se reutilizan: el refresh token antiguo ya no se acepta y el nuevo vive en una cookie HttpOnly).
  */
-export function storeRotatedTokens(accessToken: string, refreshToken: string): void {
+export function purgeLegacyStorage(): void {
   if (typeof window === 'undefined') return
-  try {
-    const storage = window.localStorage.getItem(TOKEN_KEY) ? window.localStorage : window.sessionStorage
-    storage.setItem(TOKEN_KEY, accessToken)
-    storage.setItem(REFRESH_KEY, refreshToken)
-  } catch {
-    // Sin almacenamiento disponible no hay sesion persistente que actualizar
-  }
-}
-
-/** Borra la sesion guardada (usuario y tokens) de ambos almacenamientos. */
-export function clearStoredSession(): void {
-  if (typeof window === 'undefined') return
-  try {
-    for (const storage of [window.localStorage, window.sessionStorage]) {
-      storage.removeItem(TOKEN_KEY)
-      storage.removeItem(REFRESH_KEY)
-      storage.removeItem(USER_KEY)
+  for (const storage of ['localStorage', 'sessionStorage'] as const) {
+    try {
+      for (const key of LEGACY_KEYS) window[storage].removeItem(key)
+    } catch {
+      // almacenamiento no disponible: no hay nada que borrar
     }
-  } catch {
-    // ignorar: nada que limpiar si el almacenamiento no esta disponible
   }
 }

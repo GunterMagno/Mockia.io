@@ -1,16 +1,17 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios'
 import {
+  CSRF_HEADERS,
   SESSION_EXPIRED_EVENT,
-  clearStoredSession,
-  getStoredRefreshToken,
-  getStoredToken,
-  storeRotatedTokens,
+  clearSession,
+  getAccessToken,
+  setAccessToken,
+  type SessionUser,
 } from './session'
 
 const baseURL = import.meta.env.VITE_API_URL ?? '/api'
 
-// Axios instance for frontend API calls
-export const api = axios.create({ baseURL })
+// Axios instance for frontend API calls. withCredentials: el navegador envia la cookie HttpOnly del refresh token
+export const api = axios.create({ baseURL, withCredentials: true })
 
 // Rutas de auth: no llevan Bearer ni disparan el refresh automatico (un 401 en login es "credenciales invalidas")
 const AUTH_ROUTES = ['/auth/login', '/auth/register', '/auth/refresh', '/auth/logout']
@@ -18,7 +19,7 @@ const isAuthRoute = (url: string) => AUTH_ROUTES.some((route) => url.includes(ro
 
 // Attach Bearer token if available, but skip login/register requests
 api.interceptors.request.use((config) => {
-  const token = getStoredToken()
+  const token = getAccessToken()
   const url = (config.url ?? '') as string
   const skip = url.includes('/auth/login') || url.includes('/auth/register')
   if (token && config.headers && !skip) {
@@ -27,36 +28,41 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+/** Resultado de pedir una sesion nueva al backend con la cookie de refresh. */
+export type RefreshOutcome =
+  | { status: 'ok'; accessToken: string; user: SessionUser | null }
+  /** El servidor dijo que no hay sesion valida (sin cookie, caducada, revocada o reutilizada). */
+  | { status: 'rejected' }
+  /** Fallo de red o 5xx: no se sabe si la sesion sigue viva, no se toca nada. */
+  | { status: 'failed' }
+
 /**
- * Renueva el par de tokens con el refresh token guardado. Devuelve el nuevo access token o null.
+ * POST /auth/refresh con la cookie HttpOnly (y la cabecera anti-CSRF). Guarda el access token nuevo en memoria.
  * Usa axios sin la instancia `api` para no pasar por sus interceptores (ni adjuntar el Bearer caducado).
- * Solo cierra la sesion cuando el servidor rechaza el refresh (401/400): un fallo de red o un 5xx deja la sesion
- * intacta para que el usuario pueda reintentar.
  */
-async function refreshAccessToken(): Promise<string | null> {
-  const refreshToken = getStoredRefreshToken()
-  if (!refreshToken) return null
+async function requestRefresh(): Promise<RefreshOutcome> {
   try {
-    const res = await axios.post(`${baseURL}/auth/refresh`, { refreshToken })
-    const tokens = res.data?.data
-    if (typeof tokens?.accessToken !== 'string' || typeof tokens?.refreshToken !== 'string') return null
-    storeRotatedTokens(tokens.accessToken, tokens.refreshToken)
-    return tokens.accessToken
+    const res = await axios.post(`${baseURL}/auth/refresh`, null, { withCredentials: true, headers: CSRF_HEADERS })
+    const data = res.data?.data
+    if (typeof data?.accessToken !== 'string') return { status: 'failed' }
+    setAccessToken(data.accessToken)
+    return { status: 'ok', accessToken: data.accessToken, user: data.user ?? null }
   } catch (err) {
     const status = axios.isAxiosError(err) ? err.response?.status : undefined
-    if (status === 401 || status === 400) {
-      clearStoredSession()
-      window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT))
+    if (status === 401 || status === 400 || status === 403) {
+      clearSession()
+      return { status: 'rejected' }
     }
-    return null
+    return { status: 'failed' }
   }
 }
 
-// Single-flight: los 401 simultaneos comparten una unica llamada de refresh (el refresh token se rota en cada uso)
-let refreshInFlight: Promise<string | null> | null = null
-function refreshOnce(): Promise<string | null> {
+// Single-flight: las peticiones simultaneas (arranque, varios 401) comparten una unica llamada de refresh,
+// porque el refresh token se rota en cada uso
+let refreshInFlight: Promise<RefreshOutcome> | null = null
+export function refreshSession(): Promise<RefreshOutcome> {
   if (!refreshInFlight) {
-    refreshInFlight = refreshAccessToken().finally(() => {
+    refreshInFlight = requestRefresh().finally(() => {
       refreshInFlight = null
     })
   }
@@ -91,8 +97,13 @@ api.interceptors.response.use(
     original._retried = true
     // Otra peticion ya renovo la sesion mientras esta volaba con el token viejo: basta repetirla con el actual
     const sent = String(original.headers?.Authorization ?? '').replace(/^Bearer /, '')
-    const stored = getStoredToken()
-    const accessToken = stored && sent && stored !== sent ? stored : await refreshOnce()
+    const current = getAccessToken()
+    let accessToken: string | null = current && sent && current !== sent ? current : null
+    if (!accessToken) {
+      const outcome = await refreshSession()
+      if (outcome.status === 'rejected') window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT))
+      accessToken = outcome.status === 'ok' ? outcome.accessToken : null
+    }
     if (!accessToken) return Promise.reject(error)
     original.headers.Authorization = `Bearer ${accessToken}`
     return api(original)

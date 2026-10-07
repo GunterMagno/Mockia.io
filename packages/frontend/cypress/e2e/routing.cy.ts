@@ -2,7 +2,10 @@
 Cypress.on('window:before:load', (win) => win.localStorage.setItem('mockia_locale', 'en'));
 
 describe('Routing: home publico y login solo donde hace falta', () => {
-  beforeEach(() => cy.clearLocalStorage());
+  beforeEach(() => {
+    cy.clearLocalStorage();
+    cy.clearCookies();
+  });
 
   it('la ruta por defecto es el home publico, no el login', () => {
     cy.visit('/');

@@ -9,6 +9,7 @@ describe('Billing: planes, limites y facturacion', () => {
   it('elegir un plan sin cuenta lleva al registro y vuelve a facturacion con el plan resaltado', () => {
     const email = `billing${Date.now()}@example.com`;
     cy.clearLocalStorage();
+    cy.clearCookies();
     cy.visit('/');
     cy.get('#pricing-title').scrollIntoView();
     cy.contains('li', 'Team').within(() => cy.contains('button', 'Choose Team').click());
@@ -42,6 +43,8 @@ describe('Billing: planes, limites y facturacion', () => {
           });
         }
       });
+    // The API login above also put a refresh cookie in the browser: the test logs in through the UI like a user
+    cy.clearCookies();
 
     cy.visit('/login');
     cy.get('input[name="email"]').type(email);

@@ -79,7 +79,8 @@ app.use(morgan(morganFormat));
 if (process.env.NODE_ENV !== 'test') {
   const MIN15 = 15 * 60 * 1000;
   const globalLimiter = rateLimit({ windowMs: MIN15, max: 1000 });
-  const authLimiter = rateLimit({ windowMs: MIN15, max: 20 }); // login / register brute force
+  // login / register brute force. AUTH_RATE_LIMIT_MAX raises it for the e2e suite, which logs in more than 20 times from one IP.
+  const authLimiter = rateLimit({ windowMs: MIN15, max: Number(process.env.AUTH_RATE_LIMIT_MAX) || 20 });
   const heavyLimiter = rateLimit({ windowMs: MIN15, max: 60 }); // AI (paid upstream) and GitHub clone
   // Public mock traffic (own quota gate), Stripe webhook and health probes are not throttled here.
   app.use('/api', (req, res, next) =>

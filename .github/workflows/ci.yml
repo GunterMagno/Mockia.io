@@ -209,6 +209,8 @@ jobs:
           MONGODB_URI: mongodb://localhost:27017/mockia-test
           NODE_ENV: development
           E2E: 'true'
+          # The suite logs in more than the 20-per-15-min brute-force limit of /auth/login and /auth/register
+          AUTH_RATE_LIMIT_MAX: 500
           BACKEND_URL: http://localhost:3000
           JWT_ACCESS_SECRET: test-secret-key-super-secure-for-testing
           JWT_REFRESH_SECRET: test-refresh-secret-key-for-testing

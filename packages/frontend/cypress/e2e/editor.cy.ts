@@ -33,6 +33,8 @@ describe('Editor Flow', () => {
         });
       });
     });
+    // The API login above also put a refresh cookie in the browser: every test logs in through the UI like a user
+    cy.clearCookies();
   });
 
   beforeEach(() => {
