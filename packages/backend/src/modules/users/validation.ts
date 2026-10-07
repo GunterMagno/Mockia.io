@@ -49,3 +49,14 @@ export const updatePreferencesSchema = Joi.object({
       'string.base': `Locale must be one of: ${SUPPORTED_LOCALES.join(', ')}`,
     }),
 });
+
+/**
+ * Validation schema for deleting the account: the password must be re-entered (no max length here, it is only compared).
+ */
+export const deleteAccountSchema = Joi.object({
+  password: Joi.string().required().messages({
+    'any.required': 'Password is required',
+    'string.empty': 'Password is required',
+    'string.base': 'Password is required',
+  }),
+}).unknown(false);

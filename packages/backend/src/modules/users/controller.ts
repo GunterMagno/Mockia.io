@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { getUserProfile, updateUserProfile, changeUserPassword, updateUserLocale } from './service.js';
+import { exportUserData, deleteUserAccount } from './gdpr.js';
+import { clearRefreshCookie } from '../auth/cookie.js';
 import { AuthRequest } from '../../types/auth.js';
 import { asyncHandler } from '../../middlewares/errorHandler.js';
 
@@ -63,4 +65,39 @@ export const updatePreferences = asyncHandler(async (req: AuthRequest, res: Resp
 
   const saved = await updateUserLocale(userId, req.body.locale);
   res.json(saved);
+});
+
+/**
+ * GET /api/users/me/export
+ * Downloads every personal datum of the authenticated user as a JSON attachment (GDPR access / portability).
+ */
+export const exportMyData = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction) => {
+  const userId = req.user?.id;
+  if (!userId) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+
+  const data = await exportUserData(userId);
+  const day = new Date().toISOString().slice(0, 10);
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="mockia-export-${day}.json"`);
+  res.setHeader('Cache-Control', 'no-store');
+  res.send(JSON.stringify(data, null, 2));
+});
+
+/**
+ * DELETE /api/users/me   body: { password }
+ * Permanently deletes the account and all its data (GDPR erasure). 204 and the refresh cookie is cleared.
+ */
+export const deleteMyAccount = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction) => {
+  const userId = req.user?.id;
+  if (!userId) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+
+  await deleteUserAccount(userId, req.body.password);
+  clearRefreshCookie(res);
+  res.status(204).send();
 });

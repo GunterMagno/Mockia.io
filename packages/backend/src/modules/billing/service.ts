@@ -216,6 +216,32 @@ export async function createPortalSession(input: { customerId: string; secretKey
   return { url: data.url };
 }
 
+/**
+ * Cancels a subscription IMMEDIATELY in Stripe (DELETE /v1/subscriptions/{id}): no further charge, no proration refund.
+ * Used by account deletion, which must not leave a live subscription behind. A subscription Stripe no longer knows
+ * (404 resource_missing) counts as already cancelled. The Stripe customer record is kept by Stripe (fiscal duties).
+ *
+ * @throws AppError 502 if Stripe does not confirm the cancellation (the caller must then delete nothing)
+ */
+export async function cancelSubscriptionNow(subscriptionId: string, secretKey: string): Promise<void> {
+  let res: Response;
+  try {
+    res = await fetch(`${STRIPE_API}/subscriptions/${encodeURIComponent(subscriptionId)}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${secretKey}` },
+      signal: AbortSignal.timeout(10_000),
+    });
+  } catch (err) {
+    console.error('[Billing] Stripe subscription cancel failed:', err instanceof Error ? err.message : err);
+    throw new AppError('Could not cancel your subscription. Nothing was deleted; try again later.', ErrorCode.EXTERNAL_SERVICE_ERROR, 502);
+  }
+  if (res.ok) return;
+  const data: any = await res.json().catch(() => ({}));
+  if (res.status === 404 && data?.error?.code === 'resource_missing') return;
+  console.error('[Billing] Stripe subscription cancel failed:', res.status, data?.error?.message);
+  throw new AppError('Could not cancel your subscription. Nothing was deleted; try again later.', ErrorCode.EXTERNAL_SERVICE_ERROR, 502);
+}
+
 /** Plan, limits and usage of the current billing period, for the billing page. */
 export async function getBillingOverview(userId: string, now = new Date()): Promise<BillingOverview> {
   const user = await UserModel.findById(userId)
