@@ -45,8 +45,10 @@ El backend está diseñado bajo principios de **arquitectura de tres capas (MVC 
 
 La autenticación de usuarios se implementa de manera robusta y sin estado utilizando **JSON Web Tokens (JWT)**:
 
-- **Tokens de Acceso (Access Tokens):** Firmados mediante `JWT_ACCESS_SECRET`. Tienen un tiempo de vida corto (1 hora) y deben enviarse en la cabecera `Authorization: Bearer <token>` para proteger las rutas privadas.
-- **Tokens de Refresco (Refresh Tokens):** Almacenados en la base de datos de forma encriptada y firmados mediante `JWT_REFRESH_SECRET` con un vencimiento de 7 días. Se utilizan para regenerar tokens de acceso caducados de forma transparente para el usuario.
+- **Tokens de Acceso (Access Tokens):** Firmados mediante `JWT_ACCESS_SECRET`. Tienen un tiempo de vida corto (15 minutos) y deben enviarse en la cabecera `Authorization: Bearer <token>` para proteger las rutas privadas. El cliente los guarda solo en memoria (una variable de `services/session.ts`), nunca en `localStorage`/`sessionStorage`.
+- **Tokens de Refresco (Refresh Tokens):** Firmados mediante `JWT_REFRESH_SECRET`, con vencimiento de 7 días, rotados en cada uso y respaldados por una sesión en la base de datos (reutilizar uno ya usado revoca la sesión entera). Viajan **solo** en la cookie `mockia_rt`: `HttpOnly` (invisible para JavaScript), `Secure` en producción, `SameSite=Lax` y `Path=/api/auth`. Con «Recordarme» la cookie dura 7 días; sin él es una cookie de sesión y desaparece al cerrar el navegador. Al cargar la aplicación el frontend recupera la sesión con `POST /api/auth/refresh`.
+- **Protección CSRF:** `POST /api/auth/refresh` y `POST /api/auth/logout` autentican con la cookie, por lo que exigen la cabecera `X-Requested-With: mockia` (403 si falta). Un formulario de otro sitio no puede añadirla y un `fetch` entre orígenes necesita una petición previa CORS que la lista de orígenes permitidos rechaza. Se suma a `SameSite=Lax`.
+- **Misma origen en producción:** como la cookie es `SameSite=Lax`, el navegador solo la envía si la SPA y `/api` comparten origen (por eso `nginx.conf` y la regla `rewrite /api/*` de `render.yaml` sirven la API bajo el dominio del frontend). Si algún día front y back viven en sitios distintos, hay que fijar `COOKIE_SAMESITE=none` (fuerza `Secure`, exige HTTPS y `CORS_ORIGIN` explícito); es la excepción, no la configuración recomendada.
 - **Cifrado de Contraseñas:** Se utiliza **bcrypt** con un factor de sal de 10 para encriptar y verificar las claves de usuario de forma segura.
 
 ### Control de Acceso basado en Roles (RBAC)

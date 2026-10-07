@@ -51,7 +51,7 @@ Las pruebas del cliente se implementan bajo el marco de **Cypress**, garantizand
 
 - **Ruta de Archivos:** Residen en `packages/frontend/cypress/e2e/`.
 - **Casos de Uso Automatizados:**
-  - *Flujo Auth:* Registro de nuevo usuario -> Inicio de sesión -> Persistencia de sesión (`localStorage`/`cookies`).
+  - *Flujo Auth:* Registro de nuevo usuario -> Inicio de sesión -> Persistencia de sesión: el token de acceso no se guarda en el almacenamiento web, la cookie `mockia_rt` es HttpOnly (invisible a `document.cookie`), recargar restaura la sesión y cerrar sesión la borra.
   - *Workspace CRUD:* Creación de un proyecto -> Edición del título -> Archivado del proyecto -> Recuperación del listado.
   - *Flujo Mock Editor:* Modificación manual de un esquema JSON de respuesta -> Guardar cambios -> Consumo del mock en local verificando el cambio sin recargar.
 

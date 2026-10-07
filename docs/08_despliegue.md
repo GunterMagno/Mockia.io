@@ -45,6 +45,7 @@ Se utiliza **Nginx** como único punto de entrada de tráfico web de producción
 ### Archivo de Configuración `nginx`.conf:
 1. **Rutas Estáticas (`location /`):** Sirve los archivos CSS, JS e HTML compilados del frontend en `/usr/share/nginx/html`. Habilita `try_files` para redirigir peticiones de rutas inexistentes a `index.html`, permitiendo que el enrutador de React (Client-side routing) resuelva las vistas de la SPA de forma nativa.
 2. **Rutas de API Backend (`location /api/`):** Redirige el tráfico a `http://backend:3000/api/` gestionando las cabeceras del protocolo (Upgrade, Connection) para soportar flujos asíncronos y mantener el puerto del host limpio.
+   Nginx reenvía las cabeceras de respuesta sin tocarlas, `Set-Cookie` incluida, y como API y SPA salen por el mismo origen la cookie `mockia_rt` (`Path=/api/auth`) llega al backend sin configuración adicional. **Producción debe servir la SPA y `/api` bajo un único origen**: con `SameSite=Lax` (por defecto, variable `COOKIE_SAMESITE`) el navegador no envía la cookie entre sitios distintos; por eso `render.yaml` reescribe `/api/*` hacia el backend en lugar de apuntar el frontend a otro dominio `onrender.com`. La cookie es `Secure` en producción: detrás de HTTP plano (que no sea `localhost`) el navegador la descarta y no habría sesión.
 3. **Rutas de Mock Router (`location /mock/`):** Proxy inverso que canaliza el tráfico de clientes externos que consumen sus APIs simuladas a `http://backend:3000/mock/`.
 
 ### Seguridad e Habilitación de HTTPS (SSL/TLS)

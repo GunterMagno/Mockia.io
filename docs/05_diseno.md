@@ -312,11 +312,11 @@ La API Core de Mockia.io sigue principios **RESTful**, utiliza payloads en forma
 | Módulo | Método | Endpoint (Ruta) | Auth | Headers / Parámetros | Descripción / Propósito | Código Éxito | Códigos Error |
 | :--- | :---: | :--- | :---: | :--- | :--- | :---: | :---: |
 | **Autenticación** | `POST` | `/api/auth/register` | No | Body: `username, email, password` | Registra una nueva cuenta de usuario | `201 Created` | `400 Bad Request` |
-| | `POST` | `/api/auth/login` | No | Body: `email, password` | Inicia sesión y obtiene tokens de acceso/refresco | `200 OK` | `401 Unauthorized` |
-| | `POST` | `/api/auth/refresh` | No | Body: `refreshToken` | Rota la sesión: devuelve un access token (15 min) y un refresh token nuevo (7 días); el anterior queda usado y reutilizarlo fuera de 10 s revoca toda la sesión | `200 OK` | `401 Unauthorized` |
-| | `POST` | `/api/auth/logout` | No | Body: `refreshToken` | Revoca la sesión del refresh token (idempotente) | `204 No Content` | `400 Bad Request` |
+| | `POST` | `/api/auth/login` | No | Body: `email, password, remember?` | Inicia sesión: devuelve el access token y el usuario en el cuerpo y fija el refresh token en la cookie HttpOnly `mockia_rt` (7 días con `remember: true`, de sesión sin él) | `200 OK` | `401 Unauthorized` |
+| | `POST` | `/api/auth/refresh` | Cookie | Cookie `mockia_rt` + cabecera `X-Requested-With: mockia` | Rota la sesión: devuelve un access token (15 min) y el usuario, y fija una cookie nueva; la anterior queda usada y reutilizarla fuera de 10 s revoca toda la sesión. Sin cookie válida limpia la cookie | `200 OK` | `401 Unauthorized`, `403 Forbidden` (sin la cabecera) |
+| | `POST` | `/api/auth/logout` | Cookie | Cookie `mockia_rt` + cabecera `X-Requested-With: mockia` | Revoca la sesión de la cookie y la borra (idempotente) | `204 No Content` | `403 Forbidden` (sin la cabecera) |
 | | `POST` | `/api/auth/logout-all` | Sí | `Authorization: Bearer <JWT>` | Revoca todas las sesiones del usuario | `204 No Content` | `401 Unauthorized` |
-| | `GET` | `/api/auth/sessions` | Sí | `Authorization: Bearer <JWT>` | Lista las sesiones activas (`id, createdAt, ip, ua, current`) | `200 OK` | `401 Unauthorized` |
+| | `GET` | `/api/auth/sessions` | Sí | `Authorization: Bearer <JWT>` | Lista las sesiones activas (`id, createdAt, ip, ua, current`; `current` marca la de la cookie de la petición) | `200 OK` | `401 Unauthorized` |
 | | `GET` | `/api/auth/me` | Sí | `Authorization: Bearer <JWT>` | Obtiene el perfil del usuario autenticado actual | `200 OK` | `401 Unauthorized` |
 | **Gestión Proyectos** | `GET` | `/api/projects` | Sí | `Authorization: Bearer <JWT>` | Lista todos los proyectos del usuario | `200 OK` | `401` |
 | | `POST` | `/api/projects` | Sí | Body: `title, description` | Crea un nuevo proyecto en el espacio de trabajo | `201 Created` | `400, 401` |
@@ -364,8 +364,7 @@ Para ilustrar la estructura de datos que maneja el sistema, se exponen a continu
 {
   "success": true,
   "data": {
-    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.refresh...",
+    "tokens": { "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." },
     "user": {
       "id": "6444eb1c4fe01a2f64c679a1",
       "username": "alejandro",
@@ -374,6 +373,7 @@ Para ilustrar la estructura de datos que maneja el sistema, se exponen a continu
   }
 }
 ```
+El refresh token **no** aparece en el cuerpo: llega en la cabecera `Set-Cookie: mockia_rt=...; HttpOnly; SameSite=Lax; Path=/api/auth` (con `Secure` en producción), de modo que ningún script de la página puede leerlo.
 
 #### 2. Crear un Endpoint Mock (`POST /api/endpoints/mi-proyecto-slug`)
 **Petición (JSON):**

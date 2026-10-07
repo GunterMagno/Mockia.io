@@ -44,6 +44,8 @@ Campos del archivo `.env` del backend:
 - `MONGODB_URI`: Cadena de conexión a MongoDB. Para ejecución local nativa: `mongodb://localhost:27017/mockia`.
 - `CORS_ORIGIN`: Origen permitido para CORS. En desarrollo: `http://localhost:5173`.
 - `JWT_ACCESS_SECRET` y `JWT_REFRESH_SECRET`: Claves de encriptación simétrica para firmar los tokens de seguridad JWT de acceso y refresco.
+- `COOKIE_SAMESITE`: Política `SameSite` de la cookie HttpOnly del refresh token: `lax` (por defecto), `strict` o `none` (fuerza `Secure`; solo si frontend y backend están en sitios distintos). En producción la cookie siempre es `Secure`, así que necesita HTTPS (los navegadores aceptan `localhost`).
+- `AUTH_RATE_LIMIT_MAX`: Máximo de `POST /auth/login` y `/auth/register` por IP y 15 minutos (por defecto `20`). Solo se sube para la suite e2e.
 - `OPENROUTER_API_KEY`: API Key para consumir la Inteligencia Artificial de OpenRouter.
 
 ### Frontend (`packages/frontend/.env`)
