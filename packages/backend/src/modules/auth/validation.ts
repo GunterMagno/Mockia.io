@@ -60,3 +60,11 @@ export const refreshSchema = Joi.object({
       'string.empty': 'Refresh token cannot be empty',
     }),
 });
+
+/**
+ * Schema for logout. The token is optional: logout is idempotent and must succeed even
+ * for a client that no longer has (or never had) a refresh token.
+ */
+export const logoutSchema = Joi.object({
+  refreshToken: Joi.string().allow('').optional(),
+});

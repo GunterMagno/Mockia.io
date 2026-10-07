@@ -11,6 +11,13 @@ import type {
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../../services/jwt.service.js';
 import { AppError } from '../../middlewares/errorHandler.js';
 import { ErrorCode } from '@mockia/shared';
+import {
+  createSession,
+  rotateSession,
+  revokeAllForUser,
+  revokeFamilyByJti,
+  type SessionMeta,
+} from './sessions.js';
 
 /**
  * Registers a new user
@@ -84,15 +91,16 @@ export async function verifyPassword(
  * Flow:
  * 1. Find user by email (case-insensitive)
  * 2. Verify the provided password against the stored hash
- * 3. Generate access and refresh tokens
+ * 3. Open a session (new refresh-token family) and generate access and refresh tokens
  * 4. Map user document to DTO and return with tokens
- * 
+ *
  * @param loginRequest - DTO with email and password
+ * @param meta - ip / user agent of the client, stored on the session
  * @returns Object with user DTO and token pair
  * @throws AppError with 401 if credentials are invalid
  * @throws Error if there are database issues
  */
-export async function loginUser(loginRequest: LoginRequest): Promise<LoginResponse> {
+export async function loginUser(loginRequest: LoginRequest, meta: SessionMeta = {}): Promise<LoginResponse> {
   const { email, password } = loginRequest;
 
   // 1. Find user by email or username (case-insensitive)
@@ -122,9 +130,11 @@ export async function loginUser(loginRequest: LoginRequest): Promise<LoginRespon
     );
   }
 
-  // 3. Generate tokens
-  const accessToken = signAccessToken(user._id.toString());
-  const refreshToken = signRefreshToken(user._id.toString());
+  // 3. Open a session and generate tokens
+  const userId = user._id.toString();
+  const session = await createSession(userId, meta);
+  const accessToken = signAccessToken(userId);
+  const refreshToken = signRefreshToken(userId, session.jti);
 
   // 4. Map user to DTO
   const userDTO: UserDTO = {
@@ -145,23 +155,25 @@ export async function loginUser(loginRequest: LoginRequest): Promise<LoginRespon
 }
 
 /**
- * Refreshes expired access token using a valid refresh token
+ * Refreshes an expired access token using a valid refresh token (rotation)
  * 
  * Flow:
- * 1. Verify the refresh token is valid
- * 2. Extract user ID from refresh token payload
- * 3. Generate new access and refresh tokens
+ * 1. Verify the refresh token (signature, expiry, jti)
+ * 2. Rotate its session: the presented token becomes used and a child is issued in the same family.
+ *    A used token replayed outside the grace window revokes the whole family.
+ * 3. Verify the user still exists
+ * 4. Generate new access and refresh tokens
  * 
  * @param refreshToken - Valid JWT refresh token
+ * @param meta - ip / user agent of the client, stored on the new session
  * @returns New token pair
- * @throws AppError with 401 if refresh token is invalid or expired
- * @throws Error if token verification fails
+ * @throws AppError with 401 if the refresh token is invalid, expired, revoked or reused
  */
-export async function refreshTokens(refreshToken: string): Promise<RefreshTokensResponse> {
+export async function refreshTokens(refreshToken: string, meta: SessionMeta = {}): Promise<RefreshTokensResponse> {
   // 1. Verify refresh token
-  let payload;
+  let jti: string;
   try {
-    payload = verifyRefreshToken(refreshToken);
+    jti = verifyRefreshToken(refreshToken).jti;
   } catch (error) {
     throw new AppError(
       'Invalid or expired refresh token',
@@ -170,12 +182,13 @@ export async function refreshTokens(refreshToken: string): Promise<RefreshTokens
     );
   }
 
-  // 2. Extract user ID
-  const userId = payload.sub;
+  // 2. Rotate the session (throws AppError 401 for unknown/expired/revoked/reused)
+  const rotated = await rotateSession(jti, meta);
 
-  // Optional: Verify user still exists
-  const user = await UserModel.findById(userId);
+  // 3. The user may have been deleted since the session was opened
+  const user = await UserModel.findById(rotated.userId);
   if (!user) {
+    await revokeAllForUser(rotated.userId);
     throw new AppError(
       'User not found',
       ErrorCode.UNAUTHORIZED,
@@ -183,12 +196,26 @@ export async function refreshTokens(refreshToken: string): Promise<RefreshTokens
     );
   }
 
-  // 3. Generate new tokens
-  const newAccessToken = signAccessToken(userId);
-  const newRefreshToken = signRefreshToken(userId);
-
+  // 4. Generate new tokens (the session in the database is the source of truth for the user id)
   return {
-    accessToken: newAccessToken,
-    refreshToken: newRefreshToken,
+    accessToken: signAccessToken(rotated.userId),
+    refreshToken: signRefreshToken(rotated.userId, rotated.jti),
   };
+}
+
+/**
+ * Ends the session a refresh token belongs to (revokes its whole family).
+ * Idempotent: an invalid, expired or unknown token is ignored, never an error.
+ *
+ * @param refreshToken - Refresh token of the session to end (optional so that a client without one can still log out)
+ */
+export async function logoutSession(refreshToken?: string): Promise<void> {
+  if (!refreshToken) return;
+  let jti: string;
+  try {
+    jti = verifyRefreshToken(refreshToken).jti;
+  } catch {
+    return;
+  }
+  await revokeFamilyByJti(jti);
 }

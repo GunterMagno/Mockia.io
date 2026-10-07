@@ -313,7 +313,10 @@ La API Core de Mockia.io sigue principios **RESTful**, utiliza payloads en forma
 | :--- | :---: | :--- | :---: | :--- | :--- | :---: | :---: |
 | **Autenticación** | `POST` | `/api/auth/register` | No | Body: `username, email, password` | Registra una nueva cuenta de usuario | `201 Created` | `400 Bad Request` |
 | | `POST` | `/api/auth/login` | No | Body: `email, password` | Inicia sesión y obtiene tokens de acceso/refresco | `200 OK` | `401 Unauthorized` |
-| | `POST` | `/api/auth/refresh` | No | Body: `refreshToken` | Refresca el token de acceso JWT expirado | `200 OK` | `401 Unauthorized` |
+| | `POST` | `/api/auth/refresh` | No | Body: `refreshToken` | Rota la sesión: devuelve un access token (15 min) y un refresh token nuevo (7 días); el anterior queda usado y reutilizarlo fuera de 10 s revoca toda la sesión | `200 OK` | `401 Unauthorized` |
+| | `POST` | `/api/auth/logout` | No | Body: `refreshToken` | Revoca la sesión del refresh token (idempotente) | `204 No Content` | `400 Bad Request` |
+| | `POST` | `/api/auth/logout-all` | Sí | `Authorization: Bearer <JWT>` | Revoca todas las sesiones del usuario | `204 No Content` | `401 Unauthorized` |
+| | `GET` | `/api/auth/sessions` | Sí | `Authorization: Bearer <JWT>` | Lista las sesiones activas (`id, createdAt, ip, ua, current`) | `200 OK` | `401 Unauthorized` |
 | | `GET` | `/api/auth/me` | Sí | `Authorization: Bearer <JWT>` | Obtiene el perfil del usuario autenticado actual | `200 OK` | `401 Unauthorized` |
 | **Gestión Proyectos** | `GET` | `/api/projects` | Sí | `Authorization: Bearer <JWT>` | Lista todos los proyectos del usuario | `200 OK` | `401` |
 | | `POST` | `/api/projects` | Sí | Body: `title, description` | Crea un nuevo proyecto en el espacio de trabajo | `201 Created` | `400, 401` |

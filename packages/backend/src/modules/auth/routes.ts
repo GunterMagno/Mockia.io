@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { register, login, refresh, me } from './controller.js';
-import { registerSchema, loginSchema, refreshSchema } from './validation.js';
+import { register, login, refresh, logout, logoutAll, sessions, me } from './controller.js';
+import { registerSchema, loginSchema, refreshSchema, logoutSchema } from './validation.js';
 import { validate } from '../../middlewares/validateRequest.js';
 import { authenticateToken } from '../../middlewares/authenticateToken.js';
 
@@ -94,6 +94,70 @@ authRouter.post(
   '/refresh',
   validate({ body: refreshSchema }),
   refresh
+);
+
+/**
+ * @swagger
+ * /auth/logout:
+ *   post:
+ *     summary: End a session (revokes the refresh token family). Always 204.
+ *     tags: [Auth]
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *     responses:
+ *       204:
+ *         description: Session ended (also when the token was already invalid)
+ */
+authRouter.post(
+  '/logout',
+  validate({ body: logoutSchema }),
+  logout
+);
+
+/**
+ * @swagger
+ * /auth/logout-all:
+ *   post:
+ *     summary: End every session of the authenticated user
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       204:
+ *         description: All sessions revoked
+ *       401:
+ *         description: Unauthorized
+ */
+authRouter.post(
+  '/logout-all',
+  authenticateToken,
+  logoutAll
+);
+
+/**
+ * @swagger
+ * /auth/sessions:
+ *   get:
+ *     summary: List the authenticated user's live sessions
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: One entry per login with id, createdAt, ip, ua and current
+ *       401:
+ *         description: Unauthorized
+ */
+authRouter.get(
+  '/sessions',
+  authenticateToken,
+  sessions
 );
 
 /**

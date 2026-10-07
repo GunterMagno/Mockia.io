@@ -6,12 +6,19 @@ import jsonwebtoken from 'jsonwebtoken';
  */
 interface TokenPayload {
   sub: string; // user ID
+  jti?: string; // Token ID (refresh tokens only: id of the stored RefreshSession)
   iat?: number; // Issued at
   exp?: number; // Expiration time
 }
 
-const ACCESS_TOKEN_EXPIRES_IN = '1h';
-const REFRESH_TOKEN_EXPIRES_IN = '7d';
+/** Refresh tokens always carry the jti of their RefreshSession. */
+export interface RefreshTokenPayload extends TokenPayload {
+  jti: string;
+}
+
+const ACCESS_TOKEN_EXPIRES_IN = '15m';
+/** Also the lifetime of a RefreshSession (sessions.ts), so the JWT and its stored session expire together. */
+export const REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60;
 const ALGORITHM = 'HS256' as const;
 const MIN_SECRET_LENGTH = 32;
 
@@ -50,6 +57,10 @@ function verifyToken(token: string, secret: string, kind: 'access' | 'refresh'):
     if (typeof payload === 'string' || typeof payload.sub !== 'string' || !payload.sub) {
       throw new Error('malformed payload');
     }
+    // A refresh token without jti (issued before sessions were revocable) cannot be checked against a session.
+    if (kind === 'refresh' && (typeof payload.jti !== 'string' || !payload.jti)) {
+      throw new Error('missing jti');
+    }
     return payload as TokenPayload;
   } catch (error) {
     throw new Error(`Invalid or expired ${kind} token: ${error instanceof Error ? error.message : String(error)}`);
@@ -70,15 +81,17 @@ export function signAccessToken(userId: string): string {
 }
 
 /**
- * Signs a refresh token with user ID
+ * Signs a refresh token with user ID and the jti of its RefreshSession
  * @param userId - The user's unique identifier
+ * @param jti - Id of the stored session this token belongs to (becomes the `jti` claim)
  * @returns Signed JWT refresh token
  * @throws Error if JWT_REFRESH_SECRET is missing or weak
  */
-export function signRefreshToken(userId: string): string {
+export function signRefreshToken(userId: string, jti: string): string {
   return jsonwebtoken.sign({ sub: userId }, getSecret('JWT_REFRESH_SECRET'), {
     algorithm: ALGORITHM,
-    expiresIn: REFRESH_TOKEN_EXPIRES_IN,
+    expiresIn: REFRESH_TOKEN_TTL_SECONDS,
+    jwtid: jti,
   });
 }
 
@@ -95,9 +108,9 @@ export function verifyAccessToken(token: string): TokenPayload {
 /**
  * Verifies a refresh token and returns the payload
  * @param token - The JWT refresh token to verify
- * @returns Token payload including user ID
- * @throws Error if token is invalid or expired
+ * @returns Token payload including user ID and jti
+ * @throws Error if token is invalid, expired or has no jti
  */
-export function verifyRefreshToken(token: string): TokenPayload {
-  return verifyToken(token, getSecret('JWT_REFRESH_SECRET'), 'refresh');
+export function verifyRefreshToken(token: string): RefreshTokenPayload {
+  return verifyToken(token, getSecret('JWT_REFRESH_SECRET'), 'refresh') as RefreshTokenPayload;
 }

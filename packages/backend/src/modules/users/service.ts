@@ -3,6 +3,7 @@ import { UserModel } from '../../models/User.js';
 import type { User as UserDTO } from '@mockia/shared';
 import { AppError } from '../../middlewares/errorHandler.js';
 import { ErrorCode } from '@mockia/shared';
+import { revokeAllForUser } from '../auth/sessions.js';
 
 /**
  * Get user profile by ID
@@ -84,6 +85,8 @@ export async function changeUserPassword(
   // Hash and save new password
   const passwordHash = await bcrypt.hash(newPassword, 10);
   user.passwordHash = passwordHash;
-  
+
   await user.save();
+  // A stolen session must not survive a password change: end every refresh session of the user
+  await revokeAllForUser(userId);
 }
