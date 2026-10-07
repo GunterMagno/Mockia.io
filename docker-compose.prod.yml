@@ -1,14 +1,16 @@
+# Produccion. Todas las variables marcadas con `:?` son OBLIGATORIAS: si falta alguna, `docker compose` aborta
+# (no hay valores por defecto para secretos ni contrasenas). Copia .env.example a .env y rellenalo.
+# El backend ademas se niega a arrancar (assertProdConfig) con CORS "*", contrasena de Mongo por defecto,
+# secretos JWT por defecto/cortos o sin APP_URL.
 services:
-  # MongoDB Database
+  # MongoDB Database (solo accesible desde la red interna de compose: NO se publica ningun puerto al host)
   mongo:
     image: mongo:7.0
     container_name: mockia-mongo-prod
     restart: unless-stopped
-    ports:
-      - '27017:27017'
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:-root}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-password}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:?falta MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:?falta MONGO_INITDB_ROOT_PASSWORD}
     volumes:
       - mongo_data_prod:/data/db
       - mongo_config_prod:/data/configdb
@@ -28,22 +30,29 @@ services:
     container_name: mockia-backend-prod
     restart: unless-stopped
     expose:
-      - "3000" # Expose only internally, Nginx will proxy it
+      - '3000' # Expose only internally, Nginx will proxy it
     environment:
       NODE_ENV: production
       BACKEND_PORT: 3000
       BACKEND_HOST: 0.0.0.0
-      MONGODB_URI: mongodb://${MONGO_INITDB_ROOT_USERNAME:-root}:${MONGO_INITDB_ROOT_PASSWORD:-password}@mongo:27017/mockia?authSource=admin
-      JWT_SECRET: ${JWT_SECRET:-production_secret_key_change_me}
-      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-production_access_key}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-production_refresh_key}
+      MONGODB_URI: mongodb://${MONGO_INITDB_ROOT_USERNAME:?falta MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD:?falta MONGO_INITDB_ROOT_PASSWORD}@mongo:27017/mockia?authSource=admin
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?falta JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?falta JWT_REFRESH_SECRET}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
-      CORS_ORIGIN: '*'
+      CORS_ORIGIN: ${CORS_ORIGIN:?falta CORS_ORIGIN (origen publico del frontend, p. ej. https://app.midominio.com)}
+      APP_URL: ${APP_URL:?falta APP_URL (URL publica de la aplicacion)}
     depends_on:
       mongo:
         condition: service_healthy
     networks:
       - mockia-network-prod
+    healthcheck:
+      # 127.0.0.1 (no localhost): en Alpine localhost puede resolver a ::1 y el backend escucha en IPv4.
+      test: ['CMD-SHELL', 'wget -q -O /dev/null http://127.0.0.1:3000/api/health || exit 1']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   # Frontend Static Server + Reverse Proxy (Nginx)
   frontend:
@@ -55,7 +64,8 @@ services:
     ports:
       - '80:80'
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - mockia-network-prod
 

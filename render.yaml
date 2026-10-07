@@ -6,19 +6,25 @@ services:
     plan: free
     dockerContext: .
     dockerfilePath: packages/backend/Dockerfile.prod
+    healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
         value: production
       - key: MONGODB_URI
-        sync: false # User will need to provide this (e.g. from MongoDB Atlas)
+        sync: false # User will need to provide this (e.g. from MongoDB Atlas); never the default ":password@"
       - key: JWT_ACCESS_SECRET
         generateValue: true
       - key: JWT_REFRESH_SECRET
         generateValue: true
       - key: BACKEND_PORT
         value: 3000
+      # Explicit frontend origin (never "*": the backend refuses to boot in production with an open CORS).
+      # Adjust if you attach a custom domain to the frontend service.
       - key: CORS_ORIGIN
-        value: https://mockia-frontend.onrender.com # Adjust this after first deploy or use wildcards
+        value: https://mockia-frontend.onrender.com
+      # Public URL of the application (the frontend origin: browsers reach the API through it, see routes below).
+      - key: APP_URL
+        value: https://mockia-frontend.onrender.com
       - key: OPENROUTER_API_KEY
         sync: false
 
@@ -29,9 +35,16 @@ services:
     buildCommand: npm install && npm run build:frontend
     staticPublishPath: packages/frontend/dist
     envVars:
+      # Same-origin API: the browser calls /api on the frontend host and Render proxies it to the backend
+      # (routes below). Cookies/CORS then never cross sites (front and back are different sites on onrender.com).
       - key: VITE_API_URL
-        value: https://mockia-backend.onrender.com/api # Replace with your backend URL
+        value: /api
+    # Order matters: rules are evaluated top to bottom and the first match wins, so the API proxy must come
+    # BEFORE the SPA fallback. Update the destination host if the backend service is renamed.
     routes:
+      - type: rewrite
+        source: /api/*
+        destination: https://mockia-backend.onrender.com/api/*
       - type: rewrite
         source: /*
         destination: /index.html
