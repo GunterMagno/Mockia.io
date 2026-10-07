@@ -1,5 +1,6 @@
 import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
@@ -58,7 +59,8 @@ const corsMiddleware = cors({
   credentials: !corsWildcard,
   optionsSuccessStatus: 200,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  // X-Requested-With: the CSRF header of the cookie-based /auth/refresh and /auth/logout
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
 });
 app.use((req, res, next) => {
   // Bypasses the restrictive global CORS domain check for public/mock endpoints,
@@ -99,6 +101,9 @@ app.use(mockQuotaGate);
 // Body size limit (1mb: enough for OpenAPI/spec payloads, cuts memory-exhaustion DoS)
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ limit: '1mb', extended: true }));
+
+// Cookies (the HttpOnly refresh token): must be registered before the auth routes
+app.use(cookieParser());
 
 // ============================================================================
 // HEALTH CHECK ROUTES

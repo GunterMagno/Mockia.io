@@ -3,6 +3,7 @@ import app from '../index.js';
 import { UserModel } from '../models/User.js';
 import { connectDB, disconnectDB } from '../config/connection.js';
 import bcrypt from 'bcrypt';
+import { refreshTokenOf } from './authCookieHelpers.js';
 
 describe('Auth - Login (POST /api/auth/login)', () => {
   beforeAll(async () => {
@@ -49,7 +50,9 @@ describe('Auth - Login (POST /api/auth/login)', () => {
     expect(response.body.data.user).toHaveProperty('email', 'testlogin@example.com');
     expect(response.body.data.user).toHaveProperty('username', 'testloginuser');
     expect(response.body.data.tokens).toHaveProperty('accessToken');
-    expect(response.body.data.tokens).toHaveProperty('refreshToken');
+    // The refresh token travels only in the HttpOnly cookie (see auth.cookie.test.ts), never in the JSON body
+    expect(response.body.data.tokens).not.toHaveProperty('refreshToken');
+    expect(refreshTokenOf(response)).toEqual(expect.any(String));
     // Ensure password is NOT returned
     expect(response.body.data.user).not.toHaveProperty('password');
     expect(response.body.data.user).not.toHaveProperty('passwordHash');
@@ -131,7 +134,8 @@ describe('Auth - Login (POST /api/auth/login)', () => {
         password: 'testpassword123',
       });
 
-    const { accessToken, refreshToken } = response.body.data.tokens;
+    const { accessToken } = response.body.data.tokens;
+    const refreshToken = refreshTokenOf(response)!;
 
     // Basic JWT format check (3 parts separated by dots)
     expect(accessToken).toMatch(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/);

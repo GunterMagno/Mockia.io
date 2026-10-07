@@ -6,14 +6,19 @@ import type { User } from './user.js';
 export interface LoginRequest {
   email: string;
   password: string;
+  /**
+   * "Remember me": the session cookie that carries the refresh token lives 7 days instead of ending with the
+   * browser session. Omitted = false.
+   */
+  remember?: boolean;
 }
 
 /**
- * Authentication tokens pair
+ * Tokens the client gets in a response body. Only the short-lived access token: the refresh token never appears
+ * in a body, it travels in the HttpOnly `mockia_rt` cookie (Set-Cookie on login / refresh).
  */
 export interface AuthTokens {
   accessToken: string;
-  refreshToken: string;
 }
 
 /**
@@ -25,16 +30,10 @@ export interface LoginResponse {
 }
 
 /**
- * Refresh tokens request
- */
-export interface RefreshTokensRequest {
-  refreshToken: string;
-}
-
-/**
- * Refresh tokens response - returned after token refresh
+ * Refresh response (POST /auth/refresh, which reads the refresh cookie and rotates it): a new access token and
+ * the user, so a page that just loaded can restore its session with this single call.
  */
 export interface RefreshTokensResponse {
   accessToken: string;
-  refreshToken: string;
+  user: User;
 }

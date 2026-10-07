@@ -19,6 +19,11 @@ interface RefreshSessionDocument extends Document {
   revokedAt?: Date;
   /** Hard expiry; Mongo deletes the document shortly after (TTL index). */
   expiresAt: Date;
+  /**
+   * The user asked to be remembered at login: the cookie that carries this token outlives the browser session
+   * (Max-Age 7 d). Inherited by every child of the family so the choice survives rotation.
+   */
+  persistent: boolean;
   ip?: string;
   ua?: string;
   createdAt: Date;
@@ -32,6 +37,7 @@ const refreshSessionSchema = new Schema<RefreshSessionDocument>(
     usedAt: { type: Date },
     revokedAt: { type: Date },
     expiresAt: { type: Date, required: true },
+    persistent: { type: Boolean, default: false },
     ip: { type: String },
     ua: { type: String },
   },

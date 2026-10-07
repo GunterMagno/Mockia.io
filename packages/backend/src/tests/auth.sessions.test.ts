@@ -7,6 +7,7 @@ import { connectDB, disconnectDB } from '../config/connection.js';
 import { rotateSession, revokeFamily, createSession } from '../modules/auth/sessions.js';
 import { AppError } from '../middlewares/errorHandler.js';
 import bcrypt from 'bcrypt';
+import { CSRF_HEADERS, RT_COOKIE, refreshTokenOf } from './authCookieHelpers.js';
 
 const EMAIL = 'sessions@example.com';
 const PASSWORD = 'sessionpass123';
@@ -16,14 +17,31 @@ interface Tokens {
   refreshToken: string;
 }
 
+// The refresh token travels in the HttpOnly `mockia_rt` cookie (never in a JSON body): login/refresh hand it out in
+// Set-Cookie and refresh/logout read it from the Cookie header, guarded by the X-Requested-With CSRF header.
 async function login(): Promise<Tokens> {
   const res = await request(app).post('/api/auth/login').set('User-Agent', 'jest-agent').send({ email: EMAIL, password: PASSWORD });
   expect(res.status).toBe(200);
-  return res.body.data.tokens;
+  return { accessToken: res.body.data.tokens.accessToken, refreshToken: refreshTokenOf(res)! };
 }
 
 const refresh = (refreshToken: string) =>
-  request(app).post('/api/auth/refresh').set('User-Agent', 'jest-agent').send({ refreshToken });
+  request(app)
+    .post('/api/auth/refresh')
+    .set('User-Agent', 'jest-agent')
+    .set(CSRF_HEADERS)
+    .set('Cookie', `${RT_COOKIE}=${refreshToken}`);
+
+/** Token pair of a successful refresh response: access token from the body, refresh token from Set-Cookie. */
+const rotated = (res: request.Response): Tokens => ({
+  accessToken: res.body.data.accessToken,
+  refreshToken: refreshTokenOf(res)!,
+});
+
+const logout = (refreshToken?: string) => {
+  const req = request(app).post('/api/auth/logout').set(CSRF_HEADERS);
+  return refreshToken === undefined ? req : req.set('Cookie', `${RT_COOKIE}=${refreshToken}`);
+};
 const jtiOf = (token: string) => (jsonwebtoken.decode(token) as { jti: string }).jti;
 
 describe('Auth - sessions with rotated, revocable refresh tokens', () => {
@@ -80,7 +98,7 @@ describe('Auth - sessions with rotated, revocable refresh tokens', () => {
         .post('/api/auth/login')
         .set('User-Agent', 'x'.repeat(1000))
         .send({ email: EMAIL, password: PASSWORD });
-      const session = await RefreshSessionModel.findOne({ jti: jtiOf(res.body.data.tokens.refreshToken) });
+      const session = await RefreshSessionModel.findOne({ jti: jtiOf(refreshTokenOf(res)!) });
       expect(session!.ip).toEqual(expect.any(String));
       expect(session!.ua).toHaveLength(256);
     });
@@ -107,7 +125,7 @@ describe('Auth - sessions with rotated, revocable refresh tokens', () => {
 
       const res = await refresh(first.refreshToken);
       expect(res.status).toBe(200);
-      const second: Tokens = res.body.data;
+      const second = rotated(res);
       expect(second.accessToken).toEqual(expect.any(String));
       expect(second.refreshToken).not.toBe(first.refreshToken);
       expect(jtiOf(second.refreshToken)).not.toBe(jtiOf(first.refreshToken));
@@ -125,7 +143,7 @@ describe('Auth - sessions with rotated, revocable refresh tokens', () => {
 
     it('(b) reusing a used token after the 10 s grace revokes the whole family, including the newest token', async () => {
       const first = await login();
-      const second: Tokens = (await refresh(first.refreshToken)).body.data;
+      const second = rotated(await refresh(first.refreshToken));
 
       // Make the first token "used" 11 s ago
       await RefreshSessionModel.updateOne({ jti: jtiOf(first.refreshToken) }, { usedAt: new Date(Date.now() - 11_000) });
@@ -144,11 +162,11 @@ describe('Auth - sessions with rotated, revocable refresh tokens', () => {
 
     it('(c) reusing a used token within the 10 s grace does not revoke: it issues another child (concurrent tabs)', async () => {
       const first = await login();
-      const second: Tokens = (await refresh(first.refreshToken)).body.data;
+      const second = rotated(await refresh(first.refreshToken));
 
       const again = await refresh(first.refreshToken);
       expect(again.status).toBe(200);
-      const third: Tokens = again.body.data;
+      const third = rotated(again);
       expect(jtiOf(third.refreshToken)).not.toBe(jtiOf(second.refreshToken));
 
       const family = await RefreshSessionModel.find({ userId });
@@ -164,7 +182,7 @@ describe('Auth - sessions with rotated, revocable refresh tokens', () => {
       const [r1, r2] = await Promise.all([refresh(first.refreshToken), refresh(first.refreshToken)]);
       expect(r1.status).toBe(200);
       expect(r2.status).toBe(200);
-      expect(jtiOf(r1.body.data.refreshToken)).not.toBe(jtiOf(r2.body.data.refreshToken));
+      expect(jtiOf(refreshTokenOf(r1)!)).not.toBe(jtiOf(refreshTokenOf(r2)!));
       expect(await RefreshSessionModel.countDocuments({ userId, revokedAt: { $exists: true } })).toBe(0);
     });
 
@@ -227,27 +245,27 @@ describe('Auth - sessions with rotated, revocable refresh tokens', () => {
     it('(d) invalidates the refresh token and is idempotent (always 204)', async () => {
       const { refreshToken } = await login();
 
-      const out = await request(app).post('/api/auth/logout').send({ refreshToken });
+      const out = await logout(refreshToken);
       expect(out.status).toBe(204);
       expect((await refresh(refreshToken)).status).toBe(401);
 
-      expect((await request(app).post('/api/auth/logout').send({ refreshToken })).status).toBe(204);
-      expect((await request(app).post('/api/auth/logout').send({ refreshToken: 'garbage' })).status).toBe(204);
-      expect((await request(app).post('/api/auth/logout').send({})).status).toBe(204);
+      expect((await logout(refreshToken)).status).toBe(204);
+      expect((await logout('garbage')).status).toBe(204);
+      expect((await logout()).status).toBe(204);
     });
 
     it('revokes the whole family, even when called with an older (already used) token', async () => {
       const first = await login();
-      const second: Tokens = (await refresh(first.refreshToken)).body.data;
+      const second = rotated(await refresh(first.refreshToken));
 
-      expect((await request(app).post('/api/auth/logout').send({ refreshToken: first.refreshToken })).status).toBe(204);
+      expect((await logout(first.refreshToken)).status).toBe(204);
       expect((await refresh(second.refreshToken)).status).toBe(401);
     });
 
     it('does not touch other sessions of the same user', async () => {
       const a = await login();
       const b = await login();
-      await request(app).post('/api/auth/logout').send({ refreshToken: a.refreshToken });
+      await logout(a.refreshToken);
       expect((await refresh(b.refreshToken)).status).toBe(200);
     });
   });
@@ -261,7 +279,7 @@ describe('Auth - sessions with rotated, revocable refresh tokens', () => {
     it('GET /sessions lists one live row per family without exposing the family id', async () => {
       const a = await login();
       const b = await login();
-      const rotated: Tokens = (await refresh(a.refreshToken)).body.data;
+      const rotatedA = rotated(await refresh(a.refreshToken));
 
       const res = await request(app)
         .get('/api/auth/sessions')
@@ -270,7 +288,7 @@ describe('Auth - sessions with rotated, revocable refresh tokens', () => {
       const rows = res.body.data as Array<Record<string, unknown>>;
       expect(rows).toHaveLength(2);
       const ids = rows.map((r) => r.id);
-      expect(ids).toEqual(expect.arrayContaining([jtiOf(b.refreshToken), jtiOf(rotated.refreshToken)]));
+      expect(ids).toEqual(expect.arrayContaining([jtiOf(b.refreshToken), jtiOf(rotatedA.refreshToken)]));
       expect(ids).not.toContain(jtiOf(a.refreshToken)); // used parent is not listed
       for (const row of rows) {
         expect(Object.keys(row).sort()).toEqual(['createdAt', 'current', 'id', 'ip', 'ua']);

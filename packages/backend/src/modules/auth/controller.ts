@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import { registerUser, loginUser, refreshTokens, logoutSession } from './service.js';
+import { registerUser, loginUser, refreshTokens, logoutSession, refreshTokenJti, type IssuedSession } from './service.js';
 import { revokeAllForUser, listActiveSessions, type SessionMeta } from './sessions.js';
+import { setRefreshCookie, clearRefreshCookie, readRefreshCookie } from './cookie.js';
 import type { AuthenticatedRequest } from '../../middlewares/authenticateToken.js';
 import type { 
   CreateUserRequest,
@@ -8,7 +9,7 @@ import type {
   LoginResponse, 
   RefreshTokensResponse 
 } from '@mockia/shared';
-import { asyncHandler } from '../../middlewares/errorHandler.js';
+import { AppError, asyncHandler } from '../../middlewares/errorHandler.js';
 
 /**
  * Controller for user registration
@@ -53,15 +54,16 @@ export const register = asyncHandler(
 
 /**
  * POST /api/auth/login
- * Authenticates a user and returns JWT tokens
+ * Authenticates a user: the access token comes in the body, the refresh token in the HttpOnly `mockia_rt` cookie.
  *
  * Expected body:
  * {
  *   "email": "user@example.com",
- *   "password": "password123"
+ *   "password": "password123",
+ *   "remember": true            (optional: the cookie lives 7 days instead of ending with the browser session)
  * }
  *
- * @returns 200 with user data and { accessToken, refreshToken }
+ * @returns 200 with { user, tokens: { accessToken } } and Set-Cookie: mockia_rt
  * @throws 400 if validation fails
  * @throws 401 if credentials are invalid
  */
@@ -69,13 +71,14 @@ export const login = asyncHandler(
   async (req: Request<{}, {}, LoginRequest>, res: Response, next: NextFunction) => {
     const loginRequest: LoginRequest = req.body;
 
-    // Call the service to authenticate
-    const loginResponse: LoginResponse = await loginUser(loginRequest, sessionMeta(req));
+    const { user, accessToken, refreshToken, persistent } = await loginUser(loginRequest, sessionMeta(req));
+    setRefreshCookie(res, refreshToken, persistent);
 
-    // Respond with 200 OK and the user data + tokens
+    // The refresh token must never reach the body (page scripts can read bodies, not HttpOnly cookies)
+    const data: LoginResponse = { user, tokens: { accessToken } };
     res.status(200).json({
       success: true,
-      data: loginResponse,
+      data,
       timestamp: new Date().toISOString(),
     });
   }
@@ -83,28 +86,31 @@ export const login = asyncHandler(
 
 /**
  * POST /api/auth/refresh
- * Refreshes the access token using a valid refresh token
+ * Exchanges the refresh cookie for a new access token and a rotated cookie.
+ * Requires the `X-Requested-With: mockia` header (CSRF defence, see requireCsrfHeader in the route).
+ * The refresh token is read ONLY from the cookie; a body is ignored.
  *
- * Expected body:
- * {
- *   "refreshToken": "<jwt-refresh-token>"
- * }
- *
- * @returns 200 with new { accessToken, refreshToken }
- * @throws 400 if validation fails
- * @throws 401 if refresh token is invalid or expired
+ * @returns 200 with { accessToken, user } and a new Set-Cookie: mockia_rt (same lifetime policy as the login)
+ * @throws 401 if the cookie is missing, invalid, expired, revoked or reused (the cookie is cleared)
+ * @throws 403 if the CSRF header is missing
  */
 export const refresh = asyncHandler(
-  async (req: Request<{}, {}, { refreshToken: string }>, res: Response, next: NextFunction) => {
-    const { refreshToken } = req.body;
+  async (req: Request, res: Response, next: NextFunction) => {
+    let issued: IssuedSession;
+    try {
+      issued = await refreshTokens(readRefreshCookie(req), sessionMeta(req));
+    } catch (err) {
+      // The session is gone (no/invalid/expired/revoked/reused token): drop the dead cookie. A server error
+      // (e.g. database down) keeps it, since the user may still hold a perfectly valid session.
+      if (err instanceof AppError && err.statusCode === 401) clearRefreshCookie(res);
+      throw err;
+    }
+    setRefreshCookie(res, issued.refreshToken, issued.persistent);
 
-    // Call the service to refresh tokens
-    const newTokens: RefreshTokensResponse = await refreshTokens(refreshToken, sessionMeta(req));
-
-    // Respond with 200 OK and the new token pair
+    const data: RefreshTokensResponse = { accessToken: issued.accessToken, user: issued.user };
     res.status(200).json({
       success: true,
-      data: newTokens,
+      data,
       timestamp: new Date().toISOString(),
     });
   }
@@ -112,14 +118,15 @@ export const refresh = asyncHandler(
 
 /**
  * POST /api/auth/logout
- * Revokes the session (refresh-token family) the given refresh token belongs to.
- * Idempotent: always 204, even for an unknown, expired or missing token.
- *
- * Expected body: { "refreshToken": "<jwt-refresh-token>" }
+ * Revokes the session (refresh-token family) the cookie belongs to and clears the cookie.
+ * Idempotent: always 204, even for an unknown, expired or missing cookie.
+ * Requires the `X-Requested-With: mockia` header (403 otherwise; nothing is revoked or cleared).
  */
 export const logout = asyncHandler(
-  async (req: Request<{}, {}, { refreshToken?: string }>, res: Response, next: NextFunction) => {
-    await logoutSession(req.body?.refreshToken);
+  async (req: Request, res: Response, next: NextFunction) => {
+    // Cleared first: even if revoking fails the browser stops holding the credential
+    clearRefreshCookie(res);
+    await logoutSession(readRefreshCookie(req));
     res.status(204).send();
   }
 );
@@ -140,11 +147,12 @@ export const logoutAll = asyncHandler(async (req: Request, res: Response) => {
  * GET /api/auth/sessions
  * Lists the authenticated user's live sessions (one per login).
  *
- * @returns 200 with [{ id, createdAt, ip, ua, current }]
+ * @returns 200 with [{ id, createdAt, ip, ua, current }] (`current`: the login of the request's refresh cookie)
  */
 export const sessions = asyncHandler(async (req: Request, res: Response) => {
   const userId = (req as AuthenticatedRequest).user!.id;
-  const data = await listActiveSessions(userId);
+  // The refresh cookie (Path /api/auth also covers this route) tells which listed login is the caller's
+  const data = await listActiveSessions(userId, refreshTokenJti(readRefreshCookie(req)));
   res.status(200).json({
     success: true,
     data,

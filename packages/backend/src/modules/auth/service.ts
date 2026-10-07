@@ -1,12 +1,10 @@
 import bcrypt from 'bcrypt';
-import { UserModel } from '../../models/User.js';
+import { UserModel, type UserDocument } from '../../models/User.js';
 import { DuplicateUserError } from '../../models/errors.js';
 import type { 
   CreateUserRequest, 
   User as UserDTO,
-  LoginRequest,
-  LoginResponse,
-  RefreshTokensResponse 
+  LoginRequest
 } from '@mockia/shared';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../../services/jwt.service.js';
 import { AppError } from '../../middlewares/errorHandler.js';
@@ -18,6 +16,28 @@ import {
   revokeFamilyByJti,
   type SessionMeta,
 } from './sessions.js';
+
+/**
+ * What the service hands to the controller after opening or renewing a session.
+ * The controller sends `accessToken` (and `user`) in the JSON body and `refreshToken` ONLY in the HttpOnly cookie;
+ * `persistent` decides whether that cookie outlives the browser session ("remember me").
+ */
+export interface IssuedSession {
+  user: UserDTO;
+  accessToken: string;
+  refreshToken: string;
+  persistent: boolean;
+}
+
+function toUserDTO(user: UserDocument): UserDTO {
+  return {
+    id: user._id.toString(),
+    email: user.email,
+    username: user.username,
+    createdAt: user.createdAt.toISOString(),
+    updatedAt: user.updatedAt.toISOString(),
+  };
+}
 
 /**
  * Registers a new user
@@ -94,14 +114,15 @@ export async function verifyPassword(
  * 3. Open a session (new refresh-token family) and generate access and refresh tokens
  * 4. Map user document to DTO and return with tokens
  *
- * @param loginRequest - DTO with email and password
+ * @param loginRequest - DTO with email, password and the optional "remember me" flag
  * @param meta - ip / user agent of the client, stored on the session
- * @returns Object with user DTO and token pair
+ * @returns The user plus the issued tokens (the refresh token is for the cookie, not for the response body)
  * @throws AppError with 401 if credentials are invalid
  * @throws Error if there are database issues
  */
-export async function loginUser(loginRequest: LoginRequest, meta: SessionMeta = {}): Promise<LoginResponse> {
+export async function loginUser(loginRequest: LoginRequest, meta: SessionMeta = {}): Promise<IssuedSession> {
   const { email, password } = loginRequest;
+  const persistent = loginRequest.remember === true;
 
   // 1. Find user by email or username (case-insensitive)
   const identifier = email.toLowerCase();
@@ -132,26 +153,12 @@ export async function loginUser(loginRequest: LoginRequest, meta: SessionMeta = 
 
   // 3. Open a session and generate tokens
   const userId = user._id.toString();
-  const session = await createSession(userId, meta);
+  const session = await createSession(userId, meta, persistent);
   const accessToken = signAccessToken(userId);
   const refreshToken = signRefreshToken(userId, session.jti);
 
   // 4. Map user to DTO
-  const userDTO: UserDTO = {
-    id: user._id.toString(),
-    email: user.email,
-    username: user.username,
-    createdAt: user.createdAt.toISOString(),
-    updatedAt: user.updatedAt.toISOString(),
-  };
-
-  return {
-    user: userDTO,
-    tokens: {
-      accessToken,
-      refreshToken,
-    },
-  };
+  return { user: toUserDTO(user), accessToken, refreshToken, persistent };
 }
 
 /**
@@ -164,17 +171,15 @@ export async function loginUser(loginRequest: LoginRequest, meta: SessionMeta = 
  * 3. Verify the user still exists
  * 4. Generate new access and refresh tokens
  * 
- * @param refreshToken - Valid JWT refresh token
+ * @param refreshToken - JWT refresh token from the cookie (undefined = the browser sent none)
  * @param meta - ip / user agent of the client, stored on the new session
- * @returns New token pair
- * @throws AppError with 401 if the refresh token is invalid, expired, revoked or reused
+ * @returns The user plus the new tokens (the new refresh token goes back into the cookie, with the same lifetime policy)
+ * @throws AppError with 401 if the refresh token is missing, invalid, expired, revoked or reused
  */
-export async function refreshTokens(refreshToken: string, meta: SessionMeta = {}): Promise<RefreshTokensResponse> {
+export async function refreshTokens(refreshToken: string | undefined, meta: SessionMeta = {}): Promise<IssuedSession> {
   // 1. Verify refresh token
-  let jti: string;
-  try {
-    jti = verifyRefreshToken(refreshToken).jti;
-  } catch (error) {
+  const jti = refreshTokenJti(refreshToken);
+  if (!jti) {
     throw new AppError(
       'Invalid or expired refresh token',
       ErrorCode.UNAUTHORIZED,
@@ -198,9 +203,24 @@ export async function refreshTokens(refreshToken: string, meta: SessionMeta = {}
 
   // 4. Generate new tokens (the session in the database is the source of truth for the user id)
   return {
+    user: toUserDTO(user),
     accessToken: signAccessToken(rotated.userId),
     refreshToken: signRefreshToken(rotated.userId, rotated.jti),
+    persistent: rotated.persistent,
   };
+}
+
+/**
+ * jti of a refresh token, or undefined when there is no token or it is not a valid, unexpired refresh JWT
+ * (bad signature, expired, an access token, no jti).
+ */
+export function refreshTokenJti(refreshToken: string | undefined): string | undefined {
+  if (!refreshToken) return undefined;
+  try {
+    return verifyRefreshToken(refreshToken).jti;
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -210,12 +230,6 @@ export async function refreshTokens(refreshToken: string, meta: SessionMeta = {}
  * @param refreshToken - Refresh token of the session to end (optional so that a client without one can still log out)
  */
 export async function logoutSession(refreshToken?: string): Promise<void> {
-  if (!refreshToken) return;
-  let jti: string;
-  try {
-    jti = verifyRefreshToken(refreshToken).jti;
-  } catch {
-    return;
-  }
-  await revokeFamilyByJti(jti);
+  const jti = refreshTokenJti(refreshToken);
+  if (jti) await revokeFamilyByJti(jti);
 }

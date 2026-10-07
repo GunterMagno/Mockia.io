@@ -29,6 +29,8 @@ export interface SessionRef {
 
 export interface RotatedSession extends SessionRef {
   userId: string;
+  /** "Remember me" choice of the login, inherited from the parent so it survives every rotation. */
+  persistent: boolean;
 }
 
 /** Public shape of a live session (the family id stays internal). */
@@ -38,7 +40,7 @@ export interface ActiveSessionInfo {
   createdAt: Date;
   ip?: string;
   ua?: string;
-  /** Always false until the refresh token travels in a cookie that identifies the calling session. */
+  /** True for the login the request's refresh cookie belongs to (false for every row when the request has none). */
   current: boolean;
 }
 
@@ -46,22 +48,32 @@ function unauthorized(): AppError {
   return new AppError('Invalid or expired refresh token', ErrorCode.UNAUTHORIZED, 401);
 }
 
-async function insertSession(userId: string, familyId: string, meta: SessionMeta): Promise<SessionRef> {
+async function insertSession(
+  userId: string,
+  familyId: string,
+  meta: SessionMeta,
+  persistent: boolean
+): Promise<SessionRef> {
   const jti = randomUUID();
   await RefreshSessionModel.create({
     jti,
     familyId,
     userId,
     expiresAt: new Date(Date.now() + SESSION_TTL_MS),
+    persistent,
     ip: meta.ip,
     ua: meta.ua?.slice(0, MAX_UA_LENGTH),
   });
   return { jti, familyId };
 }
 
-/** Starts a new family (a login) and returns its first refresh session. */
-export async function createSession(userId: string, meta: SessionMeta): Promise<SessionRef> {
-  return insertSession(userId, randomUUID(), meta);
+/**
+ * Starts a new family (a login) and returns its first refresh session.
+ *
+ * @param persistent - the user ticked "remember me": the cookie will outlive the browser session (see cookie.ts)
+ */
+export async function createSession(userId: string, meta: SessionMeta, persistent = false): Promise<SessionRef> {
+  return insertSession(userId, randomUUID(), meta, persistent);
 }
 
 /**
@@ -98,7 +110,8 @@ export async function rotateSession(jti: string, meta: SessionMeta = {}): Promis
 
   const familyId = parent.familyId;
   const userId = parent.userId.toString();
-  const child = await insertSession(userId, familyId, meta);
+  const persistent = parent.persistent === true;
+  const child = await insertSession(userId, familyId, meta, persistent);
 
   // A revocation that ran between the claim and the insert did not see the child: close that gap.
   const familyRevoked = await RefreshSessionModel.exists({ familyId, revokedAt: { $ne: null } });
@@ -107,7 +120,7 @@ export async function rotateSession(jti: string, meta: SessionMeta = {}): Promis
     throw unauthorized();
   }
 
-  return { jti: child.jti, familyId, userId };
+  return { jti: child.jti, familyId, userId, persistent };
 }
 
 /** Revokes every session of one login chain. Idempotent. */
@@ -129,8 +142,14 @@ export async function revokeAllForUser(userId: string): Promise<void> {
 /**
  * Live sessions of a user, one per login (the newest live token of each family), newest first.
  * Used tokens, revoked and expired sessions are not listed.
+ *
+ * @param currentJti - jti of the refresh token the calling browser holds (its cookie): the login that token belongs
+ *   to is flagged `current`. A token of another user's session never matches.
  */
-export async function listActiveSessions(userId: string): Promise<ActiveSessionInfo[]> {
+export async function listActiveSessions(userId: string, currentJti?: string): Promise<ActiveSessionInfo[]> {
+  const currentFamilyId = currentJti
+    ? (await RefreshSessionModel.findOne({ jti: currentJti, userId }).select('familyId'))?.familyId
+    : undefined;
   const live = await RefreshSessionModel.find({
     userId,
     usedAt: null,
@@ -144,7 +163,13 @@ export async function listActiveSessions(userId: string): Promise<ActiveSessionI
   for (const s of live) {
     if (seenFamilies.has(s.familyId)) continue;
     seenFamilies.add(s.familyId);
-    sessions.push({ id: s.jti, createdAt: s.createdAt, ip: s.ip, ua: s.ua, current: false });
+    sessions.push({
+      id: s.jti,
+      createdAt: s.createdAt,
+      ip: s.ip,
+      ua: s.ua,
+      current: currentFamilyId !== undefined && s.familyId === currentFamilyId,
+    });
   }
   return sessions;
 }

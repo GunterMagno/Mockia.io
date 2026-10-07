@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { register, login, refresh, logout, logoutAll, sessions, me } from './controller.js';
-import { registerSchema, loginSchema, refreshSchema, logoutSchema } from './validation.js';
+import { registerSchema, loginSchema } from './validation.js';
+import { requireCsrfHeader } from './cookie.js';
 import { validate } from '../../middlewares/validateRequest.js';
 import { authenticateToken } from '../../middlewares/authenticateToken.js';
 
@@ -66,9 +67,12 @@ authRouter.post(
  *                 type: string
  *               password:
  *                 type: string
+ *               remember:
+ *                 type: boolean
+ *                 description: Keep the session cookie for 7 days instead of ending it with the browser session
  *     responses:
  *       200:
- *         description: Login successful
+ *         description: Login successful. The body carries the access token; the refresh token is set in the HttpOnly mockia_rt cookie.
  *       401:
  *         description: Invalid credentials
  */
@@ -79,20 +83,30 @@ authRouter.post(
 );
 
 /**
- * POST /api/auth/refresh
- * Refreshes the access token using a valid refresh token
- *
- * Validations:
- * - refreshToken: required, must be a valid JWT
- *
- * Responses:
- * - 200: Token refresh successful, returns new tokens
- * - 400: Invalid input data
- * - 401: Invalid or expired refresh token
+ * @swagger
+ * /auth/refresh:
+ *   post:
+ *     summary: Renew the session from the HttpOnly mockia_rt cookie (rotates it)
+ *     tags: [Auth]
+ *     parameters:
+ *       - in: header
+ *         name: X-Requested-With
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [mockia]
+ *         description: CSRF defence. Any other value (or none) is rejected with 403.
+ *     responses:
+ *       200:
+ *         description: New access token and the user; a new refresh token is set in the cookie
+ *       401:
+ *         description: Cookie missing, invalid, expired, revoked or reused (the cookie is cleared)
+ *       403:
+ *         description: Missing X-Requested-With header
  */
 authRouter.post(
   '/refresh',
-  validate({ body: refreshSchema }),
+  requireCsrfHeader,
   refresh
 );
 
@@ -100,23 +114,25 @@ authRouter.post(
  * @swagger
  * /auth/logout:
  *   post:
- *     summary: End a session (revokes the refresh token family). Always 204.
+ *     summary: End a session (revokes the family of the mockia_rt cookie and clears it). Always 204.
  *     tags: [Auth]
- *     requestBody:
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               refreshToken:
- *                 type: string
+ *     parameters:
+ *       - in: header
+ *         name: X-Requested-With
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [mockia]
+ *         description: CSRF defence. Any other value (or none) is rejected with 403.
  *     responses:
  *       204:
- *         description: Session ended (also when the token was already invalid)
+ *         description: Session ended (also when the cookie was missing or already invalid)
+ *       403:
+ *         description: Missing X-Requested-With header
  */
 authRouter.post(
   '/logout',
-  validate({ body: logoutSchema }),
+  requireCsrfHeader,
   logout
 );
 

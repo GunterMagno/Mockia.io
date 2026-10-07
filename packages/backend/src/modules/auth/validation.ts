@@ -46,25 +46,12 @@ export const loginSchema = Joi.object({
     .messages({
       'any.required': 'Password is required',
     }),
-});
-
-/**
- * Schema for refresh token validation
- * Validates refresh token is provided
- */
-export const refreshSchema = Joi.object({
-  refreshToken: Joi.string()
-    .required()
+  // "Remember me": decides whether the refresh cookie outlives the browser session (7 d) or not
+  remember: Joi.boolean()
+    .optional()
     .messages({
-      'any.required': 'Refresh token is required',
-      'string.empty': 'Refresh token cannot be empty',
+      'boolean.base': 'Remember must be true or false',
     }),
 });
 
-/**
- * Schema for logout. The token is optional: logout is idempotent and must succeed even
- * for a client that no longer has (or never had) a refresh token.
- */
-export const logoutSchema = Joi.object({
-  refreshToken: Joi.string().allow('').optional(),
-});
+// No schemas for refresh / logout: the refresh token comes from the HttpOnly cookie, never from the body.
