@@ -22,7 +22,7 @@ import { specs } from './config/swagger.js';
 import { billingRouter } from './modules/billing/routes.js';
 import { mockQuotaGate } from './middlewares/planGate.js';
 import { flushUsage } from './modules/billing/usage.js';
-import { rateLimit } from './middlewares/rateLimit.js';
+import { rateLimit, isStrictAuthPath } from './middlewares/rateLimit.js';
 import { authenticateToken } from './middlewares/authenticateToken.js';
 import { authorizeRole } from './middlewares/authorizeRole.js';
 import { assertJwtConfig } from './services/jwt.service.js';
@@ -86,7 +86,7 @@ if (process.env.NODE_ENV !== 'test') {
   // Only the credential endpoints get the strict bucket. /refresh and /logout need a signed token (nothing to brute-force)
   // and every active client calls /refresh every 15 min: sharing the 20-per-IP bucket would lock out users behind one NAT.
   app.use('/api/auth', (req, res, next) =>
-    req.method === 'POST' && /^\/(login|register)\/?$/.test(req.path) ? authLimiter(req, res, next) : next()
+    req.method === 'POST' && isStrictAuthPath(req.path) ? authLimiter(req, res, next) : next()
   );
   app.use('/api/ai', heavyLimiter);
   app.use('/api/github', heavyLimiter);

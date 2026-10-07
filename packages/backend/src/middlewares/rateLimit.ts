@@ -51,3 +51,13 @@ export function rateLimit(opts: RateLimitOptions) {
     next();
   };
 }
+
+/**
+ * True for the credential endpoints under /api/auth (login, register) that get the strict brute-force bucket.
+ * `path` is relative to the /api/auth mount. Express routes case-insensitively and tolerates a trailing slash,
+ * so /LOGIN and /login/ reach the same handler and must hit the same bucket: the match ignores case and any
+ * run of leading or trailing slashes.
+ */
+export function isStrictAuthPath(path: string): boolean {
+  return /^\/*(login|register)\/*$/i.test(path);
+}
