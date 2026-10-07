@@ -488,6 +488,27 @@ const en = {
     newPassword: 'New password',
     updated: 'Profile updated successfully!',
     logOut: 'Log out',
+    account: {
+      title: 'Your data',
+      intro: 'Download a copy of everything we store about you, or delete your account for good.',
+      download: 'Download my data',
+      downloading: 'Preparing your file…',
+      downloaded: 'Your data file was downloaded.',
+      delete: 'Delete account',
+      deleteTitle: 'Delete your account',
+      warning:
+        'This permanently deletes your account, projects, endpoints, notifications and sessions. It cannot be undone. Any active subscription is cancelled immediately and is not refunded. Invoices stay with our payment provider because the law requires it.',
+      emailLabel: 'Type your email ({email}) to confirm',
+      passwordLabel: 'Your password',
+      confirm: 'Delete my account permanently',
+      deleting: 'Deleting…',
+      wrongPassword: 'That password is not correct. Nothing was deleted.',
+      subscriptionFailed: 'We could not cancel your subscription, so nothing was deleted. Try again in a few minutes.',
+      subscriptionUnavailable:
+        'Your account has an active subscription but payments are not available on this server, so it cannot be cancelled. Nothing was deleted; contact support.',
+      deletedNotice: 'Your account and its data were deleted.',
+      dismissNotice: 'Dismiss',
+    },
   },
 
   notifications: {
@@ -496,6 +517,12 @@ const en = {
     empty: 'No notifications yet',
     delete: 'Delete notification',
     unread: { one: '{count} unread notification', other: '{count} unread notifications' },
+  },
+
+  cookieNotice: {
+    label: 'Cookie notice',
+    text: 'We only use cookies and storage that are strictly necessary (your session and language). No tracking or ads. <more>More information</more>',
+    ok: 'Got it',
   },
 
   notFound: {

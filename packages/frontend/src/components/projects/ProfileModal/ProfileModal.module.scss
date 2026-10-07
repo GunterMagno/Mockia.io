@@ -2,7 +2,10 @@
   background-color: var(--color-surface);
   border-radius: var(--radius-xl);
   color: var(--color-text);
-  overflow: hidden;
+  /* El modal base recorta lo que no cabe: con la seccion "Mis datos" el panel puede superar la ventana, asi que scrollea */
+  max-height: 92dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .innerContent {

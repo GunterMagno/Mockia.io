@@ -69,6 +69,9 @@ export function refreshSession(): Promise<RefreshOutcome> {
   return refreshInFlight
 }
 
+// Mensaje con el que el backend rechaza una contrasena incorrecta en DELETE /users/me (no es un 401 de sesion)
+const WRONG_PASSWORD_MESSAGE = 'Incorrect password'
+
 type RetriableConfig = InternalAxiosRequestConfig & { _retried?: boolean }
 
 // Check for HTML responses (SPA fallback) when JSON is expected
@@ -94,6 +97,8 @@ api.interceptors.response.use(
     if (status !== 401 || !original || original._retried || isAuthRoute(original.url ?? '')) {
       return Promise.reject(error)
     }
+    // Contrasena incorrecta al borrar la cuenta: el 401 no es de sesion, renovar y repetir solo gastaria un intento mas
+    if (error.response?.data?.error?.message === WRONG_PASSWORD_MESSAGE) return Promise.reject(error)
     original._retried = true
     // Otra peticion ya renovo la sesion mientras esta volaba con el token viejo: basta repetirla con el actual
     const sent = String(original.headers?.Authorization ?? '').replace(/^Bearer /, '')

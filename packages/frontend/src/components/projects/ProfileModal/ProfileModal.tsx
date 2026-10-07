@@ -10,6 +10,7 @@ import { playErrorSound } from '../../../utils/audio'
 import { getBackendErrorMessage } from '../../../utils/error'
 import ModalErrorAlert from '../../ui/ModalErrorAlert/ModalErrorAlert'
 import { useI18n } from '../../../i18n/I18nProvider'
+import AccountData from '../../ui/AccountData/AccountData'
 
 type Props = {
   isOpen: boolean
@@ -135,6 +136,8 @@ const ProfileModal: React.FC<Props> = ({ isOpen, onClose }) => {
             <span>{t('billing.title')}</span>
             <span aria-hidden="true">→</span>
           </Link>
+
+          {email && <AccountData email={email} onDeleted={onClose} />}
 
           {status.message && status.type === 'error' && (
             <ModalErrorAlert message={status.message} />

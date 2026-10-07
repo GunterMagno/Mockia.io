@@ -181,7 +181,7 @@ export async function exportUserData(userId: string): Promise<Record<string, unk
  *  5. the user
  * Steps 3-5 are idempotent: if one fails the user still exists and can simply retry.
  *
- * The Stripe customer (invoices) is NOT deleted: Stripe keeps it for fiscal obligations (see docs/10-gdpr.md).
+ * The Stripe customer (invoices) is NOT deleted: Stripe keeps it for fiscal obligations (see docs/08_despliegue.md).
  *
  * @throws AppError 401 wrong password or account already gone, 409 Stripe not configured, 502 Stripe failed
  */

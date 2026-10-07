@@ -1,0 +1,171 @@
+.section {
+  margin-top: var(--spacing-8);
+  padding-top: var(--spacing-6);
+  border-top: 1px solid var(--color-border);
+}
+
+.title {
+  margin: 0 0 var(--spacing-2);
+  font-size: var(--text-xl);
+  font-weight: 600;
+}
+
+.intro {
+  margin: 0 0 var(--spacing-4);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-3);
+}
+
+@mixin btn {
+  min-height: var(--tap);
+  padding: 0 var(--spacing-5);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-base);
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast), opacity var(--transition-fast);
+
+  &:focus-visible {
+    outline: 2px solid var(--color-accent-text);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.secondaryBtn {
+  @include btn;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+
+  &:hover:not(:disabled) { border-color: var(--color-border-strong); }
+}
+
+.dangerOutlineBtn {
+  @include btn;
+  background: transparent;
+  border: 1px solid var(--color-danger);
+  color: var(--color-danger);
+
+  &:hover:not(:disabled) { background: var(--color-danger-soft); }
+}
+
+.dangerBtn {
+  @include btn;
+  background: var(--color-danger-solid);
+  border: 1px solid var(--color-danger-solid);
+  color: var(--color-on-accent);
+
+  &:hover:not(:disabled) { opacity: 0.9; }
+}
+
+.cancelBtn {
+  @include btn;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--color-text);
+
+  &:hover:not(:disabled) { text-decoration: underline; }
+}
+
+.status,
+.error {
+  margin: var(--spacing-3) 0 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.5;
+
+  &:empty { display: none; }
+}
+
+.status { color: var(--color-ok); }
+.error { color: var(--color-danger); }
+
+.confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+  margin-top: var(--spacing-5);
+  padding: var(--spacing-5);
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-lg);
+  background: var(--color-danger-soft);
+}
+
+.confirmTitle {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.warning {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.55;
+}
+
+.confirmActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--spacing-3);
+}
+
+@media (max-width: 600px) {
+  .row,
+  .confirmActions {
+    flex-direction: column-reverse;
+  }
+
+  .row { flex-direction: column; }
+
+  .secondaryBtn,
+  .dangerOutlineBtn,
+  .dangerBtn,
+  .cancelBtn {
+    width: 100%;
+  }
+}
+
+/* Aviso de una sola vez en el home tras borrar la cuenta */
+.deletedNotice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-3);
+  max-width: 40rem;
+  margin: var(--spacing-4) auto;
+  padding: var(--spacing-3) var(--spacing-4);
+  border: 1px solid var(--color-ok);
+  border-radius: var(--radius-lg);
+  background: var(--color-ok-soft);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  font-weight: 600;
+
+  button {
+    min-width: var(--tap);
+    min-height: var(--tap);
+    border: none;
+    background: transparent;
+    color: var(--color-text);
+    font-size: 1.5rem;
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: 2px solid var(--color-accent-text);
+      border-radius: var(--radius-lg);
+    }
+  }
+}

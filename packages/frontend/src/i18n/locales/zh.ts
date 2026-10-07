@@ -466,6 +466,26 @@ const zh: Messages = {
     newPassword: '新密码',
     updated: '个人资料已更新！',
     logOut: '退出登录',
+    account: {
+      title: '我的数据',
+      intro: '下载我们保存的与你有关的全部数据副本，或永久删除你的账户。',
+      download: '下载我的数据',
+      downloading: '正在准备文件…',
+      downloaded: '数据文件已下载。',
+      delete: '删除账户',
+      deleteTitle: '删除你的账户',
+      warning:
+        '这将永久删除你的账户、项目、接口、通知和登录会话，且无法撤销。有效订阅会立即取消且不予退款。发票依法由我们的支付服务商保留。',
+      emailLabel: '输入你的邮箱（{email}）以确认',
+      passwordLabel: '你的密码',
+      confirm: '永久删除我的账户',
+      deleting: '正在删除…',
+      wrongPassword: '密码不正确，未删除任何内容。',
+      subscriptionFailed: '无法取消你的订阅，因此未删除任何内容。请几分钟后重试。',
+      subscriptionUnavailable: '你的账户有有效订阅，但此服务器未启用支付功能，无法取消订阅。未删除任何内容，请联系支持。',
+      deletedNotice: '你的账户及数据已删除。',
+      dismissNotice: '关闭提示',
+    },
   },
 
   notifications: {
@@ -474,6 +494,12 @@ const zh: Messages = {
     empty: '暂无通知',
     delete: '删除通知',
     unread: { one: '{count} 条未读通知', other: '{count} 条未读通知' },
+  },
+
+  cookieNotice: {
+    label: 'Cookie 提示',
+    text: '我们只使用严格必要的 Cookie 和本地存储（你的登录会话和语言），没有跟踪或广告。<more>了解更多</more>',
+    ok: '知道了',
   },
 
   notFound: {

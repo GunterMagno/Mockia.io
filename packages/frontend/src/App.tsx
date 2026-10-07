@@ -21,6 +21,8 @@ import LegalNotice from './pages/Legal/LegalNotice'
 import Cookies from './pages/Legal/Cookies'
 import NotFound from './pages/NotFound/NotFound'
 import AmbientBackground from './components/ui/AmbientBackground/AmbientBackground'
+import { AccountDeletedNotice } from './components/ui/AccountData/AccountData'
+import CookieBanner from './components/ui/CookieBanner/CookieBanner'
 import { PATHS, isKnownPath, isProtectedPath } from './routes/paths'
 
 const AppShell: React.FC = () => {
@@ -38,6 +40,7 @@ const AppShell: React.FC = () => {
       <AmbientBackground />
       {showHeader && <Header />}
       <main className="mainContent">
+        <AccountDeletedNotice />
         {/* key por ruta: cada cambio de seccion entra con el mismo fundido, sin corte seco */}
         <div className="routeFade" key={path}>
         <Routes>
@@ -61,6 +64,7 @@ const AppShell: React.FC = () => {
         </div>
       </main>
       {showFooter && <Footer />}
+      <CookieBanner />
     </section>
   )
 }

@@ -20,6 +20,9 @@ const KNOWN: ReadonlyArray<readonly [RegExp, MessageKey]> = [
   [/^Owners cannot leave the project/i, 'errors.ownerCannotLeave'],
   [/^Invalid GitHub URL format$/i, 'errors.invalidGithubUrl'],
   [/^Invalid or expired refresh token$/i, 'errors.sessionExpired'],
+  [/^Incorrect password$/i, 'profile.account.wrongPassword'],
+  [/^Could not cancel your subscription/i, 'profile.account.subscriptionFailed'],
+  [/^Your account has an active subscription and payments are not configured/i, 'profile.account.subscriptionUnavailable'],
   // Joi (mismos textos que la validacion del frontend)
   [/^Email must be valid$/i, 'validation.emailInvalid'],
   [/^Email is required$/i, 'validation.emailRequired'],

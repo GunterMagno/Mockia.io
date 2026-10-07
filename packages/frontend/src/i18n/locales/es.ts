@@ -483,6 +483,27 @@ const es: Messages = {
     newPassword: 'Nueva contraseña',
     updated: '¡Perfil actualizado!',
     logOut: 'Cerrar sesión',
+    account: {
+      title: 'Mis datos',
+      intro: 'Descarga una copia de todo lo que guardamos sobre ti, o elimina tu cuenta definitivamente.',
+      download: 'Descargar mis datos',
+      downloading: 'Preparando tu archivo…',
+      downloaded: 'Se ha descargado el archivo con tus datos.',
+      delete: 'Eliminar cuenta',
+      deleteTitle: 'Eliminar tu cuenta',
+      warning:
+        'Se borran de forma permanente tu cuenta, proyectos, endpoints, notificaciones y sesiones. No se puede deshacer. Si tienes una suscripción activa se cancela de inmediato y no se reembolsa. Las facturas las conserva nuestro proveedor de pagos porque la ley lo exige.',
+      emailLabel: 'Escribe tu correo ({email}) para confirmar',
+      passwordLabel: 'Tu contraseña',
+      confirm: 'Eliminar mi cuenta para siempre',
+      deleting: 'Eliminando…',
+      wrongPassword: 'La contraseña no es correcta. No se ha borrado nada.',
+      subscriptionFailed: 'No hemos podido cancelar tu suscripción, así que no se ha borrado nada. Inténtalo de nuevo en unos minutos.',
+      subscriptionUnavailable:
+        'Tu cuenta tiene una suscripción activa pero los pagos no están disponibles en este servidor, así que no se puede cancelar. No se ha borrado nada; contacta con soporte.',
+      deletedNotice: 'Tu cuenta y sus datos se han eliminado.',
+      dismissNotice: 'Cerrar aviso',
+    },
   },
 
   notifications: {
@@ -491,6 +512,12 @@ const es: Messages = {
     empty: 'Aún no tienes notificaciones',
     delete: 'Eliminar notificación',
     unread: { one: '{count} notificación sin leer', other: '{count} notificaciones sin leer' },
+  },
+
+  cookieNotice: {
+    label: 'Aviso de cookies',
+    text: 'Solo usamos cookies y almacenamiento estrictamente necesarios (tu sesión y tu idioma). Sin seguimiento ni publicidad. <more>Más información</more>',
+    ok: 'Entendido',
   },
 
   notFound: {
