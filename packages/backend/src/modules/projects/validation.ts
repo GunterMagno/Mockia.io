@@ -98,3 +98,12 @@ export const importGitHubSchema = Joi.object<ImportGitHubRequest>({
       'string.empty': 'Branch name cannot be empty',
     }),
 });
+
+/** Query of GET /projects/:id/export */
+export const exportQuerySchema = Joi.object({
+  format: Joi.string().valid('openapi', 'postman', 'msw').required().messages({
+    'any.only': 'format must be one of: openapi, postman, msw',
+    'any.required': 'format is required (openapi, postman or msw)',
+    'string.empty': 'format is required (openapi, postman or msw)',
+  }),
+});

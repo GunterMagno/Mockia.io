@@ -3,6 +3,10 @@ import { AuthenticatedRequest } from '../../middlewares/authenticateToken.js';
 import { asyncHandler } from '../../middlewares/errorHandler.js';
 import { createProject, getUserProjects, getProjectById, updateProject, archiveProject, hardDeleteProject, cleanupArchivedProjects, addProjectMember, removeProjectMember, importGitHubRepository, regenerateApiKey, leaveProject } from './service.js';
 import { getProjectContext, deleteProjectContext } from '../../services/github-context.service.js';
+import { ProjectModel } from '../../models/Project.js';
+import { AppError } from '../../middlewares/errorHandler.js';
+import { ErrorCode } from '@mockia/shared';
+import { exportOpenApi, exportPostman, exportMswHandlers, type ExportFormat } from './export.js';
 import type { CreateProjectRequest, ImportGitHubRequest } from '@mockia/shared';
 
 /**
@@ -424,3 +428,37 @@ export const leaveProjectHandler = asyncHandler(
   }
 );
 
+
+/**
+ * GET /api/projects/:id/export?format=openapi|postman|msw
+ * Downloads the project's mocks as an OpenAPI 3.1 document, a Postman v2.1 collection or MSW v2 handlers (TypeScript).
+ * Any member (owner, editor, viewer) can export; membership is checked by authorizeRole before this runs.
+ * `:id` may be the project id or slug; the file name uses the slug (sanitized for the header).
+ */
+export const exportProjectHandler = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const ref = req.params.id;
+    const project = /^[0-9a-fA-F]{24}$/.test(ref)
+      ? await ProjectModel.findById(ref)
+      : await ProjectModel.findOne({ slug: ref });
+    if (!project) throw new AppError('Project not found', ErrorCode.NOT_FOUND, 404);
+
+    const format = req.query.format as ExportFormat;
+    const base = project.slug.replace(/[^a-z0-9._-]+/gi, '-').replace(/^-+|-+$/g, '') || 'project';
+    const attach = (name: string) => res.setHeader('Content-Disposition', `attachment; filename="${name}"`);
+    res.setHeader('Cache-Control', 'no-store');
+
+    if (format === 'msw') {
+      const code = await exportMswHandlers(project.id);
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      attach(`${base}-handlers.ts`);
+      res.send(code);
+      return;
+    }
+
+    const doc = format === 'postman' ? await exportPostman(project.id) : await exportOpenApi(project.id);
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    attach(format === 'postman' ? `${base}.postman_collection.json` : `${base}-openapi.json`);
+    res.send(JSON.stringify(doc, null, 2));
+  }
+);

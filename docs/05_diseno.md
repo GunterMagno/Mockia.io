@@ -329,6 +329,7 @@ La API Core de Mockia.io sigue principios **RESTful**, utiliza payloads en forma
 | | `GET` | `/api/projects/:id` | Sí | Parámetro `id` en la ruta | Obtiene detalles y miembros de un proyecto específico | `200 OK` | `401, 404` |
 | | `PUT` | `/api/projects/:id` | Sí | Body: `title, description` | Actualiza los datos generales de un proyecto | `200 OK` | `400, 401, 403, 404` |
 | | `DELETE`| `/api/projects/:id` | Sí | Parámetro `id` en la ruta | Archiva un proyecto de forma lógica | `204 No Content` | `401, 403, 404` |
+| | `GET` | `/api/projects/:id/export` | Sí | Parámetro `id` (o slug) y query `format=openapi\|postman\|msw` | Descarga los mocks del proyecto como adjunto: OpenAPI 3.1 (`<slug>-openapi.json`), colección Postman v2.1 (`<slug>.postman_collection.json`) o handlers MSW v2 en TypeScript (`<slug>-handlers.ts`). Cualquier miembro (OWNER, EDITOR, VIEWER) puede exportar; nunca incluye la API key. 30 por usuario cada 15 min | `200 OK` | `400, 401, 403, 404, 429` |
 | | `DELETE`| `/api/projects/:id/hard`| Sí | Parámetro `id` en la ruta | Elimina de forma física y permanente un proyecto | `204 No Content`| `401, 403, 404` |
 | | `POST` | `/api/projects/:id/members`| Sí | Body: `targetEmail, role` | Añade un miembro colaborador al proyecto | `201 Created` | `400, 401, 403, 404` |
 | | `DELETE`| `/api/projects/:id/members/:targetUserId`| Sí | Parámetros `id` y `targetUserId` | Elimina a un colaborador del proyecto | `200 OK` | `401, 403, 404` |

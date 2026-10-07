@@ -14,12 +14,14 @@ import {
   regenerateApiKeyHandler,
   hardDeleteProjectHandler,
   leaveProjectHandler,
+  exportProjectHandler,
 } from './controller.js';
-import { authenticateToken } from '../../middlewares/authenticateToken.js';
+import { authenticateToken, type AuthenticatedRequest } from '../../middlewares/authenticateToken.js';
 import { authorizeRole } from '../../middlewares/authorizeRole.js';
 import { enforceProjectLimit } from '../../middlewares/planGate.js';
 import { validate } from '../../middlewares/validateRequest.js';
-import { createProjectSchema, updateProjectSchema, addProjectMemberSchema, importGitHubSchema } from './validation.js';
+import { rateLimit } from '../../middlewares/rateLimit.js';
+import { createProjectSchema, updateProjectSchema, addProjectMemberSchema, importGitHubSchema, exportQuerySchema } from './validation.js';
 import type { ProjectRole } from '@mockia/shared';
 import { getProjectSwagger } from '../mock/swagger.controller.js';
 
@@ -33,6 +35,13 @@ import { getProjectSwagger } from '../mock/swagger.controller.js';
  * - GET    /:id       Get a specific project
  */
 export const projectsRouter = Router();
+
+/** Exporting walks the whole project tree: 30 per 15 min per user (a stolen token cannot scrape every project). */
+const exportLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  keyFn: (req) => (req as AuthenticatedRequest).user?.id ?? req.ip ?? 'unknown',
+});
 
 /**
  * @swagger
@@ -164,6 +173,48 @@ projectsRouter.get(
   '/:id/swagger.json',
   authenticateToken,
   getProjectSwagger
+);
+
+/**
+ * @swagger
+ * /projects/{id}/export:
+ *   get:
+ *     summary: Export the project's mocks (OpenAPI 3.1, Postman v2.1 collection or MSW handlers)
+ *     description: Any project member (owner, editor, viewer) can export. The API key is never included.
+ *     tags: [Projects]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: format
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [openapi, postman, msw]
+ *     responses:
+ *       200:
+ *         description: File attachment (JSON for openapi/postman, TypeScript for msw)
+ *       400:
+ *         description: Missing or unknown format
+ *       403:
+ *         description: Not a member of the project
+ *       404:
+ *         description: Project not found
+ *       429:
+ *         description: Too many exports
+ */
+projectsRouter.get(
+  '/:id/export',
+  authenticateToken,
+  exportLimiter,
+  authorizeRole(['OWNER', 'EDITOR', 'VIEWER'] as unknown as ProjectRole[]),
+  validate({ query: exportQuerySchema }),
+  exportProjectHandler
 );
 
 /**
