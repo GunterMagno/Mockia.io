@@ -4,6 +4,8 @@ import { AppError } from '../../middlewares/errorHandler.js';
 import { ErrorCode, toLimitsDTO, type BillingOverview } from '@mockia/shared';
 import { PLAN_LIMITS, asPaidPlan, effectivePlan, invalidatePlanCache, type BillingStatus, type PaidPlan } from './plans.js';
 import { getMonthlyUsage, nextPeriodStart } from './usage.js';
+import { stripeCheckoutLocale, termsAcceptanceMessage } from './checkoutText.js';
+import { appBaseUrl } from '../auth/passwordReset.js';
 
 export interface StripeEvent {
   id: string;
@@ -140,12 +142,21 @@ export function checkoutConfig(plan: PaidPlan): { secretKey: string; priceId: st
   return secretKey && priceId ? { secretKey, priceId } : null;
 }
 
-/** Creates a Stripe Checkout Session (subscription mode) through the REST API with native fetch. */
+/**
+ * Creates a Stripe Checkout Session (subscription mode) through the REST API with native fetch.
+ *
+ * Tax and invoicing: Stripe Tax computes VAT (prices must be tax_behavior=exclusive in the dashboard, see docs/pagos.md),
+ * the buyer can enter a VAT id, the billing address is mandatory and the Terms must be accepted (the accompanying text carries
+ * the immediate-access / withdrawal-waiver acknowledgement promised in the Terms). Subscription-mode checkouts always produce an
+ * invoice, so `invoice_creation` (only valid for mode=payment) is deliberately NOT sent.
+ */
 export async function createCheckoutSession(input: {
   userId: string;
   email: string;
   plan: PaidPlan;
   stripeCustomerId?: string;
+  /** Saved UI language of the user (en | es | zh); anything else lets Stripe detect it. */
+  locale?: string | null;
   secretKey: string;
   priceId: string;
 }): Promise<{ id: string; url: string }> {
@@ -162,9 +173,21 @@ export async function createCheckoutSession(input: {
     'metadata[userId]': input.userId,
     'subscription_data[metadata][plan]': input.plan,
     'subscription_data[metadata][userId]': input.userId,
+    'automatic_tax[enabled]': 'true',
+    'tax_id_collection[enabled]': 'true',
+    billing_address_collection: 'required',
+    'consent_collection[terms_of_service]': 'required',
+    'custom_text[terms_of_service_acceptance][message]': termsAcceptanceMessage(input.locale, `${appBaseUrl()}/terms`),
+    locale: stripeCheckoutLocale(input.locale),
   });
-  if (input.stripeCustomerId) params.set('customer', input.stripeCustomerId);
-  else params.set('customer_email', input.email);
+  if (input.stripeCustomerId) {
+    params.set('customer', input.stripeCustomerId);
+    // Stripe requires these two with an existing customer when automatic_tax / tax_id_collection are on, and rejects them with customer_email.
+    params.set('customer_update[address]', 'auto');
+    params.set('customer_update[name]', 'auto');
+  } else {
+    params.set('customer_email', input.email);
+  }
 
   const res = await fetch(`${STRIPE_API}/checkout/sessions`, {
     method: 'POST',

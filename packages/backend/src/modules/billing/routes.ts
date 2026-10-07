@@ -118,7 +118,7 @@ billingRouter.post(
       return;
     }
     const user = await UserModel.findById(req.user!.id)
-      .select('email stripeCustomerId stripeSubscriptionId plan billingStatus')
+      .select('email locale stripeCustomerId stripeSubscriptionId plan billingStatus')
       .lean();
     if (!user) {
       res.status(404).json(fail('NOT_FOUND', 'User not found'));
@@ -134,6 +134,7 @@ billingRouter.post(
       email: user.email,
       plan,
       stripeCustomerId: user.stripeCustomerId,
+      locale: user.locale,
       ...config,
     });
     res.status(200).json({ success: true, data: session, timestamp: new Date().toISOString() });
