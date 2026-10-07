@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import type { BillingOverview, PaidPlan, Plan } from '@mockia/shared'
+import { isBillingInterval, type BillingInterval, type BillingOverview, type PaidPlan, type Plan } from '@mockia/shared'
 import Layout from '../../layouts/Layout'
 import PricingPlans, { hasOpenSubscription } from '../../components/billing/PricingPlans/PricingPlans'
 import PastDueBanner from '../../components/billing/PastDueBanner/PastDueBanner'
@@ -55,6 +55,9 @@ const Billing: React.FC = () => {
   const [params] = useSearchParams()
   const checkout = params.get('checkout')
   const upgrade = asPaidPlan(params.get('upgrade'))
+  const intervalParam = params.get('interval')
+  // Intervalo elegido en la landing antes de registrarse
+  const upgradeInterval = isBillingInterval(intervalParam) ? intervalParam : null
 
   const [overview, setOverview] = useState<BillingOverview | null>(null)
   const [loadError, setLoadError] = useState(false)
@@ -111,11 +114,11 @@ const Billing: React.FC = () => {
     if (upgrade && overview) plansRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [upgrade, overview])
 
-  const goCheckout = async (plan: PaidPlan) => {
+  const goCheckout = async (plan: PaidPlan, interval: BillingInterval) => {
     setBusy(plan)
     setActionError('')
     try {
-      window.location.assign(await startCheckout(plan))
+      window.location.assign(await startCheckout(plan, interval))
     } catch (err) {
       setActionError(getBackendErrorMessage(err, t))
       setBusy(null)
@@ -190,6 +193,11 @@ const Billing: React.FC = () => {
                 <h2>{planName(overview.plan)}</h2>
                 <span className={`${styles.status} ${styles[shownStatus]}`}>{t(`billing.status.${shownStatus}`)}</span>
               </div>
+              {overview.interval && overview.subscribedPlan !== 'free' && overview.billingStatus !== 'canceled' && (
+                <p className={styles.muted} data-testid="billing-interval">
+                  {overview.interval === 'year' ? t('pricing.billedYearlyShort') : t('pricing.billedMonthly')}
+                </p>
+              )}
               {overview.subscribedPlan !== 'free' && overview.currentPeriodEnd && overview.billingStatus === 'active' && (
                 <p className={styles.muted}>
                   {overview.cancelAtPeriodEnd
@@ -238,8 +246,9 @@ const Billing: React.FC = () => {
               mode="app"
               overview={overview}
               highlight={upgrade && !hasOpenSubscription(overview) && overview.plan !== upgrade ? upgrade : null}
+              initialInterval={upgradeInterval}
               busy={busy}
-              onCheckout={(plan) => void goCheckout(plan)}
+              onCheckout={(plan, interval) => void goCheckout(plan, interval)}
               onPortal={(from) => void goPortal(from)}
             />
             <p className={styles.muted}>{t('pricing.note')}</p>

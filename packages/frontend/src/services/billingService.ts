@@ -1,7 +1,7 @@
 import { api } from './api'
-import type { BillingOverview, PaidPlan } from '@mockia/shared'
+import type { BillingInterval, BillingOverview, PaidPlan } from '@mockia/shared'
 
-export type { BillingOverview, PaidPlan }
+export type { BillingInterval, BillingOverview, PaidPlan }
 
 type Envelope<T> = { data: T }
 
@@ -12,8 +12,8 @@ export const getBillingOverview = async (): Promise<BillingOverview> => {
 }
 
 /** Crea una sesion de Stripe Checkout y devuelve la URL a la que redirigir. */
-export const startCheckout = async (plan: PaidPlan): Promise<string> => {
-  const res = await api.post<Envelope<{ id: string; url: string }>>('/billing/checkout', { plan })
+export const startCheckout = async (plan: PaidPlan, interval: BillingInterval = 'month'): Promise<string> => {
+  const res = await api.post<Envelope<{ id: string; url: string }>>('/billing/checkout', { plan, interval })
   return res.data.data.url
 }
 
