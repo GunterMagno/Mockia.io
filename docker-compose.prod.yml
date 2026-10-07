@@ -51,6 +51,8 @@ services:
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
       STRIPE_PRICE_PRO: ${STRIPE_PRICE_PRO:-}
       STRIPE_PRICE_TEAM: ${STRIPE_PRICE_TEAM:-}
+      STRIPE_PRICE_PRO_YEARLY: ${STRIPE_PRICE_PRO_YEARLY:-}
+      STRIPE_PRICE_TEAM_YEARLY: ${STRIPE_PRICE_TEAM_YEARLY:-}
     depends_on:
       mongo:
         condition: service_healthy

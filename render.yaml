@@ -33,7 +33,7 @@ services:
         sync: false
       - key: MAIL_FROM
         sync: false
-      # Cobros con Stripe (docs/pagos.md): clave secreta, secreto del webhook y los dos price_... (Pro y Team).
+      # Cobros con Stripe (docs/pagos.md): clave secreta, secreto del webhook y los cuatro price_... (Pro y Team, mensual y anual).
       - key: STRIPE_SECRET_KEY
         sync: false
       - key: STRIPE_WEBHOOK_SECRET
@@ -41,6 +41,10 @@ services:
       - key: STRIPE_PRICE_PRO
         sync: false
       - key: STRIPE_PRICE_TEAM
+        sync: false
+      - key: STRIPE_PRICE_PRO_YEARLY
+        sync: false
+      - key: STRIPE_PRICE_TEAM_YEARLY
         sync: false
 
   # Frontend Static Site

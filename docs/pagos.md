@@ -19,12 +19,19 @@ Por qué: el código solo habla con la cuenta cuyas claves le des. Mezclar clave
 ### 2. Productos y precios (Pro y Team)
 
 - [ ] Crear dos productos: **Pro** y **Team** (Dashboard → Catálogo de productos).
-- [ ] En cada producto, un precio **recurrente mensual** en **USD** (los importes que muestra la web están en dólares: ver `PLAN_PRICE_USD` en `@mockia/shared`).
-- [ ] En cada precio, **Tax behavior = Exclusive** (el impuesto se suma al precio mostrado). Es lo que prometen los Términos ("los precios se indican sin impuestos").
-- [ ] En cada producto, **Tax code = `txcd_35000000`** (el código fiscal acordado para el software como servicio). Comprueba en el selector de códigos del producto que ese código sigue siendo el de SaaS que quieres (Stripe distingue algunos usos, p. ej. personal o empresarial) y confírmalo con la gestoría.
-- [ ] Copiar los dos identificadores `price_...` (no `prod_...`) a `STRIPE_PRICE_PRO` y `STRIPE_PRICE_TEAM` (paso 9).
+- [ ] En cada producto, **dos precios recurrentes** en **USD** (los importes que muestra la web están en dólares: ver `PLAN_PRICE_USD` en `@mockia/shared`):
 
-Por qué: con `tax_behavior` vacío Stripe Tax no sabe si el importe incluye impuesto y rechaza la sesión o cobra de más; el tax code decide el tipo aplicable.
+  | Producto | Mensual (`interval = month`) | Anual (`interval = year`) |
+  | --- | --- | --- |
+  | Pro | 29 USD | 290 USD |
+  | Team | 99 USD | 990 USD |
+
+  El anual es **10 veces el mensual** (dos meses gratis, un 17 % de ahorro): es lo que anuncia la web, calculado en `@mockia/shared` (`ANNUAL_MONTHS_CHARGED`, `ANNUAL_DISCOUNT_PERCENT`). Si cambias un importe en Stripe, cámbialo también en `PLAN_PRICE_USD` (`packages/shared/src/billing.ts`) y reconstruye `@mockia/shared`: Stripe cobra lo que tenga el Price, la web solo anuncia.
+- [ ] En **cada uno de los cuatro precios**, **Tax behavior = Exclusive** (el impuesto se suma al precio mostrado). Es lo que prometen los Términos ("los precios se indican sin impuestos").
+- [ ] En cada producto, **Tax code = `txcd_35000000`** (el código fiscal acordado para el software como servicio). Comprueba en el selector de códigos del producto que ese código sigue siendo el de SaaS que quieres (Stripe distingue algunos usos, p. ej. personal o empresarial) y confírmalo con la gestoría.
+- [ ] Copiar los cuatro identificadores `price_...` (no `prod_...`) a `STRIPE_PRICE_PRO`, `STRIPE_PRICE_TEAM`, `STRIPE_PRICE_PRO_YEARLY` y `STRIPE_PRICE_TEAM_YEARLY` (paso 9).
+
+Por qué: el código deduce el plan **y el intervalo** del `price_...` de la suscripción (un `price_...` que no sea uno de los cuatro configurados nunca concede un plan de pago). Con `tax_behavior` vacío Stripe Tax no sabe si el importe incluye impuesto y rechaza la sesión o cobra de más; el tax code decide el tipo aplicable.
 
 ### 3. Activar Stripe Tax
 
@@ -56,7 +63,7 @@ Por qué: en una suscripción Stripe genera la factura automáticamente en cada 
 
 - [ ] Dashboard → Configuración → Facturación → **Portal de cliente** → guardar la configuración (hasta guardarla, `POST /api/billing/portal` da error 502).
 - [ ] Activar: **cancelar suscripciones** (la cancelación **al final del periodo de facturación**), **actualizar el método de pago**, **historial de facturas**, y la actualización de datos de facturación (nombre, dirección, NIF-IVA).
-- [ ] Si quieres cambio de plan desde el portal (la web lo ofrece como "Cambiar a Pro/Team"): activar **actualizar suscripciones** y añadir los productos Pro y Team.
+- [ ] Si quieres cambio de plan desde el portal (la web lo ofrece como "Cambiar a Pro/Team"): activar **actualizar suscripciones** y añadir los productos Pro y Team **con sus precios mensual y anual**, para que el cliente pueda pasar de mensual a anual (y al revés) desde el portal; el webhook actualiza plan e intervalo solo.
 
 Por qué: la interfaz envía al usuario al portal para cambiar de plan, cancelar y ver facturas; la lógica del webhook (`customer.subscription.updated`) deduce el plan del precio, así que un cambio de plan en el portal se aplica solo.
 
@@ -119,6 +126,10 @@ Se definen en `.env` (Docker/servidor propio) o en el panel de Render (`render.y
 | `STRIPE_WEBHOOK_SECRET` | `whsec_...` del paso 8. |
 | `STRIPE_PRICE_PRO` | `price_...` del precio mensual de Pro. |
 | `STRIPE_PRICE_TEAM` | `price_...` del precio mensual de Team. |
+| `STRIPE_PRICE_PRO_YEARLY` | `price_...` del precio anual de Pro (290 USD). |
+| `STRIPE_PRICE_TEAM_YEARLY` | `price_...` del precio anual de Team (990 USD). |
+
+Las dos variables `*_YEARLY` son opcionales: sin ellas el backend arranca y se puede contratar al mes, pero `POST /api/billing/checkout` con `interval: "year"` responde **501** nombrando la variable que falta y la web no ofrece comprar al año ese plan (`yearlyCheckoutAvailable` en `GET /api/billing/me`).
 
 Opcionales: `STRIPE_SUCCESS_URL`, `STRIPE_CANCEL_URL`, `STRIPE_PORTAL_RETURN_URL` (por defecto `/billing` de la aplicación). Importante: `APP_URL` también es obligatoria en producción y de ahí sale el enlace a los Términos que ve el cliente en el pago.
 
@@ -134,7 +145,7 @@ Opcionales: `STRIPE_SUCCESS_URL`, `STRIPE_CANCEL_URL`, `STRIPE_PORTAL_RETURN_URL
 
 Con el interruptor de prueba activo y las claves `sk_test_...`:
 
-1. Arranca el backend con las 4 variables del paso 9 y la web en local.
+1. Arranca el backend con las variables del paso 9 (las 4 de siempre y, para probar el anual, las dos `*_YEARLY`) y la web en local.
 2. Reenvía los webhooks a tu máquina con la CLI de Stripe (instálala y haz `stripe login`):
 
    ```bash
@@ -142,7 +153,7 @@ Con el interruptor de prueba activo y las claves `sk_test_...`:
    ```
 
    La CLI imprime un `whsec_...` temporal: ponlo como `STRIPE_WEBHOOK_SECRET` mientras pruebas (es distinto del secreto del endpoint real).
-3. En la web: registra un usuario, **verifica el correo** (el checkout lo exige), ve a *Plan y facturación* y elige Pro o Team.
+3. En la web: registra un usuario, **verifica el correo** (el checkout lo exige), ve a *Plan y facturación*, elige **Mensual** o **Anual** con el selector y pulsa Pro o Team. En el Checkout el importe debe ser el del intervalo elegido; tras pagar, *Plan y facturación* indica "Facturación anual" o "mensual".
 4. En el Checkout comprueba: dirección de facturación obligatoria, campo de **NIF-IVA**, casilla de aceptación de los Términos con el texto de acceso inmediato y pérdida del desistimiento, y la línea de **impuestos** calculada según el país.
 5. Tarjetas de prueba (cualquier fecha futura, CVC y código postal):
 
@@ -172,6 +183,6 @@ Para comprobar a mano el **500 de cliente desconocido**, `stripe trigger invoice
 
 ## Lo que hace el código y lo que no
 
-- Hace: IVA automático (`automatic_tax`), NIF-IVA (`tax_id_collection`), dirección obligatoria (`billing_address_collection`), aceptación de Términos con el texto de desistimiento (`consent_collection` + `custom_text`), idioma del Checkout según el idioma guardado del usuario (`es`, `en`, `zh`; si no lo hay, Stripe lo detecta), y `customer_update[address|name]=auto` solo cuando el usuario ya es cliente de Stripe (con `customer_email` Stripe lo rechaza).
+- Hace: precio mensual o anual (`interval` en `POST /api/billing/checkout`; el intervalo vigente sale del `price_...` de la suscripción y se guarda en el usuario), IVA automático (`automatic_tax`), NIF-IVA (`tax_id_collection`), dirección obligatoria (`billing_address_collection`), aceptación de Términos con el texto de desistimiento (`consent_collection` + `custom_text`), idioma del Checkout según el idioma guardado del usuario (`es`, `en`, `zh`; si no lo hay, Stripe lo detecta), y `customer_update[address|name]=auto` solo cuando el usuario ya es cliente de Stripe (con `customer_email` Stripe lo rechaza).
 - Hace también: gestión del impago con 7 días de gracia, correo y aviso en la app (ver pasos 7 y 8).
 - No hace: configurar la cuenta de Stripe, los registros fiscales, los productos, el portal ni los reintentos. Tampoco emite facturas por su cuenta: las genera Stripe.
