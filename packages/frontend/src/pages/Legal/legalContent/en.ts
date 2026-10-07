@@ -256,11 +256,6 @@ const en: LegalContent = {
                     "Hosting the application, the database and the server logs.",
                     "All the data described above, as infrastructure.",
                   ],
-                  [
-                    "**Google Fonts** (Google LLC)",
-                    "The \"how it works\" animation on the home page loads typefaces from Google's servers, which receive your IP address when it opens.",
-                    "Your IP address and the technical details of the browser request.",
-                  ],
                 ],
               },
             },
@@ -600,7 +595,7 @@ const en: LegalContent = {
           heading: "Third-party services",
           blocks: [
             {
-              p: "When you go to pay or manage your subscription, we take you to pages hosted by Stripe, which may use its own cookies according to its policy ([stripe.com/privacy](https://stripe.com/privacy)). Mockia.io does not control those cookies. In addition, the \"how it works\" animation on the home page downloads typefaces from Google Fonts, so Google receives your IP address; it does not set any Mockia.io cookies.",
+              p: "When you go to pay or manage your subscription, we take you to pages hosted by Stripe, which may use its own cookies according to its policy ([stripe.com/privacy](https://stripe.com/privacy)). Mockia.io does not control those cookies.",
             },
           ],
         },

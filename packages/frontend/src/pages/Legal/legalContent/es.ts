@@ -257,11 +257,6 @@ const es: LegalContent = {
                     'Alojar la aplicación, la base de datos y los registros del servidor.',
                     'Todos los datos descritos arriba, como infraestructura.',
                   ],
-                  [
-                    '**Google Fonts** (Google LLC)',
-                    'La animación «cómo funciona» de la página principal carga tipografías desde los servidores de Google, que reciben tu dirección IP al abrirla.',
-                    'Tu dirección IP y los datos técnicos de la petición del navegador.',
-                  ],
                 ],
               },
             },
@@ -604,7 +599,7 @@ const es: LegalContent = {
           heading: 'Servicios de terceros',
           blocks: [
             {
-              p: 'Cuando vas a pagar o gestionar tu suscripción, te llevamos a páginas alojadas por Stripe, que puede usar sus propias cookies según su política ([stripe.com/privacy](https://stripe.com/privacy)). Esas cookies no las controla Mockia.io. Además, la animación «cómo funciona» de la página principal descarga tipografías de Google Fonts, por lo que Google recibe tu dirección IP; no instala cookies de Mockia.io.',
+              p: 'Cuando vas a pagar o gestionar tu suscripción, te llevamos a páginas alojadas por Stripe, que puede usar sus propias cookies según su política ([stripe.com/privacy](https://stripe.com/privacy)). Esas cookies no las controla Mockia.io.',
             },
           ],
         },

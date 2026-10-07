@@ -10,6 +10,7 @@ import { parseGitHubUrl } from '../../services/github.service.js';
 import { importAndAnalyzeRepository } from '../../services/github-context.service.js';
 import { createNotification } from '../../services/notification.service.js';
 import { NotificationType } from '@mockia/shared';
+import { deleteProjectsCascade } from './cascade.js';
 
 /**
  * Maps a MongoDB ProjectDocument to a ProjectDTO
@@ -495,7 +496,7 @@ export async function archiveProject(
 }
 
 /**
- * Permanently deletes a project and its associated MockAPI
+ * Permanently deletes a project and all its data (see deleteProjectsCascade)
  * Used for rollbacks when creation flow fails halfway
  */
 export async function hardDeleteProject(projectId: string, userId: string): Promise<void> {
@@ -508,10 +509,8 @@ export async function hardDeleteProject(projectId: string, userId: string): Prom
       throw new AppError('Only project owner can delete this project', ErrorCode.FORBIDDEN, 403);
     }
 
-    // Delete project and MockAPI
-    await ProjectModel.findByIdAndDelete(projectId);
-    const { MockAPIModel } = await import('../../models/MockAPI.js');
-    await MockAPIModel.deleteMany({ projectId });
+    // Project and everything under it (mock APIs, endpoints, responses, configs, GitHub context, notifications)
+    await deleteProjectsCascade([projectId]);
   } catch (error) {
     console.error('Error hard deleting project:', error);
     throw new AppError('Failed to delete project', ErrorCode.INTERNAL_SERVER_ERROR, 500);
@@ -525,7 +524,7 @@ export async function hardDeleteProject(projectId: string, userId: string): Prom
  * Flow:
  * 1. Calculate date 30 days ago
  * 2. Find all projects where isArchived = true AND archivedAt is older than 30 days
- * 3. Delete those projects permanently
+ * 3. Delete those projects permanently, with their mock APIs, endpoints, responses and GitHub context
  * 4. Return count of deleted projects
  * 
  * @returns Number of projects permanently deleted
@@ -537,13 +536,15 @@ export async function cleanupArchivedProjects(): Promise<number> {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    // Find and delete projects archived more than 30 days ago
-    const result = await ProjectModel.deleteMany({
+    // Find the projects archived more than 30 days ago and delete them with all their data
+    const expired = await ProjectModel.find({
       isArchived: true,
       archivedAt: { $lt: thirtyDaysAgo },
-    });
+    })
+      .select('_id')
+      .lean();
 
-    const deletedCount = result.deletedCount || 0;
+    const deletedCount = await deleteProjectsCascade(expired.map((p) => p._id));
 
     if (deletedCount > 0) {
       console.log(

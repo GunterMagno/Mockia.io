@@ -103,3 +103,22 @@ describe('Legal: enlaces desde el footer y el registro', () => {
     cy.get('[data-signup-legal]').invoke('text').should('match', /[一-鿿]/);
   });
 });
+
+describe('Legal: la web no carga recursos de terceros que los textos no mencionen', () => {
+  it('la animacion "como funciona" se sirve con GSAP propio y sin Google Fonts ni CDNs', () => {
+    cy.request('/como-funciona/index.html').its('body').then((html: string) => {
+      expect(html).to.not.match(/fonts\.googleapis|fonts\.gstatic|cdnjs|jsdelivr|unpkg/i);
+      expect(html).to.include('vendor/gsap.min.js');
+    });
+    cy.request('/como-funciona/vendor/gsap.min.js').its('body').should('include', 'GSAP 3.15.0');
+  });
+
+  it('Privacidad y Cookies ya no citan Google Fonts', () => {
+    for (const lang of ['es', 'en', 'zh'] as Lang[]) {
+      for (const path of ['/privacy', '/cookies']) {
+        visitIn(path, lang);
+        cy.get('article').invoke('text').should('not.match', /google/i);
+      }
+    }
+  });
+});

@@ -12,9 +12,7 @@
   // ?embed=1: incrustado en otra página (la landing de Mockia). Sin fondo ni márgenes; el idioma lo manda la página anfitriona.
   if (new URLSearchParams(location.search).has('embed')) document.documentElement.classList.add('embed');
 </script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<!-- Sin tipografías ni scripts de terceros (RGPD: ninguna IP sale a Google/Cloudflare). Se usa la misma pila de sistema que la app. -->
 <style>
 /* ===================================================================
    1. TOKENS — mismos valores que la web de Mockia (tema oscuro único)
@@ -1027,7 +1025,8 @@ body {
   </nav>
 </section>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.15.0/gsap.min.js" integrity="sha512-oJ8QbaQThQoJZ7oEv+29jfPM6CcP+zUxh3PKJs1vyOhx0UraUrE7PQgeItu3dOuCJyrzWpoYMsVjkkPEBzbUqw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<!-- GSAP 3.15.0 alojado aquí (vendor/gsap.min.js, mismo fichero publicado por GSAP, SRI comprobado) -->
+<script src="vendor/gsap.min.js" integrity="sha512-oJ8QbaQThQoJZ7oEv+29jfPM6CcP+zUxh3PKJs1vyOhx0UraUrE7PQgeItu3dOuCJyrzWpoYMsVjkkPEBzbUqw==" crossorigin="anonymous"></script>
 <script>
 (function () {
   'use strict';

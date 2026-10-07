@@ -256,11 +256,6 @@ const zh: LegalContent = {
                     "托管应用、数据库和服务器日志。",
                     "上述全部数据（作为基础设施）。",
                   ],
-                  [
-                    "**Google Fonts**（Google LLC）",
-                    "首页的“工作原理”动画会从 Google 服务器加载字体，打开时 Google 会收到你的 IP 地址。",
-                    "你的 IP 地址以及浏览器请求的技术信息。",
-                  ],
                 ],
               },
             },
@@ -583,7 +578,7 @@ const zh: LegalContent = {
           heading: "第三方服务",
           blocks: [
             {
-              p: "当你前往付款或管理订阅时，我们会把你带到由 Stripe 托管的页面，Stripe 可能按其政策使用自己的 Cookie（[stripe.com/privacy](https://stripe.com/privacy)）。这些 Cookie 不受 Mockia.io 控制。此外，首页的“工作原理”动画会从 Google Fonts 下载字体，因此 Google 会收到你的 IP 地址；它不会设置 Mockia.io 的任何 Cookie。",
+              p: "当你前往付款或管理订阅时，我们会把你带到由 Stripe 托管的页面，Stripe 可能按其政策使用自己的 Cookie（[stripe.com/privacy](https://stripe.com/privacy)）。这些 Cookie 不受 Mockia.io 控制。",
             },
           ],
         },
