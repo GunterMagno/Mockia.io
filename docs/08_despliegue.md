@@ -61,6 +61,17 @@ Sin `SMTP_URL`: en desarrollo el enlace se imprime en la consola del backend; en
 
 ---
 
+### Derechos RGPD: exportar y borrar la cuenta
+
+Desde **Ajustes de la cuenta > Mis datos** (modal de perfil) cada usuario puede descargar sus datos (`GET /api/users/me/export`) y eliminar su cuenta (`DELETE /api/users/me`, pide el correo exacto y la contraseña). Notas de operación:
+
+- **Orden del borrado** (`modules/users/gdpr.ts`): contraseña, cancelación inmediata de la suscripción en Stripe, proyectos con todo su contenido (`deleteProjectsCascade`), pertenencias a proyectos ajenos, notificaciones, contadores de uso, sesiones, tokens de correo y, al final, el usuario. Si Stripe falla (`502`) o no está configurado teniendo el usuario una suscripción (`409`), **no se borra nada**: el usuario puede reintentarlo.
+- **Stripe conserva el cliente** (`stripeCustomerId`) y sus facturas: es una obligación fiscal y Stripe es responsable de esa conservación. Mockia no llama a la API para borrar el cliente. La Política de Privacidad lo indica.
+- **Copias de seguridad**: si el proveedor de base de datos hace copias, los datos borrados desaparecen de ellas al rotar según su política de retención; documéntalo en el registro de tratamientos.
+- **Aviso de cookies**: `CookieBanner` es informativo (solo hay almacenamiento estrictamente necesario). Si algún día se añade analítica o publicidad hay que sustituirlo por un banner de consentimiento previo con «Aceptar» y «Rechazar» de igual peso y actualizar la Política de Cookies.
+
+---
+
 ## 8.4 Configuración del Servidor Web y Proxy Inverso (Nginx)
 
 Se utiliza **Nginx** como único punto de entrada de tráfico web de producción, actuando como servidor estático de la SPA y como proxy inverso inteligente para redirigir las peticiones dinámicas.
