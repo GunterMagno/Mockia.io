@@ -1,9 +1,10 @@
 import { Router } from 'express';
-import { register, login, refresh, logout, logoutAll, sessions, me } from './controller.js';
-import { registerSchema, loginSchema } from './validation.js';
+import { register, login, refresh, logout, logoutAll, sessions, me, forgot, reset, verify, resendVerificationEmail } from './controller.js';
+import { registerSchema, loginSchema, forgotSchema, resetSchema, verifySchema, resendSchema } from './validation.js';
 import { requireCsrfHeader } from './cookie.js';
 import { validate } from '../../middlewares/validateRequest.js';
-import { authenticateToken } from '../../middlewares/authenticateToken.js';
+import { authenticateToken, type AuthenticatedRequest } from '../../middlewares/authenticateToken.js';
+import { rateLimit } from '../../middlewares/rateLimit.js';
 
 /**
  * Authentication router
@@ -15,6 +16,13 @@ import { authenticateToken } from '../../middlewares/authenticateToken.js';
  */
 
 export const authRouter = Router();
+
+/** Resend of the verification email: 5 per user per 15 minutes (each one is an outgoing email). */
+const resendLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  keyFn: (req) => (req as AuthenticatedRequest).user?.id ?? req.ip ?? 'unknown',
+});
 
 /**
  * POST /api/auth/register
@@ -175,6 +183,106 @@ authRouter.get(
   authenticateToken,
   sessions
 );
+
+/**
+ * @swagger
+ * /auth/forgot:
+ *   post:
+ *     summary: Start a password reset. Always 202, whether or not the email has an account.
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email]
+ *             properties:
+ *               email:
+ *                 type: string
+ *               locale:
+ *                 type: string
+ *                 enum: [en, es, zh]
+ *                 description: Language of the email (default en)
+ *     responses:
+ *       202:
+ *         description: Accepted. If the account exists a single-use link (valid 30 minutes) is emailed.
+ *       400:
+ *         description: Invalid email format
+ *       429:
+ *         description: Too many requests (strict limiter shared with login and register)
+ */
+authRouter.post('/forgot', validate({ body: forgotSchema }), forgot);
+
+/**
+ * @swagger
+ * /auth/reset:
+ *   post:
+ *     summary: Set a new password with the token from the reset email. Ends every session of the user.
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [token, password]
+ *             properties:
+ *               token:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *                 minLength: 10
+ *                 maxLength: 128
+ *     responses:
+ *       200:
+ *         description: Password updated
+ *       400:
+ *         description: Weak password, or invalid / expired / already used token
+ */
+authRouter.post('/reset', validate({ body: resetSchema }), reset);
+
+/**
+ * @swagger
+ * /auth/verify:
+ *   post:
+ *     summary: Confirm the email address with the token from the verification email
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [token]
+ *             properties:
+ *               token:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Email verified
+ *       400:
+ *         description: Invalid, expired or already used token
+ */
+authRouter.post('/verify', validate({ body: verifySchema }), verify);
+
+/**
+ * @swagger
+ * /auth/verify/resend:
+ *   post:
+ *     summary: Send the authenticated user a new verification email (no-op if already verified)
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       202:
+ *         description: Accepted (data.alreadyVerified tells whether anything was sent)
+ *       401:
+ *         description: Unauthorized
+ *       429:
+ *         description: Too many requests (5 per 15 minutes)
+ */
+authRouter.post('/verify/resend', authenticateToken, resendLimiter, validate({ body: resendSchema }), resendVerificationEmail);
 
 /**
  * GET /api/auth/me

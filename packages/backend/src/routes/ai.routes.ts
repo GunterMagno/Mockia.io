@@ -12,6 +12,7 @@ import {
   aiHealthCheckHandler,
 } from '../controllers/ai.controller.js';
 import { authenticateToken } from '../middlewares/authenticateToken.js';
+import { requireVerifiedEmail } from '../middlewares/requireVerifiedEmail.js';
 
 const router = Router();
 
@@ -39,7 +40,7 @@ const router = Router();
  *       200:
  *         description: Success
  */
-router.post('/generate-description', authenticateToken, generateDescriptionHandler);
+router.post('/generate-description', authenticateToken, requireVerifiedEmail, generateDescriptionHandler);
 
 /**
  * @swagger
@@ -53,7 +54,7 @@ router.post('/generate-description', authenticateToken, generateDescriptionHandl
  *       200:
  *         description: Success
  */
-router.post('/generate-mock-data', authenticateToken, generateMockDataHandler);
+router.post('/generate-mock-data', authenticateToken, requireVerifiedEmail, generateMockDataHandler);
 
 /**
  * @swagger
@@ -81,7 +82,7 @@ router.post('/generate-mock-data', authenticateToken, generateMockDataHandler);
  *       200:
  *         description: Success
  */
-router.post('/generate-mock-api-spec', authenticateToken, generateMockAPISpecHandler);
+router.post('/generate-mock-api-spec', authenticateToken, requireVerifiedEmail, generateMockAPISpecHandler);
 
 /**
  * @swagger
@@ -109,7 +110,7 @@ router.post('/generate-mock-api-spec', authenticateToken, generateMockAPISpecHan
  *       200:
  *         description: Success
  */
-router.post('/generate-and-save', authenticateToken, generateAndSaveHandler);
+router.post('/generate-and-save', authenticateToken, requireVerifiedEmail, generateAndSaveHandler);
 
 /**
  * @swagger

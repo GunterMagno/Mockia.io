@@ -1,6 +1,7 @@
 import express, { Router } from 'express';
 import { asyncHandler } from '../../middlewares/errorHandler.js';
 import { authenticateToken, type AuthenticatedRequest } from '../../middlewares/authenticateToken.js';
+import { requireVerifiedEmail } from '../../middlewares/requireVerifiedEmail.js';
 import { UserModel } from '../../models/User.js';
 import { rateLimit } from '../../middlewares/rateLimit.js';
 import { asPaidPlan } from './plans.js';
@@ -94,12 +95,13 @@ billingRouter.get(
 
 /**
  * POST /api/billing/checkout  body: { plan: 'pro' | 'team' }
- * 200 { url } (redirect the browser there), 400 invalid plan, 401, 409 already subscribed (use the portal),
+ * 200 { url } (redirect the browser there), 400 invalid plan, 401, 403 EMAIL_NOT_VERIFIED (when email verification is required), 409 already subscribed (use the portal),
  * 501 Stripe not configured, 502 Stripe error.
  */
 billingRouter.post(
   '/checkout',
   authenticateToken,
+  requireVerifiedEmail,
   stripeCallLimiter,
   express.json({ limit: '10kb' }),
   asyncHandler(async (req: AuthenticatedRequest, res) => {
@@ -145,6 +147,7 @@ billingRouter.post(
 billingRouter.post(
   '/portal',
   authenticateToken,
+  requireVerifiedEmail,
   stripeCallLimiter,
   asyncHandler(async (req: AuthenticatedRequest, res) => {
     const secretKey = process.env.STRIPE_SECRET_KEY;

@@ -1,7 +1,7 @@
 import { isStrictAuthPath } from '../middlewares/rateLimit.js';
 
 // The strict limiter is off under jest (NODE_ENV=test), so the path matcher is tested directly.
-// Express routes case-insensitively and ignores a trailing slash: every spelling that reaches the login/register
+// Express routes case-insensitively and ignores a trailing slash: every spelling that reaches the login/register/forgot/reset
 // handler must land in the strict bucket.
 describe('isStrictAuthPath', () => {
   it.each([
@@ -16,7 +16,15 @@ describe('isStrictAuthPath', () => {
     '/register',
     '/REGISTER',
     '/Register/',
-  ])('%s is a credential endpoint (strict bucket)', (path) => {
+    '/forgot',
+    '/FORGOT',
+    '/Forgot/',
+    '//forgot',
+    '/reset',
+    '/RESET',
+    '/Reset/',
+    '/reset//',
+  ])('%s is a strict-bucket endpoint (credentials or password reset)', (path) => {
     expect(isStrictAuthPath(path)).toBe(true);
   });
 
@@ -33,6 +41,13 @@ describe('isStrictAuthPath', () => {
     '/loginx',
     '/xlogin',
     '/login-all',
+    '/verify',
+    '/VERIFY',
+    '/verify/resend',
+    '/forgot/extra',
+    '/forgotten',
+    '/resetx',
+    '/reset-password',
   ])('%s is not a credential endpoint', (path) => {
     expect(isStrictAuthPath(path)).toBe(false);
   });

@@ -7,6 +7,7 @@ import dotenv from 'dotenv';
 import { connectDB, disconnectDB, getConnectionStatus } from './config/connection.js';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler.js';
 import { authRouter } from './modules/auth/routes.js';
+import { testOutboxRouter, shouldMountTestOutbox } from './modules/testSupport/outboxRoutes.js';
 import { projectsRouter } from './modules/projects/routes.js';
 import { userRouter } from './modules/users/routes.js';
 import { githubRouter } from './routes/github.routes.js';
@@ -25,6 +26,7 @@ import { mockQuotaGate } from './middlewares/planGate.js';
 import { flushUsage } from './modules/billing/usage.js';
 import { rateLimit, isStrictAuthPath } from './middlewares/rateLimit.js';
 import { authenticateToken } from './middlewares/authenticateToken.js';
+import { isEmailVerificationRequired } from './middlewares/requireVerifiedEmail.js';
 import { authorizeRole } from './middlewares/authorizeRole.js';
 import { assertJwtConfig } from './services/jwt.service.js';
 import { assertProdConfig } from './config/assertProdConfig.js';
@@ -86,8 +88,9 @@ if (process.env.NODE_ENV !== 'test') {
   app.use('/api', (req, res, next) =>
     /^\/(mock|billing|health)(\/|$)/.test(req.path) ? next() : globalLimiter(req, res, next)
   );
-  // Only the credential endpoints get the strict bucket. /refresh and /logout need a signed token (nothing to brute-force)
-  // and every active client calls /refresh every 15 min: sharing the 20-per-IP bucket would lock out users behind one NAT.
+  // Only login, register and the password-reset pair (forgot, reset) get the strict bucket. /refresh and /logout need a
+  // signed token (nothing to brute-force) and every active client calls /refresh every 15 min: sharing the 20-per-IP
+  // bucket would lock out users behind one NAT.
   app.use('/api/auth', (req, res, next) =>
     req.method === 'POST' && isStrictAuthPath(req.path) ? authLimiter(req, res, next) : next()
   );
@@ -146,6 +149,11 @@ app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(specs));
 
 // Authentication routes
 app.use('/api/auth', authRouter);
+
+// Test-only: read/clear the in-memory mail outbox. Mounted only for NODE_ENV=test or E2E_EXPOSE_MAIL_OUTBOX=true, never in production.
+if (shouldMountTestOutbox()) {
+  app.use('/api/__test__', testOutboxRouter);
+}
 
 // Users routes (protected)
 app.use('/api/users', userRouter);
@@ -227,6 +235,12 @@ const startServer = async (): Promise<void> => {
     assertJwtConfig();
     // Fail fast on insecure production config (open CORS, default DB password, missing APP_URL, default secrets)
     assertProdConfig();
+    if (process.env.NODE_ENV === 'production' && !process.env.SMTP_URL?.trim() && isEmailVerificationRequired()) {
+      console.warn(
+        '[Backend] SMTP_URL is not set: verification and password reset emails cannot be delivered, and with email ' +
+          'verification required users could not unlock AI generation or billing. Set SMTP_URL and MAIL_FROM.'
+      );
+    }
 
     // Connect to MongoDB
     await connectDB();

@@ -49,6 +49,11 @@ export function assertProdConfig(env: NodeJS.ProcessEnv = process.env): void {
     problems.push('APP_URL must be set to the public URL of the application');
   }
 
+  // GET /api/__test__/outbox serves every email sent, password-reset links included: an account takeover in production
+  if (/^(true|1|yes|on)$/i.test(env.E2E_EXPOSE_MAIL_OUTBOX?.trim() ?? '')) {
+    problems.push('E2E_EXPOSE_MAIL_OUTBOX must not be enabled in production (it would expose password reset links)');
+  }
+
   // Missing JWT_ACCESS_SECRET / JWT_REFRESH_SECRET is reported by assertJwtConfig(); here we reject weak values that are set.
   for (const name of JWT_VARS) {
     const value = env[name];

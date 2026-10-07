@@ -1,4 +1,6 @@
 import bcrypt from 'bcrypt';
+import { hashPassword } from '../../services/password.service.js';
+import { toUserDTO } from './dto.js';
 import { UserModel } from '../../models/User.js';
 import type { User as UserDTO } from '@mockia/shared';
 import { AppError } from '../../middlewares/errorHandler.js';
@@ -18,13 +20,7 @@ export async function getUserProfile(userId: string): Promise<UserDTO> {
     throw new AppError('User not found', ErrorCode.NOT_FOUND, 404);
   }
 
-  return {
-    id: user._id.toString(),
-    email: user.email,
-    username: user.username,
-    createdAt: user.createdAt!.toISOString(),
-    updatedAt: user.updatedAt!.toISOString(),
-  };
+  return toUserDTO(user);
 }
 
 /**
@@ -50,13 +46,7 @@ export async function updateUserProfile(
 
   await user.save();
 
-  return {
-    id: user._id.toString(),
-    email: user.email,
-    username: user.username,
-    createdAt: user.createdAt!.toISOString(),
-    updatedAt: user.updatedAt!.toISOString(),
-  };
+  return toUserDTO(user);
 }
 
 /**
@@ -83,7 +73,7 @@ export async function changeUserPassword(
   }
 
   // Hash and save new password
-  const passwordHash = await bcrypt.hash(newPassword, 10);
+  const passwordHash = await hashPassword(newPassword);
   user.passwordHash = passwordHash;
 
   await user.save();

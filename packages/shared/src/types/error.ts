@@ -12,4 +12,6 @@ export enum ErrorCode {
   RATE_LIMIT_ERROR = 'RATE_LIMIT_ERROR',
   AUTHENTICATION_ERROR = 'AUTHENTICATION_ERROR',
   EXTERNAL_SERVICE_ERROR = 'EXTERNAL_SERVICE_ERROR',
+  /** 403: the feature needs a verified email address (AI generation, billing checkout / portal). */
+  EMAIL_NOT_VERIFIED = 'EMAIL_NOT_VERIFIED',
 }

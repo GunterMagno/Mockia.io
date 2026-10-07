@@ -37,3 +37,21 @@ export interface RefreshTokensResponse {
   accessToken: string;
   user: User;
 }
+
+/** POST /auth/forgot. The answer is always 202, whether or not the email has an account. */
+export interface ForgotPasswordRequest {
+  email: string;
+  /** Language of the email ('en' | 'es' | 'zh'). Defaults to 'en'. */
+  locale?: string;
+}
+
+/** POST /auth/reset: sets a new password with the token from the email. */
+export interface ResetPasswordRequest {
+  token: string;
+  password: string;
+}
+
+/** POST /auth/verify: confirms the email address with the token from the email. */
+export interface VerifyEmailRequest {
+  token: string;
+}

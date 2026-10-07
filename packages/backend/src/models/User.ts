@@ -21,6 +21,11 @@ interface UserDocument extends Document {
   cancelAtPeriodEnd: boolean;
   /** End of the current billing period, mirrored from the Stripe subscription. */
   currentPeriodEnd?: Date | null;
+  /**
+   * When the user proved control of the inbox (verification link or password reset link).
+   * Unset = unverified; AI generation and billing require it when REQUIRE_EMAIL_VERIFICATION is on.
+   */
+  emailVerifiedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -62,6 +67,7 @@ const userSchema = new Schema<UserDocument>(
     stripeEventAt: { type: Date },
     cancelAtPeriodEnd: { type: Boolean, default: false },
     currentPeriodEnd: { type: Date, default: null },
+    emailVerifiedAt: { type: Date, default: null },
   },
   {
     timestamps: true,

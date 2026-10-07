@@ -1,13 +1,17 @@
 import { Request, Response, NextFunction } from 'express';
 import { registerUser, loginUser, refreshTokens, logoutSession, refreshTokenJti, type IssuedSession } from './service.js';
 import { revokeAllForUser, listActiveSessions, type SessionMeta } from './sessions.js';
+import { requestPasswordReset, resetPassword, verifyEmail, resendVerification } from './passwordReset.js';
 import { setRefreshCookie, clearRefreshCookie, readRefreshCookie } from './cookie.js';
 import type { AuthenticatedRequest } from '../../middlewares/authenticateToken.js';
 import type { 
   CreateUserRequest,
   LoginRequest, 
-  LoginResponse, 
-  RefreshTokensResponse 
+  LoginResponse,
+  RefreshTokensResponse,
+  ForgotPasswordRequest,
+  ResetPasswordRequest,
+  VerifyEmailRequest,
 } from '@mockia/shared';
 import { AppError, asyncHandler } from '../../middlewares/errorHandler.js';
 
@@ -156,6 +160,80 @@ export const sessions = asyncHandler(async (req: Request, res: Response) => {
   res.status(200).json({
     success: true,
     data,
+    timestamp: new Date().toISOString(),
+  });
+});
+
+/**
+ * POST /api/auth/forgot
+ * Starts a password reset. ALWAYS answers 202 with the same body, whether or not the email has an account (and
+ * whether or not the mail could be sent), so it cannot be used to discover who is registered.
+ *
+ * Expected body: { "email": "user@example.com", "locale": "es" (optional) }
+ */
+export const forgot = asyncHandler(
+  async (req: Request<{}, {}, ForgotPasswordRequest>, res: Response) => {
+    const { email, locale } = req.body;
+    try {
+      await requestPasswordReset(email, locale);
+    } catch (err) {
+      // Even a database hiccup must look like any other request: the caller learns nothing
+      console.error('[Auth] Password reset request failed:', err instanceof Error ? err.message : err);
+    }
+    res.status(202).json({
+      success: true,
+      data: { message: 'If an account exists for that email, a reset link has been sent.' },
+      timestamp: new Date().toISOString(),
+    });
+  }
+);
+
+/**
+ * POST /api/auth/reset
+ * Sets a new password with the token from the email. Revokes every session of the user and marks the email verified.
+ *
+ * Expected body: { "token": "...", "password": "at least 10 characters" }
+ * @throws 400 if the password breaks the policy or the token is invalid, expired or already used
+ */
+export const reset = asyncHandler(
+  async (req: Request<{}, {}, ResetPasswordRequest>, res: Response) => {
+    await resetPassword(req.body.token, req.body.password);
+    res.status(200).json({
+      success: true,
+      data: { message: 'Password updated. Sign in with your new password.' },
+      timestamp: new Date().toISOString(),
+    });
+  }
+);
+
+/**
+ * POST /api/auth/verify
+ * Confirms the email address with the token from the verification email (works without being signed in).
+ *
+ * Expected body: { "token": "..." }
+ * @throws 400 if the token is invalid, expired or already used
+ */
+export const verify = asyncHandler(
+  async (req: Request<{}, {}, VerifyEmailRequest>, res: Response) => {
+    await verifyEmail(req.body.token);
+    res.status(200).json({
+      success: true,
+      data: { verified: true },
+      timestamp: new Date().toISOString(),
+    });
+  }
+);
+
+/**
+ * POST /api/auth/verify/resend
+ * Sends the authenticated user a new verification email. No-op (still 202) when the email is already verified.
+ */
+export const resendVerificationEmail = asyncHandler(async (req: Request, res: Response) => {
+  const userId = (req as AuthenticatedRequest).user!.id;
+  const sent = await resendVerification(userId, req.body?.locale);
+  res.status(202).json({
+    success: true,
+    data: { alreadyVerified: !sent },
     timestamp: new Date().toISOString(),
   });
 });

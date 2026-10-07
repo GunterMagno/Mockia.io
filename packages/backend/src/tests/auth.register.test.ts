@@ -101,13 +101,13 @@ describe('Auth - Registration (POST /api/auth/register)', () => {
     expect(response.body.error).toHaveProperty('code', 'VALIDATION_ERROR');
   });
 
-  it('should return 400 with short password (< 8 chars)', async () => {
+  it('should return 400 with short password (< 10 chars)', async () => {
     const response = await request(app)
       .post('/api/auth/register')
       .set('Content-Type', 'application/json')
       .send({
         email: 'test@example.com',
-        password: 'short',
+        password: 'short1234', // 9 characters
         username: 'testuser',
       });
 

@@ -1,5 +1,8 @@
 import bcrypt from 'bcrypt';
-import { UserModel, type UserDocument } from '../../models/User.js';
+import { UserModel } from '../../models/User.js';
+import { toUserDTO } from '../users/dto.js';
+import { hashPassword, rehashIfOutdated } from '../../services/password.service.js';
+import { sendVerificationEmail } from './passwordReset.js';
 import { DuplicateUserError } from '../../models/errors.js';
 import type { 
   CreateUserRequest, 
@@ -29,24 +32,15 @@ export interface IssuedSession {
   persistent: boolean;
 }
 
-function toUserDTO(user: UserDocument): UserDTO {
-  return {
-    id: user._id.toString(),
-    email: user.email,
-    username: user.username,
-    createdAt: user.createdAt.toISOString(),
-    updatedAt: user.updatedAt.toISOString(),
-  };
-}
-
 /**
  * Registers a new user
  * 
  * Flow:
  * 1. Check if email already exists in the database
- * 2. Hash the plain text password
- * 3. Create the document in MongoDB
- * 4. Map the document to API User DTO
+ * 2. Hash the plain text password (bcrypt cost 12)
+ * 3. Create the document in MongoDB (unverified)
+ * 4. Email a verification link (best effort: registration never fails because of mail)
+ * 5. Map the document to API User DTO
  * 
  * @param createUserRequest - DTO with email, password, username
  * @returns Created user mapped to User DTO
@@ -65,8 +59,7 @@ export async function registerUser(
   }
 
   // 2. Hash the password
-  const saltRounds = 10;
-  const passwordHash = await bcrypt.hash(password, saltRounds);
+  const passwordHash = await hashPassword(password);
 
   // 3. Create the document in MongoDB
   const userDocument = new UserModel({
@@ -77,16 +70,14 @@ export async function registerUser(
 
   const savedUser = await userDocument.save();
 
-  // 4. Map the document to API User DTO
-  const userDTO: UserDTO = {
-    id: savedUser._id.toString(),
-    email: savedUser.email,
-    username: savedUser.username,
-    createdAt: savedUser.createdAt.toISOString(),
-    updatedAt: savedUser.updatedAt.toISOString(),
-  };
+  // 4. Verification email: the token is created here, the SMTP delivery is not awaited and cannot throw
+  await sendVerificationEmail(
+    { id: savedUser._id.toString(), email: savedUser.email, username: savedUser.username },
+    createUserRequest.locale
+  );
 
-  return userDTO;
+  // 5. Map the document to API User DTO
+  return toUserDTO(savedUser);
 }
 
 /**
@@ -111,8 +102,9 @@ export async function verifyPassword(
  * Flow:
  * 1. Find user by email (case-insensitive)
  * 2. Verify the provided password against the stored hash
- * 3. Open a session (new refresh-token family) and generate access and refresh tokens
- * 4. Map user document to DTO and return with tokens
+ * 3. Transparently re-hash a password stored with a lower bcrypt cost
+ * 4. Open a session (new refresh-token family) and generate access and refresh tokens
+ * 5. Map user document to DTO and return with tokens
  *
  * @param loginRequest - DTO with email, password and the optional "remember me" flag
  * @param meta - ip / user agent of the client, stored on the session
@@ -151,13 +143,16 @@ export async function loginUser(loginRequest: LoginRequest, meta: SessionMeta = 
     );
   }
 
-  // 3. Open a session and generate tokens
+  // 3. Hashes made with an older, cheaper bcrypt cost are upgraded now that the password is proven
+  await rehashIfOutdated(user._id.toString(), password, user.passwordHash);
+
+  // 4. Open a session and generate tokens
   const userId = user._id.toString();
   const session = await createSession(userId, meta, persistent);
   const accessToken = signAccessToken(userId);
   const refreshToken = signRefreshToken(userId, session.jti);
 
-  // 4. Map user to DTO
+  // 5. Map user to DTO
   return { user: toUserDTO(user), accessToken, refreshToken, persistent };
 }
 

@@ -1,4 +1,5 @@
 import Joi from 'joi';
+import { PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH } from '../../services/password.service.js';
 
 /**
  * Validation schema for updating user profile
@@ -24,10 +25,12 @@ export const changePasswordSchema = Joi.object({
       'any.required': 'Current password is required',
     }),
   newPassword: Joi.string()
-    .min(8)
+    .min(PASSWORD_MIN_LENGTH)
+    .max(PASSWORD_MAX_LENGTH)
     .required()
     .messages({
-      'string.min': 'New password must be at least 8 characters',
+      'string.min': `New password must be at least ${PASSWORD_MIN_LENGTH} characters`,
+      'string.max': `New password cannot exceed ${PASSWORD_MAX_LENGTH} characters`,
       'any.required': 'New password is required',
     }),
 }).unknown(true);
