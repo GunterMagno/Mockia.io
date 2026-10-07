@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../../middlewares/authenticateToken.js';
 import { asyncHandler } from '../../middlewares/errorHandler.js';
-import { createProject, getUserProjects, getProjectById, updateProject, archiveProject, hardDeleteProject, cleanupArchivedProjects, addProjectMember, removeProjectMember, importGitHubRepository, regenerateApiKey, leaveProject } from './service.js';
+import { createProject, getUserProjects, getProjectById, updateProject, archiveProject, hardDeleteProject, cleanupArchivedProjects, addProjectMember, removeProjectMember, importGitHubRepository, issueApiKey, revokeApiKey, leaveProject } from './service.js';
 import { getProjectContext, deleteProjectContext } from '../../services/github-context.service.js';
 import { ProjectModel } from '../../models/Project.js';
 import { AppError } from '../../middlewares/errorHandler.js';
@@ -376,27 +376,46 @@ export const deleteProjectContextHandler = asyncHandler(
 );
 
 /**
- * POST /api/projects/:id/regenerate-api-key
- * Regenerates the API Key for a project
- * Only project owners and editors can regenerate
- * 
- * @param req - Authenticated request with user info and params
- * @param res - Express response
- * @returns 200 with new API key
- * @throws 401 if not authenticated
- * @throws 403 if user is not the project owner
- * @throws 404 if project not found or no context exists
+ * POST /api/projects/:id/api-key
+ * Creates the API key of the project or rotates it (the old one stops working). Owner only.
+ * The full key is in this response and nowhere else, so it is never cached.
+ *
+ * @returns 201 with { apiKey, prefix }
+ * @throws 403 if the user is not the project owner
+ * @throws 404 if project not found
  */
-
-export const regenerateApiKeyHandler = asyncHandler(
+export const issueApiKeyHandler = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
     const userId = req.user?.id;
     if (!userId) {
       throw new Error('User ID not found in request');
     }
 
-    const { id } = req.params;
-    const project = await regenerateApiKey(id, userId);
+    const issued = await issueApiKey(req.params.id, userId);
+
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(201).json({
+      success: true,
+      data: issued,
+      timestamp: new Date().toISOString(),
+    });
+  }
+);
+
+/**
+ * DELETE /api/projects/:id/api-key
+ * Revokes the API key. Owner only.
+ *
+ * @returns 200 with the project (no key)
+ */
+export const revokeApiKeyHandler = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new Error('User ID not found in request');
+    }
+
+    const project = await revokeApiKey(req.params.id, userId);
 
     res.status(200).json({
       success: true,

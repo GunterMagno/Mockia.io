@@ -10,6 +10,8 @@ import { getDefaultErrorBody } from './errorHelper.js';
 import { applyMockHeaders } from './header.service.js';
 import { mockCache } from './mockCache.service.js';
 import { applyCustomHeaders, clampStatus, waitDelay } from './mockBehavior.js';
+import { mockAccessAllowed, mockUnauthorizedBody } from './mockAuth.js';
+import { recordMockRequest } from '../../middlewares/planGate.js';
 
 /**
  * Express 4 no captura rechazos de handlers async: sin este wrapper cualquier fallo de BD/cache
@@ -37,8 +39,7 @@ async function handleMock(req: Request, res: Response, next: NextFunction) {
     return next();
   }
 
-  // 1. Authenticate with API Key
-  const apiKeyHeader = req.headers['x-mockia-api-key'] as string;
+  // 1. Authenticate with API Key (only projects with visibility 'key' ask for it)
   const project = await mockCache.getProject(projectSlug);
   
   if (!project) {
@@ -52,16 +53,8 @@ async function handleMock(req: Request, res: Response, next: NextFunction) {
     });
   }
 
-  // Check API Key if project has one
-  if (project.apiKey && project.apiKey !== apiKeyHeader) {
-    return res.status(401).json({
-      success: false,
-      error: {
-        code: 'UNAUTHORIZED',
-        message: 'Invalid or missing X-Mockia-API-Key header',
-      },
-      timestamp: new Date().toISOString(),
-    });
+  if (!mockAccessAllowed(project, req.headers)) {
+    return res.status(401).json(mockUnauthorizedBody());
   }
 
   const resolved = await resolveRoute(projectSlug, method, relativePath);
@@ -86,6 +79,9 @@ async function handleMock(req: Request, res: Response, next: NextFunction) {
   if (!defaultResp) {
     return next();
   }
+
+  // The request is accepted from here on: it counts against the owner's monthly quota (before any configured delay)
+  recordMockRequest(res);
 
   let body = Array.isArray(defaultResp.examples) && defaultResp.examples.length > 0
     ? defaultResp.examples[0]

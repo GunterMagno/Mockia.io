@@ -1,4 +1,5 @@
 import Joi from 'joi';
+import { MOCK_VISIBILITIES } from '@mockia/shared';
 import type { CreateProjectRequest, ImportGitHubRequest, ProjectRole } from '@mockia/shared';
 
 /**
@@ -28,7 +29,7 @@ export const createProjectSchema = Joi.object<CreateProjectRequest>({
 
 /**
  * Validation schema for updating a project
- * Both title and description are optional
+ * Title, description and mock visibility are all optional
  */
 export const updateProjectSchema = Joi.object({
   title: Joi.string()
@@ -47,6 +48,12 @@ export const updateProjectSchema = Joi.object({
     .allow('')
     .messages({
       'string.max': 'Project description cannot exceed 500 characters',
+    }),
+  visibility: Joi.string()
+    .valid(...MOCK_VISIBILITIES)
+    .optional()
+    .messages({
+      'any.only': 'visibility must be one of: public, key',
     }),
 });
 

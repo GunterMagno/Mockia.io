@@ -3,7 +3,8 @@ import type { AuthenticatedRequest } from './authenticateToken.js';
 import { ProjectModel } from '../models/Project.js';
 import { mockCache } from '../modules/mock/mockCache.service.js';
 import { PLAN_LIMITS, getUserPlan } from '../modules/billing/plans.js';
-import { consumeQuota, nextPeriodStart } from '../modules/billing/usage.js';
+import { nextPeriodStart, peekQuota, recordRequest } from '../modules/billing/usage.js';
+import { MOCK_EXPOSED_HEADERS, mockAccessAllowed } from '../modules/mock/mockAuth.js';
 
 const body = (code: string, message: string, details: Record<string, unknown>) => ({
   success: false,
@@ -50,6 +51,9 @@ export const enforceProjectLimit: RequestHandler = async (req: Request, res: Res
 
 const RESERVED_API_MOCK = new Set(['resolve-route', 'endpoints']); // authenticated management routes under /api/mock
 
+/** Clock of the quota (UTC month boundaries). Tests replace `now` to cross a month without touching the system date. */
+export const mockClock = { now: (): Date => new Date() };
+
 /** Project slug of a public mock call (/mock/:slug/* or /api/mock/:slug/*), or null for anything else. */
 export function extractMockSlug(path: string): string | null {
   const m = /^\/(api\/)?mock\/([^/]+)(\/.*)?$/.exec(path);
@@ -64,14 +68,31 @@ export function extractMockSlug(path: string): string | null {
   }
 }
 
+/** What the gate hands to the mock handlers: the quota check passed, count the request once it is actually served. */
+interface QuotaTicket {
+  ownerId: string;
+  limit: number;
+  now: Date;
+  counted: boolean;
+}
+
+const epochSeconds = (d: Date) => Math.floor(d.getTime() / 1000);
+
+function setRateLimitHeaders(res: Response, limit: number, remaining: number, resetAt: Date): void {
+  res.setHeader('X-RateLimit-Limit', String(limit));
+  res.setHeader('X-RateLimit-Remaining', String(Math.max(0, remaining)));
+  res.setHeader('X-RateLimit-Reset', String(epochSeconds(resetAt)));
+}
+
 /**
- * Global middleware: counts public mock calls per project owner and answers 429 QUOTA_EXCEEDED
- * once the owner's effective plan quota is spent. It ignores every non-mock path, so it can be
- * mounted once with app.use(). Every plan has a finite monthly quota (see PLAN_LIMITS).
+ * Global middleware, first half of the monthly mock quota. For public mock calls it answers 429 QUOTA_EXCEEDED once
+ * the project owner's effective plan quota is spent; otherwise it leaves a ticket in `res.locals` and the mock
+ * handler calls `recordMockRequest(res)` when it really serves the request. It ignores every non-mock path, so it can
+ * be mounted once with app.use(). Every plan has a finite monthly quota (see PLAN_LIMITS).
  *
- * - Calls with a wrong API key are not counted (the mock router answers 401), so strangers
- *   cannot burn an owner's quota by guessing.
- * - Fails open on lookup errors: a billing hiccup must not take mocks down.
+ * Only served requests count. Rejected ones (wrong or missing API key, unknown project or route, 429, CORS preflight)
+ * never consume quota, so strangers cannot burn an owner's quota by guessing slugs, routes or keys.
+ * Fails open on lookup errors: a billing hiccup must not take mocks down.
  */
 export const mockQuotaGate: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -81,23 +102,27 @@ export const mockQuotaGate: RequestHandler = async (req: Request, res: Response,
 
     const project = await mockCache.getProject(slug);
     if (!project) return next(); // mock router answers 404
-    if (project.apiKey && project.apiKey !== req.headers['x-mockia-api-key']) return next();
+    if (!mockAccessAllowed(project, req.headers)) return next(); // mock router answers 401
 
     const ownerId = project.ownerId.toString();
     const plan = await getUserPlan(ownerId);
     const limit = PLAN_LIMITS[plan].maxMonthlyRequests;
     if (!Number.isFinite(limit)) return next();
 
-    const now = new Date();
-    const { allowed, used } = await consumeQuota(ownerId, limit, now);
-    res.setHeader('X-Quota-Limit', String(limit));
-    res.setHeader('X-Quota-Remaining', String(Math.max(0, limit - used)));
-    if (allowed) return next();
+    const now = mockClock.now();
+    const { allowed } = await peekQuota(ownerId, limit, now);
+    if (allowed) {
+      const ticket: QuotaTicket = { ownerId, limit, now, counted: false };
+      res.locals.mockQuota = ticket;
+      return next();
+    }
 
     const resetAt = nextPeriodStart(now);
+    setRateLimitHeaders(res, limit, 0, resetAt);
     res.setHeader('Retry-After', String(Math.ceil((resetAt.getTime() - now.getTime()) / 1000)));
-    // This runs before the mock routes' own cors(origin '*'), so browsers need the header here to read the 429.
+    // This runs before the mock routes' own cors(origin '*'), so browsers need these headers here to read the 429.
     res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Expose-Headers', MOCK_EXPOSED_HEADERS.join(', '));
     res.status(429).json(
       body('QUOTA_EXCEEDED', `Monthly mock request quota (${limit}) exceeded for the ${plan} plan`, {
         plan,
@@ -110,3 +135,16 @@ export const mockQuotaGate: RequestHandler = async (req: Request, res: Response,
     next();
   }
 };
+
+/**
+ * Second half of the quota: called by the mock handlers once the request is accepted (project found, key valid, route
+ * resolved). Counts it against the owner (in memory, written to Mongo in batches) and sets the X-RateLimit-* headers.
+ * Safe to call more than once and when the gate left no ticket (unlimited plan, lookup failure).
+ */
+export function recordMockRequest(res: Response): void {
+  const ticket = res.locals?.mockQuota as QuotaTicket | undefined;
+  if (!ticket || ticket.counted) return;
+  ticket.counted = true;
+  const used = recordRequest(ticket.ownerId, ticket.now);
+  setRateLimitHeaders(res, ticket.limit, ticket.limit - used, nextPeriodStart(ticket.now));
+}

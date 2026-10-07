@@ -14,6 +14,8 @@ import { EndpointConfigModel } from '../models/EndpointConfig.js';
 import { getDefaultErrorBody } from '../modules/mock/errorHelper.js';
 import { mockCache } from '../modules/mock/mockCache.service.js';
 import { applyCustomHeaders, clampStatus, waitDelay } from '../modules/mock/mockBehavior.js';
+import { mockAccessAllowed, mockUnauthorizedBody } from '../modules/mock/mockAuth.js';
+import { recordMockRequest } from '../middlewares/planGate.js';
 
 /**
  * POST /api/mock/resolve-route
@@ -154,7 +156,7 @@ export const getProjectEndpointsHandler = asyncHandler(
  * Proxy handler for mock API requests
  * Acts as a catch-all to resolve and respond to mock API calls
  *
- * Authentication: API Key required via X-Mockia-API-Key header
+ * Authentication: projects with visibility 'key' require their API key in the X-Mockia-API-Key header
  *
  * @param req - Request
  * @param res - Express response
@@ -186,8 +188,7 @@ export const mockProxyHandler = asyncHandler(
     const projectSlug = pathParts[0];
     const mockPath = pathParts.length > 1 ? '/' + pathParts.slice(1).join('/') : '';
 
-    // 1. Authenticate with API Key
-    const apiKeyHeader = req.headers['x-mockia-api-key'] as string;
+    // 1. Authenticate with API Key (only projects with visibility 'key' ask for it)
     const project = await mockCache.getProject(projectSlug);
     
     if (!project) {
@@ -202,21 +203,14 @@ export const mockProxyHandler = asyncHandler(
       return;
     }
 
-    // Check API Key if project has one
-    if (project.apiKey && project.apiKey !== apiKeyHeader) {
-      res.status(401).json({
-        success: false,
-        error: {
-          code: 'UNAUTHORIZED',
-          message: 'Invalid or missing X-Mockia-API-Key header',
-        },
-        timestamp: new Date().toISOString(),
-      });
+    if (!mockAccessAllowed(project, req.headers)) {
+      res.status(401).json(mockUnauthorizedBody());
       return;
     }
 
     // 2. Handle Project Root (List Endpoints)
     if (!mockPath || mockPath === '/') {
+      recordMockRequest(res);
       const endpoints = await getProjectEndpoints(projectSlug);
       res.status(200).json({
         success: true,
@@ -252,6 +246,9 @@ export const mockProxyHandler = asyncHandler(
       });
       return;
     }
+
+    // The request is accepted from here on: it counts against the owner's monthly quota (before any configured delay)
+    recordMockRequest(res);
 
     // 4. Select Response
     const responseStatusHeader = req.headers['x-mockia-response-status'];

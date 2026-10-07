@@ -23,6 +23,8 @@ import swaggerUi from 'swagger-ui-express';
 import { specs } from './config/swagger.js';
 import { billingRouter } from './modules/billing/routes.js';
 import { mockQuotaGate } from './middlewares/planGate.js';
+import { MOCK_CORS_OPTIONS } from './modules/mock/mockAuth.js';
+import { migrateLegacyApiKeys } from './modules/projects/apiKeyMigration.js';
 import { flushUsage } from './modules/billing/usage.js';
 import { rateLimit, isStrictAuthPath } from './middlewares/rateLimit.js';
 import { authenticateToken } from './middlewares/authenticateToken.js';
@@ -165,10 +167,7 @@ app.use('/api/projects', projectsRouter);
 app.use('/api/github', githubRouter);
 
 // Mock Router routes (public with API Key)
-app.use('/api/mock', cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-}), mockRouter);
+app.use('/api/mock', cors(MOCK_CORS_OPTIONS), mockRouter);
 
 // Endpoints routes (protected)
 app.use('/api/endpoints', endpointsRouter);
@@ -198,10 +197,7 @@ mountMockDocsRoutes(app);
 // Intercepts any request to /mock/:projectSlug/* and serves default responses
 app.all(
   '/mock/:projectSlug/*',
-  cors({
-    origin: '*',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  }),
+  cors(MOCK_CORS_OPTIONS),
   catchAllMockRouter
 );
 
@@ -244,6 +240,11 @@ const startServer = async (): Promise<void> => {
 
     // Connect to MongoDB
     await connectDB();
+
+    // Plain-text project API keys of older versions become SHA-256 hashes (idempotent, no-op once migrated).
+    // Not caught on purpose: if it fails the server must not start, or private mocks would be served as public.
+    const migratedKeys = await migrateLegacyApiKeys();
+    if (migratedKeys > 0) console.log(`[Backend] Migrated ${migratedKeys} project API key(s) to hashes`);
 
     // Start project cleanup scheduler
     startProjectCleanupScheduler();

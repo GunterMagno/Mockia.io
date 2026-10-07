@@ -14,4 +14,6 @@ export enum ErrorCode {
   EXTERNAL_SERVICE_ERROR = 'EXTERNAL_SERVICE_ERROR',
   /** 403: the feature needs a verified email address (AI generation, billing checkout / portal). */
   EMAIL_NOT_VERIFIED = 'EMAIL_NOT_VERIFIED',
+  /** 409: the project cannot require an API key (visibility 'key') because none has been issued yet. */
+  API_KEY_REQUIRED = 'API_KEY_REQUIRED',
 }

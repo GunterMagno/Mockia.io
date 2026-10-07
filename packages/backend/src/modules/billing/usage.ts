@@ -80,6 +80,31 @@ function scheduleFlush(): void {
   flushTimer.unref();
 }
 
+/** Requests counted so far this period (persisted + in flight + pending), without consuming anything. */
+export async function peekQuota(
+  ownerId: string,
+  limit: number,
+  now = new Date()
+): Promise<{ allowed: boolean; used: number }> {
+  const entry = await entryFor(ownerId, periodOf(now), now.getTime());
+  const used = entry.persisted + entry.inFlight + entry.pending;
+  return { allowed: used < limit, used };
+}
+
+/** Counts one served request for `ownerId`; returns the new total of the period. Never touches Mongo itself. */
+export function recordRequest(ownerId: string, now = new Date()): number {
+  const period = periodOf(now);
+  const key = keyOf(ownerId, period);
+  let entry = entries.get(key);
+  if (!entry) {
+    entry = { ownerId, period, persisted: 0, inFlight: 0, pending: 0, syncedAt: 0, version: 0 };
+    entries.set(key, entry);
+  }
+  entry.pending += 1;
+  scheduleFlush();
+  return entry.persisted + entry.inFlight + entry.pending;
+}
+
 /**
  * Consumes one request for `ownerId` if the owner is under `limit` this month.
  * Rejected requests are not counted.
@@ -89,12 +114,9 @@ export async function consumeQuota(
   limit: number,
   now = new Date()
 ): Promise<{ allowed: boolean; used: number }> {
-  const entry = await entryFor(ownerId, periodOf(now), now.getTime());
-  const used = entry.persisted + entry.inFlight + entry.pending;
-  if (used >= limit) return { allowed: false, used };
-  entry.pending += 1;
-  scheduleFlush();
-  return { allowed: true, used: used + 1 };
+  const { allowed, used } = await peekQuota(ownerId, limit, now);
+  if (!allowed) return { allowed, used };
+  return { allowed, used: recordRequest(ownerId, now) };
 }
 
 /** Requests counted this month for `ownerId` (persisted total plus what this process has not written yet). */

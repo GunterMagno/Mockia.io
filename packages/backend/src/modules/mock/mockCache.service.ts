@@ -73,13 +73,14 @@ class MockCacheService {
     const cached = this.cache.get<ProjectDocument>(cacheKey);
     if (cached) return cached;
 
+    // The hash is select:false everywhere else; the mock engine needs it to check API keys (it stays in this process).
     let project;
     const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(projectSlug);
     if (isValidObjectId) {
-      project = await ProjectModel.findById(projectSlug);
+      project = await ProjectModel.findById(projectSlug).select('+apiKeyHash');
     }
     if (!project) {
-      project = await ProjectModel.findOne({ slug: projectSlug });
+      project = await ProjectModel.findOne({ slug: projectSlug }).select('+apiKeyHash');
     }
 
     if (project) {

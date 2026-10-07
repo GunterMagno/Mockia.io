@@ -1,16 +1,17 @@
 import { ProjectModel } from '../../models/Project.js';
-import crypto from 'crypto';
 import { UserModel } from '../../models/User.js';
 import { generateUniqueSlug } from '../../utils/slugGenerator.js';
 import { AppError } from '../../middlewares/errorHandler.js';
 import { ErrorCode } from '@mockia/shared';
-import type { Project as ProjectDTO, CreateProjectRequest, ImportGitHubRequest, ProjectMember, ProjectRole } from '@mockia/shared';
+import type { Project as ProjectDTO, IssuedApiKey, MockVisibility, CreateProjectRequest, ImportGitHubRequest, ProjectMember, ProjectRole } from '@mockia/shared';
 import { ProjectRoleEnum } from '../../models/Project.js';
 import { parseGitHubUrl } from '../../services/github.service.js';
 import { importAndAnalyzeRepository } from '../../services/github-context.service.js';
 import { createNotification } from '../../services/notification.service.js';
 import { NotificationType } from '@mockia/shared';
 import { deleteProjectsCascade } from './cascade.js';
+import { generateApiKey } from '../mock/mockAuth.js';
+import { mockCache } from '../mock/mockCache.service.js';
 
 /**
  * Maps a MongoDB ProjectDocument to a ProjectDTO
@@ -50,7 +51,10 @@ function mapProjectToDTO(doc: any): ProjectDTO {
       url: doc.gitHubRepo.url,
       importedAt: ensureISO(doc.gitHubRepo.importedAt) || new Date().toISOString(),
     } : undefined,
-    apiKey: doc.apiKey,
+    // The key itself is never in a DTO: only whether one exists and its display prefix (the hash is select:false).
+    visibility: doc.visibility === 'key' ? 'key' : 'public',
+    hasApiKey: Boolean(doc.apiKeyPrefix),
+    apiKeyPrefix: doc.apiKeyPrefix ?? null,
     isArchived: doc.isArchived,
     archivedAt: ensureISO(doc.archivedAt),
     createdAt: ensureISO(doc.createdAt) || new Date().toISOString(),
@@ -116,9 +120,8 @@ export async function createProject(
   }
 
   try {
-    // Generate unique slug and API Key
+    // Generate unique slug. New projects are public and have no API key; the owner issues one from the settings.
     const slug = await generateUniqueSlug(title);
-    const apiKey = crypto.randomBytes(24).toString('hex');
 
     // Create project document with owner as initial member
     const projectDocument = new ProjectModel({
@@ -126,7 +129,6 @@ export async function createProject(
       description,
       slug,
       ownerId,
-      apiKey,
       members: [
         {
           userId: ownerId,
@@ -289,7 +291,7 @@ export async function getProjectById(
 export async function updateProject(
   projectId: string,
   userId: string,
-  updateData: { title?: string; description?: string }
+  updateData: { title?: string; description?: string; visibility?: MockVisibility }
 ): Promise<ProjectDTO> {
   try {
     const project = await resolveProject(projectId);
@@ -328,6 +330,7 @@ export async function updateProject(
     const changerName = changer ? changer.username : 'A collaborator';
 
     const oldTitle = project.title;
+    const oldSlug = project.slug;
     const oldDescription = project.description;
 
     // Validate update data
@@ -373,12 +376,25 @@ export async function updateProject(
       }
     }
 
+    if (updateData.visibility !== undefined && updateData.visibility !== (project.visibility ?? 'public')) {
+      if (updateData.visibility === 'key' && !project.apiKeyPrefix) {
+        throw new AppError(
+          'Create an API key before requiring it on the mock endpoints',
+          ErrorCode.API_KEY_REQUIRED,
+          409
+        );
+      }
+      project.visibility = updateData.visibility;
+    }
+
     const titleChanged = updateData.title !== undefined && updateData.title.trim() !== oldTitle;
     const descriptionChanged = updateData.description !== undefined && updateData.description.trim() !== (oldDescription || '');
 
     // Save and return
     const savedProject = await project.save();
     await savedProject.populate('members.userId');
+    // The mock engine caches projects for a few seconds: visibility (and slug) changes must apply at once
+    await Promise.all([mockCache.invalidateProject(oldSlug), mockCache.invalidateProject(savedProject.slug)]);
 
     // Notify other members about the update (except the one who did it)
     if (titleChanged || descriptionChanged) {
@@ -844,81 +860,79 @@ export async function importGitHubRepository(
   }
 }
 
+/** Loads a project and checks that `userId` owns it (API keys are an owner-only credential). */
+async function projectOwnedBy(projectId: string, userId: string) {
+  const project = await resolveProject(projectId);
+  if (!project) throw new AppError('Project not found', ErrorCode.NOT_FOUND, 404);
+  if (project.ownerId.toString() !== userId) {
+    throw new AppError('Only the project owner can manage the API key', ErrorCode.FORBIDDEN, 403);
+  }
+  return project;
+}
+
+/** Tells the other members that the credential of the mock changed (they may have it in their clients). */
+async function notifyKeyChange(project: any, actorId: string, title: string, verb: string): Promise<void> {
+  const actor = await UserModel.findById(actorId);
+  const actorName = actor ? actor.username : 'The owner';
+  for (const member of project.members) {
+    const mId = member.userId?._id ? member.userId._id.toString() : member.userId.toString();
+    if (mId === actorId) continue;
+    await createNotification({
+      userId: mId,
+      type: NotificationType.PROJECT_REMOVAL, // Warning icon
+      title,
+      message: `${actorName} has ${verb} the API key for project "${project.title}". Update your client integrations.`,
+      link: `/editor/${project.slug}`,
+      projectId: project._id.toString(),
+    }).catch((err) => console.error('Failed to send API Key notification:', err));
+  }
+}
+
 /**
- * Regenerates the API Key for a project
- * Only project owners and editors can regenerate
+ * Creates the API key of a project, or rotates it if there already is one (the previous key stops working at once).
+ * Owner only. Only the SHA-256 and a display prefix are stored: the full key is in the return value and nowhere else.
  */
-export async function regenerateApiKey(
-  projectId: string,
-  userId: string
-): Promise<ProjectDTO> {
+export async function issueApiKey(projectId: string, userId: string): Promise<IssuedApiKey> {
   try {
-    const project = await resolveProject(projectId);
-    if (!project) {
-      throw new AppError('Project not found', ErrorCode.NOT_FOUND, 404);
-    }
-
-    // Check permissions (Owner or Editor)
-    const member = project.members.find(m => {
-      const mid = m.userId?._id ? m.userId._id.toString() : m.userId.toString();
-      return mid === userId;
-    });
-    
-    const role = member?.role?.toUpperCase();
-    const canRegenerate = role === 'OWNER' || role === 'EDITOR';
-
-    if (!canRegenerate) {
-      throw new AppError(
-        'Only project owners and editors can regenerate the API Key',
-        ErrorCode.FORBIDDEN,
-        403
-      );
-    }
-
-    // Get the changer's username
-    const changer = await UserModel.findById(userId);
-    const changerName = changer ? changer.username : 'A collaborator';
-
-    // Generate and save new API Key using findOneAndUpdate for atomicity and to avoid populate issues
-    const newApiKey = crypto.randomBytes(24).toString('hex');
-    
-    const updatedProject = await ProjectModel.findByIdAndUpdate(
-      projectId,
-      { $set: { apiKey: newApiKey } },
-      { new: true }
-    ).populate({
-      path: 'members.userId',
-      model: 'User'
-    });
-
-    if (!updatedProject) {
-      throw new AppError('Failed to retrieve updated project', ErrorCode.INTERNAL_SERVER_ERROR, 500);
-    }
-
-    // Notify other members about API key regeneration
-    for (const member of updatedProject.members) {
-      const mId = (member.userId as any)._id ? (member.userId as any)._id.toString() : member.userId.toString();
-      if (mId !== userId) {
-        await createNotification({
-          userId: mId,
-          type: NotificationType.PROJECT_REMOVAL, // Warning icon
-          title: 'Security: API Key Regenerated',
-          message: `${changerName} has regenerated the API Key for project "${updatedProject.title}". Update your client integrations.`,
-          link: `/editor/${updatedProject.slug}`,
-          projectId: updatedProject._id.toString()
-        }).catch(err => console.error('Failed to send API Key notification:', err));
-      }
-    }
-
-    return mapProjectToDTO(updatedProject);
+    const project = await projectOwnedBy(projectId, userId);
+    const { apiKey, hash, prefix } = generateApiKey();
+    const rotated = Boolean(project.apiKeyPrefix);
+    await ProjectModel.updateOne(
+      { _id: project._id },
+      { $set: { apiKeyHash: hash, apiKeyPrefix: prefix, apiKeyCreatedAt: new Date() } }
+    );
+    await mockCache.invalidateProject(project.slug);
+    if (rotated) await notifyKeyChange(project, userId, 'Security: API Key Regenerated', 'regenerated');
+    return { apiKey, prefix };
   } catch (error) {
     if (error instanceof AppError) throw error;
-    console.error('Error regenerating API Key:', error);
-    throw new AppError(
-      'Failed to regenerate API Key',
-      ErrorCode.INTERNAL_SERVER_ERROR,
-      500
-    );
+    console.error('Error issuing API Key:', error);
+    throw new AppError('Failed to create API Key', ErrorCode.INTERNAL_SERVER_ERROR, 500);
+  }
+}
+
+/**
+ * Revokes the API key. Visibility is left as it is: a project that requires a key and has none answers 401 to
+ * everybody until a new key is issued (it never silently becomes public). Owner only.
+ */
+export async function revokeApiKey(projectId: string, userId: string): Promise<ProjectDTO> {
+  try {
+    const project = await projectOwnedBy(projectId, userId);
+    if (project.apiKeyPrefix) {
+      await ProjectModel.updateOne(
+        { _id: project._id },
+        { $unset: { apiKeyHash: '', apiKeyPrefix: '', apiKeyCreatedAt: '' } }
+      );
+      await mockCache.invalidateProject(project.slug);
+      await notifyKeyChange(project, userId, 'Security: API Key Revoked', 'revoked');
+    }
+    const updated = await resolveProject(projectId);
+    if (!updated) throw new AppError('Project not found', ErrorCode.NOT_FOUND, 404);
+    return mapProjectToDTO(updated);
+  } catch (error) {
+    if (error instanceof AppError) throw error;
+    console.error('Error revoking API Key:', error);
+    throw new AppError('Failed to revoke API Key', ErrorCode.INTERNAL_SERVER_ERROR, 500);
   }
 }
 

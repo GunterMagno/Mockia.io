@@ -36,7 +36,13 @@ interface ProjectDocument extends Document {
   members: ProjectMemberDocument[];
   gitHubRepo?: GitHubRepoDocument;
   isArchived: boolean;
-  apiKey?: string;
+  /** Who can call the mock endpoints. Missing on old documents: treated as 'public'. */
+  visibility?: 'public' | 'key';
+  /** SHA-256 of the API key (hex). The key itself is never stored; select:false keeps the hash out of ordinary reads. */
+  apiKeyHash?: string;
+  /** First characters of the key, for display ("mk_ab12cd"). */
+  apiKeyPrefix?: string;
+  apiKeyCreatedAt?: Date;
   archivedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -137,11 +143,20 @@ const projectSchema = new Schema<ProjectDocument>(
       default: null,
       index: true,
     },
-    apiKey: {
+    visibility: {
       type: String,
-      unique: true,
-      sparse: true,
-      index: true,
+      enum: ['public', 'key'],
+      default: 'public',
+    },
+    apiKeyHash: {
+      type: String,
+      select: false,
+    },
+    apiKeyPrefix: {
+      type: String,
+    },
+    apiKeyCreatedAt: {
+      type: Date,
     },
   },
   {
