@@ -67,6 +67,197 @@ describe('Billing: planes, limites y facturacion', () => {
     cy.location('pathname').should('eq', '/billing');
     cy.contains('5 of 5').should('be.visible');
   });
+  describe('precio mensual / anual y Enterprise', () => {
+    // Importes del catalogo compartido (@mockia/shared PLAN_PRICE_USD): Pro 29 / 290 al ano, Team 99 / 990 al ano; el anual son 10 meses (ahorro 17 %)
+    const toggle = () => cy.get('[role="group"][aria-label="Billing period"]');
+
+    it('en la landing el selector cambia los importes mostrados y los avisa con texto', () => {
+      cy.visit('/');
+      cy.get('#pricing-title').scrollIntoView();
+
+      toggle().contains('button', 'Monthly').should('have.attr', 'aria-pressed', 'true');
+      toggle().contains('button', 'Yearly').should('have.attr', 'aria-pressed', 'false');
+      cy.get('[data-testid="price-pro"]').should('have.text', '$29');
+      cy.get('[data-testid="price-team"]').should('have.text', '$99');
+      cy.get('[data-testid="price-free"]').should('have.text', '$0');
+      cy.get('[data-testid="billed-pro"]').should('have.text', 'Billed monthly');
+
+      // Teclado: Tab desde el segmento mensual llega al anual (son <button> nativos: Enter y Espacio los activan en el navegador;
+      // cy.press envia la tecla pero no ejecuta la accion por defecto, asi que la activacion se prueba con click)
+      toggle().contains('button', 'Monthly').focus();
+      cy.press(Cypress.Keyboard.Keys.TAB);
+      cy.focused().should('contain.text', 'Yearly');
+      cy.focused().click();
+      toggle().contains('button', 'Yearly').should('have.attr', 'aria-pressed', 'true');
+      toggle().contains('button', 'Monthly').should('have.attr', 'aria-pressed', 'false');
+      // 290 / 12 = 24,17 y 990 / 12 = 82,50 al mes; se cobra el ano entero
+      cy.get('[data-testid="price-pro"]').should('have.text', '$24.17');
+      cy.get('[data-testid="price-team"]').should('have.text', '$82.50');
+      cy.get('[data-testid="price-free"]').should('have.text', '$0');
+      cy.get('[data-testid="billed-pro"]').should('contain.text', 'Billed yearly $290').and('contain.text', 'Save 17%');
+      cy.get('[data-testid="billed-team"]').should('contain.text', 'Billed yearly $990').and('contain.text', 'Save 17%');
+
+      toggle().contains('button', 'Monthly').click();
+      cy.get('[data-testid="price-pro"]').should('have.text', '$29');
+    });
+
+    it('Enterprise no tiene precio ni checkout: solo un enlace mailto para hablar', () => {
+      cy.visit('/');
+      cy.get('#pricing-title').scrollIntoView();
+      cy.get('[data-testid="plan-enterprise"]').within(() => {
+        cy.contains('h3', 'Enterprise').should('be.visible');
+        cy.contains('Custom').should('be.visible');
+        cy.contains('SSO or an SLA').should('be.visible');
+        cy.contains('a', 'Contact us').should('have.attr', 'href').and('match', /^mailto:[^?\s]+@[^?\s]+\?subject=/);
+        cy.get('button').should('not.exist');
+      });
+    });
+
+    it('las cuatro tarjetas caben sin desbordar en 375, 768 y 1440 px', () => {
+      for (const [width, height] of [[375, 812], [768, 1024], [1440, 900]]) {
+        cy.viewport(width, height);
+        cy.visit('/');
+        cy.get('#pricing-title').scrollIntoView();
+        cy.get('ul[class*="grid"] > li').should('have.length', 4);
+        cy.document().then((doc) => {
+          expect(doc.documentElement.scrollWidth, `ancho ${width}`).to.be.at.most(width);
+        });
+      }
+    });
+
+    const loginFresh = (username: string) => {
+      const email = `${username.toLowerCase()}${Date.now()}@example.com`;
+      cy.request('POST', `${API}/auth/register`, { username, email, password });
+      cy.clearCookies();
+      cy.visit('/login');
+      cy.get('input[name="email"]').type(email);
+      cy.get('input[name="password"]').type(password);
+      cy.get('button[type="submit"]').click();
+      cy.location('pathname').should('eq', '/dashboard');
+    };
+    const day = 86400000;
+    const overviewOf = (extra: Record<string, unknown>) => ({
+      success: true,
+      timestamp: new Date().toISOString(),
+      data: {
+        plan: 'free',
+        subscribedPlan: 'free',
+        billingStatus: 'active',
+        interval: null,
+        cancelAtPeriodEnd: false,
+        currentPeriodEnd: null,
+        pastDueUntil: null,
+        limits: { maxActiveProjects: 5, maxMonthlyRequests: 10_000 },
+        usage: { activeProjects: 0, monthlyRequests: 0, periodResetAt: new Date(Date.now() + 20 * day).toISOString() },
+        canManageBilling: false,
+        checkoutAvailable: { pro: true, team: true },
+        yearlyCheckoutAvailable: { pro: true, team: false },
+        ...extra,
+      },
+    });
+
+    it('en facturacion el checkout viaja con el intervalo elegido', () => {
+      loginFresh('IntervalUser');
+      cy.intercept('GET', '**/api/billing/me', overviewOf({})).as('overview');
+      // Respuesta simulada hacia una pagina propia: no se sale de la app
+      cy.intercept('POST', '**/api/billing/checkout', { success: true, data: { id: 'cs_1', url: '/billing?checkout=cancel' } }).as('checkout');
+
+      cy.visit('/billing');
+      cy.wait('@overview');
+      toggle().contains('button', 'Yearly').click();
+      cy.contains('li', 'Pro').within(() => cy.contains('button', 'Upgrade to Pro').click());
+      cy.wait('@checkout').its('request.body').should('deep.equal', { plan: 'pro', interval: 'year' });
+
+      // Sin el precio anual de Team configurado, el anual de Team no se ofrece, pero el mensual si (y en movil la pagina no desborda)
+      cy.viewport(375, 812);
+      cy.visit('/billing');
+      cy.wait('@overview');
+      cy.get('#billing-plans-title').should('exist');
+      cy.document().then((doc) => expect(doc.documentElement.scrollWidth).to.be.at.most(375));
+      toggle().contains('button', 'Yearly').click();
+      cy.contains('li', 'Team').within(() => cy.contains('button', 'Not available yet').should('be.disabled'));
+      toggle().contains('button', 'Monthly').click();
+      cy.contains('li', 'Team').within(() => cy.contains('button', 'Upgrade to Team').click());
+      cy.wait('@checkout').its('request.body').should('deep.equal', { plan: 'team', interval: 'month' });
+    });
+
+    it('un suscriptor anual ve su intervalo y puede pasar al mensual desde el portal', () => {
+      loginFresh('YearlyUser');
+      const pro = overviewOf({
+        plan: 'pro',
+        subscribedPlan: 'pro',
+        interval: 'year',
+        currentPeriodEnd: new Date(Date.now() + 200 * day).toISOString(),
+        limits: { maxActiveProjects: 50, maxMonthlyRequests: 1_000_000 },
+        canManageBilling: true,
+        yearlyCheckoutAvailable: { pro: true, team: true },
+      });
+      cy.intercept('GET', '**/api/billing/me', pro).as('overview');
+      cy.intercept('POST', '**/api/billing/portal', { success: true, data: { url: '/billing?portal=returned' } }).as('portal');
+      cy.visit('/billing');
+      cy.wait('@overview');
+      cy.get('[data-testid="billing-interval"]').should('have.text', 'Billed yearly');
+      // El selector arranca en el intervalo que ya paga: su tarjeta es el plan actual
+      toggle().contains('button', 'Yearly').should('have.attr', 'aria-pressed', 'true');
+      cy.contains('li', 'Pro').within(() => cy.contains('button', 'Current plan').should('be.disabled'));
+      toggle().contains('button', 'Monthly').click();
+      cy.contains('li', 'Pro').within(() => cy.contains('button', 'Switch to monthly billing').click());
+      cy.wait('@portal');
+      cy.location('search').should('eq', '?portal=returned');
+    });
+
+    it('el intervalo elegido en la landing llega a facturacion tras registrarse', () => {
+      const email = `landing-interval${Date.now()}@example.com`;
+      cy.clearLocalStorage();
+      cy.clearCookies();
+      cy.visit('/');
+      cy.get('#pricing-title').scrollIntoView();
+      toggle().contains('button', 'Yearly').click();
+      cy.contains('li', 'Pro').within(() => cy.contains('button', 'Choose Pro').click());
+      cy.location('pathname').should('eq', '/signup');
+      cy.get('input[name="username"]').type('LandingInterval');
+      cy.get('input[name="email"]').type(email);
+      cy.get('input[name="new-password"]').type(password);
+      cy.get('button[type="submit"]').click();
+      cy.location('pathname').should('eq', '/billing');
+      cy.location('search').should('eq', '?upgrade=pro&interval=year');
+      toggle().contains('button', 'Yearly').should('have.attr', 'aria-pressed', 'true');
+    });
+  });
+
+  describe('landing sin cifras ni testimonios inventados', () => {
+    const FAKE = /Sarah Chen|Veloce|100\+|99\.9|edge locations/i;
+
+    it('no muestra regiones, uptime ni la cita falsa, y no desborda en 375 px', () => {
+      cy.viewport(375, 812);
+      cy.visit('/');
+      cy.get('#pricing-title').should('exist');
+      cy.document().then((doc) => {
+        expect(doc.body.innerText).not.to.match(FAKE);
+        expect(doc.documentElement.scrollWidth).to.be.at.most(375);
+      });
+      cy.get('blockquote').should('not.exist');
+      // Los enlaces de la cabecera y las secciones siguen existiendo
+      for (const id of ['how-title', 'builder-title', 'features-title', 'pricing-title', 'story-title']) cy.get(`#${id}`).should('exist');
+    });
+
+    it('tampoco en espanol ni en chino, y el selector de precios esta traducido', () => {
+      cy.visit('/');
+      for (const [locale, group, yearly, billed] of [
+        ['es', 'Periodo de facturación', 'Anual', 'Facturado anualmente: 290'],
+        ['zh', '计费周期', '按年', '按年计费'],
+      ]) {
+        cy.get('select:has(option[value="zh"])').filter(':visible').first().select(locale);
+        cy.get('#pricing-title').scrollIntoView();
+        cy.get(`[role="group"][aria-label="${group}"]`).contains('button', yearly).click();
+        cy.get('[data-testid="billed-pro"]').should('contain.text', billed);
+        cy.document().then((doc) => {
+          expect(doc.body.innerText).not.to.match(FAKE);
+        });
+      }
+    });
+  });
+
   // La app no puede sembrar la base de datos desde Cypress: el estado de impago se simula interceptando GET /billing/me.
   describe('impago dentro del periodo de gracia', () => {
     const DAY = 24 * 60 * 60 * 1000;
