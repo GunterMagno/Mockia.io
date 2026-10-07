@@ -1,4 +1,5 @@
 import { Schema, model, Document } from 'mongoose';
+import { SUPPORTED_LOCALES, type Locale } from '@mockia/shared';
 
 /**
  * Internal interface for user document in MongoDB
@@ -26,6 +27,8 @@ interface UserDocument extends Document {
    * Unset = unverified; AI generation and billing require it when REQUIRE_EMAIL_VERIFICATION is on.
    */
   emailVerifiedAt?: Date | null;
+  /** Interface language chosen by the user. Unset until the client saves one. */
+  locale?: Locale;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -68,6 +71,7 @@ const userSchema = new Schema<UserDocument>(
     cancelAtPeriodEnd: { type: Boolean, default: false },
     currentPeriodEnd: { type: Date, default: null },
     emailVerifiedAt: { type: Date, default: null },
+    locale: { type: String, enum: SUPPORTED_LOCALES },
   },
   {
     timestamps: true,

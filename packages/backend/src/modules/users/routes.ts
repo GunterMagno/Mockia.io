@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { getProfile, updateProfile, changePassword } from './controller.js';
+import { getProfile, updateProfile, changePassword, updatePreferences } from './controller.js';
 import { authenticateToken } from '../../middlewares/authenticateToken.js';
 import { validate } from '../../middlewares/validateRequest.js';
-import { updateProfileSchema, changePasswordSchema } from './validation.js';
+import { updateProfileSchema, changePasswordSchema, updatePreferencesSchema } from './validation.js';
 
 /**
  * User router
@@ -91,4 +91,39 @@ userRouter.post(
   authenticateToken,
   validate({ body: changePasswordSchema }),
   changePassword
+);
+
+/**
+ * @swagger
+ * /users/me/preferences:
+ *   patch:
+ *     summary: Save the interface language of the user
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - locale
+ *             properties:
+ *               locale:
+ *                 type: string
+ *                 enum: [en, es, zh]
+ *     responses:
+ *       200:
+ *         description: Language saved
+ *       400:
+ *         description: Unsupported language
+ *       401:
+ *         description: Unauthorized
+ */
+userRouter.patch(
+  '/me/preferences',
+  authenticateToken,
+  validate({ body: updatePreferencesSchema }),
+  updatePreferences
 );

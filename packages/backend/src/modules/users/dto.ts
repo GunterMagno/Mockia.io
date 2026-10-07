@@ -8,6 +8,7 @@ export function toUserDTO(user: UserDocument): UserDTO {
     email: user.email,
     username: user.username,
     emailVerifiedAt: user.emailVerifiedAt ? user.emailVerifiedAt.toISOString() : null,
+    ...(user.locale ? { locale: user.locale } : {}),
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),
   };

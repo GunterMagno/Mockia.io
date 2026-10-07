@@ -1,4 +1,5 @@
 import Joi from 'joi';
+import { SUPPORTED_LOCALES } from '@mockia/shared';
 import { PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH } from '../../services/password.service.js';
 
 /**
@@ -34,3 +35,17 @@ export const changePasswordSchema = Joi.object({
       'any.required': 'New password is required',
     }),
 }).unknown(true);
+
+/**
+ * Validation schema for saving user preferences (strict: an unknown language is a 400, never silently ignored)
+ */
+export const updatePreferencesSchema = Joi.object({
+  locale: Joi.string()
+    .valid(...SUPPORTED_LOCALES)
+    .required()
+    .messages({
+      'any.only': `Locale must be one of: ${SUPPORTED_LOCALES.join(', ')}`,
+      'any.required': 'Locale is required',
+      'string.base': `Locale must be one of: ${SUPPORTED_LOCALES.join(', ')}`,
+    }),
+});
