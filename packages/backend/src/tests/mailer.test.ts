@@ -45,6 +45,29 @@ describe('mailer', () => {
       expect(mail.text).toContain('Ana');
     });
 
+    it.each([
+      ['en', 'payment_failed', "We couldn't charge your card", 'October 14, 2026'],
+      ['es', 'payment_failed', 'No hemos podido cobrar tu tarjeta', '14 de octubre de 2026'],
+      ['zh', 'payment_failed', '我们无法从你的银行卡扣款', '2026年10月14日'],
+      ['en', 'trial_will_end', 'Your Mockia trial ends soon', 'October 14, 2026'],
+      ['es', 'trial_will_end', 'Tu prueba de Mockia termina pronto', '14 de octubre de 2026'],
+      ['zh', 'trial_will_end', '你的 Mockia 试用即将结束', '2026年10月14日'],
+    ] as const)('%s / %s: billing notice with the date, the link and the user name', (locale, template, subject, date) => {
+      const mail = renderMail(template, { link: 'https://app.example.com/billing', username: 'Ana', locale, date });
+      expect(mail.subject).toBe(subject);
+      expect(mail.text).toContain(date);
+      expect(mail.html).toContain(date);
+      expect(mail.text).toContain('https://app.example.com/billing');
+      expect(mail.html).toContain('href="https://app.example.com/billing"');
+      expect(mail.text).toContain('Ana');
+    });
+
+    it('escapes html in the date of a billing notice', () => {
+      const mail = renderMail('payment_failed', { link: LINK, date: '<b>x</b>' });
+      expect(mail.html).not.toContain('<b>x</b>');
+      expect(mail.html).toContain('&lt;b&gt;x&lt;/b&gt;');
+    });
+
     it('defaults to English when the locale is missing or unknown', () => {
       expect(renderMail('reset', { link: LINK }).locale).toBe('en');
       expect(renderMail('reset', { link: LINK, locale: 'fr' }).locale).toBe('en');
