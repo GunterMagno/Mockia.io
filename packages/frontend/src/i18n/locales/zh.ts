@@ -360,6 +360,20 @@ const zh: Messages = {
     goToEditor: '进入编辑器 →',
   },
 
+  projectExport: {
+    button: '导出',
+    exporting: '正在导出…',
+    openapi: 'OpenAPI (.json)',
+    openapiHint: 'OpenAPI 3.1 文档',
+    postman: 'Postman 集合',
+    postmanHint: '集合 v2.1 (.json)',
+    msw: 'MSW 处理程序 (.ts)',
+    mswHint: 'Mock Service Worker v2 处理程序',
+    preparing: '正在准备导出…',
+    done: '已下载 {file}',
+    failed: '无法导出：{message}',
+  },
+
   editor: {
     mockBaseUrl: '模拟 API 基础地址',
     header: '请求头',

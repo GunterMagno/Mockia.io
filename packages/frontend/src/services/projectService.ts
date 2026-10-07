@@ -1,4 +1,5 @@
 import { api } from './api'
+import { filenameFromDisposition } from '../utils/download'
 import type { 
   Project, 
   CreateProjectRequest, 
@@ -60,3 +61,20 @@ export const leaveProject = async (projectId: string): Promise<void> => {
   await api.post(`/projects/${projectId}/leave`)
 }
 
+
+export type ExportFormat = 'openapi' | 'postman' | 'msw'
+
+const EXPORT_FALLBACK_NAME: Record<ExportFormat, string> = {
+  openapi: 'openapi.json',
+  postman: 'collection.postman_collection.json',
+  msw: 'handlers.ts',
+}
+
+/**
+ * Descarga los mocks del proyecto (GET /projects/:id/export?format=...) con el token Bearer en memoria.
+ * Devuelve el contenido y el nombre de archivo que propone el servidor (Content-Disposition).
+ */
+export const exportProject = async (projectId: string, format: ExportFormat): Promise<{ blob: Blob; filename: string }> => {
+  const res = await api.get<Blob>(`/projects/${encodeURIComponent(projectId)}/export`, { params: { format }, responseType: 'blob' })
+  return { blob: res.data, filename: filenameFromDisposition(res.headers['content-disposition'], EXPORT_FALLBACK_NAME[format]) }
+}

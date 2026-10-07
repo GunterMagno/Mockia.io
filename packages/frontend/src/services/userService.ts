@@ -1,4 +1,5 @@
 import { api } from './api'
+import { filenameFromDisposition } from '../utils/download'
 
 export interface UserProfile {
   id: string
@@ -29,8 +30,7 @@ export const changePassword = async (payload: { currentPassword: string, newPass
  */
 export const exportMyData = async (): Promise<{ blob: Blob; filename: string }> => {
   const res = await api.get<Blob>('/users/me/export', { responseType: 'blob' })
-  const disposition = String(res.headers['content-disposition'] ?? '')
-  const filename = /filename="([^"]+)"/.exec(disposition)?.[1] ?? `mockia-export-${new Date().toISOString().slice(0, 10)}.json`
+  const filename = filenameFromDisposition(res.headers['content-disposition'], `mockia-export-${new Date().toISOString().slice(0, 10)}.json`)
   return { blob: res.data, filename }
 }
 

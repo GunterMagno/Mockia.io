@@ -6,6 +6,7 @@ import { exportMyData, deleteMyAccount } from '../../../services/userService'
 import { getBackendErrorMessage } from '../../../utils/error'
 import { playErrorSound } from '../../../utils/audio'
 import { PATHS } from '../../../routes/paths'
+import { saveBlob } from '../../../utils/download'
 import { Input } from '../Input/Input'
 import styles from './AccountData.module.scss'
 
@@ -52,14 +53,7 @@ const AccountData: React.FC<Props> = ({ email, onDeleted }) => {
     setDownloadStatus(t('profile.account.downloading'))
     try {
       const { blob, filename } = await exportMyData()
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = filename
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-      URL.revokeObjectURL(url)
+      saveBlob(blob, filename)
       setDownloadStatus(t('profile.account.downloaded'))
     } catch (err) {
       setDownloadStatus('')

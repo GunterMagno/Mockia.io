@@ -376,6 +376,20 @@ const es: Messages = {
     goToEditor: 'Ir al editor →',
   },
 
+  projectExport: {
+    button: 'Exportar',
+    exporting: 'Exportando…',
+    openapi: 'OpenAPI (.json)',
+    openapiHint: 'Documento OpenAPI 3.1',
+    postman: 'Colección de Postman',
+    postmanHint: 'Colección v2.1 (.json)',
+    msw: 'Handlers de MSW (.ts)',
+    mswHint: 'Handlers de Mock Service Worker v2',
+    preparing: 'Preparando la exportación…',
+    done: '{file} descargado',
+    failed: 'No se pudo exportar: {message}',
+  },
+
   editor: {
     mockBaseUrl: 'URL base del mock',
     header: 'Cabecera',

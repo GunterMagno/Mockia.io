@@ -15,6 +15,7 @@ import { Icon } from '../../components/ui/Icon/Icon'
 import aiSparkleIcon from '../../assets/ai-sparkle.svg'
 import copyIcon from '../../assets/copy.svg'
 import checkIcon from '../../assets/check.svg'
+import { ExportMenu } from '../../components/projects/ExportMenu'
 
 import styles from './MockEditor.module.scss'
 import ProjectSettingsModal from '../../components/projects/ProjectSettingsModal'
@@ -354,6 +355,7 @@ const MockEditor: React.FC = () => {
           {isDirty && <span className={styles.unsaved} role="status">• {t('editor.unsaved')}</span>}
         </section>
         <section className={styles.rightHeader}>
+          <ExportMenu projectId={project?.id} />
           {!isViewer && (
             <>
               <Button 

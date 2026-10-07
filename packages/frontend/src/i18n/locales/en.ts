@@ -381,6 +381,20 @@ const en = {
     goToEditor: 'Go to editor →',
   },
 
+  projectExport: {
+    button: 'Export',
+    exporting: 'Exporting…',
+    openapi: 'OpenAPI (.json)',
+    openapiHint: 'OpenAPI 3.1 document',
+    postman: 'Postman collection',
+    postmanHint: 'Collection v2.1 (.json)',
+    msw: 'MSW handlers (.ts)',
+    mswHint: 'Mock Service Worker v2 handlers',
+    preparing: 'Preparing the export…',
+    done: '{file} downloaded',
+    failed: 'Could not export: {message}',
+  },
+
   editor: {
     mockBaseUrl: 'Mock base URL',
     header: 'Header',
