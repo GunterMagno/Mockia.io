@@ -8,8 +8,10 @@ export const PATHS = {
   forgotPassword: '/forgot-password',
   resetPassword: '/reset-password',
   verifyEmail: '/verify-email',
+  legal: '/legal',
   terms: '/terms',
   privacy: '/privacy',
+  cookies: '/cookies',
   dashboard: '/dashboard',
   billing: '/billing',
   editorPattern: '/editor/:id',
@@ -24,8 +26,10 @@ const PUBLIC = [
   PATHS.forgotPassword,
   PATHS.resetPassword,
   PATHS.verifyEmail,
+  PATHS.legal,
   PATHS.terms,
   PATHS.privacy,
+  PATHS.cookies,
 ]
 /** Requieren cuenta: solo estas piden login. */
 const PROTECTED = [PATHS.dashboard, PATHS.billing, PATHS.editorPattern]

@@ -20,8 +20,10 @@ export const Footer: React.FC = () => {
           >
             {t('footer.documentation')}
           </a>
+          <Link to={PATHS.legal} className={styles.link}>{t('footer.legal')}</Link>
           <Link to={PATHS.terms} className={styles.link}>{t('footer.terms')}</Link>
           <Link to={PATHS.privacy} className={styles.link}>{t('footer.privacy')}</Link>
+          <Link to={PATHS.cookies} className={styles.link}>{t('footer.cookies')}</Link>
           <a 
             href="/api/docs" 
             className={styles.link}

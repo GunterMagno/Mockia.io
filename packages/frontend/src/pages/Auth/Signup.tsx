@@ -18,7 +18,7 @@ const Signup: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const { login } = useAuth()
-  const { t, locale } = useI18n()
+  const { t, locale, rich } = useI18n()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [username, setUsername] = useState('')
@@ -116,6 +116,14 @@ const Signup: React.FC = () => {
             <Button type="submit" isLoading={loading} className={styles.submitBtn}>
               {t('auth.createAccount')}
             </Button>
+
+            {/* Aviso informativo, sin casilla: registrarse implica aceptar los documentos que se enlazan */}
+            <p className={styles.legalNotice} data-signup-legal>
+              {rich('auth.legalNotice', {
+                terms: (chunk) => <Link to={PATHS.terms}>{chunk}</Link>,
+                privacy: (chunk) => <Link to={PATHS.privacy}>{chunk}</Link>,
+              })}
+            </p>
           </form>
           
           <footer className={styles.footer}>

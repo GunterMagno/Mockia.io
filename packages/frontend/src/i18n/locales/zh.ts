@@ -54,6 +54,8 @@ const zh: Messages = {
     documentation: '文档',
     terms: '服务条款',
     privacy: '隐私政策',
+    legal: '法律声明',
+    cookies: 'Cookie 政策',
     apiDocs: 'API 文档',
     links: '页脚',
   },
@@ -212,6 +214,7 @@ const zh: Messages = {
     emailPlaceholder: 'you@email.com',
     password: '密码',
     rememberMe: '记住我',
+    legalNotice: '注册即表示你接受<terms>服务条款</terms>和<privacy>隐私政策</privacy>。',
     signIn: '登录',
     createAccount: '创建账户',
     noAccount: '还没有账户？',
@@ -477,10 +480,6 @@ const zh: Messages = {
     title: '迷失在 <em>API 矩阵</em>中',
     text: '你要访问的接口已消失在数字虚空中。它可能已被移动、删除，或者从未存在过。',
     home: '返回首页',
-  },
-
-  legal: {
-    englishOnly: '本文档目前仅提供英文版本，中文版本即将推出。',
   },
 }
 

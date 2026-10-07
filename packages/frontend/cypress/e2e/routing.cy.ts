@@ -14,7 +14,7 @@ describe('Routing: home publico y login solo donde hace falta', () => {
   });
 
   it('las paginas publicas cargan sin sesion', () => {
-    for (const p of ['/terms', '/privacy']) {
+    for (const p of ['/terms', '/privacy', '/legal', '/cookies']) {
       cy.visit(p);
       cy.location('pathname').should('eq', p);
     }

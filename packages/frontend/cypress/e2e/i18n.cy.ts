@@ -30,10 +30,11 @@ describe('i18n: idioma de la interfaz', () => {
     cy.get('html').should('have.attr', 'lang', 'es');
   });
 
-  it('las paginas legales avisan de que el texto solo esta en ingles', () => {
+  it('las paginas legales se traducen al idioma activo (el detalle esta en legal.cy.ts)', () => {
     cy.visit('/terms', { onBeforeLoad: (win) => win.localStorage.setItem('mockia_locale', 'zh') });
-    cy.get('[role="note"]').should('contain.text', '仅提供英文版本');
-    cy.get('article[lang="en"]').should('exist');
+    cy.contains('article h1', '服务条款').should('be.visible');
+    cy.get('article[lang="zh-CN"]').should('exist');
+    cy.get('[role="note"]').should('not.exist');
   });
 });
 

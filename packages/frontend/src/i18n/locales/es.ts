@@ -54,6 +54,8 @@ const es: Messages = {
     documentation: 'Documentación',
     terms: 'Términos',
     privacy: 'Privacidad',
+    legal: 'Aviso legal',
+    cookies: 'Cookies',
     apiDocs: 'Docs de la API',
     links: 'Pie de página',
   },
@@ -214,6 +216,7 @@ const es: Messages = {
     emailPlaceholder: 'tu@email.com',
     password: 'Contraseña',
     rememberMe: 'Recordarme',
+    legalNotice: 'Al registrarte aceptas los <terms>Términos</terms> y la <privacy>Política de Privacidad</privacy>.',
     signIn: 'Entrar',
     createAccount: 'Crear cuenta',
     noAccount: '¿No tienes cuenta?',
@@ -495,10 +498,6 @@ const es: Messages = {
     text:
       'El endpoint que buscas se ha desvanecido en el vacío digital. Puede que se haya movido, que se haya eliminado o que nunca haya existido.',
     home: 'Volver al inicio',
-  },
-
-  legal: {
-    englishOnly: 'Por ahora este documento solo está disponible en inglés. La traducción llegará pronto.',
   },
 }
 

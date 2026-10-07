@@ -17,6 +17,8 @@ import Header from './components/ui/Header/Header'
 import Footer from './components/ui/Footer/Footer'
 import Terms from './pages/Legal/Terms'
 import Privacy from './pages/Legal/Privacy'
+import LegalNotice from './pages/Legal/LegalNotice'
+import Cookies from './pages/Legal/Cookies'
 import NotFound from './pages/NotFound/NotFound'
 import AmbientBackground from './components/ui/AmbientBackground/AmbientBackground'
 import { PATHS, isKnownPath, isProtectedPath } from './routes/paths'
@@ -47,6 +49,8 @@ const AppShell: React.FC = () => {
           <Route path={PATHS.verifyEmail} element={<VerifyEmail />} />
           <Route path={PATHS.terms} element={<Terms />} />
           <Route path={PATHS.privacy} element={<Privacy />} />
+          <Route path={PATHS.legal} element={<LegalNotice />} />
+          <Route path={PATHS.cookies} element={<Cookies />} />
           <Route element={<ProtectedRoute />}>
             <Route path={PATHS.dashboard} element={<Dashboard />} />
             <Route path={PATHS.billing} element={<Billing />} />

@@ -193,6 +193,19 @@
   color: var(--color-text-muted);
 }
 
+/* Aviso de aceptacion de terminos bajo el boton de registro (solo informa, no bloquea) */
+.legalNotice {
+  margin: 0;
+  text-align: center;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+
+  a {
+    color: var(--color-accent-text);
+    font-weight: 600;
+  }
+}
+
 /* Resultado de una accion (correo enviado, contrasena cambiada, correo verificado). Se anuncia con role="status". */
 .notice {
   max-width: 24rem;

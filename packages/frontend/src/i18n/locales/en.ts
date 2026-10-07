@@ -59,6 +59,8 @@ const en = {
     documentation: 'Documentation',
     terms: 'Terms',
     privacy: 'Privacy',
+    legal: 'Legal notice',
+    cookies: 'Cookies',
     apiDocs: 'API docs',
     links: 'Footer',
   },
@@ -219,6 +221,7 @@ const en = {
     emailPlaceholder: 'you@email.com',
     password: 'Password',
     rememberMe: 'Remember me',
+    legalNotice: 'By signing up you accept the <terms>Terms of Service</terms> and the <privacy>Privacy Policy</privacy>.',
     signIn: 'Sign in',
     createAccount: 'Create account',
     noAccount: 'Don’t have an account?',
@@ -500,10 +503,6 @@ const en = {
     text:
       'The endpoint you are trying to reach has vanished into the digital void. Perhaps it was moved, deleted, or never existed in the first place.',
     home: 'Return to home',
-  },
-
-  legal: {
-    englishOnly: 'This document is currently available in English only. A translated version is on its way.',
   },
 }
 
