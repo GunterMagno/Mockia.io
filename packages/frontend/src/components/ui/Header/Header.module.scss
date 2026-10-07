@@ -32,13 +32,17 @@
   }
 }
 
-/* Idioma en paginas de auth: a la derecha sin descentrar el logo */
-.authLanguage {
+/* Idioma en paginas de auth: a la derecha sin descentrar el logo.
+   Va anidado en .authHeader para ganar en especificidad a `.switcher { position: relative }` del propio selector
+   (su modulo se carga despues y, con la misma especificidad, anulaba el position: absolute). */
+.authHeader .authLanguage {
   position: absolute;
   right: var(--spacing-6);
 
+  /* relative (no static): el icono del globo se posiciona respecto al selector */
   @include respond-to('md') {
-    position: static;
+    position: relative;
+    right: auto;
   }
 }
 
