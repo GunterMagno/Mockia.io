@@ -36,7 +36,7 @@
   text-align: center;
   
   h1 {
-    font-size: var(--step-4);
+    font-size: var(--step-3);
     font-weight: 800;
     letter-spacing: -0.04em;
     margin-bottom: var(--spacing-4);
@@ -54,7 +54,7 @@
 .content {
   line-height: 1.75;
   font-size: 1.05rem;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   color: var(--color-text);
   
   section {
