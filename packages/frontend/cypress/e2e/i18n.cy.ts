@@ -252,4 +252,12 @@ describe('Estetica morada del heroe', () => {
     visitAs('/', 'en-US', 'en');
     cy.get('nav[aria-label] button').first().should('have.css', 'background-color', PURPLE_SOLID);
   });
+
+  it('el boton Sign up de la cabecera sin sesion es morado con texto blanco (ya no queda ningun CTA verde)', () => {
+    visitAs('/', 'en-US', 'en');
+    cy.contains('header a', 'Sign up')
+      .should('be.visible')
+      .and('have.css', 'background-color', PURPLE_SOLID)
+      .and('have.css', 'color', 'rgb(255, 255, 255)');
+  });
 });
