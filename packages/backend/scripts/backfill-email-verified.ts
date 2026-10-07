@@ -18,6 +18,8 @@ async function main(): Promise<void> {
   const modified = await backfillEmailVerified();
   console.log(`[Backfill] ${modified} user(s) marked as email-verified.`);
   await disconnectDB();
+  // disconnectDB() leaves the reconnect listener of config/connection.ts armed: it would reopen the connection and keep the process alive
+  process.exit(0);
 }
 
 main().catch(async (err) => {
