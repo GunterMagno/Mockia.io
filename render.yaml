@@ -45,6 +45,19 @@ services:
       # (routes below). Cookies/CORS then never cross sites (front and back are different sites on onrender.com).
       - key: VITE_API_URL
         value: /api
+      # Datos del titular que publican el Aviso Legal y la Politica de Privacidad (LSSI art. 10, RGPD art. 13).
+      # OBLIGATORIAS: el build de produccion FALLA si NAME, NIF, ADDRESS o EMAIL estan vacias. No pongas
+      # VITE_LEGAL_ALLOW_PLACEHOLDER aqui: solo existe para CI. REGISTRY (datos registrales) es opcional.
+      - key: VITE_LEGAL_NAME
+        sync: false
+      - key: VITE_LEGAL_NIF
+        sync: false
+      - key: VITE_LEGAL_ADDRESS
+        sync: false
+      - key: VITE_LEGAL_EMAIL
+        sync: false
+      - key: VITE_LEGAL_REGISTRY
+        sync: false
     # Order matters: rules are evaluated top to bottom and the first match wins, so the API proxy must come
     # BEFORE the SPA fallback. Update the destination host if the backend service is renamed.
     routes:

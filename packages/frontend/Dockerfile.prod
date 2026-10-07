@@ -15,6 +15,15 @@ RUN npm ci
 COPY packages/shared ./packages/shared
 COPY packages/frontend ./packages/frontend
 
+# Datos del titular (Aviso Legal / Privacidad). `vite build` falla en produccion si NAME, NIF, ADDRESS o EMAIL van vacios.
+ARG VITE_LEGAL_NAME=
+ARG VITE_LEGAL_NIF=
+ARG VITE_LEGAL_ADDRESS=
+ARG VITE_LEGAL_EMAIL=
+ARG VITE_LEGAL_REGISTRY=
+ARG VITE_LEGAL_ALLOW_PLACEHOLDER=
+ENV VITE_LEGAL_NAME=$VITE_LEGAL_NAME     VITE_LEGAL_NIF=$VITE_LEGAL_NIF     VITE_LEGAL_ADDRESS=$VITE_LEGAL_ADDRESS     VITE_LEGAL_EMAIL=$VITE_LEGAL_EMAIL     VITE_LEGAL_REGISTRY=$VITE_LEGAL_REGISTRY     VITE_LEGAL_ALLOW_PLACEHOLDER=$VITE_LEGAL_ALLOW_PLACEHOLDER
+
 # Build shared and then frontend
 RUN npm run build --workspace=packages/shared
 RUN npm run build --workspace=packages/frontend

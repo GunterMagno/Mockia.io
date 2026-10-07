@@ -64,6 +64,13 @@ services:
     build:
       context: .
       dockerfile: packages/frontend/Dockerfile.prod
+      # Titular del servicio: el build FALLA si NAME, NIF, ADDRESS o EMAIL estan vacios (ver .env.example)
+      args:
+        VITE_LEGAL_NAME: ${VITE_LEGAL_NAME:-}
+        VITE_LEGAL_NIF: ${VITE_LEGAL_NIF:-}
+        VITE_LEGAL_ADDRESS: ${VITE_LEGAL_ADDRESS:-}
+        VITE_LEGAL_EMAIL: ${VITE_LEGAL_EMAIL:-}
+        VITE_LEGAL_REGISTRY: ${VITE_LEGAL_REGISTRY:-}
     container_name: mockia-frontend-prod
     restart: unless-stopped
     ports:

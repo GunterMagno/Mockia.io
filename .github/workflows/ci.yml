@@ -62,6 +62,10 @@ jobs:
 
       - name: Build all workspaces
         run: npm run build
+        env:
+          # El build de produccion exige los datos legales del titular (VITE_LEGAL_*); CI solo comprueba que compila
+          # y por eso usa marcadores visibles. Un despliegue real define VITE_LEGAL_NAME/NIF/ADDRESS/EMAIL.
+          VITE_LEGAL_ALLOW_PLACEHOLDER: '1'
 
   compose-prod-config:
     name: Validate docker-compose.prod.yml
@@ -168,6 +172,10 @@ jobs:
       - name: Build frontend
         working-directory: ./packages/frontend
         run: npm run build
+        env:
+          # El build de produccion exige los datos legales del titular (VITE_LEGAL_*); CI solo comprueba que compila
+          # y por eso usa marcadores visibles. Un despliegue real define VITE_LEGAL_NAME/NIF/ADDRESS/EMAIL.
+          VITE_LEGAL_ALLOW_PLACEHOLDER: '1'
 
   test-e2e:
     name: Test - E2E (Cypress)
@@ -213,6 +221,8 @@ jobs:
           AUTH_RATE_LIMIT_MAX: 500
           # No SMTP in CI: emails are kept in memory and read by cypress/e2e/passwordReset.cy.ts at /api/__test__/outbox
           E2E_EXPOSE_MAIL_OUTBOX: 'true'
+          # Los textos legales muestran marcadores en lugar de los datos del titular (legal.cy.ts los comprueba)
+          VITE_LEGAL_ALLOW_PLACEHOLDER: '1'
           BACKEND_URL: http://localhost:3000
           JWT_ACCESS_SECRET: test-secret-key-super-secure-for-testing
           JWT_REFRESH_SECRET: test-refresh-secret-key-for-testing
