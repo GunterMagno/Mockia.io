@@ -6,7 +6,6 @@ describe('Editor Flow', () => {
   const password = 'Password123!';
   let projectId: string;
   let projectSlug: string;
-  let projectApiKey: string;
 
   before(() => {
     // Setup: Register and Create a Project via API
@@ -29,7 +28,6 @@ describe('Editor Flow', () => {
         }).then((projRes) => {
           projectId = projRes.body.data.id;
           projectSlug = projRes.body.data.slug;
-          projectApiKey = projRes.body.data.apiKey;
         });
       });
     });
@@ -84,13 +82,10 @@ describe('Editor Flow', () => {
   });
 
   it('Should successfully call and resolve the newly created Mock API endpoint', () => {
-    // Perform a request to the Mock Engine with correct project Slug and API Key
+    // New projects are public: the Mock Engine answers without any API key
     cy.request({
       method: 'POST',
       url: `http://localhost:3000/api/mock/${projectSlug}/hello`,
-      headers: {
-        'X-Mockia-API-Key': projectApiKey
-      },
       failOnStatusCode: false
     }).then((response) => {
       // Validate that the Mock Engine resolved the route and returned correct status

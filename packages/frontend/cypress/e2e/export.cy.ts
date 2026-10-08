@@ -34,8 +34,12 @@ describe('Export the project mocks', () => {
       const headers = { Authorization: `Bearer ${login.body.data.tokens.accessToken}` };
       cy.request({ method: 'POST', url: '/api/projects', headers, body: { title: TITLE, description: 'Exported by Cypress' } }).then((res) => {
         slug = res.body.data.slug;
-        apiKey = res.body.data.apiKey;
-        expect(apiKey).to.match(API_KEY_PATTERN);
+        // The exports must advertise the key header but never carry the key: make the mock private with a real key
+        cy.request({ method: 'POST', url: `/api/projects/${res.body.data.id}/api-key`, headers }).then((issued) => {
+          apiKey = issued.body.data.apiKey;
+          expect(apiKey).to.match(API_KEY_PATTERN);
+          cy.request({ method: 'PUT', url: `/api/projects/${res.body.data.id}`, headers, body: { visibility: 'key' } });
+        });
         cy.request({ method: 'POST', url: `/api/endpoints/${slug}`, headers, body: { path: '/users/:id', method: 'GET', description: 'Get a user' } })
           .then((ep) => {
             cy.request({ method: 'PUT', url: `/api/endpoints/${ep.body.data.id}`, headers, body: { responseBody: { id: 1, name: 'Ana' }, statusCode: 200 } });
