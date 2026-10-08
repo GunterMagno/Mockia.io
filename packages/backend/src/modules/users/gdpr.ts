@@ -10,6 +10,8 @@ import { GitHubContextModel } from '../../models/GitHubContext.js';
 import { NotificationModel } from '../../models/Notification.js';
 import { UsageModel } from '../../models/Usage.js';
 import { AiRateWindowModel } from '../../models/AiRateWindow.js';
+import { AiGenerationModel } from '../../models/AiGeneration.js';
+import { AiFeedbackModel } from '../../models/AiFeedback.js';
 import { RefreshSessionModel } from '../../models/RefreshSession.js';
 import { AuthTokenModel } from '../../models/AuthToken.js';
 import { deleteProjectsCascade } from '../projects/cascade.js';
@@ -42,13 +44,15 @@ export async function exportUserData(userId: string): Promise<Record<string, unk
   const projects = await ProjectModel.find({ ownerId: uid }).sort({ createdAt: 1 }).lean();
   const projectIds = projects.map((p) => p._id);
 
-  const [mockApis, githubContexts, notifications, usage, sessions, memberOf] = await Promise.all([
+  const [mockApis, githubContexts, notifications, usage, sessions, memberOf, aiGenerations, aiFeedback] = await Promise.all([
     MockAPIModel.find({ projectId: { $in: projectIds } }).sort({ createdAt: 1 }).lean(),
     GitHubContextModel.find({ projectId: { $in: projectIds } }).lean(),
     NotificationModel.find({ userId: uid }).sort({ createdAt: 1 }).lean(),
     UsageModel.find({ ownerId: uid }).sort({ period: 1 }).lean(),
     listActiveSessions(userId),
     ProjectModel.find({ ownerId: { $ne: uid }, 'members.userId': uid }).select('title slug members').lean(),
+    AiGenerationModel.find({ userId: uid }).sort({ createdAt: 1 }).lean(),
+    AiFeedbackModel.find({ userId: uid }).sort({ createdAt: 1 }).lean(),
   ]);
 
   const endpoints = await EndpointModel.find({ mockApiId: { $in: mockApis.map((m) => m._id) } })
@@ -107,6 +111,9 @@ export async function exportUserData(userId: string): Promise<Record<string, unk
       billingStatus: user.billingStatus,
       createdAt: iso(user.createdAt),
       emailVerifiedAt: iso(user.emailVerifiedAt),
+      aiTrainingConsent: user.aiTrainingConsent
+        ? { granted: user.aiTrainingConsent.granted, at: iso(user.aiTrainingConsent.at) }
+        : null,
     },
     billing: {
       plan: user.plan,
@@ -166,6 +173,26 @@ export async function exportUserData(userId: string): Promise<Record<string, unk
       createdAt: iso(n.createdAt),
     })),
     usage: usage.map((u) => ({ period: u.period, requests: u.requests })),
+    // What the user contributed to improving the AI (only exists with their consent): prompts as sent, model output, thumbs and corrections
+    aiGenerations: aiGenerations.map((g) => ({
+      generationId: g.generationId,
+      messages: g.messages.map((m) => ({ role: m.role, content: m.content })),
+      output: g.output,
+      parsedOk: g.parsedOk,
+      provider: g.provider,
+      model: g.model,
+      createdAt: iso(g.createdAt),
+      expiresAt: iso(g.expiresAt),
+    })),
+    aiFeedback: aiFeedback.map((f) => ({
+      generationId: f.generationId,
+      verdict: f.verdict,
+      provider: f.provider ?? null,
+      model: f.model ?? null,
+      correctedOutput: f.correctedOutput ?? null,
+      createdAt: iso(f.createdAt),
+      expiresAt: iso(f.expiresAt),
+    })),
     sessions: sessions.map((s) => ({ createdAt: iso(s.createdAt), ip: s.ip ?? null, ua: s.ua ?? null })),
   };
 }
@@ -218,6 +245,9 @@ export async function deleteUserAccount(userId: string, password: string): Promi
   await UsageModel.deleteMany({ ownerId: uid });
   // Per-minute AI call counters: not exported (operational, expire within minutes) but erased with the account
   await AiRateWindowModel.deleteMany({ userId: uid });
+  // Stored AI generations and feedback (only exist with the user's consent): exported above, erased with the account
+  await AiGenerationModel.deleteMany({ userId: uid });
+  await AiFeedbackModel.deleteMany({ userId: uid });
   await revokeAllForUser(userId);
   await RefreshSessionModel.deleteMany({ userId: uid });
   await AuthTokenModel.deleteMany({ userId: uid });

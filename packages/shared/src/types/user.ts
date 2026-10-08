@@ -14,6 +14,11 @@ export interface User {
   emailVerifiedAt?: string | null;
   /** Interface language saved by the user. Absent = never saved (the client sends its current one once). */
   locale?: Locale;
+  /**
+   * Explicit, optional consent to use the user's AI generations to improve Mockia's AI. Absent = never decided = NO.
+   * `at` is when the current choice was made (ISO). Withdrawing (granted false) erases the stored examples.
+   */
+  aiTrainingConsent?: { granted: boolean; at: string };
   createdAt: string;
   updatedAt: string;
 }

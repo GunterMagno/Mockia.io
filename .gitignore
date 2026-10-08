@@ -97,3 +97,8 @@ packages/frontend/cypress/videos/
 
 # AI evaluation bench: per-run results (evals/baseline.json IS versioned)
 packages/backend/evals/results/
+
+# AI training datasets exported from consented user data (train.jsonl / val.jsonl): never commit
+ai-datasets/
+**/ai-datasets/
+*.jsonl

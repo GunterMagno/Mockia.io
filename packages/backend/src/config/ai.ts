@@ -120,3 +120,18 @@ export function getAiRatePerMinute(env: NodeJS.ProcessEnv = process.env): number
 export function getAiTotalTimeoutMs(env: NodeJS.ProcessEnv = process.env): number {
   return positiveInt(env.AI_TOTAL_TIMEOUT_MS, DEFAULT_AI_TOTAL_TIMEOUT_MS);
 }
+
+const DEFAULT_AI_GENERATION_RETENTION_DAYS = 180;
+const MAX_AI_GENERATION_RETENTION_DAYS = 3650;
+
+/**
+ * Days a stored AI generation (consented users only) and its feedback live before the TTL index removes them
+ * (AI_GENERATION_RETENTION_DAYS, default 180). Only a plain positive integer counts; anything else falls back to the
+ * default, and the value is capped at ten years so a typo cannot keep personal data practically forever.
+ */
+export function getAiGenerationRetentionDays(env: NodeJS.ProcessEnv = process.env): number {
+  const raw = (env.AI_GENERATION_RETENTION_DAYS ?? '').trim();
+  if (!/^\d{1,5}$/.test(raw)) return DEFAULT_AI_GENERATION_RETENTION_DAYS;
+  const n = Number.parseInt(raw, 10);
+  return n > 0 ? Math.min(n, MAX_AI_GENERATION_RETENTION_DAYS) : DEFAULT_AI_GENERATION_RETENTION_DAYS;
+}

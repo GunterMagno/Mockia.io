@@ -13,6 +13,8 @@ import { GitHubContextModel } from '../models/GitHubContext.js';
 import { NotificationModel } from '../models/Notification.js';
 import { UsageModel } from '../models/Usage.js';
 import { AiRateWindowModel } from '../models/AiRateWindow.js';
+import { AiGenerationModel } from '../models/AiGeneration.js';
+import { AiFeedbackModel } from '../models/AiFeedback.js';
 import { RefreshSessionModel } from '../models/RefreshSession.js';
 import { AuthTokenModel } from '../models/AuthToken.js';
 
@@ -31,6 +33,8 @@ const ALL_MODELS = [
   NotificationModel,
   UsageModel,
   AiRateWindowModel,
+  AiGenerationModel,
+  AiFeedbackModel,
   RefreshSessionModel,
   AuthTokenModel,
   GitHubContextModel,
@@ -102,6 +106,19 @@ async function seedProject(ownerId: Types.ObjectId, slug: string, extra: Record<
 async function seedUserData(userId: Types.ObjectId) {
   await UsageModel.create({ ownerId: userId, period: '2026-10', requests: 7 });
   await AiRateWindowModel.create({ userId, windowStart: new Date(), count: 3, expireAt: new Date(Date.now() + 180_000) });
+  // Data contributed to improving the AI (exists only with consent): a generation and a feedback row with a correction
+  const generationId = `gen-${userId.toString()}`;
+  await AiGenerationModel.create({
+    generationId,
+    userId,
+    messages: [{ role: 'system', content: 's' }, { role: 'user', content: 'u' }],
+    output: '{}',
+    parsedOk: true,
+    provider: 'p',
+    model: 'm',
+    expiresAt: new Date(Date.now() + 86_400_000),
+  });
+  await AiFeedbackModel.create({ userId, generationId, verdict: 'good', provider: 'p', model: 'm', expiresAt: new Date(Date.now() + 86_400_000) });
   await AuthTokenModel.create({
     tokenHash: `hash-${userId.toString()}`,
     userId,

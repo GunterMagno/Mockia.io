@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { getUserProfile, updateUserProfile, changeUserPassword, updateUserLocale } from './service.js';
 import { exportUserData, deleteUserAccount } from './gdpr.js';
 import { clearRefreshCookie } from '../auth/cookie.js';
+import { setAiTrainingConsent } from '../ai/consent.js';
 import { AuthRequest } from '../../types/auth.js';
 import { asyncHandler } from '../../middlewares/errorHandler.js';
 
@@ -100,4 +101,23 @@ export const deleteMyAccount = asyncHandler(async (req: AuthRequest, res: Respon
   await deleteUserAccount(userId, req.body.password);
   clearRefreshCookie(res);
   res.status(204).send();
+});
+
+/**
+ * PUT /api/users/me/ai-consent   body: { granted: boolean }
+ * Opt in (200 with the consent state) or out (204: every stored generation and feedback row of the user is erased).
+ */
+export const updateAiConsent = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction) => {
+  const userId = req.user?.id;
+  if (!userId) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+
+  const state = await setAiTrainingConsent(userId, req.body.granted);
+  if (!state.granted) {
+    res.status(204).send();
+    return;
+  }
+  res.json({ aiTrainingConsent: { granted: true, at: state.at.toISOString() } });
 });

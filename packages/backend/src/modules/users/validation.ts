@@ -60,3 +60,13 @@ export const deleteAccountSchema = Joi.object({
     'string.base': 'Password is required',
   }),
 }).unknown(false);
+
+/**
+ * Validation schema for the AI training consent: a strict boolean (a string like "false" must not count as a choice).
+ */
+export const aiConsentSchema = Joi.object({
+  granted: Joi.boolean().strict().required().messages({
+    'any.required': 'granted is required',
+    'boolean.base': 'granted must be true or false',
+  }),
+});

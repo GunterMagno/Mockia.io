@@ -9,6 +9,9 @@ export function toUserDTO(user: UserDocument): UserDTO {
     username: user.username,
     emailVerifiedAt: user.emailVerifiedAt ? user.emailVerifiedAt.toISOString() : null,
     ...(user.locale ? { locale: user.locale } : {}),
+    ...(user.aiTrainingConsent
+      ? { aiTrainingConsent: { granted: user.aiTrainingConsent.granted, at: user.aiTrainingConsent.at.toISOString() } }
+      : {}),
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),
   };

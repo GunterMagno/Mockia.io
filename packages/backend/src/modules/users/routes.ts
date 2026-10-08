@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { getProfile, updateProfile, changePassword, updatePreferences, exportMyData, deleteMyAccount } from './controller.js';
+import { getProfile, updateProfile, changePassword, updatePreferences, exportMyData, deleteMyAccount, updateAiConsent } from './controller.js';
 import { authenticateToken, type AuthenticatedRequest } from '../../middlewares/authenticateToken.js';
 import { rateLimit } from '../../middlewares/rateLimit.js';
 import { validate } from '../../middlewares/validateRequest.js';
-import { updateProfileSchema, changePasswordSchema, updatePreferencesSchema, deleteAccountSchema } from './validation.js';
+import { updateProfileSchema, changePasswordSchema, updatePreferencesSchema, deleteAccountSchema, aiConsentSchema } from './validation.js';
 
 /**
  * User router
@@ -135,6 +135,41 @@ userRouter.patch(
   validate({ body: updatePreferencesSchema }),
   updatePreferences
 );
+
+/**
+ * @swagger
+ * /users/me/ai-consent:
+ *   put:
+ *     summary: Give or withdraw consent to use my AI generations to improve Mockia's AI (optional, off by default)
+ *     description: >
+ *       granted=true stores the moment of the consent and, from then on, the prompts and answers of new generations
+ *       (180 days, AI_GENERATION_RETENTION_DAYS) so they can be used, redacted and anonymised, as training examples.
+ *       granted=false erases every stored generation and feedback row of the user at once.
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - granted
+ *             properties:
+ *               granted:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Consent granted ({ aiTrainingConsent: { granted, at } })
+ *       204:
+ *         description: Consent withdrawn and stored examples erased
+ *       400:
+ *         description: granted is not a boolean
+ *       401:
+ *         description: Unauthorized
+ */
+userRouter.put('/me/ai-consent', authenticateToken, validate({ body: aiConsentSchema }), updateAiConsent);
 
 /**
  * @swagger

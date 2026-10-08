@@ -10,6 +10,8 @@ import { consumeAiQuota } from '../modules/ai/aiRateLimit.js';
 import { parseAiProviders, SPEC_GENERATION_DEFAULTS } from '../config/ai.js';
 import { describeError } from '../utils/safeErrorLog.js';
 import { getLlm, type LlmCompletion, type LlmRequest } from '../modules/ai/providers/index.js';
+import { newGenerationId, persistGeneration } from '../modules/ai/generationStore.js';
+import { recordFeedback } from '../modules/ai/feedback.js';
 import { AppError } from '../middlewares/errorHandler.js';
 import { ErrorCode } from '@mockia/shared';
 import {
@@ -238,12 +240,25 @@ export const generateMockAPISpecHandler = asyncHandler(
     // Validate and extract the mock API specification
     const mockAPISpec = extractMockAPIFromResponse(responseContent);
 
+    // The id always goes back to the client (so it can rate the result); the content is stored only with consent
+    const generationId = newGenerationId();
+    await persistGeneration({
+      generationId,
+      userId,
+      messages,
+      output: responseContent,
+      parsedOk: true,
+      provider: completion.provider,
+      model: completion.model,
+    });
+
     // Return the generated specification
     res.status(200).json({
       success: true,
       data: {
         specification: mockAPISpec,
         usage: usageOf(completion),
+        generationId,
       },
       timestamp: new Date().toISOString(),
     });
@@ -328,7 +343,19 @@ export const generateAndSaveHandler = asyncHandler(
         `[AI] Pipeline completed: ${pipelineResult.databaseResult.endpointsCreated} endpoints created`
       );
 
-      // 5. Return complete result
+      // 5. Id for the client's feedback; the content is stored only for users who consented
+      const generationId = newGenerationId();
+      await persistGeneration({
+        generationId,
+        userId,
+        messages,
+        output: responseContent,
+        parsedOk: true,
+        provider: completion.provider,
+        model: completion.model,
+      });
+
+      // 6. Return complete result
       res.status(200).json({
         success: true,
         data: {
@@ -341,6 +368,7 @@ export const generateAndSaveHandler = asyncHandler(
           usage: {
             totalTokens: pipelineResult.totalTokens,
           },
+          generationId,
         },
         timestamp: new Date().toISOString(),
       });
@@ -350,6 +378,21 @@ export const generateAndSaveHandler = asyncHandler(
     }
   }
 );
+
+/**
+ * POST /api/ai/feedback
+ * Thumbs up/down on a generation (body validated by feedbackSchema). Accepted from every user; it carries content only
+ * with consent (see modules/ai/feedback.ts). 204 with no body.
+ */
+export const feedbackHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user?.id;
+  if (!userId) {
+    throw new Error('User ID not found in request');
+  }
+  const { generationId, verdict, correctedOutput } = req.body;
+  await recordFeedback(userId, generationId, verdict, correctedOutput);
+  res.status(204).send();
+});
 
 /**
  * Health check for the AI integration (reports the configured provider chain, e.g. "local,openrouter")

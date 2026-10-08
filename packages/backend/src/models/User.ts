@@ -46,6 +46,11 @@ interface UserDocument extends Document {
   emailVerifiedAt?: Date | null;
   /** Interface language chosen by the user. Unset until the client saves one. */
   locale?: Locale;
+  /**
+   * Explicit consent to use this user's AI generations (prompts, outputs, corrections) to improve Mockia's AI.
+   * Absent = never asked = no consent. Withdrawing sets granted=false and erases the stored examples.
+   */
+  aiTrainingConsent?: { granted: boolean; at: Date };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -93,6 +98,9 @@ const userSchema = new Schema<UserDocument>(
     currentPeriodEnd: { type: Date, default: null },
     emailVerifiedAt: { type: Date, default: null },
     locale: { type: String, enum: SUPPORTED_LOCALES },
+    aiTrainingConsent: {
+      type: new Schema({ granted: { type: Boolean, required: true }, at: { type: Date, required: true } }, { _id: false }),
+    },
   },
   {
     timestamps: true,
