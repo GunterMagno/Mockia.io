@@ -13,6 +13,7 @@ export { SYSTEM_PROMPT } from './systemPrompt.js';
 export { type MockAPIOutput } from '@mockia/shared';
 export {
   buildPrompt,
+  buildPromptFromInput,
   validateJsonResponse,
   extractMockAPIFromResponse,
 } from './prompt.service.js';
@@ -21,6 +22,7 @@ export {
   tryExtractJsonFromLLMOutput,
 } from './llmOutputParser.js';
 export { validateGeneratedApi } from './llmOutputValidator.js';
+export { MOCK_SPEC_JSON_SCHEMA } from './outputSchema.js';
 export {
   runAIGenerationPipeline,
   tryRunAIGenerationPipeline,

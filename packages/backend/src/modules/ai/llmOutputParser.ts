@@ -16,10 +16,11 @@ import { ErrorCode } from '@mockia/shared';
  * - Text with JSON: "Here's the JSON: {...}"
  * 
  * @param rawOutput - The raw text output from the LLM
+ * @param options - `silent` skips the error log (the eval bench scores many broken answers on purpose)
  * @returns Parsed JSON object
  * @throws AppError if JSON cannot be extracted or parsed
  */
-export function extractJsonFromLLMOutput(rawOutput: string): unknown {
+export function extractJsonFromLLMOutput(rawOutput: string, options: { silent?: boolean } = {}): unknown {
   if (!rawOutput || typeof rawOutput !== 'string') {
     throw new AppError(
       'Invalid input: expected non-empty string',
@@ -57,7 +58,7 @@ export function extractJsonFromLLMOutput(rawOutput: string): unknown {
   }
 
   // Never log or return a snippet of the model output (it can echo repository content); the length is enough to debug
-  console.error(`Failed to parse extracted JSON (${text.length} chars)`);
+  if (!options.silent) console.error(`Failed to parse extracted JSON (${text.length} chars)`);
   throw new AppError(
     lastError instanceof Error ? 'Failed to parse AI output as JSON' : 'Failed to parse AI output as JSON: no JSON object or array found',
     ErrorCode.INTERNAL_SERVER_ERROR,

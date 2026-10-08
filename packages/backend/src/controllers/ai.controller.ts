@@ -16,6 +16,7 @@ import {
   buildPrompt,
   extractMockAPIFromResponse,
   runAIGenerationPipeline,
+  MOCK_SPEC_JSON_SCHEMA,
 } from '../modules/ai/index.js';
 
 /**
@@ -230,7 +231,7 @@ export const generateMockAPISpecHandler = asyncHandler(
       messages,
       temperature: req.body.temperature ?? 0.85,
       maxTokens: req.body.maxTokens ?? 5000,
-      json: true,
+      jsonSchema: MOCK_SPEC_JSON_SCHEMA,
     });
     const responseContent = completion.text;
 
@@ -308,7 +309,7 @@ export const generateAndSaveHandler = asyncHandler(
         messages,
         temperature: req.body.temperature ?? 0.85,
         maxTokens: req.body.maxTokens ?? 5000,
-        json: true,
+        jsonSchema: MOCK_SPEC_JSON_SCHEMA,
       });
 
       // 3. Get response content (the provider already rejects empty answers)

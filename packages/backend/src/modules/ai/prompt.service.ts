@@ -286,25 +286,86 @@ export async function buildPrompt(
   // Use the real _id for subsequent operations
   const realProjectId = project._id.toString();
 
+  // Load GitHub context (a project without one still gets a prompt)
+  let context: PromptGitHubContext | null = null;
+  try {
+    context = (await getProjectContext(realProjectId)) as PromptGitHubContext | null;
+  } catch (error) {
+    // Context might not exist yet, proceed with empty context
+    console.warn(`No GitHub context found for project ${realProjectId}`);
+  }
+
+  return buildPromptFromInput({
+    projectTitle: project.title,
+    projectDescription: project.description,
+    context,
+    userInput,
+    options,
+  });
+}
+
+/**
+ * Plain-data input of the prompt: everything buildPrompt reads from the database, so the same prompt can be built
+ * without one (the AI evaluation bench replays the product's real prompt over fixed repositories).
+ */
+export interface PromptInput {
+  projectTitle: string;
+  projectDescription?: string;
+  /** GitHub context as getProjectContext returns it. null/undefined/empty = no repository connected. */
+  context?: PromptGitHubContext | null;
+  /** The user's request/requirements for the mock API. */
+  userInput: string;
+  options?: {
+    contextBudgetOverride?: number;
+    includeSystemPrompt?: boolean;
+  };
+}
+
+/** Shape of the analysed repository (see models/GitHubContext). Only what the prompt reads is listed. */
+export interface PromptGitHubContext {
+  repoName?: string;
+  repoUrl?: string;
+  repoOwner?: string;
+  branch?: string;
+  summary?: string;
+  stats?: { totalFiles?: number; totalInterfaces?: number; totalFunctions?: number; totalRoutes?: number };
+  files?: Array<{
+    path: string;
+    type?: string;
+    summary?: string;
+    routes?: Array<{ path: string; methods: string[] }>;
+    interfaces?: Array<{ name: string; properties: string[] }>;
+    typeAliases?: Array<{ name: string; type: string }>;
+    enums?: Array<{ name: string; members: string[] }>;
+    functions?: Array<{ name: string; params: string[]; returnType?: string }>;
+  }>;
+}
+
+/**
+ * Pure part of buildPrompt: system prompt + repository context + task, from plain data and with no I/O.
+ * buildPrompt is this function plus the project and context lookups.
+ */
+export function buildPromptFromInput(input: PromptInput): OpenRouterMessage[] {
+  const { projectTitle, projectDescription, context, userInput, options } = input;
+
   // Budget context
   const contextBudget =
     options?.contextBudgetOverride || TOKEN_LIMITS.contextBudget;
 
-  // Load GitHub context
   let contextString = '';
   let hasContext = false;
   try {
-    const context = await getProjectContext(realProjectId);
-    if (context && (context.files?.length > 0 || context.repoName || context.summary)) {
+    if (context && ((context.files?.length ?? 0) > 0 || context.repoName || context.summary)) {
       contextString = formatGitHubContext(context, contextBudget);
       hasContext = true;
     } else {
-      contextString = `## Project: ${project.title}\nDescription: ${project.description || 'A software application'}\nNo GitHub context available yet.`;
+      contextString = `## Project: ${projectTitle}\nDescription: ${projectDescription || 'A software application'}\nNo GitHub context available yet.`;
     }
   } catch (error) {
-    // Context might not exist yet, proceed with empty context
-    console.warn(`No GitHub context found for project ${realProjectId}`);
-    contextString = `## Project: ${project.title}\nDescription: ${project.description || 'A software application'}\nNo GitHub context available yet.`;
+    // A context that cannot be formatted is treated as no context
+    console.warn('GitHub context could not be formatted; using the project description only');
+    hasContext = false;
+    contextString = `## Project: ${projectTitle}\nDescription: ${projectDescription || 'A software application'}\nNo GitHub context available yet.`;
   }
 
   // Truncate context to fit budget
@@ -345,7 +406,7 @@ Rules for EXCELLENCE:
 8. **EMPTY CONTEXT FALLBACK**: If the repository context provided above is empty, contains no files, or has no parsed interfaces/routes, you MUST NOT return empty endpoints. In that case, ignore the "EXCLUSIVELY" and "NO GENERIC BIAS" rules. Instead, use maximum creative freedom to generate beautiful mock endpoints based on the repository name, project context, and user requirements.`
     : `There is NO repository context connected yet. Therefore, you have MAXIMUM CREATIVE FREEDOM!
 
-Based on the Project Name ("${project.title}") and Description ("${project.description || 'A custom web application'}"), generate a beautiful, comprehensive, and highly realistic mock API specification for the following requirement:
+Based on the Project Name ("${projectTitle}") and Description ("${projectDescription || 'A custom web application'}"), generate a beautiful, comprehensive, and highly realistic mock API specification for the following requirement:
 
 ${userInput}
 

@@ -232,7 +232,7 @@ describe('AI providers (local first, OpenRouter as reserve)', () => {
       expect(local.seen[1].body.response_format.type).toBe('json_schema');
     });
 
-    it('the OpenRouter provider (AI_PROVIDERS=openrouter) sends the same shaping through callOpenRouterWithRetry', async () => {
+    it('the OpenRouter provider (AI_PROVIDERS=openrouter) sends the same shaping through callOpenRouterWithRetry (a schema is downgraded to json_object, see ai.structuredOutput.test.ts)', async () => {
       process.env.AI_PROVIDERS = 'openrouter';
       resetLlm();
       const out = await getLlm().complete({ messages: MESSAGES, jsonSchema: SCHEMA });
@@ -242,7 +242,7 @@ describe('AI providers (local first, OpenRouter as reserve)', () => {
       expect(remote.seen[0].headers.authorization).toBe('Bearer sk-or-test-key');
       expect(remote.seen[0].body.model).toBe('or-model');
       expect(remote.seen[0].body.temperature).toBe(0.2);
-      expect(remote.seen[0].body.response_format.type).toBe('json_schema');
+      expect(remote.seen[0].body.response_format).toEqual({ type: 'json_object' });
       expect(out.usage).toEqual({ inputTokens: 11, outputTokens: 7 });
     });
 

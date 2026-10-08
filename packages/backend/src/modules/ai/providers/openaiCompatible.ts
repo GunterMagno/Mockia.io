@@ -108,11 +108,30 @@ export function createOpenAiCompatibleProvider(config: OpenAiCompatibleConfig): 
   };
 }
 
+/**
+ * Whether OpenRouter gets strict `json_schema` structured outputs. Off by default: only some of the models OpenRouter
+ * serves support it and the others answer 400 (the whole request would fail). Set OPENROUTER_JSON_SCHEMA=1 when
+ * OPENROUTER_MODEL is known to support it. Otherwise a schema is downgraded to `json_object`: the prompt already
+ * describes the format and the pipeline validates the answer.
+ */
+export function openRouterSupportsJsonSchema(env: NodeJS.ProcessEnv = process.env): boolean {
+  return ['1', 'true', 'yes'].includes((env.OPENROUTER_JSON_SCHEMA ?? '').trim().toLowerCase());
+}
+
+/** The request as OpenRouter should get it: the schema is kept only when the operator opted in. */
+export function toOpenRouterRequest(req: LlmRequest, env: NodeJS.ProcessEnv = process.env): LlmRequest {
+  if (!req.jsonSchema || openRouterSupportsJsonSchema(env)) return req;
+  const { jsonSchema: _dropped, ...rest } = req;
+  return { ...rest, json: true, temperature: req.temperature ?? STRUCTURED_TEMPERATURE };
+}
+
 export function createOpenRouterProvider(): LlmProvider {
   return {
     name: 'openrouter',
     async complete(req) {
-      const response = await callOpenRouterWithRetry(req.messages, buildChatParams(req), { signal: req.signal });
+      const response = await callOpenRouterWithRetry(req.messages, buildChatParams(toOpenRouterRequest(req)), {
+        signal: req.signal,
+      });
       return readCompletion(response, 'openrouter', getOpenRouterModel());
     },
   };

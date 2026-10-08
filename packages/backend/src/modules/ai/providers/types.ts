@@ -9,7 +9,10 @@ export interface ChatMessage {
 
 export interface LlmRequest {
   messages: ChatMessage[];
-  /** JSON Schema of the expected answer: sent as a strict `response_format` (and lowers the default temperature to 0.2). */
+  /**
+   * JSON Schema of the expected answer: sent as a strict `response_format` (and lowers the default temperature to 0.2).
+   * OpenRouter gets `json_object` instead unless OPENROUTER_JSON_SCHEMA=1 (not every model it serves supports json_schema).
+   */
   jsonSchema?: object;
   /** Ask for "some JSON object" without a schema (`response_format: json_object`). Ignored when `jsonSchema` is set. */
   json?: boolean;
