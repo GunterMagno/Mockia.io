@@ -56,9 +56,10 @@ export function extractJsonFromLLMOutput(rawOutput: string): unknown {
     }
   }
 
-  console.error('Failed to parse extracted JSON:', text.substring(0, 200));
+  // Never log or return a snippet of the model output (it can echo repository content); the length is enough to debug
+  console.error(`Failed to parse extracted JSON (${text.length} chars)`);
   throw new AppError(
-    `Failed to parse AI output as JSON: ${lastError instanceof Error ? lastError.message : 'no JSON object or array found'}`,
+    lastError instanceof Error ? 'Failed to parse AI output as JSON' : 'Failed to parse AI output as JSON: no JSON object or array found',
     ErrorCode.INTERNAL_SERVER_ERROR,
     500
   );

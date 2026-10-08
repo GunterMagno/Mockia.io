@@ -12,7 +12,12 @@
 import axios from 'axios';
 import { ErrorCode } from '@mockia/shared';
 import { AppError } from '../../../middlewares/errorHandler.js';
-import { getLocalAiConfig, parseAiProviders, type AiProviderName } from '../../../config/ai.js';
+import {
+  getAiTotalTimeoutMs,
+  getLocalAiConfig,
+  parseAiProviders,
+  type AiProviderName,
+} from '../../../config/ai.js';
 import { createOpenAiCompatibleProvider, createOpenRouterProvider } from './openaiCompatible.js';
 import { LlmResponseError, type LlmCompletion, type LlmProvider, type LlmRequest } from './types.js';
 
@@ -34,8 +39,13 @@ export interface FallbackEntry {
 }
 
 export interface FallbackOptions {
-  /** Clock in ms, injectable for tests. */
+  /** Clock in ms for the circuit breaker, injectable for tests. */
   now?: () => number;
+  /**
+   * Overall deadline of one request across all providers (default AI_TOTAL_TIMEOUT_MS = 240000). It is delivered to
+   * every provider as an AbortSignal, so each call ends at min(its own timeout, what is left of the budget).
+   */
+  totalTimeoutMs?: number;
 }
 
 /** Closed -> (N consecutive failures) open -> (cooldown) half-open: exactly one trial request -> closed or open again. */
@@ -102,6 +112,14 @@ function abortReason(signal: AbortSignal): unknown {
   return signal.reason ?? new Error('The AI request was aborted');
 }
 
+function deadlineError(): AppError {
+  return new AppError(
+    'The AI request took too long and was cancelled. Please try again.',
+    ErrorCode.EXTERNAL_SERVICE_ERROR,
+    504
+  );
+}
+
 function toServiceError(err: unknown): AppError {
   if (err instanceof AppError) return err;
   return new AppError('AI service temporarily unavailable. Please try again later.', ErrorCode.EXTERNAL_SERVICE_ERROR, 503);
@@ -109,6 +127,7 @@ function toServiceError(err: unknown): AppError {
 
 export function createFallbackLlm(entries: FallbackEntry[], options: FallbackOptions = {}): LlmProvider {
   const now = options.now ?? Date.now;
+  const totalTimeoutMs = options.totalTimeoutMs ?? getAiTotalTimeoutMs();
   const slots = entries.map((entry) => ({
     provider: entry.provider,
     breaker: entry.breaker ? new CircuitBreaker(entry.breaker, now) : undefined,
@@ -118,15 +137,20 @@ export function createFallbackLlm(entries: FallbackEntry[], options: FallbackOpt
     name: slots.map((s) => s.provider.name).join(','),
     async complete(req: LlmRequest): Promise<LlmCompletion> {
       let lastError: unknown;
+      // The deadline and the caller's signal are one signal for the providers; which one fired is told apart below.
+      const deadline = AbortSignal.timeout(totalTimeoutMs);
+      const signal = req.signal ? AbortSignal.any([req.signal, deadline]) : deadline;
+      const providerReq: LlmRequest = { ...req, signal };
       for (let i = 0; i < slots.length; i++) {
         const { provider, breaker } = slots[i];
         if (req.signal?.aborted) throw abortReason(req.signal);
+        if (deadline.aborted) throw deadlineError();
         if (breaker && !breaker.tryAcquire()) {
           console.warn(`[AI] Provider "${provider.name}" skipped (circuit open after repeated failures)`);
           continue;
         }
         try {
-          const result = await provider.complete(req);
+          const result = await provider.complete(providerReq);
           breaker?.onSuccess();
           return result;
         } catch (err) {
@@ -135,6 +159,10 @@ export function createFallbackLlm(entries: FallbackEntry[], options: FallbackOpt
             throw err;
           }
           breaker?.onFailure();
+          if (deadline.aborted) {
+            console.warn(`[AI] Provider "${provider.name}" cut by the overall deadline (${totalTimeoutMs} ms)`);
+            throw deadlineError();
+          }
           lastError = err;
           const next = slots[i + 1]?.provider.name;
           console.warn(
@@ -167,7 +195,8 @@ let cached: { key: string; llm: LlmProvider } | null = null;
  */
 export function getLlm(env: NodeJS.ProcessEnv = process.env): LlmProvider {
   const local = getLocalAiConfig(env);
-  const key = JSON.stringify([env.AI_PROVIDERS ?? '', local]);
+  const totalTimeoutMs = getAiTotalTimeoutMs(env);
+  const key = JSON.stringify([env.AI_PROVIDERS ?? '', local, totalTimeoutMs]);
   if (cached?.key === key) return cached.llm;
 
   const { providers, ignored } = parseAiProviders(env.AI_PROVIDERS);
@@ -180,7 +209,10 @@ export function getLlm(env: NodeJS.ProcessEnv = process.env): LlmProvider {
     throw new Error('AI_PROVIDERS does not list any valid provider (valid: local, openrouter)');
   }
 
-  const llm = createFallbackLlm(providers.map((name) => buildProvider(name, env)));
+  const llm = createFallbackLlm(
+    providers.map((name) => buildProvider(name, env)),
+    { totalTimeoutMs }
+  );
   cached = { key, llm };
   return llm;
 }

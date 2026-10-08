@@ -13,6 +13,15 @@ import {
 } from '../controllers/ai.controller.js';
 import { authenticateToken } from '../middlewares/authenticateToken.js';
 import { requireVerifiedEmail } from '../middlewares/requireVerifiedEmail.js';
+import { authorizeRole } from '../middlewares/authorizeRole.js';
+
+/**
+ * Both project-bound routes take the project (id or slug) from the body. The caller must belong to it BEFORE any prompt
+ * is built or any model is called: building the prompt pulls the project's GitHub context, and generate-and-save writes
+ * endpoints into it. Unknown project -> 404, not a member / insufficient role -> 403, no project reference -> 400.
+ * generate-description and generate-mock-data take no project reference.
+ */
+const bodyProjectRef = (req: { body?: { projectId?: unknown } }) => req.body?.projectId;
 
 const router = Router();
 
@@ -82,7 +91,14 @@ router.post('/generate-mock-data', authenticateToken, requireVerifiedEmail, gene
  *       200:
  *         description: Success
  */
-router.post('/generate-mock-api-spec', authenticateToken, requireVerifiedEmail, generateMockAPISpecHandler);
+// Read only (nothing is saved): any member, viewers included
+router.post(
+  '/generate-mock-api-spec',
+  authenticateToken,
+  requireVerifiedEmail,
+  authorizeRole(['OWNER', 'EDITOR', 'VIEWER'], bodyProjectRef),
+  generateMockAPISpecHandler
+);
 
 /**
  * @swagger
@@ -110,7 +126,14 @@ router.post('/generate-mock-api-spec', authenticateToken, requireVerifiedEmail, 
  *       200:
  *         description: Success
  */
-router.post('/generate-and-save', authenticateToken, requireVerifiedEmail, generateAndSaveHandler);
+// Writes endpoints into the project: owner or editor
+router.post(
+  '/generate-and-save',
+  authenticateToken,
+  requireVerifiedEmail,
+  authorizeRole(['OWNER', 'EDITOR'], bodyProjectRef),
+  generateAndSaveHandler
+);
 
 /**
  * @swagger

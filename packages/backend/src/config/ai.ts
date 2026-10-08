@@ -56,6 +56,8 @@ export type AiProviderName = (typeof AI_PROVIDER_NAMES)[number];
 const DEFAULT_LOCAL_MODEL = 'qwen2.5-coder:7b-instruct';
 const DEFAULT_LOCAL_TIMEOUT_MS = 120_000; // a cold model load on a CPU/GPU box can take a minute or more
 const DEFAULT_AI_RATE_PER_MINUTE = 20;
+// Whole request budget across all providers. Keep it below the front proxy read timeout (nginx /api/ai/: 300 s).
+const DEFAULT_AI_TOTAL_TIMEOUT_MS = 240_000;
 
 /**
  * Parses AI_PROVIDERS: an ordered, comma separated list of provider names ("local,openrouter").
@@ -106,4 +108,9 @@ export function getLocalAiConfig(env: NodeJS.ProcessEnv = process.env): LocalAiC
 /** AI calls one user may start per minute (AI_RATE_PER_MINUTE, default 20). */
 export function getAiRatePerMinute(env: NodeJS.ProcessEnv = process.env): number {
   return positiveInt(env.AI_RATE_PER_MINUTE, DEFAULT_AI_RATE_PER_MINUTE);
+}
+
+/** Overall deadline of one AI request across the whole fallback chain (AI_TOTAL_TIMEOUT_MS, default 240000). */
+export function getAiTotalTimeoutMs(env: NodeJS.ProcessEnv = process.env): number {
+  return positiveInt(env.AI_TOTAL_TIMEOUT_MS, DEFAULT_AI_TOTAL_TIMEOUT_MS);
 }

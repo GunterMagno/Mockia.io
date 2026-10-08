@@ -1,4 +1,5 @@
 import http from 'http';
+import { inspect } from 'util';
 import type { AddressInfo } from 'net';
 import request from 'supertest';
 import bcrypt from 'bcrypt';
@@ -8,7 +9,15 @@ import { connectDB, disconnectDB } from '../config/connection.js';
 import { UserModel } from '../models/User.js';
 import { ProjectModel } from '../models/Project.js';
 import { AiRateWindowModel } from '../models/AiRateWindow.js';
-import { openRouterConfig, parseAiProviders, getLocalAiConfig, getAiRatePerMinute } from '../config/ai.js';
+import {
+  openRouterConfig,
+  retryConfig,
+  parseAiProviders,
+  getLocalAiConfig,
+  getAiRatePerMinute,
+  getAiTotalTimeoutMs,
+} from '../config/ai.js';
+import { callOpenRouterWithRetry } from '../services/openRouter.service.js';
 import { assertProdConfig } from '../config/assertProdConfig.js';
 import { getLlm, resetLlm, createFallbackLlm, classifyFailure } from '../modules/ai/providers/index.js';
 import type { LlmProvider, LlmRequest } from '../modules/ai/providers/types.js';
@@ -813,11 +822,234 @@ describe('AI providers (local first, OpenRouter as reserve)', () => {
     it('every generation route shares the user bucket', async () => {
       process.env.AI_RATE_PER_MINUTE = '2';
       const a = await createUser('rl-c@example.com');
+      const own = await ProjectModel.create({ title: 'Own', slug: 'own-t12', ownerId: a.id, members: [{ userId: a.id, role: 'owner' }] });
       remote.setHandler(answer('{"a":1}'));
       await request(app).post('/api/ai/generate-description').set(a.auth).send({ prompt: 'p', userMessage: 'm' });
       await request(app).post('/api/ai/generate-mock-data').set(a.auth).send({ schema: { a: 'n' } });
-      const third = await request(app).post('/api/ai/generate-mock-api-spec').set(a.auth).send({});
+      const third = await request(app)
+        .post('/api/ai/generate-mock-api-spec')
+        .set(a.auth)
+        .send({ projectId: own._id.toString(), requirement: 'anything' });
       expect(third.status).toBe(429);
+    });
+  });
+
+  describe('overall deadline (AI_TOTAL_TIMEOUT_MS)', () => {
+    const req: LlmRequest = { messages: MESSAGES };
+    /** Hangs until its signal aborts, like a real HTTP call would. */
+    const hanging = (name: string): LlmProvider => ({
+      name,
+      complete: jest.fn(
+        (r: LlmRequest) =>
+          new Promise<never>((_resolve, reject) => {
+            r.signal?.addEventListener('abort', () => reject(r.signal?.reason ?? new Error('aborted')));
+          })
+      ),
+    });
+    const failsAfter = (name: string, ms: number): LlmProvider => ({
+      name,
+      complete: jest.fn(
+        () =>
+          new Promise<never>((_resolve, reject) => {
+            setTimeout(() => reject(new Error('down')), ms);
+          })
+      ),
+    });
+    const ok = (name: string): LlmProvider => ({
+      name,
+      complete: jest.fn(async () => ({ text: name, provider: name, model: 'm' })),
+    });
+
+    it('config: default 240000 ms, positive integers only', () => {
+      expect(getAiTotalTimeoutMs({})).toBe(240000);
+      expect(getAiTotalTimeoutMs({ AI_TOTAL_TIMEOUT_MS: '5000' })).toBe(5000);
+      expect(getAiTotalTimeoutMs({ AI_TOTAL_TIMEOUT_MS: '0' })).toBe(240000);
+      expect(getAiTotalTimeoutMs({ AI_TOTAL_TIMEOUT_MS: 'x' })).toBe(240000);
+    });
+
+    it('a local model that eats the whole budget ends the chain with a 504 and the reserve is not even tried', async () => {
+      const local1 = hanging('local');
+      const reserve = ok('openrouter');
+      const llm = createFallbackLlm([{ provider: local1 }, { provider: reserve }], { totalTimeoutMs: 120 });
+      const started = Date.now();
+      await expect(llm.complete(req)).rejects.toMatchObject({
+        statusCode: 504,
+        code: ErrorCode.EXTERNAL_SERVICE_ERROR,
+      });
+      expect(Date.now() - started).toBeLessThan(1000);
+      expect(reserve.complete).not.toHaveBeenCalled();
+    });
+
+    it('a slow failing local plus a hanging reserve never exceeds the budget', async () => {
+      const llm = createFallbackLlm([{ provider: failsAfter('local', 60) }, { provider: hanging('openrouter') }], {
+        totalTimeoutMs: 200,
+      });
+      const started = Date.now();
+      await expect(llm.complete(req)).rejects.toMatchObject({ statusCode: 504 });
+      const elapsed = Date.now() - started;
+      expect(elapsed).toBeGreaterThanOrEqual(190);
+      expect(elapsed).toBeLessThan(900);
+    });
+
+    it('every provider receives a signal that fires at the deadline (remaining budget, not its own timeout)', async () => {
+      let received: AbortSignal | undefined;
+      const spy: LlmProvider = {
+        name: 'local',
+        complete: jest.fn(async (r: LlmRequest) => {
+          received = r.signal;
+          return { text: 'x', provider: 'local', model: 'm' };
+        }),
+      };
+      await createFallbackLlm([{ provider: spy }], { totalTimeoutMs: 80 }).complete(req);
+      expect(received).toBeDefined();
+      expect(received!.aborted).toBe(false);
+      await new Promise((r) => setTimeout(r, 140));
+      expect(received!.aborted).toBe(true);
+    });
+
+    it('a fast answer inside the budget is unaffected', async () => {
+      const llm = createFallbackLlm([{ provider: ok('local') }], { totalTimeoutMs: 50 });
+      expect((await llm.complete(req)).provider).toBe('local');
+    });
+
+    it('the caller aborting is still not a fallback and not a 504, with or without a deadline', async () => {
+      const reserve = ok('openrouter');
+      const llm = createFallbackLlm([{ provider: hanging('local') }, { provider: reserve }], { totalTimeoutMs: 5000 });
+      const ac = new AbortController();
+      const settled = llm.complete({ ...req, signal: ac.signal }).then(
+        () => 'resolved',
+        (e) => e
+      );
+      await new Promise((r) => setTimeout(r, 40));
+      ac.abort(new Error('client went away'));
+      const err = await settled;
+      expect(err).toBeInstanceOf(Error);
+      expect((err as Error).message).toBe('client went away');
+      expect((err as { statusCode?: number }).statusCode).toBeUndefined();
+      expect(reserve.complete).not.toHaveBeenCalled();
+    });
+
+    it('through getLlm(): a hung local model (timeout 5 s) is cut at AI_TOTAL_TIMEOUT_MS and OpenRouter is not called', async () => {
+      local.setHandler(hang);
+      process.env.AI_LOCAL_TIMEOUT_MS = '5000';
+      process.env.AI_TOTAL_TIMEOUT_MS = '250';
+      resetLlm();
+      const started = Date.now();
+      await expect(getLlm().complete({ messages: MESSAGES })).rejects.toMatchObject({ statusCode: 504 });
+      expect(Date.now() - started).toBeLessThan(1500);
+      expect(remote.seen).toHaveLength(0);
+    });
+
+    it('through getLlm(): the OpenRouter retry backoff does not outlive the budget', async () => {
+      process.env.AI_PROVIDERS = 'openrouter';
+      process.env.AI_TOTAL_TIMEOUT_MS = '400';
+      resetLlm();
+      remote.setHandler((_r, res) => {
+        res.statusCode = 503;
+        res.end('busy');
+      });
+      const started = Date.now();
+      await expect(getLlm().complete({ messages: MESSAGES })).rejects.toMatchObject({ statusCode: 504 });
+      // first attempt answers 503, then the client would sleep >= 1 s before retrying
+      expect(Date.now() - started).toBeLessThan(900);
+      expect(remote.seen).toHaveLength(1);
+    });
+  });
+
+  describe('logs never carry prompts, keys or response bodies', () => {
+    const PROMPT = 'SENTINEL-PROMPT-REPO-CONTENT';
+    const KEY = 'sk-or-SENTINEL-KEY-123';
+    const BODY = 'SENTINEL-RESPONSE-BODY';
+    let log: jest.SpyInstance;
+    let err: jest.SpyInstance;
+
+    beforeEach(() => {
+      log = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+      err = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+      openRouterConfig.apiKey = KEY;
+    });
+    afterEach(() => {
+      log.mockRestore();
+      err.mockRestore();
+    });
+
+    const everything = () =>
+      [...log.mock.calls, ...warn.mock.calls, ...err.mock.calls]
+        .map((call) =>
+          call
+            // what the console would print, nested config/headers/response of an error included
+            .map((a: unknown) => (typeof a === 'string' ? a : inspect(a, { depth: 8, showHidden: true })))
+            .join(' ')
+        )
+        .join('\n');
+
+    it.each([400, 401])('a non-retryable OpenRouter %i logs only the status', async (status) => {
+      remote.setHandler((_r, res) => {
+        res.statusCode = status;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ error: { message: BODY } }));
+      });
+      await expect(
+        callOpenRouterWithRetry([{ role: 'user', content: PROMPT }], { temperature: 0.1 })
+      ).rejects.toBeDefined();
+
+      const out = everything();
+      expect(out).toContain('[OpenRouter]');
+      expect(out).toContain(String(status));
+      for (const secret of [PROMPT, KEY, BODY]) expect(out).not.toContain(secret);
+    });
+
+    it('exhausted retries (503) and a network error log no content either', async () => {
+      const cfg = retryConfig;
+      const original = { ...cfg };
+      cfg.maxRetries = 2;
+      cfg.initialDelayMs = 1;
+      try {
+        remote.setHandler((_r, res) => {
+          res.statusCode = 503;
+          res.end(BODY);
+        });
+        await expect(callOpenRouterWithRetry([{ role: 'user', content: PROMPT }])).rejects.toBeDefined();
+        openRouterConfig.baseUrl = await closedPortUrl();
+        await expect(callOpenRouterWithRetry([{ role: 'user', content: PROMPT }])).rejects.toBeDefined();
+      } finally {
+        Object.assign(cfg, original);
+      }
+      const out = everything();
+      for (const secret of [PROMPT, KEY, BODY]) expect(out).not.toContain(secret);
+    });
+
+    it('generate-and-save: an unparseable model answer and the pipeline failure do not put the answer in the logs', async () => {
+      process.env.AI_PROVIDERS = 'openrouter';
+      resetLlm();
+      await connectDB();
+      await UserModel.deleteMany({});
+      await ProjectModel.deleteMany({});
+      const user = await UserModel.create({
+        email: 'log1@example.com',
+        username: 'log1',
+        passwordHash: await bcrypt.hash('providers-test-password-1', 4),
+        emailVerifiedAt: new Date(),
+      });
+      const login = await request(app).post('/api/auth/login').send({ email: 'log1@example.com', password: 'providers-test-password-1' });
+      const auth = { Authorization: `Bearer ${login.body.data.tokens.accessToken as string}` };
+      const project = await ProjectModel.create({
+        title: 'Logs',
+        slug: 'logs-t12',
+        ownerId: user._id,
+        members: [{ userId: user._id, role: 'owner' }],
+      });
+      remote.setHandler(answer(`${BODY} this is not json at all`));
+      const res = await request(app)
+        .post('/api/ai/generate-and-save')
+        .set(auth)
+        .send({ projectId: project._id.toString(), requirement: PROMPT });
+      expect(res.status).toBeGreaterThanOrEqual(400);
+      const out = everything();
+      expect(out).toContain('[Pipeline]');
+      for (const secret of [PROMPT, BODY]) expect(out).not.toContain(secret);
+      await UserModel.deleteMany({});
+      await ProjectModel.deleteMany({});
     });
   });
 

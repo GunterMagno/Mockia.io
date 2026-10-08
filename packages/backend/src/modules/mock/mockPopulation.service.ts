@@ -8,6 +8,7 @@ import { MockAPIModel, EndpointModel, ResponseModel } from '../../models/MockAPI
 import { AppError } from '../../middlewares/errorHandler.js';
 import { ErrorCode } from '@mockia/shared';
 import { Types } from 'mongoose';
+import { describeError } from '../../utils/safeErrorLog.js';
 
 /**
  * Converts OpenAPI format paths {paramName} to Express format :paramName
@@ -157,7 +158,7 @@ export async function populateEndpointsFromLLM(
       timestamp: new Date().toISOString(),
     };
   } catch (error) {
-    console.error('[PopulationService] ✗ Error populating endpoints:', error);
+    console.error(`[PopulationService] ✗ Error populating endpoints (${describeError(error)})`);
     if (error instanceof AppError) {
       throw error;
     }
@@ -227,7 +228,7 @@ export async function deleteAllEndpointsForMockAPI(
 
     return result.deletedCount || 0;
   } catch (error) {
-    console.error('Error deleting endpoints:', error);
+    console.error(`Error deleting endpoints (${describeError(error)})`);
     throw new AppError(
       'Failed to delete endpoints',
       ErrorCode.INTERNAL_SERVER_ERROR,
@@ -260,7 +261,7 @@ export async function getEndpointsForMockAPI(mockApiId: string) {
 
     return endpoints;
   } catch (error) {
-    console.error('Error retrieving endpoints:', error);
+    console.error(`Error retrieving endpoints (${describeError(error)})`);
     throw new AppError(
       'Failed to retrieve endpoints',
       ErrorCode.INTERNAL_SERVER_ERROR,

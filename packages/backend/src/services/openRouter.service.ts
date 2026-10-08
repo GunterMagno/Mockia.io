@@ -13,12 +13,31 @@ import type {
 } from '../types/ai.js';
 import { AppError } from '../middlewares/errorHandler.js';
 import { ErrorCode } from '@mockia/shared';
+import { describeError } from '../utils/safeErrorLog.js';
 
 /**
  * Sleep utility for delays between retries
  */
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Sleep that ends early when the signal aborts (the next attempt then fails fast and the abort is rethrown), so a
+ * retry backoff never outlives the caller's overall deadline.
+ */
+function sleepUnlessAborted(ms: number, signal?: AbortSignal): Promise<void> {
+  if (!signal) return sleep(ms);
+  if (signal.aborted) return Promise.resolve();
+  return new Promise((resolve) => {
+    const timer = setTimeout(done, ms);
+    function done() {
+      clearTimeout(timer);
+      signal!.removeEventListener('abort', done);
+      resolve();
+    }
+    signal.addEventListener('abort', done, { once: true });
+  });
 }
 
 /**
@@ -138,7 +157,8 @@ export async function callOpenRouterWithRetry(
         }
 
         // Non-retryable error, throw immediately
-        console.error('[OpenRouter] ✗ Non-retryable error:', error);
+        // Only the status/code: the raw AxiosError holds the prompt (config.data), the API key and the response body
+        console.error(`[OpenRouter] ✗ Non-retryable error (${describeError(error)})`);
         throw transformOpenRouterError(error);
       }
 
@@ -162,7 +182,7 @@ export async function callOpenRouterWithRetry(
         `[OpenRouter] ⚠ Retryable error (${status} ${statusText}), waiting ${delayMs.toFixed(0)}ms before retry`
       );
 
-      await sleep(delayMs);
+      await sleepUnlessAborted(delayMs, signal);
     }
   }
 

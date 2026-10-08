@@ -8,6 +8,7 @@ import { AuthenticatedRequest } from '../middlewares/authenticateToken.js';
 import { asyncHandler } from '../middlewares/errorHandler.js';
 import { consumeAiQuota } from '../modules/ai/aiRateLimit.js';
 import { parseAiProviders } from '../config/ai.js';
+import { describeError } from '../utils/safeErrorLog.js';
 import { getLlm, type LlmCompletion, type LlmRequest } from '../modules/ai/providers/index.js';
 import { AppError } from '../middlewares/errorHandler.js';
 import { ErrorCode } from '@mockia/shared';
@@ -343,7 +344,7 @@ export const generateAndSaveHandler = asyncHandler(
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      console.error('[AI] Error during generation:', error);
+      console.error(`[AI] Error during generation (${describeError(error)})`);
       throw error;
     }
   }

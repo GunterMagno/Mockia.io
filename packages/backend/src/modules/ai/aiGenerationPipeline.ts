@@ -12,6 +12,7 @@ import { populateEndpointsFromLLM } from '../mock/mockPopulation.service.js';
 import { MockAPIOutput } from '@mockia/shared';
 import { AppError } from '../../middlewares/errorHandler.js';
 import { ErrorCode } from '@mockia/shared';
+import { describeError } from '../../utils/safeErrorLog.js';
 
 /**
  * Result of the complete pipeline
@@ -84,7 +85,8 @@ export async function runAIGenerationPipeline(
       timestamp: new Date().toISOString(),
     };
   } catch (error) {
-    console.error('[Pipeline] ✗ Pipeline failed:', error);
+    // The error text can quote the model output (JSON.parse messages do): class and status only
+    console.error(`[Pipeline] ✗ Pipeline failed (${describeError(error)})`);
     throw error;
   }
 }
@@ -112,7 +114,7 @@ export async function tryRunAIGenerationPipeline(
   try {
     return await runAIGenerationPipeline(projectId, rawLLMOutput, tokenUsage);
   } catch (error) {
-    console.error('AI Generation Pipeline failed:', error);
+    console.error(`AI Generation Pipeline failed (${describeError(error)})`);
     return null;
   }
 }
