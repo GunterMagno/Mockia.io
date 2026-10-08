@@ -135,7 +135,7 @@ describe('AI training consent, generation storage and feedback', () => {
       expect((await UserModel.findById(a.id).lean())?.aiTrainingConsent).toBeUndefined();
     });
 
-    it('granting records the moment and shows it in the profile (granted + at, nothing else)', async () => {
+    it('granting records the moment and shows it in the profile (granted, at, grantedAt, withdrawnAt; nothing else)', async () => {
       const a = await makeActor('alice');
       const before = Date.now();
       const res = await consent(a, true);
@@ -146,7 +146,9 @@ describe('AI training consent, generation storage and feedback', () => {
       expect(at).toBeLessThanOrEqual(Date.now() + 1000);
 
       const profile = await request(app).get('/api/users/profile').set(a.auth);
-      expect(Object.keys(profile.body.aiTrainingConsent).sort()).toEqual(['at', 'granted']);
+      expect(Object.keys(profile.body.aiTrainingConsent).sort()).toEqual(['at', 'granted', 'grantedAt', 'withdrawnAt']);
+      expect(profile.body.aiTrainingConsent.grantedAt).toBe(res.body.aiTrainingConsent.at);
+      expect(profile.body.aiTrainingConsent.withdrawnAt).toBeNull();
       expect(profile.body.aiTrainingConsent.granted).toBe(true);
     });
 
@@ -599,6 +601,45 @@ describe('AI training consent, generation storage and feedback', () => {
       const row = (await AiFeedbackModel.findOne({}).lean())!;
       const days = (row.expiresAt.getTime() - row.createdAt.getTime()) / 86_400_000;
       expect(days).toBeCloseTo(180, 1);
+    });
+
+    // Privacy: kept "180 days from each generation", not from each vote
+    it('a vote on a stored generation expires with that generation, even when cast on day 179', async () => {
+      const a = await makeActor('alice');
+      await consent(a, true);
+      const id = '8d1c9f0e-5b5a-4a3e-9e63-0f0f6f4f9c22';
+      const generationExpiresAt = new Date(Date.now() + 1 * 86_400_000); // generated 179 days ago
+      await AiGenerationModel.create({
+        generationId: id,
+        userId: new Types.ObjectId(a.id),
+        messages: [{ role: 'user', content: 'u' }],
+        output: SPEC_TEXT,
+        parsedOk: true,
+        provider: 'p',
+        model: 'm',
+        expiresAt: generationExpiresAt,
+      });
+      await recordFeedback(a.id, id, 'good');
+      const row = (await AiFeedbackModel.findOne({ generationId: id }).lean())!;
+      expect(row.expiresAt.getTime()).toBe(generationExpiresAt.getTime());
+      // A later re-vote does not extend it either
+      await recordFeedback(a.id, id, 'bad');
+      const again = (await AiFeedbackModel.findOne({ generationId: id }).lean())!;
+      expect(again.verdict).toBe('bad');
+      expect(again.expiresAt.getTime()).toBe(generationExpiresAt.getTime());
+    });
+
+    it('a re-vote on a generation that was never stored does not extend the expiry of the first vote', async () => {
+      const a = await makeActor('alice');
+      await consent(a, true);
+      const id = '8d1c9f0e-5b5a-4a3e-9e63-0f0f6f4f9c33';
+      await recordFeedback(a.id, id, 'good');
+      const first = (await AiFeedbackModel.findOne({ generationId: id }).lean())!;
+      await AiFeedbackModel.updateOne({ generationId: id }, { $set: { expiresAt: new Date(Date.now() + 86_400_000) } });
+      await recordFeedback(a.id, id, 'bad');
+      const again = (await AiFeedbackModel.findOne({ generationId: id }).lean())!;
+      expect(again.expiresAt.getTime()).toBeLessThan(first.expiresAt.getTime());
+      expect(again.expiresAt.getTime()).toBeLessThanOrEqual(Date.now() + 86_400_000);
     });
   });
 

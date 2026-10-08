@@ -163,6 +163,19 @@ export function flushUsage(): Promise<void> {
   return flushing;
 }
 
+/**
+ * Drops every in-memory counter of an owner (account deletion): pending increments are discarded, and a flush that is
+ * already writing is awaited, so nothing recreates a Usage row after the caller deletes the owner's rows.
+ */
+export async function forgetOwnerUsage(ownerId: string): Promise<void> {
+  const drop = () => {
+    for (const [key, entry] of entries) if (entry.ownerId === ownerId) entries.delete(key);
+  };
+  drop();
+  if (flushing) await flushing.catch(() => undefined);
+  drop();
+}
+
 /** Test helper: forget local state and stop the flush timer. */
 export function resetUsage(): void {
   entries.clear();

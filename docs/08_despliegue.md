@@ -67,7 +67,7 @@ El backend envía dos correos: el enlace de **verificación de email** (24 h) y 
 
 Sin `SMTP_URL`: en desarrollo el enlace se imprime en la consola del backend; en producción se registra un error y **no se envía nada** (la petición sigue respondiendo igual para no revelar qué correos existen), así que los usuarios no podrían verificarse ni recuperar la contraseña. El backend avisa de ello al arrancar.
 
-**Verificación obligatoria.** La generación con IA y el checkout/portal de facturación exigen el correo verificado (`403` con código `EMAIL_NOT_VERIFIED`) cuando `REQUIRE_EMAIL_VERIFICATION=true`; sin definir, solo se exige en `NODE_ENV=production`. **Antes de activarlo en una base de datos con usuarios existentes** hay que ejecutar una vez `npm run backfill:email-verified -w @mockia/backend` (con `MONGODB_URI` apuntando a esa base), que marca como verificadas las cuentas anteriores; es idempotente.
+**Verificación obligatoria.** La generación con IA y el checkout de facturación exigen el correo verificado (el portal de Stripe no: cancelar o cambiar la tarjeta nunca debe ser más difícil que suscribirse) (`403` con código `EMAIL_NOT_VERIFIED`) cuando `REQUIRE_EMAIL_VERIFICATION=true`; sin definir, solo se exige en `NODE_ENV=production`. **Antes de activarlo en una base de datos con usuarios existentes** hay que ejecutar una vez `npm run backfill:email-verified -w @mockia/backend` (con `MONGODB_URI` apuntando a esa base), que marca como verificadas las cuentas anteriores; es idempotente.
 
 ---
 

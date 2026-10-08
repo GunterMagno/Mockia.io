@@ -4,6 +4,7 @@ import { AppError } from '../middlewares/errorHandler.js';
 import { ErrorCode } from '@mockia/shared';
 import { EndpointConfigModel } from '../models/EndpointConfig.js';
 import { mockCache } from '../modules/mock/mockCache.service.js';
+import { deleteEndpointsCascade } from '../modules/projects/cascade.js';
 
 /**
  * Service to manage mock API endpoints
@@ -280,19 +281,14 @@ export async function deleteEndpoint(
   // 1. Verify project permissions
   verifyPermissions(project, userId, 'Only owners and editors can delete endpoints');
 
-  // 2. Delete associated responses
-  if (endpoint.responses && endpoint.responses.length > 0) {
-    await ResponseModel.deleteMany({ _id: { $in: endpoint.responses } });
-  }
-
-  // 3. Remove reference from MockAPI
+  // 2. Remove reference from MockAPI
   if (mockApi) {
     mockApi.endpoints = mockApi.endpoints.filter((eId: any) => eId.toString() !== endpointId);
     await mockApi.save();
   }
 
-  // 4. Delete the endpoint document itself
-  await EndpointModel.findByIdAndDelete(endpointId);
+  // 3. Delete the endpoint with its responses and its configuration (no orphans)
+  await deleteEndpointsCascade([endpoint._id]);
 
   if (project && project.slug) {
     await mockCache.invalidateProject(project.slug);

@@ -50,7 +50,12 @@ interface UserDocument extends Document {
    * Explicit consent to use this user's AI generations (prompts, outputs, corrections) to improve Mockia's AI.
    * Absent = never asked = no consent. Withdrawing sets granted=false and erases the stored examples.
    */
-  aiTrainingConsent?: { granted: boolean; at: Date };
+  /**
+   * AI training consent. `at` = when the current choice was made (compat); `grantedAt` = when the consent was given
+   * (kept after a withdrawal); `withdrawnAt` = when it was withdrawn (null while it stands). Older rows only have
+   * { granted, at }: for them `at` is the grant time.
+   */
+  aiTrainingConsent?: { granted: boolean; at: Date; grantedAt?: Date | null; withdrawnAt?: Date | null };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -99,7 +104,15 @@ const userSchema = new Schema<UserDocument>(
     emailVerifiedAt: { type: Date, default: null },
     locale: { type: String, enum: SUPPORTED_LOCALES },
     aiTrainingConsent: {
-      type: new Schema({ granted: { type: Boolean, required: true }, at: { type: Date, required: true } }, { _id: false }),
+      type: new Schema(
+        {
+          granted: { type: Boolean, required: true },
+          at: { type: Date, required: true },
+          grantedAt: { type: Date, default: undefined },
+          withdrawnAt: { type: Date, default: undefined },
+        },
+        { _id: false }
+      ),
     },
   },
   {

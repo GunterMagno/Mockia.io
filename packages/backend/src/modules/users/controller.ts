@@ -131,5 +131,12 @@ export const updateAiConsent = asyncHandler(async (req: AuthRequest, res: Respon
     res.status(204).send();
     return;
   }
-  res.json({ aiTrainingConsent: { granted: true, at: state.at.toISOString() } });
+  res.json({
+    aiTrainingConsent: {
+      granted: true,
+      at: state.at.toISOString(),
+      grantedAt: (state.grantedAt ?? state.at).toISOString(),
+      withdrawnAt: null,
+    },
+  });
 });

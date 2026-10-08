@@ -186,7 +186,6 @@ describe('Email verification', () => {
       ['post', '/api/ai/generate-mock-api-spec'],
       ['post', '/api/ai/generate-and-save'],
       ['post', '/api/billing/checkout'],
-      ['post', '/api/billing/portal'],
     ];
 
     it.each(gated)('enforced: an unverified user gets 403 EMAIL_NOT_VERIFIED on %s %s', async (method, path) => {
@@ -215,10 +214,20 @@ describe('Email verification', () => {
     it('verifying the email lifts the block', async () => {
       process.env.REQUIRE_EMAIL_VERIFICATION = 'true';
       const { id, auth } = await createUser('gate4@example.com');
-      expect((await request(app).post('/api/billing/portal').set(auth).send({})).status).toBe(403);
+      expect((await request(app).post('/api/billing/checkout').set(auth).send({ plan: 'pro' })).status).toBe(403);
       await request(app).post('/api/auth/verify').send({ token: await createAuthToken(id, 'verify', 60) });
+      const res = await request(app).post('/api/billing/checkout').set(auth).send({ plan: 'pro' });
+      expect(res.body?.error?.code).not.toBe('EMAIL_NOT_VERIFIED');
+    });
+
+    // Cancelling must never be harder than subscribing: an unverified legacy subscriber (the backfill script is not
+    // runnable from the production image) still reaches the Stripe portal to cancel or fix the card.
+    it('does not gate the billing portal', async () => {
+      process.env.REQUIRE_EMAIL_VERIFICATION = 'true';
+      const { auth } = await createUser('gate6@example.com');
       const res = await request(app).post('/api/billing/portal').set(auth).send({});
       expect(res.body?.error?.code).not.toBe('EMAIL_NOT_VERIFIED');
+      expect(res.status).not.toBe(403);
     });
 
     it('does not gate the AI health probe or the billing overview', async () => {

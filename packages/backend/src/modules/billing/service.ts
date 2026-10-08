@@ -76,10 +76,18 @@ async function updateUser(
   // (a delayed subscription.updated(active) must not resurrect a plan after subscription.deleted).
   if (typeof event.id === 'string' && Number.isFinite(event.created)) {
     const at = new Date(event.created! * 1000);
+    // Stripe stamps events with whole seconds and sends several in the same second in any order. On a tie the order is
+    // unknown, so a move to past_due never overrides an ACTIVE user: a stale "worse" event of that second (e.g. a
+    // subscription that was incomplete while its first payment was being confirmed) would otherwise leave a paying
+    // customer without their plan for a whole period. canceled is terminal in Stripe, so it always applies.
+    const notOlder =
+      fields.billingStatus === 'past_due'
+        ? [{ stripeEventAt: { $lt: at } }, { stripeEventAt: at, billingStatus: { $ne: 'active' } }]
+        : [{ stripeEventAt: { $lte: at } }];
     filter = {
       ...filter,
       stripeLastEventId: { $ne: event.id },
-      $or: [{ stripeEventAt: { $exists: false } }, { stripeEventAt: { $lte: at } }],
+      $or: [{ stripeEventAt: { $exists: false } }, ...notOlder],
     };
     fields = { ...fields, stripeEventAt: at, stripeLastEventId: event.id };
   }
@@ -199,6 +207,16 @@ export async function handleStripeEvent(event: StripeEvent): Promise<'handled' |
     }
     case 'customer.subscription.created':
     case 'customer.subscription.updated': {
+      // A subscription created as incomplete (first payment still being confirmed) or incomplete_expired (never paid)
+      // says nothing about access: checkout.session.completed / subscription.updated(active) grant the plan, and a
+      // half-finished checkout must neither grant it nor degrade a user. Only the ids are linked.
+      if (event.type === 'customer.subscription.created' && ['incomplete', 'incomplete_expired'].includes(obj.status)) {
+        result = await updateUser(event, obj, {
+          stripeSubscriptionId: obj.id,
+          ...(typeof obj.customer === 'string' && { stripeCustomerId: obj.customer }),
+        });
+        break;
+      }
       const priced = subscriptionPrice(obj);
       const plan = planFromSubscription(obj);
       const billingStatus = STATUS_MAP[obj.status] ?? 'past_due';
@@ -399,30 +417,96 @@ export async function createPortalSession(input: { customerId: string; secretKey
   return { url: data.url };
 }
 
+const cancelFailed = () =>
+  new AppError('Could not cancel your subscription. Nothing was deleted; try again later.', ErrorCode.EXTERNAL_SERVICE_ERROR, 502);
+
+/** Stripe statuses of a subscription that can still charge the customer (or become chargeable). */
+const LIVE_SUBSCRIPTION_STATUSES = new Set(['active', 'trialing', 'past_due', 'unpaid', 'incomplete', 'paused']);
+/** Statuses that mean the subscription is already over. */
+const DEAD_SUBSCRIPTION_STATUSES = new Set(['canceled', 'incomplete_expired']);
+/** Pages of 100 subscriptions read per customer at most (a customer never has that many; it only bounds a bad loop). */
+const MAX_SUBSCRIPTION_PAGES = 10;
+
+async function stripeFetch(url: string, secretKey: string, method: 'GET' | 'DELETE'): Promise<Response> {
+  try {
+    return await fetch(url, { method, headers: { Authorization: `Bearer ${secretKey}` }, signal: AbortSignal.timeout(10_000) });
+  } catch (err) {
+    console.error(`[Billing] Stripe ${method} failed:`, err instanceof Error ? err.name : 'unknown error');
+    throw cancelFailed();
+  }
+}
+
 /**
- * Cancels a subscription IMMEDIATELY in Stripe (DELETE /v1/subscriptions/{id}): no further charge, no proration refund.
- * Used by account deletion, which must not leave a live subscription behind. A subscription Stripe no longer knows
- * (404 resource_missing) counts as already cancelled. The Stripe customer record is kept by Stripe (fiscal duties).
- *
- * @throws AppError 502 if Stripe does not confirm the cancellation (the caller must then delete nothing)
+ * Cancels a subscription immediately (account deletion). Idempotent: a subscription Stripe no longer knows (404), or one
+ * that a non-OK answer turns out to have already ended (re-read with a GET: canceled / incomplete_expired), counts as
+ * cancelled. Only the status and Stripe's error code are logged.
+ * @throws AppError 502 when it could not be cancelled
  */
 export async function cancelSubscriptionNow(subscriptionId: string, secretKey: string): Promise<void> {
-  let res: Response;
-  try {
-    res = await fetch(`${STRIPE_API}/subscriptions/${encodeURIComponent(subscriptionId)}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${secretKey}` },
-      signal: AbortSignal.timeout(10_000),
-    });
-  } catch (err) {
-    console.error('[Billing] Stripe subscription cancel failed:', err instanceof Error ? err.message : err);
-    throw new AppError('Could not cancel your subscription. Nothing was deleted; try again later.', ErrorCode.EXTERNAL_SERVICE_ERROR, 502);
-  }
+  const url = `${STRIPE_API}/subscriptions/${encodeURIComponent(subscriptionId)}`;
+  const res = await stripeFetch(url, secretKey, 'DELETE');
   if (res.ok) return;
   const data: any = await res.json().catch(() => ({}));
   if (res.status === 404 && data?.error?.code === 'resource_missing') return;
-  console.error('[Billing] Stripe subscription cancel failed:', res.status, data?.error?.message);
-  throw new AppError('Could not cancel your subscription. Nothing was deleted; try again later.', ErrorCode.EXTERNAL_SERVICE_ERROR, 502);
+  // The cancel may have raced with Stripe's own (e.g. the last dunning retry): check what the subscription is now
+  const check = await stripeFetch(url, secretKey, 'GET').catch(() => null);
+  const current: any = check?.ok ? await check.json().catch(() => ({})) : null;
+  if (current && DEAD_SUBSCRIPTION_STATUSES.has(current.status)) return;
+  console.error('[Billing] Stripe subscription cancel failed:', res.status, data?.error?.code ?? '');
+  throw cancelFailed();
+}
+
+/** Ids of the customer's subscriptions that can still charge (every page, up to a sane cap). */
+export async function listLiveSubscriptionIds(customerId: string, secretKey: string): Promise<string[]> {
+  const ids: string[] = [];
+  let startingAfter: string | undefined;
+  for (let page = 0; page < MAX_SUBSCRIPTION_PAGES; page++) {
+    const params = new URLSearchParams({ customer: customerId, status: 'all', limit: '100' });
+    if (startingAfter) params.set('starting_after', startingAfter);
+    const res = await stripeFetch(`${STRIPE_API}/subscriptions?${params}`, secretKey, 'GET');
+    const body: any = await res.json().catch(() => ({}));
+    if (!res.ok || !Array.isArray(body?.data)) {
+      console.error('[Billing] Stripe subscription list failed:', res.status, body?.error?.code ?? '');
+      throw cancelFailed();
+    }
+    for (const sub of body.data) {
+      if (typeof sub?.id === 'string' && LIVE_SUBSCRIPTION_STATUSES.has(sub.status)) ids.push(sub.id);
+    }
+    const last = body.data[body.data.length - 1]?.id;
+    if (!body.has_more || typeof last !== 'string') return ids;
+    startingAfter = last;
+  }
+  console.warn('[Billing] Stopped listing subscriptions after the page cap');
+  return ids;
+}
+
+/**
+ * Account deletion: cancels EVERY subscription of the user that can still charge the card, not only the one we stored
+ * (a second checkout in another tab, or one created in the dashboard, would otherwise outlive the account). The stored
+ * one goes first; then, with a customer id, every live subscription Stripe lists for it. After the stored one is
+ * cancelled `billingStatus: 'canceled'` is written at once, so a retry after a later failure does not try it again.
+ * @throws AppError 502 when any of them could not be cancelled or the list could not be read (the caller deletes nothing)
+ */
+export async function cancelAllSubscriptions(
+  user: { _id: unknown; stripeCustomerId?: string | null; stripeSubscriptionId?: string | null; billingStatus?: string | null },
+  secretKey: string
+): Promise<void> {
+  const markCanceled = () =>
+    UserModel.updateOne({ _id: user._id }, { $set: { billingStatus: 'canceled', plan: 'free', cancelAtPeriodEnd: false } });
+  const done = new Set<string>();
+  if (user.stripeSubscriptionId && user.billingStatus !== 'canceled') {
+    await cancelSubscriptionNow(user.stripeSubscriptionId, secretKey);
+    done.add(user.stripeSubscriptionId);
+    await markCanceled();
+    invalidatePlanCache(String(user._id));
+  }
+  if (user.stripeCustomerId) {
+    for (const id of await listLiveSubscriptionIds(user.stripeCustomerId, secretKey)) {
+      if (done.has(id)) continue;
+      await cancelSubscriptionNow(id, secretKey);
+      done.add(id);
+    }
+  }
 }
 
 /** Plan, limits and usage of the current billing period, for the billing page. */

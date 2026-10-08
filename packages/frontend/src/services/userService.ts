@@ -8,7 +8,7 @@ export interface UserProfile {
   fullName?: string
   username?: string
   /** Consent to use my AI generations to improve the AI. Absent = never decided = off. */
-  aiTrainingConsent?: { granted: boolean; at: string }
+  aiTrainingConsent?: { granted: boolean; at: string; grantedAt?: string | null; withdrawnAt?: string | null }
   createdAt: string
   updatedAt: string
 }

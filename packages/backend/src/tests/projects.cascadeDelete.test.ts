@@ -9,6 +9,9 @@ import { GitHubContextModel } from '../models/GitHubContext.js';
 import { NotificationModel } from '../models/Notification.js';
 import { cleanupArchivedProjects, hardDeleteProject } from '../modules/projects/service.js';
 import { deleteProjectsCascade } from '../modules/projects/cascade.js';
+import { deleteEndpoint } from '../services/endpoint.service.js';
+import { deleteAllEndpointsForMockAPI } from '../modules/mock/mockPopulation.service.js';
+import { mockCache } from '../modules/mock/mockCache.service.js';
 
 // Privacidad y Terminos prometen que un proyecto eliminado se borra con TODO su contenido: sin huerfanos.
 const ownerId = new Types.ObjectId();
@@ -111,6 +114,48 @@ describe('borrado en cascada de proyectos', () => {
 
     expect(await counts()).toEqual([1, 1, 1, 1, 1, 1, 1]);
     expect(await ProjectModel.exists({ _id: kept._id })).toBeTruthy();
+  });
+
+  it('borrar un endpoint suelto borra tambien su configuracion y sus respuestas (sin huerfanos)', async () => {
+    const project = await seedProject('ep-doomed');
+    const endpoint = (await EndpointModel.findOne({}).lean())!;
+    expect(await EndpointConfigModel.countDocuments({ endpointId: endpoint._id })).toBe(1);
+
+    await deleteEndpoint(endpoint._id.toString(), ownerId.toString());
+
+    expect(await EndpointModel.countDocuments({})).toBe(0);
+    expect(await ResponseModel.countDocuments({})).toBe(0);
+    expect(await EndpointConfigModel.countDocuments({})).toBe(0);
+    expect(await ProjectModel.exists({ _id: project._id })).toBeTruthy();
+  });
+
+  it('el borrado masivo de endpoints de un MockAPI borra tambien sus configuraciones', async () => {
+    await seedProject('bulk-doomed');
+    const kept = await seedProject('bulk-kept');
+    const mockApi = (await MockAPIModel.findOne({ title: 'bulk-doomed' }).lean())!;
+
+    expect(await deleteAllEndpointsForMockAPI(mockApi._id.toString())).toBe(1);
+
+    expect(await EndpointModel.countDocuments({})).toBe(1);
+    expect(await ResponseModel.countDocuments({})).toBe(1);
+    expect(await EndpointConfigModel.countDocuments({})).toBe(1);
+    const keptApi = (await MockAPIModel.findOne({ projectId: kept._id }).lean())!;
+    expect(await EndpointModel.countDocuments({ mockApiId: keptApi._id })).toBe(1);
+  });
+
+  it('deleteProjectsCascade invalida la cache del mock del proyecto (slug e id)', async () => {
+    const doomed = await seedProject('cache-doomed');
+    await mockCache.getProject('cache-doomed');
+    await mockCache.getProject(doomed._id.toString());
+    const spy = jest.spyOn(mockCache, 'invalidateProject');
+    try {
+      await deleteProjectsCascade([doomed._id]);
+      expect(spy).toHaveBeenCalledWith('cache-doomed');
+      expect(await mockCache.getProject('cache-doomed')).toBeNull();
+      expect(await mockCache.getProject(doomed._id.toString())).toBeNull();
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it('cleanupArchivedProjects borra solo los archivados hace mas de 30 dias, con todos sus hijos', async () => {

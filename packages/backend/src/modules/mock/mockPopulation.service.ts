@@ -9,6 +9,7 @@ import { AppError } from '../../middlewares/errorHandler.js';
 import { ErrorCode } from '@mockia/shared';
 import { Types } from 'mongoose';
 import { describeError } from '../../utils/safeErrorLog.js';
+import { deleteEndpointsCascade } from '../projects/cascade.js';
 
 /**
  * Converts OpenAPI format paths {paramName} to Express format :paramName
@@ -215,18 +216,9 @@ export async function deleteAllEndpointsForMockAPI(
 
     const objectId = new Types.ObjectId(mockApiId);
 
-    // Get all endpoint IDs first
-    const endpoints = await EndpointModel.find({ mockApiId: objectId });
-
-    // Delete all responses for these endpoints
-    for (const endpoint of endpoints) {
-      await ResponseModel.deleteMany({ _id: { $in: endpoint.responses } });
-    }
-
-    // Delete all endpoints
-    const result = await EndpointModel.deleteMany({ mockApiId: objectId });
-
-    return result.deletedCount || 0;
+    // Endpoints with their responses and configurations (no orphans)
+    const endpointIds = (await EndpointModel.find({ mockApiId: objectId }).select('_id').lean()).map((e) => e._id);
+    return await deleteEndpointsCascade(endpointIds);
   } catch (error) {
     console.error(`Error deleting endpoints (${describeError(error)})`);
     throw new AppError(

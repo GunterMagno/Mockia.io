@@ -32,7 +32,7 @@ export async function recordFeedback(
   correctedOutput?: unknown
 ): Promise<void> {
   const uid = new Types.ObjectId(userId);
-  const generation = await AiGenerationModel.findOne({ generationId }).select('userId provider model').lean();
+  const generation = await AiGenerationModel.findOne({ generationId }).select('userId provider model expiresAt').lean();
   if (generation && generation.userId.toString() !== userId) {
     // Not theirs: nothing is written and nothing about it is revealed
     throw new AppError('Generation not found', ErrorCode.NOT_FOUND, 404);
@@ -53,14 +53,18 @@ export async function recordFeedback(
     }
   }
 
-  const now = new Date();
+  // Retention counts from the GENERATION (Privacy: "180 days from each generation"), never from the vote: a vote on a
+  // stored generation expires with it, and a re-vote never pushes the date back. Without a stored generation (made
+  // before the consent) the first vote fixes the date and later votes keep it.
   const set: Record<string, unknown> = {
     verdict,
     provider: generation ? generation.provider : null,
     model: generation ? generation.model : null,
-    expiresAt: new Date(now.getTime() + getAiGenerationRetentionDays() * 86_400_000),
   };
-  const update: Record<string, unknown> = { $set: set, $setOnInsert: { userId: uid, generationId } };
+  const setOnInsert: Record<string, unknown> = { userId: uid, generationId };
+  if (generation?.expiresAt) set.expiresAt = generation.expiresAt;
+  else setOnInsert.expiresAt = new Date(Date.now() + getAiGenerationRetentionDays() * 86_400_000);
+  const update: Record<string, unknown> = { $set: set, $setOnInsert: setOnInsert };
   if (keepContent) set.correctedOutput = validated;
   else update.$unset = { correctedOutput: '' };
 

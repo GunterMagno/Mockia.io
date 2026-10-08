@@ -15,10 +15,12 @@ import { AiFeedbackModel } from '../../models/AiFeedback.js';
 import { RefreshSessionModel } from '../../models/RefreshSession.js';
 import { AuthTokenModel } from '../../models/AuthToken.js';
 import { deleteProjectsCascade } from '../projects/cascade.js';
-import { cancelSubscriptionNow } from '../billing/service.js';
+import { cancelAllSubscriptions } from '../billing/service.js';
+import { forgetOwnerUsage } from '../billing/usage.js';
 import { setAiTrainingConsent } from '../ai/consent.js';
 import { invalidatePlanCache } from '../billing/plans.js';
-import { listActiveSessions, revokeAllForUser } from '../auth/sessions.js';
+import { revokeAllForUser } from '../auth/sessions.js';
+import { consentDTO } from './dto.js';
 
 /** Version of the shape of the export file; bump it when a field is renamed or removed. */
 export const EXPORT_SCHEMA_VERSION = 1;
@@ -50,7 +52,8 @@ export async function exportUserData(userId: string): Promise<Record<string, unk
     GitHubContextModel.find({ projectId: { $in: projectIds } }).lean(),
     NotificationModel.find({ userId: uid }).sort({ createdAt: 1 }).lean(),
     UsageModel.find({ ownerId: uid }).sort({ period: 1 }).lean(),
-    listActiveSessions(userId),
+    // Every refresh session the server still keeps (until it expires): live and already used/rotated ones
+    RefreshSessionModel.find({ userId: uid, expiresAt: { $gt: new Date() } }).sort({ createdAt: 1 }).lean(),
     ProjectModel.find({ ownerId: { $ne: uid }, 'members.userId': uid }).select('title slug members').lean(),
     AiGenerationModel.find({ userId: uid }).sort({ createdAt: 1 }).lean(),
     AiFeedbackModel.find({ userId: uid }).sort({ createdAt: 1 }).lean(),
@@ -112,13 +115,13 @@ export async function exportUserData(userId: string): Promise<Record<string, unk
       billingStatus: user.billingStatus,
       createdAt: iso(user.createdAt),
       emailVerifiedAt: iso(user.emailVerifiedAt),
-      aiTrainingConsent: user.aiTrainingConsent
-        ? { granted: user.aiTrainingConsent.granted, at: iso(user.aiTrainingConsent.at) }
-        : null,
+      aiTrainingConsent: user.aiTrainingConsent ? consentDTO(user.aiTrainingConsent) : null,
     },
     billing: {
       plan: user.plan,
       status: user.billingStatus,
+      interval: user.billingInterval ?? null,
+      pastDueSince: iso(user.pastDueSince),
       cancelAtPeriodEnd: Boolean(user.cancelAtPeriodEnd),
       currentPeriodEnd: iso(user.currentPeriodEnd),
     },
@@ -194,7 +197,13 @@ export async function exportUserData(userId: string): Promise<Record<string, unk
       createdAt: iso(f.createdAt),
       expiresAt: iso(f.expiresAt),
     })),
-    sessions: sessions.map((s) => ({ createdAt: iso(s.createdAt), ip: s.ip ?? null, ua: s.ua ?? null })),
+    sessions: sessions.map((s) => ({
+      createdAt: iso(s.createdAt),
+      expiresAt: iso(s.expiresAt),
+      status: s.revokedAt ? 'revoked' : s.usedAt ? 'used' : 'live',
+      ip: s.ip ?? null,
+      ua: s.ua ?? null,
+    })),
   };
 }
 
@@ -223,16 +232,21 @@ export async function deleteUserAccount(userId: string, password: string): Promi
   }
 
   // A subscription still live in Stripe (anything but already cancelled, past_due included) keeps charging the card.
-  if (user.stripeSubscriptionId && user.billingStatus !== 'canceled') {
+  // With a Stripe customer, every live subscription Stripe lists for it is cancelled too (not only the stored one).
+  const hasStoredLiveSubscription = Boolean(user.stripeSubscriptionId) && user.billingStatus !== 'canceled';
+  if (hasStoredLiveSubscription || user.stripeCustomerId) {
     const secretKey = process.env.STRIPE_SECRET_KEY;
     if (!secretKey) {
-      throw new AppError(
-        'Your account has an active subscription and payments are not configured on this server, so we cannot guarantee it would be cancelled. Nothing was deleted; contact support.',
-        ErrorCode.CONFLICT,
-        409
-      );
+      if (hasStoredLiveSubscription) {
+        throw new AppError(
+          'Your account has an active subscription and payments are not configured on this server, so we cannot guarantee it would be cancelled. Nothing was deleted; contact support.',
+          ErrorCode.CONFLICT,
+          409
+        );
+      }
+    } else {
+      await cancelAllSubscriptions(user, secretKey);
     }
-    await cancelSubscriptionNow(user.stripeSubscriptionId, secretKey);
   }
 
   const uid = new Types.ObjectId(userId);
@@ -243,6 +257,9 @@ export async function deleteUserAccount(userId: string, password: string): Promi
   await ProjectModel.updateMany({ 'members.userId': uid }, { $pull: { members: { userId: uid } } });
 
   await NotificationModel.deleteMany({ userId: uid });
+  // The projects are gone and deleteProjectsCascade cleared their mock cache, so no new request can be counted for this
+  // owner: drop the pending in-memory counters (the 5 s flush would otherwise recreate a Usage row) and then the rows.
+  await forgetOwnerUsage(userId);
   await UsageModel.deleteMany({ ownerId: uid });
   // Per-minute AI call counters: not exported (operational, expire within minutes) but erased with the account
   await AiRateWindowModel.deleteMany({ userId: uid });

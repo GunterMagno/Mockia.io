@@ -17,7 +17,7 @@ Coste/beneficio: las guías sobre este tema suelen situar el cruce en que ajusta
 
 ```
 usuario activa el consentimiento (perfil → "Mis datos", opcional, apagado por defecto)
-        │  PUT /users/me/ai-consent {granted:true}      → User.aiTrainingConsent {granted, at}
+        │  PUT /users/me/ai-consent {granted:true}      → User.aiTrainingConsent {granted, at, grantedAt, withdrawnAt}
         ▼
 genera endpoints con IA (generate-mock-api-spec / generate-and-save)
         │  la respuesta lleva siempre `generationId` (UUID aleatorio)
@@ -44,7 +44,7 @@ Dónde vive cada cosa:
 
 | Dato | Colección | Se borra | En la exportación RGPD |
 |---|---|---|---|
-| Consentimiento y su fecha | `users.aiTrainingConsent` | con la cuenta | sí (`account.aiTrainingConsent`) |
+| Consentimiento y sus fechas (`grantedAt` se conserva al retirarlo y se añade `withdrawnAt`; `at` = última elección, por compatibilidad) | `users.aiTrainingConsent` | con la cuenta | sí (`account.aiTrainingConsent`) |
 | Prompts, respuesta, proveedor, modelo | `aigenerations` | al retirar el consentimiento, al borrar la cuenta, a los 180 días | sí (`aiGenerations`) |
 | Voto, corrección (solo usuarios que consintieron) | `aifeedbacks` | igual (los votos sin contenido también) | sí (`aiFeedback`) |
 

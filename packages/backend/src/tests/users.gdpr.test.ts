@@ -217,7 +217,7 @@ describe('RGPD - exportar y borrar la cuenta', () => {
       expect(data.notifications.map((n: any) => n.title).sort()).toEqual([`loose-${alice._id.toString()}`, 'n-alice-proj'].sort());
       expect(data.usage).toEqual([expect.objectContaining({ period: '2026-10', requests: 7 })]);
       expect(data.sessions.length).toBeGreaterThanOrEqual(1);
-      expect(Object.keys(data.sessions[0]).sort()).toEqual(['createdAt', 'ip', 'ua'].sort());
+      expect(Object.keys(data.sessions[0]).sort()).toEqual(['createdAt', 'expiresAt', 'status', 'ip', 'ua'].sort());
 
       // Nothing of the other user
       expect(raw).not.toContain('bob@example.com');
@@ -309,6 +309,10 @@ describe('RGPD - exportar y borrar la cuenta', () => {
 
       const seenAtCall: Array<{ userExists: boolean; projects: number; url: string; init: any }> = [];
       global.fetch = jest.fn(async (url: any, init: any) => {
+        // Listing the customer's other subscriptions (account deletion cancels every live one): none besides sub_123
+        if (String(url).startsWith('https://api.stripe.com/v1/subscriptions?')) {
+          return { ok: true, status: 200, json: async () => ({ data: [{ id: 'sub_123', status: 'canceled' }], has_more: false }) } as any;
+        }
         seenAtCall.push({
           url: String(url),
           init,

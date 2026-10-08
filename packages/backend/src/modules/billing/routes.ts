@@ -151,11 +151,12 @@ billingRouter.post(
 /**
  * POST /api/billing/portal  Stripe customer portal session for the current user.
  * 200 { url }, 401, 409 NO_BILLING_ACCOUNT (never subscribed), 501 Stripe not configured, 502 Stripe error.
+ * NOT behind requireVerifiedEmail: cancelling or fixing a card must never be harder than subscribing (an unverified
+ * legacy subscriber could otherwise not cancel).
  */
 billingRouter.post(
   '/portal',
   authenticateToken,
-  requireVerifiedEmail,
   stripeCallLimiter,
   asyncHandler(async (req: AuthenticatedRequest, res) => {
     const secretKey = process.env.STRIPE_SECRET_KEY;
