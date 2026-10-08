@@ -94,7 +94,7 @@ async function loadExportProject(projectId: string): Promise<ExportProject> {
     slug: project.slug,
     description: project.description ?? '',
     apiVersion: mockApi?.apiVersion || '1.0.0',
-    hasApiKey: Boolean(project.apiKey),
+    hasApiKey: project.visibility === 'key',
     endpoints,
   };
 }

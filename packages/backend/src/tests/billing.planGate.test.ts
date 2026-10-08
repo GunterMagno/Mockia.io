@@ -12,7 +12,8 @@ import { mockCache } from '../modules/mock/mockCache.service.js';
 import { PLAN_LIMITS, effectivePlan, getUserPlan, graceEndsAt, invalidatePlanCache } from '../modules/billing/plans.js';
 import { PAST_DUE_GRACE_DAYS } from '@mockia/shared';
 import { consumeQuota, flushUsage, getMonthlyUsage, periodOf, resetUsage } from '../modules/billing/usage.js';
-import { enforceProjectLimit, extractMockSlug, mockQuotaGate } from '../middlewares/planGate.js';
+import { enforceProjectLimit, extractMockSlug, mockQuotaGate, recordMockRequest } from '../middlewares/planGate.js';
+import { hashApiKey } from '../modules/mock/mockAuth.js';
 
 const findById = UserModel.findById as unknown as jest.Mock;
 const countDocuments = ProjectModel.countDocuments as unknown as jest.Mock;
@@ -30,7 +31,7 @@ const dbKey = (f: { ownerId: string; period: string }) => `${f.ownerId}:${f.peri
 const query = (value: unknown) => ({ select: () => ({ lean: () => Promise.resolve(value) }) });
 
 function makeRes() {
-  const res: any = { statusCode: 200, headers: {} as Record<string, string>, body: undefined };
+  const res: any = { statusCode: 200, headers: {} as Record<string, string>, body: undefined, locals: {} };
   res.status = (c: number) => ((res.statusCode = c), res);
   res.json = (b: unknown) => ((res.body = b), res);
   res.setHeader = (k: string, v: string) => ((res.headers[k] = v), res);
@@ -303,9 +304,15 @@ describe('extractMockSlug', () => {
 
 describe('mockQuotaGate', () => {
   const ownerId = '64b0000000000000000000aa';
-  const project = { ownerId: { toString: () => ownerId }, apiKey: 'k1' };
+  const project = { ownerId: { toString: () => ownerId }, visibility: 'key', apiKeyHash: hashApiKey('k1') };
   const call = (over: Record<string, any> = {}) =>
     run(mockQuotaGate, { method: 'GET', path: '/mock/p/users', headers: { 'x-mockia-api-key': 'k1' }, ...over });
+  /** The gate lets it through and the mock handler serves it: that is what counts. */
+  const serve = async (over: Record<string, any> = {}) => {
+    const out = await call(over);
+    if (out.next.mock.calls.length > 0 && out.res.statusCode === 200) recordMockRequest(out.res);
+    return out;
+  };
   const used = () => getMonthlyUsage(ownerId);
 
   beforeEach(() => {
@@ -313,34 +320,54 @@ describe('mockQuotaGate', () => {
     userIs({ plan: 'free' });
   });
 
-  it('counts calls and returns 429 QUOTA_EXCEEDED past 10k with Retry-After', async () => {
+  it('counts served calls and returns 429 QUOTA_EXCEEDED past 10k with Retry-After', async () => {
     usageDb.set(`${ownerId}:${periodOf(new Date())}`, 9_999);
-    const last = await call();
+    const last = await serve();
     expect(last.next).toHaveBeenCalledWith();
-    expect(last.res.headers['X-Quota-Remaining']).toBe('0');
+    expect(last.res.headers['X-RateLimit-Remaining']).toBe('0');
 
     const over = await call();
     expect(over.res.statusCode).toBe(429);
     expect(over.res.body.error.code).toBe('QUOTA_EXCEEDED');
     expect(over.res.body.error.details).toMatchObject({ plan: 'free', limit: 10_000 });
     expect(Number(over.res.headers['Retry-After'])).toBeGreaterThan(0);
+    expect(over.res.headers['X-RateLimit-Limit']).toBe('10000');
+    expect(over.res.headers['X-RateLimit-Remaining']).toBe('0');
+    expect(Number(over.res.headers['X-RateLimit-Reset'])).toBeGreaterThan(Date.now() / 1000);
     expect(over.res.headers['Access-Control-Allow-Origin']).toBe('*');
     expect(over.next).not.toHaveBeenCalled();
     expect(await used()).toBe(10_000);
   });
 
+  it('the gate alone consumes nothing: a request the handler never serves (404) is not counted', async () => {
+    const { next } = await call();
+    expect(next).toHaveBeenCalledWith();
+    expect(await used()).toBe(0);
+  });
+
+  it('recordMockRequest counts once even if called twice, and is a no-op without a ticket', async () => {
+    const { res } = await call();
+    recordMockRequest(res);
+    recordMockRequest(res);
+    expect(await used()).toBe(1);
+    recordMockRequest(makeRes());
+    expect(await used()).toBe(1);
+  });
+
   it('applies the team quota (10M) instead of the free one', async () => {
     userIs({ plan: 'team', billingStatus: 'active' });
     usageDb.set(`${ownerId}:${periodOf(new Date())}`, 50_000);
-    const { next, res } = await call();
+    const { next, res } = await serve();
     expect(next).toHaveBeenCalledWith();
-    expect(res.headers['X-Quota-Limit']).toBe('10000000');
+    expect(res.headers['X-RateLimit-Limit']).toBe('10000000');
     expect(await used()).toBe(50_001);
   });
 
-  it('a wrong API key is not counted (mock router answers 401)', async () => {
-    const { next } = await call({ headers: { 'x-mockia-api-key': 'wrong' } });
-    expect(next).toHaveBeenCalledWith();
+  it('a wrong or missing API key is not counted (mock router answers 401)', async () => {
+    const wrong = await serve({ headers: { 'x-mockia-api-key': 'wrong' } });
+    expect(wrong.next).toHaveBeenCalledWith();
+    expect(wrong.res.locals.mockQuota).toBeUndefined();
+    await serve({ headers: {} });
     expect(await used()).toBe(0);
   });
 

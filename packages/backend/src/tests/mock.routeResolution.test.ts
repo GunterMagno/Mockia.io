@@ -47,7 +47,7 @@ describe('Route Resolution Service', () => {
 
       await resolveRoute(id, 'GET', '/');
 
-      expect(ProjectModel.findById).toHaveBeenCalledWith(id);
+      expect(ProjectModel.findById).toHaveBeenCalledWith(id, '+apiKeyHash');
     });
 
     it('should throw 404 if project not found', async () => {

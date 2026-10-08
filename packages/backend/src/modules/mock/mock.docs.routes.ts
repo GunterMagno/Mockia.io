@@ -6,12 +6,23 @@
 import { Application } from 'express';
 import { ProjectModel } from '../../models/Project.js';
 
+/** Same charset the slug generator produces (plus _ and uppercase tolerated), so it is inert inside HTML and JS. */
+const SAFE_SLUG = /^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$/;
+
+const escapeHtml = (s: string) =>
+  s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string);
+
 /** Mount Swagger UI page for a given project */
 export function mountMockDocsRoutes(app: Application) {
   app.get('/mock/:projectSlug/docs', async (req, res) => {
     const projectSlug = req.params?.projectSlug as string | undefined;
     if (!projectSlug) {
       return res.status(400).send('Missing projectSlug');
+    }
+
+    // Slugs are generated lowercase [a-z0-9-]; anything else cannot be a project and must never reach the HTML
+    if (!SAFE_SLUG.test(projectSlug)) {
+      return res.status(404).type('text/plain').send('Project not found');
     }
 
     // Resolve project by slug to obtain its ID for the swagger.json URL
@@ -30,7 +41,7 @@ export function mountMockDocsRoutes(app: Application) {
       <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Swagger UI - ${projectSlug}</title>
+        <title>Swagger UI - ${escapeHtml(projectSlug)}</title>
         <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist/swagger-ui.css" />
       </head>
       <body>

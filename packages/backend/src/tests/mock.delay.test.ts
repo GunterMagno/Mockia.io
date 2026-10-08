@@ -6,6 +6,7 @@ import { EndpointModel, MockAPIModel, ResponseModel } from '../models/MockAPI.js
 import { EndpointConfigModel } from '../models/EndpointConfig.js';
 import { connectDB, disconnectDB } from '../config/connection.js';
 import bcrypt from 'bcrypt';
+import { hashApiKey } from '../modules/mock/mockAuth.js';
 import { mockCache } from '../modules/mock/mockCache.service.js';
 
 describe('Mock Router Delay and Status Code Interceptors', () => {
@@ -51,7 +52,9 @@ describe('Mock Router Delay and Status Code Interceptors', () => {
       slug: 'delay-test-project',
       ownerId: user._id,
       members: [{ userId: user._id, role: 'owner' as any, addedAt: new Date() }],
-      apiKey,
+      visibility: 'key',
+      apiKeyHash: hashApiKey(apiKey),
+      apiKeyPrefix: apiKey.slice(0, 9),
       isArchived: false,
     });
     projectId = project._id.toString();

@@ -9,6 +9,7 @@ import { UserModel } from '../models/User.js';
 import { ProjectModel, ProjectRoleEnum } from '../models/Project.js';
 import { EndpointModel, MockAPIModel, ResponseModel } from '../models/MockAPI.js';
 import { EndpointConfigModel } from '../models/EndpointConfig.js';
+import { hashApiKey } from '../modules/mock/mockAuth.js';
 import { exportOpenApi, exportPostman, exportMswHandlers } from '../modules/projects/export.js';
 
 // Task 10: exportar los mocks de un proyecto a OpenAPI 3.1, coleccion Postman v2.1 y handlers MSW.
@@ -46,7 +47,9 @@ async function seedProject(
     slug,
     ownerId,
     members: [{ userId: ownerId, role: ProjectRoleEnum.OWNER, addedAt: new Date() }],
-    apiKey: `${API_KEY}-${slug}`,
+    visibility: 'key',
+    apiKeyHash: hashApiKey(`${API_KEY}-${slug}`),
+    apiKeyPrefix: 'mk_abcdef',
     ...extra,
   });
   const mockApi = await MockAPIModel.create({ projectId: project._id, title: `Api ${slug}`, apiVersion: '2.3.0' });

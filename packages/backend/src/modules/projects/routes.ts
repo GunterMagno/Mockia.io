@@ -11,7 +11,8 @@ import {
   importGitHubRepositoryHandler,
   getProjectContextHandler,
   deleteProjectContextHandler,
-  regenerateApiKeyHandler,
+  issueApiKeyHandler,
+  revokeApiKeyHandler,
   hardDeleteProjectHandler,
   leaveProjectHandler,
   exportProjectHandler,
@@ -167,11 +168,14 @@ projectsRouter.get(
  *           type: string
  *     responses:
  *       200:
- *         description: Project Swagger JSON
+ *         description: Project Swagger JSON (any project member)
+ *       403:
+ *         description: Not a member of the project
  */
 projectsRouter.get(
   '/:id/swagger.json',
   authenticateToken,
+  authorizeRole(['OWNER', 'EDITOR', 'VIEWER'] as unknown as ProjectRole[]),
   getProjectSwagger
 );
 
@@ -219,9 +223,26 @@ projectsRouter.get(
 
 /**
  * @swagger
- * /projects/{id}/regenerate-api-key:
+ * /projects/{id}/api-key:
  *   post:
- *     summary: Regenerate project API key
+ *     summary: Create or rotate the API key of the project's mock endpoints
+ *     description: Owner only. The full key is in this response and never again; only its SHA-256 is stored. Rotating invalidates the previous key.
+ *     tags: [Projects]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       201:
+ *         description: "{ apiKey, prefix }"
+ *       403:
+ *         description: Not the project owner
+ *   delete:
+ *     summary: Revoke the API key (a project that requires a key then answers 401 to everybody)
  *     tags: [Projects]
  *     security:
  *       - bearerAuth: []
@@ -233,12 +254,21 @@ projectsRouter.get(
  *           type: string
  *     responses:
  *       200:
- *         description: API Key regenerated
+ *         description: Project without key
+ *       403:
+ *         description: Not the project owner
  */
 projectsRouter.post(
-  '/:id/regenerate-api-key',
+  '/:id/api-key',
   authenticateToken,
-  regenerateApiKeyHandler
+  authorizeRole(['OWNER'] as unknown as ProjectRole[]),
+  issueApiKeyHandler
+);
+projectsRouter.delete(
+  '/:id/api-key',
+  authenticateToken,
+  authorizeRole(['OWNER'] as unknown as ProjectRole[]),
+  revokeApiKeyHandler
 );
 
 /**
@@ -265,11 +295,22 @@ projectsRouter.post(
  *                 type: string
  *               description:
  *                 type: string
+ *               visibility:
+ *                 type: string
+ *                 enum: [public, key]
+ *                 description: "'key' needs an API key first (409 API_KEY_REQUIRED)"
  *     responses:
  *       200:
  *         description: Project updated
  */
 projectsRouter.put(
+  '/:id',
+  authenticateToken,
+  validate({ body: updateProjectSchema }),
+  updateProjectHandler
+);
+// PATCH is the same partial update (title, description, visibility)
+projectsRouter.patch(
   '/:id',
   authenticateToken,
   validate({ body: updateProjectSchema }),

@@ -1,6 +1,7 @@
 import { Types } from 'mongoose';
 import { NotificationType } from '@mockia/shared';
 import { connectDB, disconnectDB } from '../config/connection.js';
+import { hashApiKey } from '../modules/mock/mockAuth.js';
 import { ProjectModel } from '../models/Project.js';
 import { EndpointModel, MockAPIModel, ResponseModel } from '../models/MockAPI.js';
 import { EndpointConfigModel } from '../models/EndpointConfig.js';
@@ -32,7 +33,9 @@ async function seedProject(slug: string, opts: { archivedDaysAgo?: number } = {}
     slug,
     ownerId,
     members: [{ userId: ownerId, role: 'owner' as any, addedAt: new Date() }],
-    apiKey: `key-${slug}`,
+    visibility: 'key',
+    apiKeyHash: hashApiKey(`key-${slug}`),
+    apiKeyPrefix: 'mk_abcdef',
     isArchived: archived,
     archivedAt: archived ? new Date(Date.now() - opts.archivedDaysAgo! * DAY) : null,
   });

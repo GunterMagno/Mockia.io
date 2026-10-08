@@ -62,6 +62,9 @@ class MemoryCache {
   }
 }
 
+/** apiKeyHash is select:false everywhere else; the mock engine needs it to check API keys (it stays in this process). */
+const API_KEY_PROJECTION = '+apiKeyHash';
+
 class MockCacheService {
   private cache = new MemoryCache();
 
@@ -73,14 +76,13 @@ class MockCacheService {
     const cached = this.cache.get<ProjectDocument>(cacheKey);
     if (cached) return cached;
 
-    // The hash is select:false everywhere else; the mock engine needs it to check API keys (it stays in this process).
     let project;
     const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(projectSlug);
     if (isValidObjectId) {
-      project = await ProjectModel.findById(projectSlug).select('+apiKeyHash');
+      project = await ProjectModel.findById(projectSlug, API_KEY_PROJECTION);
     }
     if (!project) {
-      project = await ProjectModel.findOne({ slug: projectSlug }).select('+apiKeyHash');
+      project = await ProjectModel.findOne({ slug: projectSlug }, API_KEY_PROJECTION);
     }
 
     if (project) {

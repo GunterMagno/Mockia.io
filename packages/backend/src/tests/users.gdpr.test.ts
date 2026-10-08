@@ -5,6 +5,7 @@ import { NotificationType } from '@mockia/shared';
 import app from '../index.js';
 import { connectDB, disconnectDB } from '../config/connection.js';
 import { UserModel } from '../models/User.js';
+import { hashApiKey } from '../modules/mock/mockAuth.js';
 import { ProjectModel, ProjectRoleEnum } from '../models/Project.js';
 import { EndpointModel, MockAPIModel, ResponseModel } from '../models/MockAPI.js';
 import { EndpointConfigModel } from '../models/EndpointConfig.js';
@@ -60,7 +61,9 @@ async function seedProject(ownerId: Types.ObjectId, slug: string, extra: Record<
     slug,
     ownerId,
     members: [{ userId: ownerId, role: ProjectRoleEnum.OWNER, addedAt: new Date() }],
-    apiKey: `key-${slug}`,
+    visibility: 'key',
+    apiKeyHash: hashApiKey(`key-${slug}`),
+    apiKeyPrefix: 'mk_abcdef',
     ...extra,
   });
   const mockApi = await MockAPIModel.create({ projectId: project._id, title: `Api ${slug}` });
@@ -177,6 +180,7 @@ describe('RGPD - exportar y borrar la cuenta', () => {
       expect(raw).not.toContain('tokenHash');
       expect(raw).not.toContain('familyId');
       expect(raw).not.toContain('key-alice-proj');
+      expect(raw).not.toContain(hashApiKey('key-alice-proj'));
 
       // Own project with its whole tree
       expect(data.projects).toHaveLength(1);
