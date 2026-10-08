@@ -1,0 +1,254 @@
+{
+  "id": "openapi3-library-pagination",
+  "description": "OpenAPI 3 spec whose list operations document limit/offset pagination and a wrapped response.",
+  "tags": [
+    "openapi3",
+    "pagination",
+    "path-params"
+  ],
+  "input": {
+    "projectTitle": "Records API",
+    "userInput": "Mock every operation of the OpenAPI document.",
+    "context": {
+      "repoName": "records-api",
+      "repoUrl": "https://github.com/acme/records-api",
+      "repoOwner": "acme",
+      "branch": "main",
+      "summary": "Records catalogue API",
+      "stats": {
+        "totalFiles": 1,
+        "totalInterfaces": 0,
+        "totalFunctions": 0,
+        "totalRoutes": 3
+      },
+      "files": [
+        {
+          "path": "docs/openapi.json",
+          "type": "swagger",
+          "summary": "OpenAPI 3.0.1. GET /records takes query params limit and offset and returns { data: Record[], limit: integer, offset: integer, count: integer }. Record = { id: string, title: string, artist: string, year: integer }.",
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/records"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/records/{id}"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/artists/{artistId}/records"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": [
+    {
+      "method": "GET",
+      "path": "/records",
+      "description": "Paginated list of records",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "artist": {
+                  "type": "string"
+                },
+                "year": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "id",
+                "title",
+                "artist",
+                "year"
+              ]
+            }
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "offset": {
+            "type": "integer"
+          },
+          "count": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "data",
+          "limit",
+          "offset",
+          "count"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "data": [
+              {
+                "id": "r1",
+                "title": "Kind of Blue",
+                "artist": "Miles Davis",
+                "year": 1959
+              }
+            ],
+            "limit": 20,
+            "offset": 0,
+            "count": 1
+          }
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/records/{id}",
+      "description": "Get a record",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "artist": {
+            "type": "string"
+          },
+          "year": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "artist",
+          "year"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "id": "r1",
+            "title": "Kind of Blue",
+            "artist": "Miles Davis",
+            "year": 1959
+          }
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "Record not found"
+          },
+          "statusCode": 404
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/artists/{artistId}/records",
+      "description": "Records of an artist",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "artist": {
+                  "type": "string"
+                },
+                "year": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "id",
+                "title",
+                "artist",
+                "year"
+              ]
+            }
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "offset": {
+            "type": "integer"
+          },
+          "count": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "data",
+          "limit",
+          "offset",
+          "count"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "data": [
+              {
+                "id": "r1",
+                "title": "Kind of Blue",
+                "artist": "Miles Davis",
+                "year": 1959
+              }
+            ],
+            "limit": 20,
+            "offset": 0,
+            "count": 1
+          }
+        }
+      ]
+    }
+  ]
+}

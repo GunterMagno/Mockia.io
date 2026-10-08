@@ -1,0 +1,343 @@
+{
+  "id": "nestjs-products",
+  "description": "NestJS ProductsController with a DTO: CRUD with PATCH.",
+  "tags": [
+    "nestjs",
+    "path-params"
+  ],
+  "input": {
+    "projectTitle": "Catalog Service",
+    "userInput": "Mock the products controller.",
+    "context": {
+      "repoName": "catalog-service",
+      "repoUrl": "https://github.com/acme/catalog-service",
+      "repoOwner": "acme",
+      "branch": "main",
+      "summary": "NestJS catalogue microservice",
+      "stats": {
+        "totalFiles": 3,
+        "totalInterfaces": 2,
+        "totalFunctions": 0,
+        "totalRoutes": 5
+      },
+      "files": [
+        {
+          "path": "README.md",
+          "type": "other",
+          "summary": "# Catalog Service\nNestJS service. Controllers live in `src/products`."
+        },
+        {
+          "path": "src/products/products.controller.ts",
+          "type": "typescript",
+          "summary": "@Controller(\"products\") ProductsController: @Get() findAll, @Get(\":id\") findOne, @Post() create, @Patch(\":id\") update, @Delete(\":id\") remove",
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/products"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/products/:id"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/products"
+            },
+            {
+              "methods": [
+                "PATCH"
+              ],
+              "path": "/products/:id"
+            },
+            {
+              "methods": [
+                "DELETE"
+              ],
+              "path": "/products/:id"
+            }
+          ]
+        },
+        {
+          "path": "src/products/dto/create-product.dto.ts",
+          "type": "typescript",
+          "summary": "DTOs",
+          "interfaces": [
+            {
+              "name": "CreateProductDto",
+              "properties": [
+                "name: string",
+                "price: number",
+                "category: string"
+              ]
+            },
+            {
+              "name": "ProductEntity",
+              "properties": [
+                "id: number",
+                "name: string",
+                "price: number",
+                "category: string"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": [
+    {
+      "method": "GET",
+      "path": "/products",
+      "description": "List products",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer"
+            },
+            "name": {
+              "type": "string"
+            },
+            "price": {
+              "type": "number"
+            },
+            "category": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "price",
+            "category"
+          ]
+        }
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": [
+            {
+              "id": 1,
+              "name": "Espresso machine",
+              "price": 249.9,
+              "category": "kitchen"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/products/:id",
+      "description": "Get a product",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number"
+          },
+          "category": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "price",
+          "category"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "id": 1,
+            "name": "Espresso machine",
+            "price": 249.9,
+            "category": "kitchen"
+          }
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "Product not found"
+          },
+          "statusCode": 404
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/products",
+      "description": "Create a product",
+      "requestSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number"
+          },
+          "category": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "price",
+          "category"
+        ]
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number"
+          },
+          "category": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "price",
+          "category"
+        ]
+      },
+      "examples": [
+        {
+          "request": {
+            "name": "Milk frother",
+            "price": 39.5,
+            "category": "kitchen"
+          },
+          "response": {
+            "id": 2,
+            "name": "Milk frother",
+            "price": 39.5,
+            "category": "kitchen"
+          }
+        }
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/products/:id",
+      "description": "Update a product",
+      "requestSchema": {
+        "type": "object",
+        "properties": {
+          "price": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "price"
+        ]
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "price": {
+            "type": "integer"
+          },
+          "category": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "price",
+          "category"
+        ]
+      },
+      "examples": [
+        {
+          "request": {
+            "price": 35
+          },
+          "response": {
+            "id": 2,
+            "name": "Milk frother",
+            "price": 35,
+            "category": "kitchen"
+          }
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/products/:id",
+      "description": "Delete a product",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "deleted": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "deleted"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "id": 2,
+            "deleted": true
+          }
+        }
+      ]
+    }
+  ]
+}

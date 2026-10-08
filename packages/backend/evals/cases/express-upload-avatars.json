@@ -1,0 +1,236 @@
+{
+  "id": "express-upload-avatars",
+  "description": "Avatar service with a multipart upload endpoint.",
+  "tags": [
+    "express",
+    "upload",
+    "path-params"
+  ],
+  "input": {
+    "projectTitle": "Avatar Service",
+    "userInput": "Mock the avatar endpoints, including the upload.",
+    "context": {
+      "repoName": "avatar-service",
+      "repoUrl": "https://github.com/acme/avatar-service",
+      "repoOwner": "acme",
+      "branch": "main",
+      "summary": "Stores profile pictures",
+      "stats": {
+        "totalFiles": 3,
+        "totalInterfaces": 1,
+        "totalFunctions": 0,
+        "totalRoutes": 3
+      },
+      "files": [
+        {
+          "path": "README.md",
+          "type": "other",
+          "summary": "# Avatar Service\nUpload a profile picture (multipart/form-data, field `file`, max 2 MB) and fetch its metadata."
+        },
+        {
+          "path": "src/routes/avatars.ts",
+          "type": "typescript",
+          "summary": "Avatars router using multer",
+          "routes": [
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/avatars"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/avatars/:userId"
+            },
+            {
+              "methods": [
+                "DELETE"
+              ],
+              "path": "/avatars/:userId"
+            }
+          ]
+        },
+        {
+          "path": "src/types.ts",
+          "type": "typescript",
+          "summary": "Avatar type",
+          "interfaces": [
+            {
+              "name": "Avatar",
+              "properties": [
+                "userId: string",
+                "url: string",
+                "mimeType: string",
+                "sizeBytes: number",
+                "uploadedAt: string"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": [
+    {
+      "method": "POST",
+      "path": "/avatars",
+      "description": "Upload an avatar (multipart/form-data)",
+      "requestSchema": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "file",
+          "userId"
+        ]
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "type": "integer"
+          },
+          "uploadedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "userId",
+          "url",
+          "mimeType",
+          "sizeBytes",
+          "uploadedAt"
+        ]
+      },
+      "examples": [
+        {
+          "request": {
+            "file": "(binary)",
+            "userId": "u1"
+          },
+          "response": {
+            "userId": "u1",
+            "url": "https://cdn.example.com/avatars/u1.png",
+            "mimeType": "image/png",
+            "sizeBytes": 48211,
+            "uploadedAt": "2026-10-02T09:30:00Z"
+          }
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "File too large"
+          },
+          "statusCode": 400
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/avatars/:userId",
+      "description": "Get the avatar metadata of a user",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "type": "integer"
+          },
+          "uploadedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "userId",
+          "url",
+          "mimeType",
+          "sizeBytes",
+          "uploadedAt"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "userId": "u1",
+            "url": "https://cdn.example.com/avatars/u1.png",
+            "mimeType": "image/png",
+            "sizeBytes": 48211,
+            "uploadedAt": "2026-10-02T09:30:00Z"
+          }
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "Avatar not found"
+          },
+          "statusCode": 404
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/avatars/:userId",
+      "description": "Delete the avatar of a user",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "deleted": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "userId",
+          "deleted"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "userId": "u1",
+            "deleted": true
+          }
+        }
+      ]
+    }
+  ]
+}

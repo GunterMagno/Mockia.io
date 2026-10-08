@@ -1,0 +1,287 @@
+{
+  "id": "openapi3-auth-bearer",
+  "description": "OpenAPI 3 notes API where every operation but login is secured with a bearer token.",
+  "tags": [
+    "openapi3",
+    "auth",
+    "errors",
+    "path-params"
+  ],
+  "input": {
+    "projectTitle": "Secure Notes",
+    "userInput": "Generate the mock API for the secured notes service.",
+    "context": {
+      "repoName": "secure-notes",
+      "repoUrl": "https://github.com/acme/secure-notes",
+      "repoOwner": "acme",
+      "branch": "main",
+      "summary": "Notes API with login",
+      "stats": {
+        "totalFiles": 1,
+        "totalInterfaces": 0,
+        "totalFunctions": 0,
+        "totalRoutes": 4
+      },
+      "files": [
+        {
+          "path": "openapi.yaml",
+          "type": "swagger",
+          "summary": "OpenAPI 3.0.0. POST /login is public and returns { token: string, expiresAt: string }. All other operations require bearerAuth. Note = { id: string, text: string, pinned: boolean }.",
+          "routes": [
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/login"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/notes"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/notes"
+            },
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/notes/{noteId}"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": [
+    {
+      "method": "POST",
+      "path": "/login",
+      "description": "Log in and receive a bearer token",
+      "requestSchema": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "password"
+        ]
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "expiresAt"
+        ]
+      },
+      "examples": [
+        {
+          "request": {
+            "username": "ana",
+            "password": "demo-pass"
+          },
+          "response": {
+            "token": "eyJhbGciOiJIUzI1NiJ9.notes",
+            "expiresAt": "2026-10-08T18:00:00Z"
+          }
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "Invalid credentials"
+          },
+          "statusCode": 401
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/notes",
+      "description": "List notes",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "pinned": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id",
+            "text",
+            "pinned"
+          ]
+        }
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": [
+            {
+              "id": "n1",
+              "text": "Renew the domain",
+              "pinned": true
+            }
+          ]
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "Unauthorized"
+          },
+          "statusCode": 401
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/notes",
+      "description": "Create a note",
+      "requestSchema": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ]
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "pinned": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "pinned"
+        ]
+      },
+      "examples": [
+        {
+          "request": {
+            "text": "Book the venue"
+          },
+          "response": {
+            "id": "n2",
+            "text": "Book the venue",
+            "pinned": false
+          }
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "Unauthorized"
+          },
+          "statusCode": 401
+        }
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/notes/{noteId}",
+      "description": "Update a note",
+      "requestSchema": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "pinned": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "text",
+          "pinned"
+        ]
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "pinned": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "pinned"
+        ]
+      },
+      "examples": [
+        {
+          "request": {
+            "text": "Book the venue",
+            "pinned": true
+          },
+          "response": {
+            "id": "n2",
+            "text": "Book the venue",
+            "pinned": true
+          }
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "Unauthorized"
+          },
+          "statusCode": 401
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "Note not found"
+          },
+          "statusCode": 404
+        }
+      ]
+    }
+  ]
+}

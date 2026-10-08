@@ -1,0 +1,246 @@
+{
+  "id": "es-tienda-tipos",
+  "description": "Spanish TypeScript interfaces only, Spanish instruction: list and get by id for two entities.",
+  "tags": [
+    "es",
+    "typescript-types",
+    "path-params"
+  ],
+  "input": {
+    "projectTitle": "Tienda Online",
+    "userInput": "Crea una API REST para productos y clientes: listar y obtener por id.",
+    "context": {
+      "repoName": "tienda-online",
+      "repoUrl": "https://github.com/acme/tienda-online",
+      "repoOwner": "acme",
+      "branch": "main",
+      "summary": "Tipos de una tienda online",
+      "stats": {
+        "totalFiles": 2,
+        "totalInterfaces": 2,
+        "totalFunctions": 0,
+        "totalRoutes": 0
+      },
+      "files": [
+        {
+          "path": "README.md",
+          "type": "other",
+          "summary": "# Tienda Online\nCatalogo de productos y registro de clientes."
+        },
+        {
+          "path": "src/tipos.ts",
+          "type": "typescript",
+          "summary": "Tipos del dominio",
+          "interfaces": [
+            {
+              "name": "Producto",
+              "properties": [
+                "id: string",
+                "nombre: string",
+                "precio: number",
+                "stock: number"
+              ]
+            },
+            {
+              "name": "Cliente",
+              "properties": [
+                "id: string",
+                "nombre: string",
+                "correo: string",
+                "ciudad: string"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": [
+    {
+      "method": "GET",
+      "path": "/productos",
+      "description": "Listar productos",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "nombre": {
+              "type": "string"
+            },
+            "precio": {
+              "type": "number"
+            },
+            "stock": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "id",
+            "nombre",
+            "precio",
+            "stock"
+          ]
+        }
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": [
+            {
+              "id": "p1",
+              "nombre": "Aceite de oliva 1L",
+              "precio": 8.95,
+              "stock": 120
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/productos/:id",
+      "description": "Obtener un producto",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "precio": {
+            "type": "number"
+          },
+          "stock": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "precio",
+          "stock"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "id": "p1",
+            "nombre": "Aceite de oliva 1L",
+            "precio": 8.95,
+            "stock": 120
+          }
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/clientes",
+      "description": "Listar clientes",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "nombre": {
+              "type": "string"
+            },
+            "correo": {
+              "type": "string"
+            },
+            "ciudad": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "nombre",
+            "correo",
+            "ciudad"
+          ]
+        }
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": [
+            {
+              "id": "c1",
+              "nombre": "Marta Gil",
+              "correo": "marta.gil@example.com",
+              "ciudad": "Sevilla"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/clientes/:id",
+      "description": "Obtener un cliente",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "correo": {
+            "type": "string"
+          },
+          "ciudad": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "correo",
+          "ciudad"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "id": "c1",
+            "nombre": "Marta Gil",
+            "correo": "marta.gil@example.com",
+            "ciudad": "Sevilla"
+          }
+        }
+      ]
+    }
+  ]
+}

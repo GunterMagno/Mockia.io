@@ -1,0 +1,285 @@
+{
+  "id": "express-versioned-api",
+  "description": "API mounted under /api/v1: the version prefix is part of every path.",
+  "tags": [
+    "express",
+    "path-params"
+  ],
+  "input": {
+    "projectTitle": "Fleet Tracker",
+    "userInput": "Mock the vehicle endpoints of the v1 API.",
+    "context": {
+      "repoName": "fleet-tracker",
+      "repoUrl": "https://github.com/acme/fleet-tracker",
+      "repoOwner": "acme",
+      "branch": "main",
+      "summary": "Vehicle fleet tracking",
+      "stats": {
+        "totalFiles": 4,
+        "totalInterfaces": 2,
+        "totalFunctions": 0,
+        "totalRoutes": 4
+      },
+      "files": [
+        {
+          "path": "README.md",
+          "type": "other",
+          "summary": "# Fleet Tracker\nEverything is served under `/api/v1`."
+        },
+        {
+          "path": "src/app.ts",
+          "type": "typescript",
+          "summary": "app.use(\"/api/v1\", router) mounts the router"
+        },
+        {
+          "path": "src/routes/vehicles.ts",
+          "type": "typescript",
+          "summary": "Vehicles router (mounted at /api/v1)",
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/v1/vehicles"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/v1/vehicles/:plate"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/api/v1/vehicles"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/api/v1/vehicles/:plate/position"
+            }
+          ]
+        },
+        {
+          "path": "src/types.ts",
+          "type": "typescript",
+          "summary": "Vehicle types",
+          "interfaces": [
+            {
+              "name": "Vehicle",
+              "properties": [
+                "plate: string",
+                "model: string",
+                "driver: string"
+              ]
+            },
+            {
+              "name": "Position",
+              "properties": [
+                "lat: number",
+                "lng: number",
+                "speedKmh: number",
+                "recordedAt: string"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": [
+    {
+      "method": "GET",
+      "path": "/api/v1/vehicles",
+      "description": "List vehicles",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "plate": {
+              "type": "string"
+            },
+            "model": {
+              "type": "string"
+            },
+            "driver": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "plate",
+            "model",
+            "driver"
+          ]
+        }
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": [
+            {
+              "plate": "4821-KLM",
+              "model": "Renault Master",
+              "driver": "Pedro Gil"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/vehicles/:plate",
+      "description": "Get a vehicle",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "plate": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "driver": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "plate",
+          "model",
+          "driver"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "plate": "4821-KLM",
+            "model": "Renault Master",
+            "driver": "Pedro Gil"
+          }
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "Vehicle not found"
+          },
+          "statusCode": 404
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/vehicles",
+      "description": "Register a vehicle",
+      "requestSchema": {
+        "type": "object",
+        "properties": {
+          "plate": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "driver": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "plate",
+          "model",
+          "driver"
+        ]
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "plate": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "driver": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "plate",
+          "model",
+          "driver"
+        ]
+      },
+      "examples": [
+        {
+          "request": {
+            "plate": "1234-ABC",
+            "model": "Iveco Daily",
+            "driver": "Sara Mora"
+          },
+          "response": {
+            "plate": "1234-ABC",
+            "model": "Iveco Daily",
+            "driver": "Sara Mora"
+          }
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/vehicles/:plate/position",
+      "description": "Last known position of a vehicle",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "lat": {
+            "type": "number"
+          },
+          "lng": {
+            "type": "number"
+          },
+          "speedKmh": {
+            "type": "integer"
+          },
+          "recordedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "lat",
+          "lng",
+          "speedKmh",
+          "recordedAt"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "lat": 40.4168,
+            "lng": -3.7038,
+            "speedKmh": 62,
+            "recordedAt": "2026-10-04T07:45:12Z"
+          }
+        }
+      ]
+    }
+  ]
+}

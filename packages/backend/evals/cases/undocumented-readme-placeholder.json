@@ -1,0 +1,124 @@
+{
+  "id": "undocumented-readme-placeholder",
+  "description": "The README is a placeholder and there is no code; the user states the endpoints.",
+  "tags": [
+    "undocumented"
+  ],
+  "input": {
+    "projectTitle": "Task Board",
+    "userInput": "Mock two endpoints: GET /tasks to list tasks and POST /tasks to create one. A task has id, title and status.",
+    "context": {
+      "repoName": "task-board",
+      "repoUrl": "https://github.com/acme/task-board",
+      "repoOwner": "acme",
+      "branch": "main",
+      "summary": "Work in progress",
+      "stats": {
+        "totalFiles": 1,
+        "totalInterfaces": 0,
+        "totalFunctions": 0,
+        "totalRoutes": 0
+      },
+      "files": [
+        {
+          "path": "README.md",
+          "type": "other",
+          "summary": "# Task Board\n\nTODO: write the documentation."
+        }
+      ]
+    }
+  },
+  "expected": [
+    {
+      "method": "GET",
+      "path": "/tasks",
+      "description": "List tasks",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "title",
+            "status"
+          ]
+        }
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": [
+            {
+              "id": "k1",
+              "title": "Fix header alignment on mobile",
+              "status": "open"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/tasks",
+      "description": "Create a task",
+      "requestSchema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "title"
+        ]
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "status"
+        ]
+      },
+      "examples": [
+        {
+          "request": {
+            "title": "Write release notes"
+          },
+          "response": {
+            "id": "k2",
+            "title": "Write release notes",
+            "status": "open"
+          }
+        }
+      ]
+    }
+  ]
+}

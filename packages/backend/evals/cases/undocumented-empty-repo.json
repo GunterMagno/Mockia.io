@@ -1,0 +1,44 @@
+{
+  "id": "undocumented-empty-repo",
+  "description": "No repository context at all: the user spells out the single endpoint they want.",
+  "tags": [
+    "undocumented"
+  ],
+  "input": {
+    "projectTitle": "Pet Adoption",
+    "projectDescription": "Shelter website",
+    "userInput": "I only need a health check for now: GET /health that answers { \"status\": \"ok\" }.",
+    "context": null
+  },
+  "expected": [
+    {
+      "method": "GET",
+      "path": "/health",
+      "description": "Health check",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "status": "ok"
+          }
+        }
+      ]
+    }
+  ]
+}

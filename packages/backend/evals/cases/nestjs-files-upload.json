@@ -1,0 +1,223 @@
+{
+  "id": "nestjs-files-upload",
+  "description": "NestJS files controller with an upload (FileInterceptor) and a download.",
+  "tags": [
+    "nestjs",
+    "upload",
+    "path-params"
+  ],
+  "input": {
+    "projectTitle": "Document Vault",
+    "userInput": "Mock the file upload and download endpoints.",
+    "context": {
+      "repoName": "document-vault",
+      "repoUrl": "https://github.com/acme/document-vault",
+      "repoOwner": "acme",
+      "branch": "main",
+      "summary": "File storage service",
+      "stats": {
+        "totalFiles": 3,
+        "totalInterfaces": 1,
+        "totalFunctions": 0,
+        "totalRoutes": 3
+      },
+      "files": [
+        {
+          "path": "README.md",
+          "type": "other",
+          "summary": "# Document Vault\nUpload documents and download them later by id."
+        },
+        {
+          "path": "src/files/files.controller.ts",
+          "type": "typescript",
+          "summary": "@Controller(\"files\"): @Post(\"upload\") with @UseInterceptors(FileInterceptor(\"file\")), @Get(\":id/download\")",
+          "routes": [
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/files/upload"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/files/:id/download"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/files/:id"
+            }
+          ]
+        },
+        {
+          "path": "src/files/file.entity.ts",
+          "type": "typescript",
+          "summary": "File entity",
+          "interfaces": [
+            {
+              "name": "StoredFile",
+              "properties": [
+                "id: string",
+                "originalName: string",
+                "mimeType: string",
+                "sizeBytes: number"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": [
+    {
+      "method": "POST",
+      "path": "/files/upload",
+      "description": "Upload a document (multipart/form-data)",
+      "requestSchema": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ]
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "originalName": {
+            "type": "string"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "originalName",
+          "mimeType",
+          "sizeBytes"
+        ]
+      },
+      "examples": [
+        {
+          "request": {
+            "file": "(binary)"
+          },
+          "response": {
+            "id": "f1",
+            "originalName": "contract.pdf",
+            "mimeType": "application/pdf",
+            "sizeBytes": 182044
+          }
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/files/:id/download",
+      "description": "Download a document",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "originalName": {
+            "type": "string"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "originalName",
+          "mimeType",
+          "sizeBytes"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "id": "f1",
+            "originalName": "contract.pdf",
+            "mimeType": "application/pdf",
+            "sizeBytes": 182044
+          }
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/files/:id",
+      "description": "Metadata of a stored document",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "originalName": {
+            "type": "string"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "originalName",
+          "mimeType",
+          "sizeBytes"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "id": "f1",
+            "originalName": "contract.pdf",
+            "mimeType": "application/pdf",
+            "sizeBytes": 182044
+          }
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "File not found"
+          },
+          "statusCode": 404
+        }
+      ]
+    }
+  ]
+}

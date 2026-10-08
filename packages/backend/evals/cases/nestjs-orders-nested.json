@@ -1,0 +1,264 @@
+{
+  "id": "nestjs-orders-nested",
+  "description": "NestJS controller with a parent path parameter in the @Controller prefix.",
+  "tags": [
+    "nestjs",
+    "nested-resources",
+    "path-params"
+  ],
+  "input": {
+    "projectTitle": "Customer Orders",
+    "userInput": "Mock the orders of a customer.",
+    "context": {
+      "repoName": "customer-orders",
+      "repoUrl": "https://github.com/acme/customer-orders",
+      "repoOwner": "acme",
+      "branch": "main",
+      "summary": "NestJS orders module",
+      "stats": {
+        "totalFiles": 3,
+        "totalInterfaces": 1,
+        "totalFunctions": 0,
+        "totalRoutes": 3
+      },
+      "files": [
+        {
+          "path": "README.md",
+          "type": "other",
+          "summary": "# Customer Orders\nOrders always belong to a customer."
+        },
+        {
+          "path": "src/orders/orders.controller.ts",
+          "type": "typescript",
+          "summary": "@Controller(\"customers/:customerId/orders\") OrdersController",
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/customers/:customerId/orders"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/customers/:customerId/orders/:orderId"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/customers/:customerId/orders"
+            }
+          ]
+        },
+        {
+          "path": "src/orders/order.entity.ts",
+          "type": "typescript",
+          "summary": "Order entity",
+          "interfaces": [
+            {
+              "name": "Order",
+              "properties": [
+                "id: string",
+                "customerId: string",
+                "totalCents: number",
+                "status: string",
+                "placedAt: string"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": [
+    {
+      "method": "GET",
+      "path": "/customers/:customerId/orders",
+      "description": "List the orders of a customer",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "customerId": {
+              "type": "string"
+            },
+            "totalCents": {
+              "type": "integer"
+            },
+            "status": {
+              "type": "string"
+            },
+            "placedAt": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "customerId",
+            "totalCents",
+            "status",
+            "placedAt"
+          ]
+        }
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": [
+            {
+              "id": "o1",
+              "customerId": "cu1",
+              "totalCents": 12990,
+              "status": "shipped",
+              "placedAt": "2026-09-28T14:20:00Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/customers/:customerId/orders/:orderId",
+      "description": "Get one order of a customer",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "customerId": {
+            "type": "string"
+          },
+          "totalCents": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string"
+          },
+          "placedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "customerId",
+          "totalCents",
+          "status",
+          "placedAt"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "id": "o1",
+            "customerId": "cu1",
+            "totalCents": 12990,
+            "status": "shipped",
+            "placedAt": "2026-09-28T14:20:00Z"
+          }
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "Order not found"
+          },
+          "statusCode": 404
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/customers/:customerId/orders",
+      "description": "Place an order for a customer",
+      "requestSchema": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "sku": {
+                  "type": "string"
+                },
+                "quantity": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "sku",
+                "quantity"
+              ]
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "customerId": {
+            "type": "string"
+          },
+          "totalCents": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string"
+          },
+          "placedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "customerId",
+          "totalCents",
+          "status",
+          "placedAt"
+        ]
+      },
+      "examples": [
+        {
+          "request": {
+            "items": [
+              {
+                "sku": "SKU-7",
+                "quantity": 1
+              }
+            ]
+          },
+          "response": {
+            "id": "o2",
+            "customerId": "cu1",
+            "totalCents": 4500,
+            "status": "pending",
+            "placedAt": "2026-10-06T10:00:00Z"
+          }
+        }
+      ]
+    }
+  ]
+}

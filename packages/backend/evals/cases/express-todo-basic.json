@@ -1,0 +1,336 @@
+{
+  "id": "express-todo-basic",
+  "description": "Plain Express router for a todo list: full CRUD with an :id parameter.",
+  "tags": [
+    "express",
+    "path-params"
+  ],
+  "input": {
+    "projectTitle": "Todo API",
+    "projectDescription": "Simple todo list service",
+    "userInput": "Generate the mock API for the todo service so the frontend can start working.",
+    "context": {
+      "repoName": "todo-api",
+      "repoUrl": "https://github.com/acme/todo-api",
+      "repoOwner": "acme",
+      "branch": "main",
+      "summary": "Express todo list service",
+      "stats": {
+        "totalFiles": 3,
+        "totalInterfaces": 1,
+        "totalFunctions": 0,
+        "totalRoutes": 5
+      },
+      "files": [
+        {
+          "path": "README.md",
+          "type": "other",
+          "summary": "# Todo API\nA tiny Express service to manage a personal todo list.\n\n## Routes\n- GET /todos - list todos\n- GET /todos/:id - one todo\n- POST /todos - create a todo\n- PUT /todos/:id - update a todo\n- DELETE /todos/:id - delete a todo"
+        },
+        {
+          "path": "src/routes/todos.ts",
+          "type": "typescript",
+          "summary": "Express router for todos",
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/todos"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/todos/:id"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/todos"
+            },
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/todos/:id"
+            },
+            {
+              "methods": [
+                "DELETE"
+              ],
+              "path": "/todos/:id"
+            }
+          ]
+        },
+        {
+          "path": "src/types.ts",
+          "type": "typescript",
+          "summary": "Todo types",
+          "interfaces": [
+            {
+              "name": "Todo",
+              "properties": [
+                "id: string",
+                "title: string",
+                "done: boolean",
+                "dueDate: string"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": [
+    {
+      "method": "GET",
+      "path": "/todos",
+      "description": "List all todos",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "done": {
+              "type": "boolean"
+            },
+            "dueDate": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "title",
+            "done",
+            "dueDate"
+          ]
+        }
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": [
+            {
+              "id": "t1",
+              "title": "Buy oat milk",
+              "done": false,
+              "dueDate": "2026-10-12"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/todos/:id",
+      "description": "Get one todo",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "done": {
+            "type": "boolean"
+          },
+          "dueDate": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "done",
+          "dueDate"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "id": "t1",
+            "title": "Buy oat milk",
+            "done": false,
+            "dueDate": "2026-10-12"
+          }
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "Todo not found"
+          },
+          "statusCode": 404
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/todos",
+      "description": "Create a todo",
+      "requestSchema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "dueDate": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "dueDate"
+        ]
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "done": {
+            "type": "boolean"
+          },
+          "dueDate": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "done",
+          "dueDate"
+        ]
+      },
+      "examples": [
+        {
+          "request": {
+            "title": "Call the dentist",
+            "dueDate": "2026-10-15"
+          },
+          "response": {
+            "id": "t2",
+            "title": "Call the dentist",
+            "done": false,
+            "dueDate": "2026-10-15"
+          }
+        }
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/todos/:id",
+      "description": "Update a todo",
+      "requestSchema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "done": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "title",
+          "done"
+        ]
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "done": {
+            "type": "boolean"
+          },
+          "dueDate": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "done",
+          "dueDate"
+        ]
+      },
+      "examples": [
+        {
+          "request": {
+            "title": "Call the dentist",
+            "done": true
+          },
+          "response": {
+            "id": "t2",
+            "title": "Call the dentist",
+            "done": true,
+            "dueDate": "2026-10-15"
+          }
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/todos/:id",
+      "description": "Delete a todo",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "deleted": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "deleted"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "id": "t2",
+            "deleted": true
+          }
+        }
+      ]
+    }
+  ]
+}

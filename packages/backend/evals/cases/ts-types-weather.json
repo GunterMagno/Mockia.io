@@ -1,0 +1,194 @@
+{
+  "id": "ts-types-weather",
+  "description": "Weather types with a type alias and nested objects; a read-only API is requested.",
+  "tags": [
+    "typescript-types",
+    "path-params"
+  ],
+  "input": {
+    "projectTitle": "Weather Board",
+    "userInput": "Read-only mock API: current weather and forecast per city.",
+    "context": {
+      "repoName": "weather-board",
+      "repoUrl": "https://github.com/acme/weather-board",
+      "repoOwner": "acme",
+      "branch": "main",
+      "summary": "Weather dashboard types",
+      "stats": {
+        "totalFiles": 2,
+        "totalInterfaces": 3,
+        "totalFunctions": 0,
+        "totalRoutes": 0
+      },
+      "files": [
+        {
+          "path": "README.md",
+          "type": "other",
+          "summary": "# Weather Board\nShows current conditions and a 3 day forecast for a city."
+        },
+        {
+          "path": "src/types.ts",
+          "type": "typescript",
+          "summary": "Weather types",
+          "interfaces": [
+            {
+              "name": "CurrentWeather",
+              "properties": [
+                "city: string",
+                "temperatureC: number",
+                "condition: Condition",
+                "humidity: number"
+              ]
+            },
+            {
+              "name": "ForecastDay",
+              "properties": [
+                "date: string",
+                "minC: number",
+                "maxC: number",
+                "condition: Condition"
+              ]
+            },
+            {
+              "name": "Forecast",
+              "properties": [
+                "city: string",
+                "days: ForecastDay[]"
+              ]
+            }
+          ],
+          "typeAliases": [
+            {
+              "name": "Condition",
+              "type": "\"sunny\" | \"cloudy\" | \"rain\" | \"storm\""
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": [
+    {
+      "method": "GET",
+      "path": "/weather/:city",
+      "description": "Current weather of a city",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "city": {
+            "type": "string"
+          },
+          "temperatureC": {
+            "type": "integer"
+          },
+          "condition": {
+            "type": "string"
+          },
+          "humidity": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "city",
+          "temperatureC",
+          "condition",
+          "humidity"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "city": "Valencia",
+            "temperatureC": 24,
+            "condition": "sunny",
+            "humidity": 58
+          }
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "City not found"
+          },
+          "statusCode": 404
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/forecast/:city",
+      "description": "3 day forecast of a city",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "city": {
+            "type": "string"
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "date": {
+                  "type": "string"
+                },
+                "minC": {
+                  "type": "integer"
+                },
+                "maxC": {
+                  "type": "integer"
+                },
+                "condition": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "date",
+                "minC",
+                "maxC",
+                "condition"
+              ]
+            }
+          }
+        },
+        "required": [
+          "city",
+          "days"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "city": "Valencia",
+            "days": [
+              {
+                "date": "2026-10-09",
+                "minC": 17,
+                "maxC": 25,
+                "condition": "sunny"
+              }
+            ]
+          }
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "City not found"
+          },
+          "statusCode": 404
+        }
+      ]
+    }
+  ]
+}

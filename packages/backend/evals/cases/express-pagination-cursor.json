@@ -1,0 +1,197 @@
+{
+  "id": "express-pagination-cursor",
+  "description": "Event feed with cursor-based pagination.",
+  "tags": [
+    "express",
+    "pagination"
+  ],
+  "input": {
+    "projectTitle": "Event Feed",
+    "userInput": "Mock the event feed API.",
+    "context": {
+      "repoName": "event-feed",
+      "repoUrl": "https://github.com/acme/event-feed",
+      "repoOwner": "acme",
+      "branch": "main",
+      "summary": "Activity feed with cursors",
+      "stats": {
+        "totalFiles": 3,
+        "totalInterfaces": 2,
+        "totalFunctions": 0,
+        "totalRoutes": 2
+      },
+      "files": [
+        {
+          "path": "README.md",
+          "type": "other",
+          "summary": "# Event Feed\nGET /events?cursor=<token>&limit=<n> answers `{ events, nextCursor }`. `nextCursor` is null on the last page.\nPOST /events publishes an event."
+        },
+        {
+          "path": "src/routes/events.ts",
+          "type": "typescript",
+          "summary": "Events router",
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/events"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/events"
+            }
+          ]
+        },
+        {
+          "path": "src/types.ts",
+          "type": "typescript",
+          "summary": "Event types",
+          "interfaces": [
+            {
+              "name": "Event",
+              "properties": [
+                "id: string",
+                "type: string",
+                "actor: string",
+                "occurredAt: string"
+              ]
+            },
+            {
+              "name": "EventPage",
+              "properties": [
+                "events: Event[]",
+                "nextCursor: string | null"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": [
+    {
+      "method": "GET",
+      "path": "/events",
+      "description": "Cursor paginated list of events",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "actor": {
+                  "type": "string"
+                },
+                "occurredAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "type",
+                "actor",
+                "occurredAt"
+              ]
+            }
+          },
+          "nextCursor": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "events",
+          "nextCursor"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "events": [
+              {
+                "id": "e1",
+                "type": "project.created",
+                "actor": "ana",
+                "occurredAt": "2026-10-03T12:00:00Z"
+              }
+            ],
+            "nextCursor": "c_92f1"
+          }
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/events",
+      "description": "Publish an event",
+      "requestSchema": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "actor": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "actor"
+        ]
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "actor": {
+            "type": "string"
+          },
+          "occurredAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "actor",
+          "occurredAt"
+        ]
+      },
+      "examples": [
+        {
+          "request": {
+            "type": "project.created",
+            "actor": "ana"
+          },
+          "response": {
+            "id": "e2",
+            "type": "project.created",
+            "actor": "ana",
+            "occurredAt": "2026-10-03T12:01:00Z"
+          }
+        }
+      ]
+    }
+  ]
+}

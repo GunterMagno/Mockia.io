@@ -1,0 +1,262 @@
+{
+  "id": "express-inventory-pagination",
+  "description": "Inventory service with page/limit pagination: list responses are envelopes with paging metadata.",
+  "tags": [
+    "express",
+    "pagination",
+    "path-params"
+  ],
+  "input": {
+    "projectTitle": "Warehouse Inventory",
+    "userInput": "Mock the inventory API, lists must be paginated as documented.",
+    "context": {
+      "repoName": "warehouse-inventory",
+      "repoUrl": "https://github.com/acme/warehouse-inventory",
+      "repoOwner": "acme",
+      "branch": "main",
+      "summary": "Inventory management API",
+      "stats": {
+        "totalFiles": 3,
+        "totalInterfaces": 2,
+        "totalFunctions": 0,
+        "totalRoutes": 3
+      },
+      "files": [
+        {
+          "path": "README.md",
+          "type": "other",
+          "summary": "# Warehouse Inventory\nStock items are identified by SKU.\n\nList endpoints accept `page` and `limit` and answer `{ items, page, pageSize, total }`."
+        },
+        {
+          "path": "src/routes/items.ts",
+          "type": "typescript",
+          "summary": "Items router",
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/items"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/items/:sku"
+            },
+            {
+              "methods": [
+                "PATCH"
+              ],
+              "path": "/items/:sku/stock"
+            }
+          ]
+        },
+        {
+          "path": "src/types.ts",
+          "type": "typescript",
+          "summary": "Inventory types",
+          "interfaces": [
+            {
+              "name": "Item",
+              "properties": [
+                "sku: string",
+                "name: string",
+                "quantity: number",
+                "location: string"
+              ]
+            },
+            {
+              "name": "Page",
+              "properties": [
+                "items: Item[]",
+                "page: number",
+                "pageSize: number",
+                "total: number"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": [
+    {
+      "method": "GET",
+      "path": "/items",
+      "description": "Paginated list of stock items",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "sku": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "quantity": {
+                  "type": "integer"
+                },
+                "location": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "sku",
+                "name",
+                "quantity",
+                "location"
+              ]
+            }
+          },
+          "page": {
+            "type": "integer"
+          },
+          "pageSize": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "pageSize",
+          "total"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "items": [
+              {
+                "sku": "SKU-1001",
+                "name": "Pallet jack",
+                "quantity": 14,
+                "location": "A-03"
+              }
+            ],
+            "page": 1,
+            "pageSize": 20,
+            "total": 134
+          }
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/items/:sku",
+      "description": "Get an item by SKU",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "integer"
+          },
+          "location": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "sku",
+          "name",
+          "quantity",
+          "location"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "sku": "SKU-1001",
+            "name": "Pallet jack",
+            "quantity": 14,
+            "location": "A-03"
+          }
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "Item not found"
+          },
+          "statusCode": 404
+        }
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/items/:sku/stock",
+      "description": "Adjust the stock of an item",
+      "requestSchema": {
+        "type": "object",
+        "properties": {
+          "delta": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "delta"
+        ]
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "integer"
+          },
+          "location": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "sku",
+          "name",
+          "quantity",
+          "location"
+        ]
+      },
+      "examples": [
+        {
+          "request": {
+            "delta": -2
+          },
+          "response": {
+            "sku": "SKU-1001",
+            "name": "Pallet jack",
+            "quantity": 12,
+            "location": "A-03"
+          }
+        }
+      ]
+    }
+  ]
+}

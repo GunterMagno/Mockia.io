@@ -1,0 +1,402 @@
+{
+  "id": "ts-types-nested-objects",
+  "description": "Interfaces with nested objects: only top-level field names are compared.",
+  "tags": [
+    "typescript-types",
+    "path-params"
+  ],
+  "input": {
+    "projectTitle": "Clinic Appointments",
+    "userInput": "Mock appointments: list, get by id and create.",
+    "context": {
+      "repoName": "clinic-appointments",
+      "repoUrl": "https://github.com/acme/clinic-appointments",
+      "repoOwner": "acme",
+      "branch": "main",
+      "summary": "Medical appointment scheduling types",
+      "stats": {
+        "totalFiles": 2,
+        "totalInterfaces": 3,
+        "totalFunctions": 0,
+        "totalRoutes": 0
+      },
+      "files": [
+        {
+          "path": "README.md",
+          "type": "other",
+          "summary": "# Clinic Appointments\nPatients book appointments with doctors."
+        },
+        {
+          "path": "src/types.ts",
+          "type": "typescript",
+          "summary": "Appointment types",
+          "interfaces": [
+            {
+              "name": "Patient",
+              "properties": [
+                "id: string",
+                "fullName: string",
+                "phone: string"
+              ]
+            },
+            {
+              "name": "Doctor",
+              "properties": [
+                "id: string",
+                "fullName: string",
+                "specialty: string"
+              ]
+            },
+            {
+              "name": "Appointment",
+              "properties": [
+                "id: string",
+                "patient: Patient",
+                "doctor: Doctor",
+                "slot: { start: string; end: string }",
+                "status: string"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": [
+    {
+      "method": "GET",
+      "path": "/appointments",
+      "description": "List appointments",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "patient": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "fullName": {
+                  "type": "string"
+                },
+                "phone": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "fullName",
+                "phone"
+              ]
+            },
+            "doctor": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "fullName": {
+                  "type": "string"
+                },
+                "specialty": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "fullName",
+                "specialty"
+              ]
+            },
+            "slot": {
+              "type": "object",
+              "properties": {
+                "start": {
+                  "type": "string"
+                },
+                "end": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "start",
+                "end"
+              ]
+            },
+            "status": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "patient",
+            "doctor",
+            "slot",
+            "status"
+          ]
+        }
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": [
+            {
+              "id": "ap1",
+              "patient": {
+                "id": "pa1",
+                "fullName": "Rosa Medina",
+                "phone": "+34 600 111 222"
+              },
+              "doctor": {
+                "id": "d1",
+                "fullName": "Dr. Navarro",
+                "specialty": "Cardiology"
+              },
+              "slot": {
+                "start": "2026-10-11T09:00:00Z",
+                "end": "2026-10-11T09:30:00Z"
+              },
+              "status": "confirmed"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/appointments/:id",
+      "description": "Get an appointment",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "patient": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "fullName": {
+                "type": "string"
+              },
+              "phone": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "fullName",
+              "phone"
+            ]
+          },
+          "doctor": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "fullName": {
+                "type": "string"
+              },
+              "specialty": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "fullName",
+              "specialty"
+            ]
+          },
+          "slot": {
+            "type": "object",
+            "properties": {
+              "start": {
+                "type": "string"
+              },
+              "end": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "start",
+              "end"
+            ]
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "patient",
+          "doctor",
+          "slot",
+          "status"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "id": "ap1",
+            "patient": {
+              "id": "pa1",
+              "fullName": "Rosa Medina",
+              "phone": "+34 600 111 222"
+            },
+            "doctor": {
+              "id": "d1",
+              "fullName": "Dr. Navarro",
+              "specialty": "Cardiology"
+            },
+            "slot": {
+              "start": "2026-10-11T09:00:00Z",
+              "end": "2026-10-11T09:30:00Z"
+            },
+            "status": "confirmed"
+          }
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/appointments",
+      "description": "Book an appointment",
+      "requestSchema": {
+        "type": "object",
+        "properties": {
+          "patientId": {
+            "type": "string"
+          },
+          "doctorId": {
+            "type": "string"
+          },
+          "start": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "patientId",
+          "doctorId",
+          "start"
+        ]
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "patient": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "fullName": {
+                "type": "string"
+              },
+              "phone": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "fullName",
+              "phone"
+            ]
+          },
+          "doctor": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "fullName": {
+                "type": "string"
+              },
+              "specialty": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "fullName",
+              "specialty"
+            ]
+          },
+          "slot": {
+            "type": "object",
+            "properties": {
+              "start": {
+                "type": "string"
+              },
+              "end": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "start",
+              "end"
+            ]
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "patient",
+          "doctor",
+          "slot",
+          "status"
+        ]
+      },
+      "examples": [
+        {
+          "request": {
+            "patientId": "pa1",
+            "doctorId": "d1",
+            "start": "2026-10-11T09:00:00Z"
+          },
+          "response": {
+            "id": "ap2",
+            "patient": {
+              "id": "pa1",
+              "fullName": "Rosa Medina",
+              "phone": "+34 600 111 222"
+            },
+            "doctor": {
+              "id": "d1",
+              "fullName": "Dr. Navarro",
+              "specialty": "Cardiology"
+            },
+            "slot": {
+              "start": "2026-10-11T09:00:00Z",
+              "end": "2026-10-11T09:30:00Z"
+            },
+            "status": "pending"
+          }
+        }
+      ]
+    }
+  ]
+}

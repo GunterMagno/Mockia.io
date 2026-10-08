@@ -1,0 +1,188 @@
+{
+  "id": "swagger2-weather-stations",
+  "description": "Swagger 2.0 document (paths + definitions) for weather stations.",
+  "tags": [
+    "swagger2",
+    "path-params"
+  ],
+  "input": {
+    "projectTitle": "Weather Stations",
+    "userInput": "Mock the Swagger 2 API.",
+    "context": {
+      "repoName": "weather-stations",
+      "repoUrl": "https://github.com/acme/weather-stations",
+      "repoOwner": "acme",
+      "branch": "main",
+      "summary": "Swagger 2.0 contract",
+      "stats": {
+        "totalFiles": 1,
+        "totalInterfaces": 0,
+        "totalFunctions": 0,
+        "totalRoutes": 3
+      },
+      "files": [
+        {
+          "path": "swagger.json",
+          "type": "swagger",
+          "summary": "Swagger 2.0, basePath \"/\". definitions.Station = { id: string, name: string, altitudeM: integer }; definitions.Reading = { stationId: string, temperatureC: number, takenAt: string }.",
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/stations"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/stations/{id}"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/stations/{id}/readings"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": [
+    {
+      "method": "GET",
+      "path": "/stations",
+      "description": "List stations",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "altitudeM": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "altitudeM"
+          ]
+        }
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": [
+            {
+              "id": "s1",
+              "name": "Retiro",
+              "altitudeM": 667
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/stations/{id}",
+      "description": "Get a station",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "altitudeM": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "altitudeM"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "id": "s1",
+            "name": "Retiro",
+            "altitudeM": 667
+          }
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "Station not found"
+          },
+          "statusCode": 404
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/stations/{id}/readings",
+      "description": "Readings of a station",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "stationId": {
+              "type": "string"
+            },
+            "temperatureC": {
+              "type": "number"
+            },
+            "takenAt": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "stationId",
+            "temperatureC",
+            "takenAt"
+          ]
+        }
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": [
+            {
+              "stationId": "s1",
+              "temperatureC": 19.4,
+              "takenAt": "2026-10-07T12:00:00Z"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

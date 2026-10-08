@@ -1,0 +1,252 @@
+{
+  "id": "swagger2-bookstore-nested",
+  "description": "Swagger 2.0 bookstore with an order resource nested under customers and a PATCH.",
+  "tags": [
+    "swagger2",
+    "nested-resources",
+    "path-params"
+  ],
+  "input": {
+    "projectTitle": "Bookstore",
+    "userInput": "Create the mock API of the Swagger document.",
+    "context": {
+      "repoName": "bookstore",
+      "repoUrl": "https://github.com/acme/bookstore",
+      "repoOwner": "acme",
+      "branch": "main",
+      "summary": "Swagger 2.0 bookstore",
+      "stats": {
+        "totalFiles": 1,
+        "totalInterfaces": 0,
+        "totalFunctions": 0,
+        "totalRoutes": 4
+      },
+      "files": [
+        {
+          "path": "api/swagger.yaml",
+          "type": "swagger",
+          "summary": "Swagger 2.0. definitions.Customer = { id: integer, name: string, city: string }; definitions.Order = { id: integer, customerId: integer, total: number, state: string }.",
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/customers"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/customers/{customerId}"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/customers/{customerId}/orders"
+            },
+            {
+              "methods": [
+                "PATCH"
+              ],
+              "path": "/orders/{orderId}"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": [
+    {
+      "method": "GET",
+      "path": "/customers",
+      "description": "List customers",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer"
+            },
+            "name": {
+              "type": "string"
+            },
+            "city": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "city"
+          ]
+        }
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": [
+            {
+              "id": 1,
+              "name": "Biblioteca Norte",
+              "city": "Bilbao"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/customers/{customerId}",
+      "description": "Get a customer",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "city"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "id": 1,
+            "name": "Biblioteca Norte",
+            "city": "Bilbao"
+          }
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "Customer not found"
+          },
+          "statusCode": 404
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/customers/{customerId}/orders",
+      "description": "Orders of a customer",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer"
+            },
+            "customerId": {
+              "type": "integer"
+            },
+            "total": {
+              "type": "number"
+            },
+            "state": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "customerId",
+            "total",
+            "state"
+          ]
+        }
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": [
+            {
+              "id": 10,
+              "customerId": 1,
+              "total": 86.4,
+              "state": "shipped"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/orders/{orderId}",
+      "description": "Update the state of an order",
+      "requestSchema": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "customerId": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "number"
+          },
+          "state": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "customerId",
+          "total",
+          "state"
+        ]
+      },
+      "examples": [
+        {
+          "request": {
+            "state": "delivered"
+          },
+          "response": {
+            "id": 10,
+            "customerId": 1,
+            "total": 86.4,
+            "state": "delivered"
+          }
+        }
+      ]
+    }
+  ]
+}

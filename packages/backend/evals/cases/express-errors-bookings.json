@@ -1,0 +1,275 @@
+{
+  "id": "express-errors-bookings",
+  "description": "Bookings API whose README documents the 400, 401 and 404 answers; the endpoints are what is scored.",
+  "tags": [
+    "express",
+    "errors",
+    "auth",
+    "path-params"
+  ],
+  "input": {
+    "projectTitle": "Court Bookings",
+    "userInput": "Mock the bookings API including its documented error answers.",
+    "context": {
+      "repoName": "court-bookings",
+      "repoUrl": "https://github.com/acme/court-bookings",
+      "repoOwner": "acme",
+      "branch": "main",
+      "summary": "Tennis court booking API",
+      "stats": {
+        "totalFiles": 3,
+        "totalInterfaces": 1,
+        "totalFunctions": 0,
+        "totalRoutes": 3
+      },
+      "files": [
+        {
+          "path": "README.md",
+          "type": "other",
+          "summary": "# Court Bookings\nAll routes need a Bearer token (401 otherwise).\n\n- POST /bookings - create (400 if the slot is in the past)\n- GET /bookings/:id - read (404 if it does not exist)\n- DELETE /bookings/:id - cancel (404 if it does not exist)"
+        },
+        {
+          "path": "src/routes/bookings.ts",
+          "type": "typescript",
+          "summary": "Bookings router",
+          "routes": [
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/bookings"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/bookings/:id"
+            },
+            {
+              "methods": [
+                "DELETE"
+              ],
+              "path": "/bookings/:id"
+            }
+          ]
+        },
+        {
+          "path": "src/types.ts",
+          "type": "typescript",
+          "summary": "Booking type",
+          "interfaces": [
+            {
+              "name": "Booking",
+              "properties": [
+                "id: string",
+                "court: number",
+                "startsAt: string",
+                "durationMinutes: number",
+                "player: string"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": [
+    {
+      "method": "POST",
+      "path": "/bookings",
+      "description": "Book a court",
+      "requestSchema": {
+        "type": "object",
+        "properties": {
+          "court": {
+            "type": "integer"
+          },
+          "startsAt": {
+            "type": "string"
+          },
+          "durationMinutes": {
+            "type": "integer"
+          },
+          "player": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "court",
+          "startsAt",
+          "durationMinutes",
+          "player"
+        ]
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "court": {
+            "type": "integer"
+          },
+          "startsAt": {
+            "type": "string"
+          },
+          "durationMinutes": {
+            "type": "integer"
+          },
+          "player": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "court",
+          "startsAt",
+          "durationMinutes",
+          "player"
+        ]
+      },
+      "examples": [
+        {
+          "request": {
+            "court": 2,
+            "startsAt": "2026-10-14T17:00:00Z",
+            "durationMinutes": 60,
+            "player": "Nora"
+          },
+          "response": {
+            "id": "b1",
+            "court": 2,
+            "startsAt": "2026-10-14T17:00:00Z",
+            "durationMinutes": 60,
+            "player": "Nora"
+          }
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "The slot is in the past"
+          },
+          "statusCode": 400
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "Unauthorized"
+          },
+          "statusCode": 401
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/bookings/:id",
+      "description": "Get a booking",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "court": {
+            "type": "integer"
+          },
+          "startsAt": {
+            "type": "string"
+          },
+          "durationMinutes": {
+            "type": "integer"
+          },
+          "player": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "court",
+          "startsAt",
+          "durationMinutes",
+          "player"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "id": "b1",
+            "court": 2,
+            "startsAt": "2026-10-14T17:00:00Z",
+            "durationMinutes": 60,
+            "player": "Nora"
+          }
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "Unauthorized"
+          },
+          "statusCode": 401
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "Booking not found"
+          },
+          "statusCode": 404
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/bookings/:id",
+      "description": "Cancel a booking",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "cancelled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "cancelled"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "id": "b1",
+            "cancelled": true
+          }
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "Unauthorized"
+          },
+          "statusCode": 401
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "Booking not found"
+          },
+          "statusCode": 404
+        }
+      ]
+    }
+  ]
+}

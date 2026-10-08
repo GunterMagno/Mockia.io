@@ -1,0 +1,251 @@
+{
+  "id": "openapi3-payments-errors",
+  "description": "OpenAPI 3 payments API with bearer security and documented 400, 401 and 404 answers.",
+  "tags": [
+    "openapi3",
+    "errors",
+    "auth",
+    "path-params"
+  ],
+  "input": {
+    "projectTitle": "Payments Gateway",
+    "userInput": "Mock the payments API, including the documented errors.",
+    "context": {
+      "repoName": "payments-gateway",
+      "repoUrl": "https://github.com/acme/payments-gateway",
+      "repoOwner": "acme",
+      "branch": "main",
+      "summary": "Payments API (OpenAPI 3)",
+      "stats": {
+        "totalFiles": 1,
+        "totalInterfaces": 0,
+        "totalFunctions": 0,
+        "totalRoutes": 3
+      },
+      "files": [
+        {
+          "path": "openapi.yaml",
+          "type": "swagger",
+          "summary": "OpenAPI 3.0.3. securitySchemes: bearerAuth (HTTP bearer JWT) applied globally. Payment = { id: string, amount: number, currency: string, status: \"pending\"|\"settled\"|\"failed\" }. Responses: 400 invalid amount, 401 missing token, 404 unknown payment.",
+          "routes": [
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/payments"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/payments/{paymentId}"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/payments/{paymentId}/refund"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": [
+    {
+      "method": "POST",
+      "path": "/payments",
+      "description": "Create a payment",
+      "requestSchema": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "number"
+          },
+          "currency": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount",
+          "currency"
+        ]
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "number"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "amount",
+          "currency",
+          "status"
+        ]
+      },
+      "examples": [
+        {
+          "request": {
+            "amount": 49.9,
+            "currency": "EUR"
+          },
+          "response": {
+            "id": "pay_1",
+            "amount": 49.9,
+            "currency": "EUR",
+            "status": "pending"
+          }
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "Invalid amount"
+          },
+          "statusCode": 400
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "Missing bearer token"
+          },
+          "statusCode": 401
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/payments/{paymentId}",
+      "description": "Get a payment",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "number"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "amount",
+          "currency",
+          "status"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "id": "pay_1",
+            "amount": 49.9,
+            "currency": "EUR",
+            "status": "settled"
+          }
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "Missing bearer token"
+          },
+          "statusCode": 401
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "Payment not found"
+          },
+          "statusCode": 404
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/payments/{paymentId}/refund",
+      "description": "Refund a payment",
+      "requestSchema": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "number"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "amount",
+          "currency",
+          "status"
+        ]
+      },
+      "examples": [
+        {
+          "request": {
+            "reason": "duplicate"
+          },
+          "response": {
+            "id": "pay_1",
+            "amount": 49.9,
+            "currency": "EUR",
+            "status": "refunded"
+          }
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "Missing bearer token"
+          },
+          "statusCode": 401
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "Payment not found"
+          },
+          "statusCode": 404
+        }
+      ]
+    }
+  ]
+}

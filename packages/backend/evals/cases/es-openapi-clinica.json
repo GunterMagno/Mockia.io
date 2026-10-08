@@ -1,0 +1,262 @@
+{
+  "id": "es-openapi-clinica",
+  "description": "OpenAPI 3 document with Spanish summaries for a clinic (patients and appointments).",
+  "tags": [
+    "es",
+    "openapi3",
+    "path-params"
+  ],
+  "input": {
+    "projectTitle": "Clinica Central",
+    "userInput": "Genera la API simulada a partir de la especificacion OpenAPI.",
+    "context": {
+      "repoName": "clinica-central",
+      "repoUrl": "https://github.com/acme/clinica-central",
+      "repoOwner": "acme",
+      "branch": "main",
+      "summary": "Contrato OpenAPI de la clinica",
+      "stats": {
+        "totalFiles": 1,
+        "totalInterfaces": 0,
+        "totalFunctions": 0,
+        "totalRoutes": 4
+      },
+      "files": [
+        {
+          "path": "openapi.yaml",
+          "type": "swagger",
+          "summary": "OpenAPI 3.0.3 \"Clinica Central\". Paciente = { id: string, nombre: string, telefono: string }. Cita = { id: string, pacienteId: string, fecha: string, motivo: string }.",
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/pacientes"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/pacientes/{id}"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/citas"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/citas"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": [
+    {
+      "method": "GET",
+      "path": "/pacientes",
+      "description": "Listar pacientes",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "nombre": {
+              "type": "string"
+            },
+            "telefono": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "nombre",
+            "telefono"
+          ]
+        }
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": [
+            {
+              "id": "pa1",
+              "nombre": "Lucia Herrera",
+              "telefono": "+34 611 222 333"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/pacientes/{id}",
+      "description": "Obtener un paciente",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "telefono": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "telefono"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "id": "pa1",
+            "nombre": "Lucia Herrera",
+            "telefono": "+34 611 222 333"
+          }
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "Paciente no encontrado"
+          },
+          "statusCode": 404
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/citas",
+      "description": "Listar citas",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "pacienteId": {
+              "type": "string"
+            },
+            "fecha": {
+              "type": "string"
+            },
+            "motivo": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "pacienteId",
+            "fecha",
+            "motivo"
+          ]
+        }
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": [
+            {
+              "id": "ci1",
+              "pacienteId": "pa1",
+              "fecha": "2026-10-13T10:30:00Z",
+              "motivo": "Revision anual"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/citas",
+      "description": "Pedir una cita",
+      "requestSchema": {
+        "type": "object",
+        "properties": {
+          "pacienteId": {
+            "type": "string"
+          },
+          "fecha": {
+            "type": "string"
+          },
+          "motivo": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "pacienteId",
+          "fecha",
+          "motivo"
+        ]
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "pacienteId": {
+            "type": "string"
+          },
+          "fecha": {
+            "type": "string"
+          },
+          "motivo": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "pacienteId",
+          "fecha",
+          "motivo"
+        ]
+      },
+      "examples": [
+        {
+          "request": {
+            "pacienteId": "pa1",
+            "fecha": "2026-10-13T10:30:00Z",
+            "motivo": "Revision anual"
+          },
+          "response": {
+            "id": "ci2",
+            "pacienteId": "pa1",
+            "fecha": "2026-10-13T10:30:00Z",
+            "motivo": "Revision anual"
+          }
+        }
+      ]
+    }
+  ]
+}

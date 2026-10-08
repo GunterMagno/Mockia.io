@@ -1,0 +1,256 @@
+{
+  "id": "openapi3-petstore-lite",
+  "description": "OpenAPI 3.0 spec for a small pet store: paths with {petId} parameters.",
+  "tags": [
+    "openapi3",
+    "path-params"
+  ],
+  "input": {
+    "projectTitle": "Pet Store Lite",
+    "userInput": "Generate the mock API from the OpenAPI spec.",
+    "context": {
+      "repoName": "petstore-lite",
+      "repoUrl": "https://github.com/acme/petstore-lite",
+      "repoOwner": "acme",
+      "branch": "main",
+      "summary": "Pet store described by an OpenAPI 3 document",
+      "stats": {
+        "totalFiles": 2,
+        "totalInterfaces": 0,
+        "totalFunctions": 0,
+        "totalRoutes": 4
+      },
+      "files": [
+        {
+          "path": "README.md",
+          "type": "other",
+          "summary": "# Pet Store Lite\nThe contract lives in `openapi.yaml`."
+        },
+        {
+          "path": "openapi.yaml",
+          "type": "swagger",
+          "summary": "OpenAPI 3.0.3 \"Pet Store Lite\" v1.0.0. components.schemas.Pet = { id: integer, name: string, tag: string, status: \"available\"|\"sold\" }. NewPet = { name: string, tag: string }.",
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/pets"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/pets"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/pets/{petId}"
+            },
+            {
+              "methods": [
+                "DELETE"
+              ],
+              "path": "/pets/{petId}"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": [
+    {
+      "method": "GET",
+      "path": "/pets",
+      "description": "List pets",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "integer"
+            },
+            "name": {
+              "type": "string"
+            },
+            "tag": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "tag",
+            "status"
+          ]
+        }
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": [
+            {
+              "id": 1,
+              "name": "Luna",
+              "tag": "dog",
+              "status": "available"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/pets",
+      "description": "Create a pet",
+      "requestSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "tag": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "tag"
+        ]
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "tag": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "tag",
+          "status"
+        ]
+      },
+      "examples": [
+        {
+          "request": {
+            "name": "Milo",
+            "tag": "cat"
+          },
+          "response": {
+            "id": 2,
+            "name": "Milo",
+            "tag": "cat",
+            "status": "available"
+          }
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/pets/{petId}",
+      "description": "Get a pet by id",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "tag": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "tag",
+          "status"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "id": 1,
+            "name": "Luna",
+            "tag": "dog",
+            "status": "available"
+          }
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "Pet not found"
+          },
+          "statusCode": 404
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/pets/{petId}",
+      "description": "Delete a pet",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "deleted": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "deleted"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "id": 1,
+            "deleted": true
+          }
+        }
+      ]
+    }
+  ]
+}

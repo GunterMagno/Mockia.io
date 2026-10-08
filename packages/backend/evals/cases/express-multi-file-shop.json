@@ -1,0 +1,372 @@
+{
+  "id": "express-multi-file-shop",
+  "description": "Shop with products and a cart split in two routers and two model files.",
+  "tags": [
+    "express",
+    "nested-resources",
+    "path-params"
+  ],
+  "input": {
+    "projectTitle": "Corner Shop",
+    "userInput": "Mock the shop API: catalogue and shopping cart.",
+    "context": {
+      "repoName": "corner-shop",
+      "repoUrl": "https://github.com/acme/corner-shop",
+      "repoOwner": "acme",
+      "branch": "main",
+      "summary": "Small online shop",
+      "stats": {
+        "totalFiles": 5,
+        "totalInterfaces": 3,
+        "totalFunctions": 0,
+        "totalRoutes": 5
+      },
+      "files": [
+        {
+          "path": "README.md",
+          "type": "other",
+          "summary": "# Corner Shop\nBrowse the catalogue, then add products to your cart."
+        },
+        {
+          "path": "src/routes/products.ts",
+          "type": "typescript",
+          "summary": "Catalogue router",
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/products"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/products/:id"
+            }
+          ]
+        },
+        {
+          "path": "src/routes/cart.ts",
+          "type": "typescript",
+          "summary": "Cart router",
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/cart"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/cart/items"
+            },
+            {
+              "methods": [
+                "DELETE"
+              ],
+              "path": "/cart/items/:productId"
+            }
+          ]
+        },
+        {
+          "path": "src/models/product.ts",
+          "type": "typescript",
+          "summary": "Product model",
+          "interfaces": [
+            {
+              "name": "Product",
+              "properties": [
+                "id: string",
+                "name: string",
+                "priceCents: number",
+                "inStock: boolean"
+              ]
+            }
+          ]
+        },
+        {
+          "path": "src/models/cart.ts",
+          "type": "typescript",
+          "summary": "Cart model",
+          "interfaces": [
+            {
+              "name": "CartItem",
+              "properties": [
+                "productId: string",
+                "quantity: number"
+              ]
+            },
+            {
+              "name": "Cart",
+              "properties": [
+                "items: CartItem[]",
+                "totalCents: number"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": [
+    {
+      "method": "GET",
+      "path": "/products",
+      "description": "List the catalogue",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "priceCents": {
+              "type": "integer"
+            },
+            "inStock": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "priceCents",
+            "inStock"
+          ]
+        }
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": [
+            {
+              "id": "pr1",
+              "name": "Sourdough loaf",
+              "priceCents": 450,
+              "inStock": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/products/:id",
+      "description": "Get a product",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "priceCents": {
+            "type": "integer"
+          },
+          "inStock": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "priceCents",
+          "inStock"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "id": "pr1",
+            "name": "Sourdough loaf",
+            "priceCents": 450,
+            "inStock": true
+          }
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "Product not found"
+          },
+          "statusCode": 404
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/cart",
+      "description": "Get the current cart",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "productId": {
+                  "type": "string"
+                },
+                "quantity": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "productId",
+                "quantity"
+              ]
+            }
+          },
+          "totalCents": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "totalCents"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "items": [
+              {
+                "productId": "pr1",
+                "quantity": 2
+              }
+            ],
+            "totalCents": 900
+          }
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/cart/items",
+      "description": "Add a product to the cart",
+      "requestSchema": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "productId",
+          "quantity"
+        ]
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "productId": {
+                  "type": "string"
+                },
+                "quantity": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "productId",
+                "quantity"
+              ]
+            }
+          },
+          "totalCents": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "totalCents"
+        ]
+      },
+      "examples": [
+        {
+          "request": {
+            "productId": "pr1",
+            "quantity": 2
+          },
+          "response": {
+            "items": [
+              {
+                "productId": "pr1",
+                "quantity": 2
+              }
+            ],
+            "totalCents": 900
+          }
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/cart/items/:productId",
+      "description": "Remove a product from the cart",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {}
+          },
+          "totalCents": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "totalCents"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "items": [],
+            "totalCents": 0
+          }
+        }
+      ]
+    }
+  ]
+}

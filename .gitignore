@@ -94,3 +94,6 @@ Makefile
 packages/frontend/cypress/downloads/
 packages/frontend/cypress/screenshots/
 packages/frontend/cypress/videos/
+
+# AI evaluation bench: per-run results (evals/baseline.json IS versioned)
+packages/backend/evals/results/

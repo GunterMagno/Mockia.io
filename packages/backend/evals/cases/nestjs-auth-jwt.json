@@ -1,0 +1,242 @@
+{
+  "id": "nestjs-auth-jwt",
+  "description": "NestJS auth controller with JWT login, refresh and a guarded profile route.",
+  "tags": [
+    "nestjs",
+    "auth"
+  ],
+  "input": {
+    "projectTitle": "Identity Service",
+    "userInput": "Mock the login flow and the profile endpoint.",
+    "context": {
+      "repoName": "identity-service",
+      "repoUrl": "https://github.com/acme/identity-service",
+      "repoOwner": "acme",
+      "branch": "main",
+      "summary": "NestJS JWT authentication",
+      "stats": {
+        "totalFiles": 4,
+        "totalInterfaces": 2,
+        "totalFunctions": 0,
+        "totalRoutes": 3
+      },
+      "files": [
+        {
+          "path": "README.md",
+          "type": "other",
+          "summary": "# Identity Service\n`POST /auth/login` returns access and refresh tokens. `GET /profile` is protected by JwtAuthGuard."
+        },
+        {
+          "path": "src/auth/auth.controller.ts",
+          "type": "typescript",
+          "summary": "@Controller(\"auth\") AuthController",
+          "routes": [
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/auth/login"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/auth/refresh"
+            }
+          ]
+        },
+        {
+          "path": "src/profile/profile.controller.ts",
+          "type": "typescript",
+          "summary": "@UseGuards(JwtAuthGuard) @Controller(\"profile\")",
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/profile"
+            }
+          ]
+        },
+        {
+          "path": "src/auth/types.ts",
+          "type": "typescript",
+          "summary": "Token types",
+          "interfaces": [
+            {
+              "name": "TokenPair",
+              "properties": [
+                "accessToken: string",
+                "refreshToken: string"
+              ]
+            },
+            {
+              "name": "Profile",
+              "properties": [
+                "userId: string",
+                "email: string",
+                "roles: string[]"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": [
+    {
+      "method": "POST",
+      "path": "/auth/login",
+      "description": "Log in and get a token pair",
+      "requestSchema": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "refreshToken": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "accessToken",
+          "refreshToken"
+        ]
+      },
+      "examples": [
+        {
+          "request": {
+            "email": "admin@example.com",
+            "password": "hunter2-demo"
+          },
+          "response": {
+            "accessToken": "eyJhbGciOiJIUzI1NiJ9.access",
+            "refreshToken": "eyJhbGciOiJIUzI1NiJ9.refresh"
+          }
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "Invalid credentials"
+          },
+          "statusCode": 401
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/auth/refresh",
+      "description": "Exchange a refresh token for a new pair",
+      "requestSchema": {
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "refreshToken"
+        ]
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "refreshToken": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "accessToken",
+          "refreshToken"
+        ]
+      },
+      "examples": [
+        {
+          "request": {
+            "refreshToken": "eyJhbGciOiJIUzI1NiJ9.refresh"
+          },
+          "response": {
+            "accessToken": "eyJhbGciOiJIUzI1NiJ9.access2",
+            "refreshToken": "eyJhbGciOiJIUzI1NiJ9.refresh2"
+          }
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "Invalid refresh token"
+          },
+          "statusCode": 401
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/profile",
+      "description": "Profile of the authenticated user",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "userId",
+          "email",
+          "roles"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "userId": "u1",
+            "email": "admin@example.com",
+            "roles": [
+              "admin"
+            ]
+          }
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "Unauthorized"
+          },
+          "statusCode": 401
+        }
+      ]
+    }
+  ]
+}

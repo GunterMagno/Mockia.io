@@ -1,0 +1,319 @@
+{
+  "id": "es-restaurante-express",
+  "description": "README and instruction in Spanish for a restaurant API (dishes and reservations).",
+  "tags": [
+    "es",
+    "express",
+    "path-params"
+  ],
+  "input": {
+    "projectTitle": "Restaurante La Plaza",
+    "userInput": "Genera la API simulada del restaurante con los platos y las reservas.",
+    "context": {
+      "repoName": "restaurante-la-plaza",
+      "repoUrl": "https://github.com/acme/restaurante-la-plaza",
+      "repoOwner": "acme",
+      "branch": "main",
+      "summary": "API del restaurante",
+      "stats": {
+        "totalFiles": 4,
+        "totalInterfaces": 2,
+        "totalFunctions": 0,
+        "totalRoutes": 4
+      },
+      "files": [
+        {
+          "path": "README.md",
+          "type": "other",
+          "summary": "# Restaurante La Plaza\nAPI para consultar la carta y reservar mesa.\n\n## Rutas\n- GET /platos: carta completa\n- GET /platos/:id: un plato\n- GET /reservas: reservas del dia\n- POST /reservas: crear una reserva"
+        },
+        {
+          "path": "src/rutas/platos.ts",
+          "type": "typescript",
+          "summary": "Rutas de platos",
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/platos"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/platos/:id"
+            }
+          ]
+        },
+        {
+          "path": "src/rutas/reservas.ts",
+          "type": "typescript",
+          "summary": "Rutas de reservas",
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/reservas"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/reservas"
+            }
+          ]
+        },
+        {
+          "path": "src/tipos.ts",
+          "type": "typescript",
+          "summary": "Tipos",
+          "interfaces": [
+            {
+              "name": "Plato",
+              "properties": [
+                "id: string",
+                "nombre: string",
+                "precio: number",
+                "alergenos: string[]"
+              ]
+            },
+            {
+              "name": "Reserva",
+              "properties": [
+                "id: string",
+                "cliente: string",
+                "personas: number",
+                "fecha: string"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": [
+    {
+      "method": "GET",
+      "path": "/platos",
+      "description": "Carta completa",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "nombre": {
+              "type": "string"
+            },
+            "precio": {
+              "type": "number"
+            },
+            "alergenos": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "id",
+            "nombre",
+            "precio",
+            "alergenos"
+          ]
+        }
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": [
+            {
+              "id": "pl1",
+              "nombre": "Tortilla de patatas",
+              "precio": 9.5,
+              "alergenos": [
+                "huevo"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/platos/:id",
+      "description": "Detalle de un plato",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "precio": {
+            "type": "number"
+          },
+          "alergenos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "nombre",
+          "precio",
+          "alergenos"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "id": "pl1",
+            "nombre": "Tortilla de patatas",
+            "precio": 9.5,
+            "alergenos": [
+              "huevo"
+            ]
+          }
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "Plato no encontrado"
+          },
+          "statusCode": 404
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/reservas",
+      "description": "Reservas del dia",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "cliente": {
+              "type": "string"
+            },
+            "personas": {
+              "type": "integer"
+            },
+            "fecha": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "cliente",
+            "personas",
+            "fecha"
+          ]
+        }
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": [
+            {
+              "id": "rs1",
+              "cliente": "Familia Soler",
+              "personas": 4,
+              "fecha": "2026-10-10T21:00:00Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/reservas",
+      "description": "Crear una reserva",
+      "requestSchema": {
+        "type": "object",
+        "properties": {
+          "cliente": {
+            "type": "string"
+          },
+          "personas": {
+            "type": "integer"
+          },
+          "fecha": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "cliente",
+          "personas",
+          "fecha"
+        ]
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "cliente": {
+            "type": "string"
+          },
+          "personas": {
+            "type": "integer"
+          },
+          "fecha": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "cliente",
+          "personas",
+          "fecha"
+        ]
+      },
+      "examples": [
+        {
+          "request": {
+            "cliente": "Familia Soler",
+            "personas": 4,
+            "fecha": "2026-10-10T21:00:00Z"
+          },
+          "response": {
+            "id": "rs2",
+            "cliente": "Familia Soler",
+            "personas": 4,
+            "fecha": "2026-10-10T21:00:00Z"
+          }
+        }
+      ]
+    }
+  ]
+}

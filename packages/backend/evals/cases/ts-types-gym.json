@@ -1,0 +1,402 @@
+{
+  "id": "ts-types-gym",
+  "description": "Interfaces for members, trainers and classes; the user asks for members and classes only.",
+  "tags": [
+    "typescript-types",
+    "path-params"
+  ],
+  "input": {
+    "projectTitle": "Gym Tracker",
+    "userInput": "I only need the members and classes endpoints (list, get by id and create).",
+    "context": {
+      "repoName": "gym-tracker",
+      "repoUrl": "https://github.com/acme/gym-tracker",
+      "repoOwner": "acme",
+      "branch": "main",
+      "summary": "Gym management types",
+      "stats": {
+        "totalFiles": 2,
+        "totalInterfaces": 3,
+        "totalFunctions": 0,
+        "totalRoutes": 0
+      },
+      "files": [
+        {
+          "path": "README.md",
+          "type": "other",
+          "summary": "# Gym Tracker\nMembers book classes taught by trainers."
+        },
+        {
+          "path": "src/types.ts",
+          "type": "typescript",
+          "summary": "Gym types",
+          "interfaces": [
+            {
+              "name": "Member",
+              "properties": [
+                "id: string",
+                "name: string",
+                "plan: string",
+                "joinedAt: string"
+              ]
+            },
+            {
+              "name": "Trainer",
+              "properties": [
+                "id: string",
+                "name: string",
+                "speciality: string"
+              ]
+            },
+            {
+              "name": "GymClass",
+              "properties": [
+                "id: string",
+                "title: string",
+                "trainerId: string",
+                "startsAt: string",
+                "capacity: number"
+              ]
+            }
+          ],
+          "enums": [
+            {
+              "name": "Plan",
+              "members": [
+                "BASIC",
+                "PREMIUM"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": [
+    {
+      "method": "GET",
+      "path": "/members",
+      "description": "List members",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "plan": {
+              "type": "string"
+            },
+            "joinedAt": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "plan",
+            "joinedAt"
+          ]
+        }
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": [
+            {
+              "id": "m1",
+              "name": "Diego Lara",
+              "plan": "PREMIUM",
+              "joinedAt": "2026-01-15"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/members/:id",
+      "description": "Get a member",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "plan": {
+            "type": "string"
+          },
+          "joinedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "plan",
+          "joinedAt"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "id": "m1",
+            "name": "Diego Lara",
+            "plan": "PREMIUM",
+            "joinedAt": "2026-01-15"
+          }
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/members",
+      "description": "Create a member",
+      "requestSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "plan": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "plan"
+        ]
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "plan": {
+            "type": "string"
+          },
+          "joinedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "plan",
+          "joinedAt"
+        ]
+      },
+      "examples": [
+        {
+          "request": {
+            "name": "Julia Prats",
+            "plan": "BASIC"
+          },
+          "response": {
+            "id": "m2",
+            "name": "Julia Prats",
+            "plan": "BASIC",
+            "joinedAt": "2026-10-05"
+          }
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/classes",
+      "description": "List classes",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "trainerId": {
+              "type": "string"
+            },
+            "startsAt": {
+              "type": "string"
+            },
+            "capacity": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "id",
+            "title",
+            "trainerId",
+            "startsAt",
+            "capacity"
+          ]
+        }
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": [
+            {
+              "id": "c1",
+              "title": "Spinning 18:00",
+              "trainerId": "t1",
+              "startsAt": "2026-10-09T18:00:00Z",
+              "capacity": 20
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/classes/:id",
+      "description": "Get a class",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "trainerId": {
+            "type": "string"
+          },
+          "startsAt": {
+            "type": "string"
+          },
+          "capacity": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "trainerId",
+          "startsAt",
+          "capacity"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "id": "c1",
+            "title": "Spinning 18:00",
+            "trainerId": "t1",
+            "startsAt": "2026-10-09T18:00:00Z",
+            "capacity": 20
+          }
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/classes",
+      "description": "Create a class",
+      "requestSchema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "trainerId": {
+            "type": "string"
+          },
+          "startsAt": {
+            "type": "string"
+          },
+          "capacity": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "title",
+          "trainerId",
+          "startsAt",
+          "capacity"
+        ]
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "trainerId": {
+            "type": "string"
+          },
+          "startsAt": {
+            "type": "string"
+          },
+          "capacity": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "trainerId",
+          "startsAt",
+          "capacity"
+        ]
+      },
+      "examples": [
+        {
+          "request": {
+            "title": "Yoga 09:00",
+            "trainerId": "t1",
+            "startsAt": "2026-10-10T09:00:00Z",
+            "capacity": 15
+          },
+          "response": {
+            "id": "c2",
+            "title": "Yoga 09:00",
+            "trainerId": "t1",
+            "startsAt": "2026-10-10T09:00:00Z",
+            "capacity": 15
+          }
+        }
+      ]
+    }
+  ]
+}

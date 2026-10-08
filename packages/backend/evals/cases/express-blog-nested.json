@@ -1,0 +1,360 @@
+{
+  "id": "express-blog-nested",
+  "description": "Blog with posts and comments nested under a post (two path parameters).",
+  "tags": [
+    "express",
+    "nested-resources",
+    "path-params"
+  ],
+  "input": {
+    "projectTitle": "Blog Engine",
+    "projectDescription": "Multi-author blog backend",
+    "userInput": "Mock the posts and comments endpoints of the blog.",
+    "context": {
+      "repoName": "blog-engine",
+      "repoUrl": "https://github.com/acme/blog-engine",
+      "repoOwner": "acme",
+      "branch": "main",
+      "summary": "Blog backend with posts and comments",
+      "stats": {
+        "totalFiles": 3,
+        "totalInterfaces": 2,
+        "totalFunctions": 0,
+        "totalRoutes": 5
+      },
+      "files": [
+        {
+          "path": "README.md",
+          "type": "other",
+          "summary": "# Blog Engine\nPosts have comments. Comments only exist inside a post."
+        },
+        {
+          "path": "src/routes/posts.ts",
+          "type": "typescript",
+          "summary": "Posts router",
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/posts"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/posts/:postId"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/posts/:postId/comments"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/posts/:postId/comments"
+            },
+            {
+              "methods": [
+                "DELETE"
+              ],
+              "path": "/posts/:postId/comments/:commentId"
+            }
+          ]
+        },
+        {
+          "path": "src/models.ts",
+          "type": "typescript",
+          "summary": "Domain models",
+          "interfaces": [
+            {
+              "name": "Post",
+              "properties": [
+                "id: string",
+                "title: string",
+                "body: string",
+                "authorName: string",
+                "publishedAt: string"
+              ]
+            },
+            {
+              "name": "Comment",
+              "properties": [
+                "id: string",
+                "postId: string",
+                "author: string",
+                "text: string",
+                "createdAt: string"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": [
+    {
+      "method": "GET",
+      "path": "/posts",
+      "description": "List posts",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "body": {
+              "type": "string"
+            },
+            "authorName": {
+              "type": "string"
+            },
+            "publishedAt": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "title",
+            "body",
+            "authorName",
+            "publishedAt"
+          ]
+        }
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": [
+            {
+              "id": "p1",
+              "title": "Shipping a mock API in a day",
+              "body": "We started with the types...",
+              "authorName": "Lucia Ortega",
+              "publishedAt": "2026-09-30T08:00:00Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/posts/:postId",
+      "description": "Get one post",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "authorName": {
+            "type": "string"
+          },
+          "publishedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "body",
+          "authorName",
+          "publishedAt"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "id": "p1",
+            "title": "Shipping a mock API in a day",
+            "body": "We started with the types...",
+            "authorName": "Lucia Ortega",
+            "publishedAt": "2026-09-30T08:00:00Z"
+          }
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "Post not found"
+          },
+          "statusCode": 404
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/posts/:postId/comments",
+      "description": "List the comments of a post",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "postId": {
+              "type": "string"
+            },
+            "author": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "createdAt": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "postId",
+            "author",
+            "text",
+            "createdAt"
+          ]
+        }
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": [
+            {
+              "id": "c1",
+              "postId": "p1",
+              "author": "Marco",
+              "text": "Great write-up",
+              "createdAt": "2026-10-01T10:15:00Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/posts/:postId/comments",
+      "description": "Add a comment to a post",
+      "requestSchema": {
+        "type": "object",
+        "properties": {
+          "author": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "author",
+          "text"
+        ]
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "postId": {
+            "type": "string"
+          },
+          "author": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "postId",
+          "author",
+          "text",
+          "createdAt"
+        ]
+      },
+      "examples": [
+        {
+          "request": {
+            "author": "Marco",
+            "text": "Great write-up"
+          },
+          "response": {
+            "id": "c2",
+            "postId": "p1",
+            "author": "Marco",
+            "text": "Great write-up",
+            "createdAt": "2026-10-01T10:20:00Z"
+          }
+        }
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/posts/:postId/comments/:commentId",
+      "description": "Delete a comment",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "deleted": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "deleted"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "id": "c2",
+            "deleted": true
+          }
+        }
+      ]
+    }
+  ]
+}

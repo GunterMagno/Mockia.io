@@ -1,0 +1,239 @@
+{
+  "id": "express-query-filters",
+  "description": "Directory API whose list endpoints take query filters; query strings are not part of the path.",
+  "tags": [
+    "express"
+  ],
+  "input": {
+    "projectTitle": "Staff Directory",
+    "userInput": "Mock the staff directory endpoints.",
+    "context": {
+      "repoName": "staff-directory",
+      "repoUrl": "https://github.com/acme/staff-directory",
+      "repoOwner": "acme",
+      "branch": "main",
+      "summary": "Company staff directory",
+      "stats": {
+        "totalFiles": 3,
+        "totalInterfaces": 1,
+        "totalFunctions": 0,
+        "totalRoutes": 3
+      },
+      "files": [
+        {
+          "path": "README.md",
+          "type": "other",
+          "summary": "# Staff Directory\n- GET /people?department=&role= - filter people\n- GET /people/:id - one person\n- GET /search?q= - free text search across people"
+        },
+        {
+          "path": "src/routes/people.ts",
+          "type": "typescript",
+          "summary": "People router",
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/people"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/people/:id"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/search"
+            }
+          ]
+        },
+        {
+          "path": "src/types.ts",
+          "type": "typescript",
+          "summary": "Person type",
+          "interfaces": [
+            {
+              "name": "Person",
+              "properties": [
+                "id: string",
+                "fullName: string",
+                "department: string",
+                "role: string",
+                "email: string"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": [
+    {
+      "method": "GET",
+      "path": "/people",
+      "description": "List people, filtered by department and role",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "fullName": {
+              "type": "string"
+            },
+            "department": {
+              "type": "string"
+            },
+            "role": {
+              "type": "string"
+            },
+            "email": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "fullName",
+            "department",
+            "role",
+            "email"
+          ]
+        }
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": [
+            {
+              "id": "pe1",
+              "fullName": "Irene Vidal",
+              "department": "Engineering",
+              "role": "Staff Engineer",
+              "email": "irene.vidal@example.com"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/people/:id",
+      "description": "Get one person",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "department": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "fullName",
+          "department",
+          "role",
+          "email"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "id": "pe1",
+            "fullName": "Irene Vidal",
+            "department": "Engineering",
+            "role": "Staff Engineer",
+            "email": "irene.vidal@example.com"
+          }
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "Person not found"
+          },
+          "statusCode": 404
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/search",
+      "description": "Free text search across people",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "fullName": {
+              "type": "string"
+            },
+            "department": {
+              "type": "string"
+            },
+            "role": {
+              "type": "string"
+            },
+            "email": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "fullName",
+            "department",
+            "role",
+            "email"
+          ]
+        }
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": [
+            {
+              "id": "pe1",
+              "fullName": "Irene Vidal",
+              "department": "Engineering",
+              "role": "Staff Engineer",
+              "email": "irene.vidal@example.com"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

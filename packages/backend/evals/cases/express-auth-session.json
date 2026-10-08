@@ -1,0 +1,327 @@
+{
+  "id": "express-auth-session",
+  "description": "Express auth module: register, login, logout and current user.",
+  "tags": [
+    "express",
+    "auth",
+    "errors"
+  ],
+  "input": {
+    "projectTitle": "Members Portal",
+    "userInput": "Mock the authentication endpoints of the portal.",
+    "context": {
+      "repoName": "members-portal",
+      "repoUrl": "https://github.com/acme/members-portal",
+      "repoOwner": "acme",
+      "branch": "main",
+      "summary": "Portal with email and password login",
+      "stats": {
+        "totalFiles": 3,
+        "totalInterfaces": 2,
+        "totalFunctions": 0,
+        "totalRoutes": 4
+      },
+      "files": [
+        {
+          "path": "README.md",
+          "type": "other",
+          "summary": "# Members Portal\nUsers register with email and password. Login returns a JWT access token used as Bearer token."
+        },
+        {
+          "path": "src/routes/auth.ts",
+          "type": "typescript",
+          "summary": "Auth router",
+          "routes": [
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/auth/register"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/auth/login"
+            },
+            {
+              "methods": [
+                "POST"
+              ],
+              "path": "/auth/logout"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/auth/me"
+            }
+          ]
+        },
+        {
+          "path": "src/types.ts",
+          "type": "typescript",
+          "summary": "Auth types",
+          "interfaces": [
+            {
+              "name": "User",
+              "properties": [
+                "id: string",
+                "email: string",
+                "displayName: string"
+              ]
+            },
+            {
+              "name": "AuthResponse",
+              "properties": [
+                "accessToken: string",
+                "expiresIn: number",
+                "user: User"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": [
+    {
+      "method": "POST",
+      "path": "/auth/register",
+      "description": "Register a new user",
+      "requestSchema": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password",
+          "displayName"
+        ]
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "expiresIn": {
+            "type": "integer"
+          },
+          "user": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string"
+              },
+              "displayName": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "email",
+              "displayName"
+            ]
+          }
+        },
+        "required": [
+          "accessToken",
+          "expiresIn",
+          "user"
+        ]
+      },
+      "examples": [
+        {
+          "request": {
+            "email": "ana@example.com",
+            "password": "S3cure-pass",
+            "displayName": "Ana"
+          },
+          "response": {
+            "accessToken": "eyJhbGciOiJIUzI1NiJ9.demo",
+            "expiresIn": 3600,
+            "user": {
+              "id": "u1",
+              "email": "ana@example.com",
+              "displayName": "Ana"
+            }
+          }
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "Email already registered"
+          },
+          "statusCode": 400
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/auth/login",
+      "description": "Log in with email and password",
+      "requestSchema": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "expiresIn": {
+            "type": "integer"
+          },
+          "user": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string"
+              },
+              "displayName": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "email",
+              "displayName"
+            ]
+          }
+        },
+        "required": [
+          "accessToken",
+          "expiresIn",
+          "user"
+        ]
+      },
+      "examples": [
+        {
+          "request": {
+            "email": "ana@example.com",
+            "password": "S3cure-pass"
+          },
+          "response": {
+            "accessToken": "eyJhbGciOiJIUzI1NiJ9.demo",
+            "expiresIn": 3600,
+            "user": {
+              "id": "u1",
+              "email": "ana@example.com",
+              "displayName": "Ana"
+            }
+          }
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "Invalid credentials"
+          },
+          "statusCode": 401
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/auth/logout",
+      "description": "Log out the current session",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "success": true
+          }
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/auth/me",
+      "description": "Get the authenticated user",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "displayName"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "id": "u1",
+            "email": "ana@example.com",
+            "displayName": "Ana"
+          }
+        },
+        {
+          "request": {},
+          "response": {
+            "error": "Missing or invalid token"
+          },
+          "statusCode": 401
+        }
+      ]
+    }
+  ]
+}

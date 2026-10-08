@@ -1,0 +1,438 @@
+{
+  "id": "ts-types-library",
+  "description": "Only TypeScript interfaces (no routes): the model must derive a REST API from the domain types.",
+  "tags": [
+    "typescript-types",
+    "path-params"
+  ],
+  "input": {
+    "projectTitle": "City Library",
+    "userInput": "Create a REST API for books, authors and loans.",
+    "context": {
+      "repoName": "city-library",
+      "repoUrl": "https://github.com/acme/city-library",
+      "repoOwner": "acme",
+      "branch": "main",
+      "summary": "Library catalogue types",
+      "stats": {
+        "totalFiles": 2,
+        "totalInterfaces": 3,
+        "totalFunctions": 0,
+        "totalRoutes": 0
+      },
+      "files": [
+        {
+          "path": "README.md",
+          "type": "other",
+          "summary": "# City Library\nCatalogue of books and their authors, and the loans made by members."
+        },
+        {
+          "path": "src/domain.ts",
+          "type": "typescript",
+          "summary": "Domain types",
+          "interfaces": [
+            {
+              "name": "Book",
+              "properties": [
+                "id: string",
+                "title: string",
+                "isbn: string",
+                "authorId: string",
+                "copiesAvailable: number"
+              ]
+            },
+            {
+              "name": "Author",
+              "properties": [
+                "id: string",
+                "name: string",
+                "country: string"
+              ]
+            },
+            {
+              "name": "Loan",
+              "properties": [
+                "id: string",
+                "bookId: string",
+                "memberId: string",
+                "dueDate: string",
+                "returned: boolean"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": [
+    {
+      "method": "GET",
+      "path": "/books",
+      "description": "List books",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "isbn": {
+              "type": "string"
+            },
+            "authorId": {
+              "type": "string"
+            },
+            "copiesAvailable": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "id",
+            "title",
+            "isbn",
+            "authorId",
+            "copiesAvailable"
+          ]
+        }
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": [
+            {
+              "id": "b1",
+              "title": "La sombra del viento",
+              "isbn": "9788408163435",
+              "authorId": "a1",
+              "copiesAvailable": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/books/:id",
+      "description": "Get a book",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "isbn": {
+            "type": "string"
+          },
+          "authorId": {
+            "type": "string"
+          },
+          "copiesAvailable": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "isbn",
+          "authorId",
+          "copiesAvailable"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "id": "b1",
+            "title": "La sombra del viento",
+            "isbn": "9788408163435",
+            "authorId": "a1",
+            "copiesAvailable": 3
+          }
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/books",
+      "description": "Add a book",
+      "requestSchema": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "isbn": {
+            "type": "string"
+          },
+          "authorId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "isbn",
+          "authorId"
+        ]
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "isbn": {
+            "type": "string"
+          },
+          "authorId": {
+            "type": "string"
+          },
+          "copiesAvailable": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "isbn",
+          "authorId",
+          "copiesAvailable"
+        ]
+      },
+      "examples": [
+        {
+          "request": {
+            "title": "Nada",
+            "isbn": "9788423343393",
+            "authorId": "a2"
+          },
+          "response": {
+            "id": "b2",
+            "title": "Nada",
+            "isbn": "9788423343393",
+            "authorId": "a2",
+            "copiesAvailable": 1
+          }
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/authors",
+      "description": "List authors",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "country": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "country"
+          ]
+        }
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": [
+            {
+              "id": "a1",
+              "name": "Carlos Ruiz Zafon",
+              "country": "Spain"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/authors/:id",
+      "description": "Get an author",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "country"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "id": "a1",
+            "name": "Carlos Ruiz Zafon",
+            "country": "Spain"
+          }
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/loans",
+      "description": "List loans",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "bookId": {
+              "type": "string"
+            },
+            "memberId": {
+              "type": "string"
+            },
+            "dueDate": {
+              "type": "string"
+            },
+            "returned": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id",
+            "bookId",
+            "memberId",
+            "dueDate",
+            "returned"
+          ]
+        }
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": [
+            {
+              "id": "l1",
+              "bookId": "b1",
+              "memberId": "m1",
+              "dueDate": "2026-11-01",
+              "returned": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/loans",
+      "description": "Lend a book",
+      "requestSchema": {
+        "type": "object",
+        "properties": {
+          "bookId": {
+            "type": "string"
+          },
+          "memberId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "bookId",
+          "memberId"
+        ]
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "bookId": {
+            "type": "string"
+          },
+          "memberId": {
+            "type": "string"
+          },
+          "dueDate": {
+            "type": "string"
+          },
+          "returned": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "bookId",
+          "memberId",
+          "dueDate",
+          "returned"
+        ]
+      },
+      "examples": [
+        {
+          "request": {
+            "bookId": "b1",
+            "memberId": "m1"
+          },
+          "response": {
+            "id": "l2",
+            "bookId": "b1",
+            "memberId": "m1",
+            "dueDate": "2026-11-08",
+            "returned": false
+          }
+        }
+      ]
+    }
+  ]
+}

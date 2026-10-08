@@ -1,0 +1,269 @@
+{
+  "id": "express-settings-put-patch",
+  "description": "Singleton resources updated with PUT and PATCH (no list, no :id).",
+  "tags": [
+    "express"
+  ],
+  "input": {
+    "projectTitle": "Account Settings",
+    "userInput": "Mock the profile and notification settings endpoints.",
+    "context": {
+      "repoName": "account-settings",
+      "repoUrl": "https://github.com/acme/account-settings",
+      "repoOwner": "acme",
+      "branch": "main",
+      "summary": "Per-user settings service",
+      "stats": {
+        "totalFiles": 3,
+        "totalInterfaces": 2,
+        "totalFunctions": 0,
+        "totalRoutes": 4
+      },
+      "files": [
+        {
+          "path": "README.md",
+          "type": "other",
+          "summary": "# Account Settings\nEach user has exactly one profile and one set of notification preferences, so there are no ids in the routes."
+        },
+        {
+          "path": "src/routes/settings.ts",
+          "type": "typescript",
+          "summary": "Settings router",
+          "routes": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/profile"
+            },
+            {
+              "methods": [
+                "PUT"
+              ],
+              "path": "/profile"
+            },
+            {
+              "methods": [
+                "GET"
+              ],
+              "path": "/notifications"
+            },
+            {
+              "methods": [
+                "PATCH"
+              ],
+              "path": "/notifications"
+            }
+          ]
+        },
+        {
+          "path": "src/types.ts",
+          "type": "typescript",
+          "summary": "Settings types",
+          "interfaces": [
+            {
+              "name": "Profile",
+              "properties": [
+                "name: string",
+                "bio: string",
+                "timezone: string"
+              ]
+            },
+            {
+              "name": "NotificationPrefs",
+              "properties": [
+                "email: boolean",
+                "push: boolean",
+                "digest: string"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": [
+    {
+      "method": "GET",
+      "path": "/profile",
+      "description": "Get the profile",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "bio": {
+            "type": "string"
+          },
+          "timezone": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "bio",
+          "timezone"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "name": "Elena Ruiz",
+            "bio": "Product designer",
+            "timezone": "Europe/Madrid"
+          }
+        }
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/profile",
+      "description": "Replace the profile",
+      "requestSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "bio": {
+            "type": "string"
+          },
+          "timezone": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "bio",
+          "timezone"
+        ]
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "bio": {
+            "type": "string"
+          },
+          "timezone": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "bio",
+          "timezone"
+        ]
+      },
+      "examples": [
+        {
+          "request": {
+            "name": "Elena Ruiz",
+            "bio": "Product designer",
+            "timezone": "Europe/Madrid"
+          },
+          "response": {
+            "name": "Elena Ruiz",
+            "bio": "Product designer",
+            "timezone": "Europe/Madrid"
+          }
+        }
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/notifications",
+      "description": "Get notification preferences",
+      "requestSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "boolean"
+          },
+          "push": {
+            "type": "boolean"
+          },
+          "digest": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "push",
+          "digest"
+        ]
+      },
+      "examples": [
+        {
+          "request": {},
+          "response": {
+            "email": true,
+            "push": false,
+            "digest": "weekly"
+          }
+        }
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/notifications",
+      "description": "Update notification preferences",
+      "requestSchema": {
+        "type": "object",
+        "properties": {
+          "push": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "push"
+        ]
+      },
+      "responseSchema": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "boolean"
+          },
+          "push": {
+            "type": "boolean"
+          },
+          "digest": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "push",
+          "digest"
+        ]
+      },
+      "examples": [
+        {
+          "request": {
+            "push": true
+          },
+          "response": {
+            "email": true,
+            "push": true,
+            "digest": "weekly"
+          }
+        }
+      ]
+    }
+  ]
+}
