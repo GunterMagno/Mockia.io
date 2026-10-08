@@ -155,6 +155,11 @@ const es: LegalContent = {
                     'El propio Servicio.',
                   ],
                   [
+                    '**Mejora de la IA (opcional)**',
+                    'Solo si lo activas tú: las instrucciones tal como se envían al modelo (que pueden incluir fragmentos del resumen y de la documentación de tu repositorio y lo que escribes), la respuesta del modelo, las correcciones que hagas, y el momento en que diste o retiraste el consentimiento. Aparte, el voto «útil / no útil» sobre un resultado se guarda siempre, sin contenido, asociado a tu cuenta.',
+                    'Tú, con tu consentimiento, y el Servicio.',
+                  ],
+                  [
                     '**Comunicaciones**',
                     'Los mensajes que nos envíes y los correos transaccionales que te enviamos (verificación, recuperación de contraseña, avisos de pago).',
                     'Tú y el Servicio.',
@@ -191,6 +196,14 @@ const es: LegalContent = {
                     'Ejecución del contrato (art. 6.1.b). Es almacenamiento técnico necesario que solicitas expresamente (véase la [Política de Cookies](/cookies)).',
                   ],
                   [
+                    'Mejorar el modelo de IA de Mockia: guardar, solo si lo activas, tus generaciones y correcciones para evaluar el modelo y, si hace falta, entrenar uno propio (véase «Mejorar la IA con tus generaciones»).',
+                    'Consentimiento (art. 6.1.a), opcional y revocable en cualquier momento.',
+                  ],
+                  [
+                    'Medir si las generaciones te resultan útiles (el voto «útil / no útil», sin contenido).',
+                    'Interés legítimo (art. 6.1.f) en mantener la calidad del Servicio; el voto no incluye ningún contenido tuyo.',
+                  ],
+                  [
                     'Atender tus consultas y el ejercicio de tus derechos, y defender reclamaciones.',
                     'Obligación legal (art. 6.1.c) e interés legítimo (art. 6.1.f).',
                   ],
@@ -198,7 +211,7 @@ const es: LegalContent = {
               },
             },
             {
-              p: 'Hoy ningún tratamiento se basa en tu consentimiento y no enviamos comunicaciones comerciales. Si en el futuro añadimos alguno (por ejemplo, analítica o publicidad), te lo pediremos antes y podrás retirarlo en cualquier momento.',
+              p: 'El único tratamiento que se basa en tu consentimiento es la mejora de la IA con tus generaciones (véase «Mejorar la IA con tus generaciones»): es opcional, está desactivado por defecto y puedes retirarlo en cualquier momento sin que cambie tu uso del Servicio. No enviamos comunicaciones comerciales. Si en el futuro añadimos otros tratamientos basados en el consentimiento (por ejemplo, analítica o publicidad), te lo pediremos antes y podrás retirarlo en cualquier momento.',
             },
             {
               p: 'Facilitar los datos de la cuenta es necesario para contratar el Servicio: sin ellos no podemos crearla.',
@@ -224,6 +237,31 @@ const es: LegalContent = {
             },
             {
               p: 'No tomamos decisiones basadas únicamente en tratamientos automatizados, incluida la elaboración de perfiles, que produzcan efectos jurídicos sobre ti o te afecten significativamente de modo similar (art. 22 RGPD). La IA se usa para generar borradores de APIs simuladas, no para evaluarte. La aplicación automática de los límites de tu plan, o el paso al plan gratuito por un pago fallido, es una consecuencia contractual objetiva que puedes impugnar escribiéndonos.',
+            },
+          ],
+        },
+        {
+          id: 'ai-training',
+          heading: 'Mejorar la IA con tus generaciones (opcional)',
+          blocks: [
+            {
+              p: 'Con tu **consentimiento expreso** (art. 6.1.a RGPD) puedes ayudarnos a **mejorar el modelo de IA de Mockia**. Es totalmente opcional, está desactivado por defecto y es independiente del uso del Servicio: no cambia tu plan, tus límites ni lo que recibes, y puedes usar Mockia.io exactamente igual sin activarlo.',
+            },
+            {
+              ul: [
+                '**Qué guardamos si lo activas:** las instrucciones tal como se envían al modelo (que pueden incluir fragmentos del resumen y de la documentación de tu repositorio y lo que tú escribes), la respuesta del modelo, las correcciones que hagas a un resultado y el proveedor y modelo que respondieron. Si no lo activas, no guardamos nada de este contenido.',
+                '**Para qué:** preparar conjuntos de ejemplos para evaluar el modelo y, si hace falta, ajustar (entrenar) un modelo propio de Mockia.io que genere mejores APIs simuladas. No lo usamos para publicidad ni para perfilarte, y no lo vendemos.',
+                '**Cómo se usan:** antes de preparar un conjunto de ejemplos se eliminan claves, tokens, contraseñas, cadenas de conexión y direcciones de correo, y se descartan los duplicados. El conjunto resultante **no contiene tu email, tu identificador de usuario ni ningún identificador de la generación**, y solo incluye ejemplos de usuarios cuyo consentimiento sigue vigente en ese momento.',
+                '**Cuánto tiempo:** 180 días desde cada generación, o hasta que retires el consentimiento o elimines tu cuenta, lo que ocurra antes.',
+                '**Cómo retirarlo:** en cualquier momento, en tu perfil → «Mis datos». Al retirarlo borramos de inmediato todo lo guardado (generaciones y valoraciones). Retirarlo no afecta a la licitud del tratamiento anterior.',
+                '**Una limitación que debes conocer:** si con ejemplos tuyos ya se ha entrenado un modelo, retirar el consentimiento no puede «desentrenarlo». Lo que garantizamos es que tus datos no se usarán en entrenamientos futuros: cada conjunto de ejemplos se prepara de nuevo a partir de los datos vigentes en ese momento.',
+              ],
+            },
+            {
+              p: 'Si lo activas, evita incluir secretos o datos personales de terceros en tus instrucciones y repositorios: aplicamos filtros automáticos, pero no son infalibles. Puedes descargar lo guardado desde perfil → «Mis datos» → «Descargar mis datos».',
+            },
+            {
+              p: 'Con independencia de este consentimiento, el voto «útil / no útil» que des a un resultado se guarda sin ningún contenido (solo el voto y el identificador aleatorio de la generación, asociados a tu cuenta) para medir si las generaciones funcionan. Se borra a los 180 días, con tu cuenta o al retirar el consentimiento.',
             },
           ],
         },
@@ -286,6 +324,10 @@ const es: LegalContent = {
                   ],
                   ['Proyectos archivados', 'Se eliminan definitivamente 30 días después de archivarlos.'],
                   [
+                    'Generaciones guardadas para mejorar la IA y valoraciones (solo con tu consentimiento)',
+                    '180 días, o hasta que retires el consentimiento o elimines la cuenta; al retirarlo se borran de inmediato.',
+                  ],
+                  [
                     'Resumen estructurado de un repositorio',
                     '30 días desde que se crea; después se borra automáticamente.',
                   ],
@@ -321,7 +363,7 @@ const es: LegalContent = {
               p: 'Puedes ejercer en cualquier momento los derechos de acceso, rectificación, supresión, limitación del tratamiento, portabilidad y oposición, así como retirar tu consentimiento cuando un tratamiento se base en él. Para ejercerlos escribe a [{entity.email}](mailto:{entity.email}) indicando el derecho que quieres ejercer; podemos pedirte que acredites tu identidad. Respondemos en el plazo de un mes (ampliable en dos meses más en casos complejos, avisándote) y es gratuito, salvo solicitudes manifiestamente infundadas o excesivas.',
             },
             {
-              p: 'Parte de ello puedes hacerlo tú mismo: cambiar tu idioma, cerrar sesión o restablecer tu contraseña desde la aplicación.',
+              p: 'Parte de ello puedes hacerlo tú mismo desde la aplicación: cambiar tu idioma, cerrar sesión, restablecer tu contraseña, descargar una copia de tus datos, eliminar tu cuenta y activar o retirar el consentimiento para mejorar la IA (perfil → «Mis datos»).',
             },
             {
               p: 'Si consideras que tus datos no se tratan correctamente, tienes derecho a presentar una reclamación ante la Agencia Española de Protección de Datos (AEPD): [www.aepd.es](https://www.aepd.es).',
@@ -461,7 +503,7 @@ const es: LegalContent = {
           heading: 'Tu contenido y los resultados generados',
           blocks: [
             {
-              p: 'Conservas todos los derechos sobre tu contenido (tus instrucciones y el código y la documentación de tus repositorios, que siguen siendo de quien corresponda). Nos concedes una licencia limitada, no exclusiva y mundial, solo para tratarlo con el fin de prestarte el Servicio, lo que incluye enviarlo al proveedor de IA tal como explica la [Política de Privacidad](/privacy).',
+              p: 'Conservas todos los derechos sobre tu contenido (tus instrucciones y el código y la documentación de tus repositorios, que siguen siendo de quien corresponda). Nos concedes una licencia limitada, no exclusiva y mundial, solo para tratarlo con el fin de prestarte el Servicio, lo que incluye enviarlo al proveedor de IA tal como explica la [Política de Privacidad](/privacy). Solo si lo activas expresamente (es opcional), también para mejorar la IA de Mockia.io en los términos de esa política.',
             },
             {
               p: 'En la medida en que la ley lo permita, los resultados generados para ti (endpoints, respuestas y datos de ejemplo) son tuyos y puedes usarlos libremente, también con fines comerciales. Es posible que otros usuarios obtengan resultados parecidos y no garantizamos que los resultados sean únicos ni que estén libres de derechos de terceros.',

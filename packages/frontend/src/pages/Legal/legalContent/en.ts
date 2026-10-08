@@ -154,6 +154,11 @@ const en: LegalContent = {
                     "The Service itself.",
                   ],
                   [
+                    "**AI improvement (optional)**",
+                    "Only if you turn it on: the prompts as they are sent to the model (which can include fragments of your repository's summary and documentation and what you write), the model's answer, any corrections you make, and when you gave or withdrew consent. Separately, the \"useful / not useful\" vote on a result is always kept, without content, linked to your account.",
+                    "You, with your consent, and the Service.",
+                  ],
+                  [
                     "**Communications**",
                     "Messages you send us and the transactional emails we send you (verification, password recovery, payment notices).",
                     "You and the Service.",
@@ -190,6 +195,14 @@ const en: LegalContent = {
                     "Performance of a contract (art. 6.1.b). This is necessary technical storage that you expressly request (see the [Cookie Policy](/cookies)).",
                   ],
                   [
+                    "Improving Mockia's AI model: storing, only if you turn it on, your generations and corrections to evaluate the model and, if needed, train our own (see \"Improving the AI with your generations\").",
+                    "Consent (art. 6.1.a), optional and revocable at any time.",
+                  ],
+                  [
+                    "Measuring whether generations are useful to you (the \"useful / not useful\" vote, without content).",
+                    "Legitimate interest (art. 6.1.f) in keeping the Service's quality; the vote contains none of your content.",
+                  ],
+                  [
                     "Handling your enquiries and the exercise of your rights, and defending claims.",
                     "Legal obligation (art. 6.1.c) and legitimate interest (art. 6.1.f).",
                   ],
@@ -197,7 +210,7 @@ const en: LegalContent = {
               },
             },
             {
-              p: "Today no processing is based on your consent and we send no marketing communications. If we add any in the future (for example analytics or advertising), we will ask first and you will be able to withdraw consent at any time.",
+              p: "The only processing based on your consent is improving the AI with your generations (see \"Improving the AI with your generations\"): it is optional, off by default, and you can withdraw it at any time without changing how you use the Service. We send no marketing communications. If we add other consent-based processing in the future (for example analytics or advertising), we will ask first and you will be able to withdraw consent at any time.",
             },
             {
               p: "Providing the account data is necessary to use the Service: without it we cannot create the account.",
@@ -223,6 +236,31 @@ const en: LegalContent = {
             },
             {
               p: "We do not make decisions based solely on automated processing, including profiling, that produce legal effects concerning you or similarly significantly affect you (GDPR art. 22). AI is used to generate drafts of mock APIs, not to assess you. The automatic application of your plan limits, or the move to the free plan after a failed payment, is an objective contractual consequence that you can contest by writing to us.",
+            },
+          ],
+        },
+        {
+          id: "ai-training",
+          heading: "Improving the AI with your generations (optional)",
+          blocks: [
+            {
+              p: "With your **explicit consent** (GDPR art. 6.1.a) you can help us **improve Mockia's AI model**. It is entirely optional, off by default and independent of using the Service: it does not change your plan, your limits or what you receive, and you can use Mockia.io exactly the same without turning it on.",
+            },
+            {
+              ul: [
+                "**What we store if you turn it on:** the prompts as they are sent to the model (which can include fragments of your repository's summary and documentation and what you write), the model's answer, any corrections you make to a result, and the provider and model that answered. If you do not turn it on, we store none of this content.",
+                "**What for:** preparing sets of examples to evaluate the model and, if needed, to fine-tune (train) a Mockia.io model of our own that generates better mock APIs. We do not use it for advertising or profiling you, and we do not sell it.",
+                "**How it is used:** before a set of examples is prepared, keys, tokens, passwords, connection strings and email addresses are removed and duplicates are dropped. The resulting set **contains no email, user identifier or generation identifier**, and only includes examples from users whose consent is still in force at that moment.",
+                "**How long:** 180 days from each generation, or until you withdraw consent or delete your account, whichever comes first.",
+                "**How to withdraw:** at any time, in your profile → \"Your data\". When you withdraw, everything stored (generations and ratings) is deleted immediately. Withdrawing does not affect the lawfulness of earlier processing.",
+                "**A limitation you should know about:** if a model has already been trained with examples from you, withdrawing consent cannot \"untrain\" it. What we guarantee is that your data will not be used in future training runs: every set of examples is prepared again from the data in force at that moment.",
+              ],
+            },
+            {
+              p: "If you turn it on, avoid putting secrets or third parties' personal data in your instructions and repositories: we apply automatic filters, but they are not infallible. You can download what is stored from profile → \"Your data\" → \"Download my data\".",
+            },
+            {
+              p: "Regardless of this consent, the \"useful / not useful\" vote you give a result is kept without any content (only the vote and the random identifier of the generation, linked to your account) to measure whether generations work. It is deleted after 180 days, with your account or when you withdraw consent.",
             },
           ],
         },
@@ -284,6 +322,10 @@ const en: LegalContent = {
                     "As long as you keep the account. If you delete it or ask us to erase it, we delete them, except as stated below.",
                   ],
                   ["Archived projects", "Permanently deleted 30 days after they are archived."],
+                  [
+                    "Generations stored to improve the AI, and ratings (only with your consent)",
+                    "180 days, or until you withdraw consent or delete the account; deleted immediately when you withdraw.",
+                  ],
                   ["Structured summary of a repository", "30 days from creation; then deleted automatically."],
                   [
                     "Sessions (including IP and browser)",
@@ -317,7 +359,7 @@ const en: LegalContent = {
               p: "You can exercise at any time your rights of access, rectification, erasure, restriction of processing, portability and objection, and withdraw your consent where processing is based on it. To exercise them write to [{entity.email}](mailto:{entity.email}) stating the right you want to exercise; we may ask you to prove your identity. We reply within one month (extendable by two more months for complex requests, in which case we will tell you) and it is free of charge, except for manifestly unfounded or excessive requests.",
             },
             {
-              p: "Some of it you can do yourself: change your language, log out or reset your password from the application.",
+              p: "Some of it you can do yourself from the application: change your language, log out, reset your password, download a copy of your data, delete your account and turn on or withdraw consent to improve the AI (profile → \"Your data\").",
             },
             {
               p: "If you believe your data is not being processed properly, you have the right to lodge a complaint with the Spanish Data Protection Agency (AEPD): [www.aepd.es](https://www.aepd.es).",
@@ -457,7 +499,7 @@ const en: LegalContent = {
           heading: "Your content and generated output",
           blocks: [
             {
-              p: "You keep all rights to your content (your instructions and the code and documentation of your repositories, which remain the property of whoever owns them). You grant us a limited, non-exclusive, worldwide licence solely to process it in order to provide the Service to you, which includes sending it to the AI provider as explained in the [Privacy Policy](/privacy).",
+              p: "You keep all rights to your content (your instructions and the code and documentation of your repositories, which remain the property of whoever owns them). You grant us a limited, non-exclusive, worldwide licence solely to process it in order to provide the Service to you, which includes sending it to the AI provider as explained in the [Privacy Policy](/privacy). Only if you expressly turn it on (it is optional), also to improve Mockia.io's AI on the terms of that policy.",
             },
             {
               p: "To the extent the law allows, the output generated for you (endpoints, responses and sample data) is yours and you may use it freely, including commercially. Other users may obtain similar output, and we do not guarantee that output is unique or free of third-party rights.",

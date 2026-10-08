@@ -16,6 +16,8 @@ export type LegalBlock =
   | { table: { head: string[]; rows: string[][] } }
 
 export interface LegalSection {
+  /** Ancla opcional (/privacy#ai-training): la app enlaza a ella desde el perfil. */
+  id?: string
   heading: string
   blocks: LegalBlock[]
 }

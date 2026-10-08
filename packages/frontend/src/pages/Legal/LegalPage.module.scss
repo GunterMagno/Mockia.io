@@ -59,6 +59,8 @@
   
   section {
     margin-bottom: var(--spacing-10, 2.5rem);
+    /* anchors (/privacy#ai-training) must not land under the sticky header */
+    scroll-margin-top: 5rem;
   }
   
   h2 {

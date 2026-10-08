@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import type { LegalEntity } from '@mockia/shared'
 import { htmlLangOf, useI18n, type Locale } from '../../i18n/I18nProvider'
 import { PATHS } from '../../routes/paths'
@@ -129,6 +129,7 @@ function renderBlock(block: LegalBlock, i: number, entity: LegalEntity, content:
 /** Pagina legal: mismo diseno y mismas reglas para los cuatro documentos; solo cambia el contenido (legalContent/<idioma>). */
 const LegalDocument: React.FC<{ doc: LegalDocKey }> = ({ doc }) => {
   const { locale, formatDate } = useI18n()
+  const { hash } = useLocation()
   const [loaded, setLoaded] = useState<{ locale: Locale; content: LegalContent } | null>(() =>
     cache[locale] ? { locale, content: cache[locale]! } : null,
   )
@@ -152,6 +153,12 @@ const LegalDocument: React.FC<{ doc: LegalDocKey }> = ({ doc }) => {
   }, [locale])
 
   const content = loaded?.locale === locale ? loaded.content : null
+
+  // The text loads lazily, so the browser cannot jump to #anchor by itself (e.g. /privacy#ai-training from the profile)
+  useEffect(() => {
+    if (!content || !hash) return
+    document.getElementById(decodeURIComponent(hash.slice(1)))?.scrollIntoView()
+  }, [content, hash])
   if (!content) return <article className={styles.legalPage} lang={htmlLangOf(locale)} data-legal={doc} aria-busy="true" />
 
   const { title, sections } = content.docs[doc]
@@ -175,7 +182,7 @@ const LegalDocument: React.FC<{ doc: LegalDocKey }> = ({ doc }) => {
 
         <div className={styles.content}>
           {sections.map((section, i) => (
-            <section key={i}>
+            <section key={i} id={section.id}>
               <h2>
                 {i + 1}. {section.heading}
               </h2>
