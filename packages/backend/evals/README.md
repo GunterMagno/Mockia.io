@@ -57,6 +57,7 @@ Opciones:
 | `--concurrency=N` | Llamadas simultáneas (1 por defecto: la latencia solo es comparable si el servidor no está compartido). |
 | `--out=<dir>` | Carpeta del resultado (por defecto `evals/results`). |
 | `--compare=<fichero>` | Imprime la diferencia contra un resultado anterior o contra `evals/baseline.json`. |
+| `--cases=<dir>` | Ejecuta los casos de otra carpeta en vez de `evals/cases` (p. ej. los casos reservados de `val.jsonl`, ver abajo). |
 | `--no-fail` | Sale con 0 aunque no se cumplan los criterios. |
 
 Códigos de salida: `0` criterios cumplidos (o `--no-fail`), `1` criterios no cumplidos, `2` error de uso o de configuración (argumento desconocido, proveedor inválido, fichero de `--compare` ilegible, `--provider=local` sin `AI_LOCAL_BASE_URL` o `--provider=openrouter` sin `OPENROUTER_API_KEY`; falla antes de hacer ninguna llamada y dice qué falta).
@@ -136,6 +137,17 @@ Cada caso es un fichero `cases/<id>.json`; el `id` coincide con el nombre del fi
 
 Los tests (`src/tests/evals.*.test.ts`) comprueban que todos los casos cargan, que los `id` son únicos, que `expected` pasa el validador de producción, que cada caso se puntúa 1.0 contra sí mismo, que el prompt se construye sin base de datos y que cada caso adversario tiene su `trap`.
 
+## Casos reservados (`val.jsonl`)
+
+`npm run ai:export-dataset` (ver `docs/ia-entrenamiento.md`) reserva una parte de los ejemplos reales en `val.jsonl`, que **nunca se usa para entrenar**. Para medir un modelo contra ella con este mismo banco:
+
+```bash
+npm run ai:val-to-cases -w @mockia/backend -- ./ai-datasets/val.jsonl ./ai-datasets/val-cases
+npm run eval -w @mockia/backend -- --provider=local --cases=./ai-datasets/val-cases --no-fail
+```
+
+Cada línea se convierte en un caso cuyo prompt son **exactamente** los mensajes guardados (campo opcional `messages` del caso; `input` queda como un resto sin uso) y cuyo esperado son los endpoints de la respuesta final. Los ficheros se escriben con modo 0600 y salen de datos de usuarios (ya redactados y sin identificadores): déjalos en `ai-datasets/`, que está en `.gitignore`.
+
 ## Estructura
 
 | Fichero | Contenido |
@@ -143,6 +155,7 @@ Los tests (`src/tests/evals.*.test.ts`) comprueban que todos los casos cargan, q
 | `scoring.ts` | `scoreOutput` (puro, sin E/S) y la normalización de `MÉTODO ruta`. |
 | `report.ts` | Percentiles, resumen, criterios de aceptación, comparación e impresión. |
 | `cases.ts` | Tipo `EvalCase` y `loadCases`. |
+| `valCases.ts`, `val-to-cases.ts` | Convierten `val.jsonl` en casos reservados (`npm run ai:val-to-cases`). |
 | `fakeProviders.ts` | `fake-perfect` y `fake-noisy`. |
 | `runner.ts` | Núcleo del banco (`runEval`, `parseArgs`); lo usan la CLI y los tests. |
 | `run.ts` | Punto de entrada de `npm run eval`. |

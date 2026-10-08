@@ -127,7 +127,7 @@ interface SamplingParams {
 async function runCase(c: EvalCase, llm: LlmProvider, params: SamplingParams): Promise<CaseRow> {
   const started = performance.now();
   try {
-    const messages = buildPromptFromInput(c.input);
+    const messages = c.messages ?? buildPromptFromInput(c.input);
     const completion = await llm.complete({ messages, jsonSchema: MOCK_SPEC_JSON_SCHEMA, temperature: params.temperature, maxTokens: params.maxTokens });
     const latencyMs = performance.now() - started;
     const row: CaseRow = { id: c.id, ...scoreOutput(c.expected, completion.text), latencyMs };
@@ -248,6 +248,8 @@ export interface CliArgs {
   maxTokens?: number;
   out?: string;
   compare?: string;
+  /** Directory of cases to run instead of evals/cases (e.g. the held-out cases made by ai:val-to-cases). */
+  cases?: string;
   noFail: boolean;
 }
 
@@ -295,6 +297,10 @@ export function parseArgs(argv: string[]): CliArgs {
       case 'compare':
         args.compare = value;
         break;
+      case 'cases':
+        if (value.trim() === '') throw new Error('--cases needs a directory');
+        args.cases = value;
+        break;
       default:
         throw new Error(`Unknown flag --${key}`);
     }
@@ -314,7 +320,7 @@ export async function cli(argv: string[], evalsDir: string, env: NodeJS.ProcessE
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     console.error(
-      'Usage: npm run eval -w @mockia/backend -- --provider=<local|openrouter|fake-perfect|fake-noisy> [--model=] [--limit=] [--concurrency=] [--temperature=] [--max-tokens=] [--out=] [--compare=] [--no-fail]'
+      'Usage: npm run eval -w @mockia/backend -- --provider=<local|openrouter|fake-perfect|fake-noisy> [--model=] [--limit=] [--concurrency=] [--temperature=] [--max-tokens=] [--out=] [--compare=] [--cases=] [--no-fail]'
     );
     return 2;
   }
@@ -326,7 +332,7 @@ export async function cli(argv: string[], evalsDir: string, env: NodeJS.ProcessE
       concurrency: args.concurrency,
       temperature: args.temperature,
       maxTokens: args.maxTokens,
-      casesDir: path.join(evalsDir, CASES_DIR_NAME),
+      casesDir: args.cases ? path.resolve(args.cases) : path.join(evalsDir, CASES_DIR_NAME),
       outDir: path.resolve(args.out ?? path.join(evalsDir, 'results')),
       noFail: args.noFail,
       compare: args.compare ? path.resolve(args.compare) : undefined,

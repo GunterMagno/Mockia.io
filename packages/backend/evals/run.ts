@@ -9,6 +9,7 @@
  *   --max-tokens=N      max output tokens (default: the production value for endpoint generation)
  *   --out=DIR           where to write the result JSON (default evals/results)
  *   --compare=FILE      print a diff against a previous result or evals/baseline.json
+ *   --cases=DIR         run the cases in DIR instead of evals/cases (e.g. held-out cases from ai:val-to-cases)
  *   --no-fail           exit 0 even if the acceptance criteria fail
  *
  * Exit code: 0 when schemaValid >= 95 %, mean F1 >= 0.85 and p95 latency <= 60 s (or --no-fail), 1 otherwise,

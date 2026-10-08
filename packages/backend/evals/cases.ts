@@ -16,6 +16,11 @@ export interface EvalCase {
   description: string;
   /** What the product's prompt is built from (see buildPromptFromInput): no database involved. */
   input: PromptInput;
+  /**
+   * Held-out examples (valCases.ts): the exact messages to send. When present they replace the prompt built from
+   * `input`, which is then only a stub.
+   */
+  messages?: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>;
   /** The endpoints a correct answer contains. At least one: production rejects an empty list. */
   expected: EndpointSpec[];
   /** Free labels (express, nestjs, openapi3, auth, errors, es, adversarial, ...). */

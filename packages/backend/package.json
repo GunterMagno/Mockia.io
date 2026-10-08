@@ -12,6 +12,7 @@
     "backfill:email-verified": "tsx scripts/backfill-email-verified.ts",
     "eval": "tsx evals/run.ts",
     "ai:export-dataset": "tsx scripts/ai/export-dataset.ts",
+    "ai:val-to-cases": "tsx evals/val-to-cases.ts",
     "test": "jest --runInBand --forceExit --detectOpenHandles",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage --forceExit --detectOpenHandles",
