@@ -72,6 +72,17 @@ Desde **Ajustes de la cuenta > Mis datos** (modal de perfil) cada usuario puede 
 
 ---
 
+### IA: modelo propio con reserva automática (OpenRouter)
+
+El backend habla con los modelos a través de una interfaz de proveedor (`modules/ai/providers`). `AI_PROVIDERS` lista los proveedores por orden de preferencia: `openrouter` (por defecto, sin cambios) o `local,openrouter` para probar primero un modelo de código abierto en tu propio servidor (Ollama, vLLM o llama.cpp: cualquier servidor que exponga `POST /v1/chat/completions`) y caer a OpenRouter si el local está parado, tarda o responde algo inservible (timeout, conexión rechazada, 4xx/5xx, sobre JSON inválido, contenido vacío). Un nombre desconocido se ignora con un aviso al arrancar; una lista sin ningún proveedor válido impide arrancar.
+
+- `AI_LOCAL_BASE_URL`: raíz del servidor **sin `/v1`** (p. ej. `http://llm:11434`); obligatoria en producción si `AI_PROVIDERS` incluye `local` y debe ser `http(s)://`. `AI_LOCAL_MODEL` (por defecto `qwen2.5-coder:7b-instruct`), `AI_LOCAL_TIMEOUT_MS` (120000: la primera carga del modelo es lenta) y `AI_LOCAL_API_KEY` (solo si el servidor exige clave).
+- **Cortacircuitos**: tras 3 fallos seguidos el proveedor local se salta durante 60 s (sin esperar el timeout en cada petición) y después se deja pasar una sola petición de prueba. Constantes en `providers/index.ts`.
+- **Límite por usuario**: `AI_RATE_PER_MINUTE` (20 por defecto) llamadas de IA por usuario y minuto, contadas en Mongo (colección `airatewindows`, con índice TTL), válido entre reinicios e instancias; al superarlo, `429` con `Retry-After`.
+- Los registros del servidor indican qué proveedor respondió y el tipo de fallo (código HTTP o clase de error); nunca el prompt, el contenido del repositorio, la respuesta ni las claves.
+
+---
+
 ## 8.4 Configuración del Servidor Web y Proxy Inverso (Nginx)
 
 Se utiliza **Nginx** como único punto de entrada de tráfico web de producción, actuando como servidor estático de la SPA y como proxy inverso inteligente para redirigir las peticiones dinámicas.
