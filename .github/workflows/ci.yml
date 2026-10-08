@@ -111,6 +111,9 @@ jobs:
       - name: Ollama on top of the development compose
         run: docker compose --env-file .env.example -f docker-compose.yml -f docker-compose.ai.yml config -q
 
+      - name: Ollama with the loopback-only evaluation port
+        run: docker compose --env-file .env.example -f docker-compose.prod.yml -f docker-compose.ai.yml -f docker-compose.ai.eval.yml config -q
+
       - name: The model API is never published and the production secrets stay mandatory
         run: |
           for combo in "-f docker-compose.prod.yml -f docker-compose.ai.yml" "-f docker-compose.prod.yml -f docker-compose.ai.vllm.yml"; do

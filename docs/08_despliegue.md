@@ -83,6 +83,7 @@ El backend habla con los modelos a través de una interfaz de proveedor (`module
 - **Banco de evaluación**: antes de poner un modelo local como principal, mídelo con `npm run eval -w @mockia/backend` (casos, métricas y criterio de aceptación en `packages/backend/evals/README.md`).
 - **Límite por usuario**: `AI_RATE_PER_MINUTE` (20 por defecto) llamadas de IA por usuario y minuto, contadas en Mongo (colección `airatewindows`, con índice TTL), válido entre reinicios e instancias; al superarlo, `429` con `Retry-After`.
 - **Permisos**: `generate-mock-api-spec` (solo lectura) exige ser miembro del proyecto (propietario, editor o lector) y `generate-and-save` (guarda endpoints) propietario o editor; sin pertenencia, `403`, y no se construye el prompt ni se llama a ningún modelo.
+- **Servicio LLM en Docker**: los ficheros `docker-compose.ai*.yml`, `scripts/pull-model.sh`, la regla de decisión, la seguridad y el simulacro de caída están en [`docs/ia-local.md`](ia-local.md). Incluirlos no activa el modelo local: eso lo decide `AI_PROVIDERS`.
 - Los registros del servidor indican qué proveedor respondió y el tipo de fallo (código HTTP o clase de error); nunca el prompt, el contenido del repositorio, la respuesta ni las claves.
 
 ---

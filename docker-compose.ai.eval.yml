@@ -1,0 +1,13 @@
+# SOLO PARA MEDIR el modelo con el banco de evaluacion desde el propio servidor (o desde tu maquina de desarrollo).
+# Publica el puerto del modelo UNICAMENTE en el loopback del anfitrion (127.0.0.1): nada fuera de esa maquina lo ve.
+# Quitalo (vuelve a levantar sin este fichero) cuando termines la evaluacion. No lo dejes en produccion.
+#
+#   docker compose -f docker-compose.prod.yml -f docker-compose.ai.yml -f docker-compose.ai.eval.yml up -d llm
+#   AI_LOCAL_BASE_URL=http://127.0.0.1:11434 npm run eval -w @mockia/backend -- --provider=local --no-fail
+#
+# Con vLLM (puerto interno 8000): LLM_INTERNAL_PORT=8000 LLM_EVAL_PORT=8000 y AI_LOCAL_BASE_URL=http://127.0.0.1:8000.
+# Desde otra maquina usa un tunel SSH (ssh -L 11434:127.0.0.1:11434 usuario@servidor) en vez de abrir el puerto.
+services:
+  llm:
+    ports:
+      - '127.0.0.1:${LLM_EVAL_PORT:-11434}:${LLM_INTERNAL_PORT:-11434}'

@@ -160,6 +160,23 @@ describe('docker-compose.ai.vllm.yml', () => {
   });
 });
 
+describe('docker-compose.ai.eval.yml (temporary, for the evaluation bench)', () => {
+  const file = load('docker-compose.ai.eval.yml');
+
+  it('only touches llm and binds exclusively to the host loopback', () => {
+    expect(Object.keys(file.services)).toEqual(['llm']);
+    const ports = file.services.llm.ports as string[];
+    expect(ports).toHaveLength(1);
+    expect(ports[0]).toMatch(/^127\.0\.0\.1:/);
+    expect(ports[0]).not.toMatch(/^0\.0\.0\.0|^\$|^\d+:/);
+  });
+
+  it('is a separate opt-in file: neither AI base file includes it', () => {
+    expect(load('docker-compose.ai.yml').services.llm.ports).toBeUndefined();
+    expect(load('docker-compose.ai.vllm.yml').services.llm.ports).toBeUndefined();
+  });
+});
+
 describe('the model API never leaves the internal network', () => {
   const nginx = read('nginx.conf');
   const withoutComments = nginx
@@ -311,6 +328,31 @@ describe('scripts/pull-model.sh', () => {
   });
 });
 
+describe('docs/ia-local.md', () => {
+  const doc = read('docs/ia-local.md');
+
+  it('leaves the results table empty instead of inventing measurements', () => {
+    const rows = doc.split('\n').filter((l) => /^\| (OpenRouter|Qwen|Otra)/.test(l));
+    expect(rows.length).toBeGreaterThanOrEqual(3);
+    for (const row of rows) {
+      expect(row).toContain('pendiente de medir por el titular');
+      expect(row).not.toMatch(/\d+(\.\d+)? ?(%|s\b)/);
+    }
+  });
+
+  it('states the decision rule of the plan and what to do when it is not met', () => {
+    expect(doc).toMatch(/95 %/);
+    expect(doc).toMatch(/0\.85/);
+    expect(doc).toMatch(/60 s/);
+    expect(doc).toMatch(/Tarea 15/);
+  });
+
+  it('documents how to turn it off and labels hardware figures as estimates', () => {
+    expect(doc).toContain('AI_PROVIDERS=openrouter');
+    expect(doc).toMatch(/ESTIMACI/);
+  });
+});
+
 describe('CI validates every AI compose combination', () => {
   const ci = read('.github/workflows/ci.yml');
 
@@ -324,6 +366,7 @@ describe('CI validates every AI compose combination', () => {
     '-f docker-compose.prod.yml -f docker-compose.ai.yml -f docker-compose.ai.gpu.yml config',
     '-f docker-compose.prod.yml -f docker-compose.ai.vllm.yml config',
     '-f docker-compose.yml -f docker-compose.ai.yml config',
+    '-f docker-compose.prod.yml -f docker-compose.ai.yml -f docker-compose.ai.eval.yml config',
   ])('runs docker compose %s', (combo) => {
     expect(ci).toContain(combo);
   });
