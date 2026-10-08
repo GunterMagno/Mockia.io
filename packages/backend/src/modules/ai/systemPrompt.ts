@@ -79,6 +79,7 @@ Always return a JSON object with this exact structure:
 - Include proper HTTP methods (GET, POST, PUT, DELETE, PATCH)
 - Add meaningful descriptions for each endpoint
 - Ensure all examples match their respective schemas
+- Add a numeric "statusCode" (e.g. 200, 201, 404) to each example next to "request" and "response"; use 4xx/5xx codes for error examples
 - Use consistent naming conventions from the provided context
 - Include proper authentication if mentioned in context
 - Handle error responses appropriately

@@ -7,13 +7,16 @@
  *   - endpoint: path and description (strings), method in GET/POST/PUT/DELETE/PATCH, optional requestSchema/responseSchema
  *     (objects) and examples;
  *   - data model: name (string) and schema (object).
- * The only deliberate difference: the validator heals loose `examples` (flat bodies, missing list) while the schema asks
- * for the canonical `{ request, response }` items, because a constrained model should produce the documented format.
+ * The only deliberate difference: the validator heals loose `examples` (flat bodies, primitive bodies, missing list)
+ * while the schema asks for the canonical `{ request, response }` items (objects or arrays, plus an optional integer
+ * `statusCode` 100-599), because a constrained model should produce the documented format.
  *
  * Plain draft-07 keywords only, so every server's grammar compiler understands it.
  */
 
 const OBJECT = { type: 'object' } as const;
+/** An example body: list endpoints answer (and bulk endpoints receive) an array, the validator accepts both. */
+const BODY = { type: ['object', 'array'] } as const;
 
 export const MOCK_SPEC_JSON_SCHEMA = {
   type: 'object',
@@ -36,7 +39,12 @@ export const MOCK_SPEC_JSON_SCHEMA = {
             type: 'array',
             items: {
               type: 'object',
-              properties: { request: OBJECT, response: OBJECT },
+              properties: {
+                request: BODY,
+                response: BODY,
+                // HTTP status of the example (404, 401...). Optional: 200 when absent.
+                statusCode: { type: 'integer', minimum: 100, maximum: 599 },
+              },
               required: ['request', 'response'],
             },
           },

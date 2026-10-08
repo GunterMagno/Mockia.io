@@ -135,6 +135,17 @@ export function validateGeneratedApi(data: unknown): MockAPIOutput {
   return obj as unknown as MockAPIOutput;
 }
 
+/** A usable HTTP status: an integer between 100 and 599. */
+const isHttpStatus = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isInteger(value) && value >= 100 && value <= 599;
+
+/** `statusCode` of an example, or its `status` alias when `statusCode` is missing or invalid. */
+function exampleStatusCode(item: Record<string, unknown>): number | undefined {
+  if (isHttpStatus(item.statusCode)) return item.statusCode;
+  if (isHttpStatus(item.status)) return item.status;
+  return undefined;
+}
+
 /**
  * Validates a single endpoint object
  * 
@@ -219,10 +230,14 @@ function validateEndpoint(endpoint: unknown, index: number): AppError | null {
       const hasResponse = 'response' in item && item.response && typeof item.response === 'object';
       
       if (hasRequest || hasResponse) {
-        return {
+        const healed: Record<string, unknown> = {
           request: hasRequest ? item.request : {},
           response: hasResponse ? item.response : {}
         };
+        // Keep the example's HTTP status (404, 401...): without it everything would be saved as 200
+        const statusCode = exampleStatusCode(item);
+        if (statusCode !== undefined) healed.statusCode = statusCode;
+        return healed;
       }
       
       // Flat mock response - wrap in response block

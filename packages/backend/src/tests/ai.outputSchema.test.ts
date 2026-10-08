@@ -126,3 +126,42 @@ describe('MOCK_SPEC_JSON_SCHEMA', () => {
     expect(schema.properties.endpoints.minItems).toBe(1);
   });
 });
+
+describe('MOCK_SPEC_JSON_SCHEMA: example bodies and status codes', () => {
+  const withExample = (example: unknown) => api({ endpoints: [endpoint({ examples: [example] })] });
+
+  it.each([
+    ['object request and object response', { request: {}, response: { id: 'm1' } }],
+    ['object request and array response (list endpoint)', { request: {}, response: [{ id: 'm1' }] }],
+    ['array request (bulk create) and array response', { request: [{ name: 'a' }], response: [{ id: 'm1' }] }],
+    ['empty array response', { request: {}, response: [] }],
+  ])('accepts, like the validator: %s', (_name, example) => {
+    expect(validatorAccepts(withExample(example))).toBe(true);
+    expect(schemaAccepts(withExample(example))).toBe(true);
+  });
+
+  it.each([
+    ['string response', { request: {}, response: 'ok' }],
+    ['number response', { request: {}, response: 42 }],
+    ['null response', { request: {}, response: null }],
+    ['string request', { request: 'x', response: {} }],
+  ])('rejects a primitive body, which the validator would only heal: %s', (_name, example) => {
+    expect(validatorAccepts(withExample(example))).toBe(true); // healed into a flat response
+    expect(schemaAccepts(withExample(example))).toBe(false);
+  });
+
+  it('keeps requestSchema and responseSchema as objects (arrays are not JSON Schemas)', () => {
+    expect(schemaAccepts(api({ endpoints: [endpoint({ responseSchema: [] })] }))).toBe(false);
+    expect(schemaAccepts(api({ endpoints: [endpoint({ requestSchema: [] })] }))).toBe(false);
+  });
+
+  it.each([200, 201, 404, 100, 599])('accepts an example with statusCode %i', (statusCode) => {
+    const sample = withExample({ request: {}, response: { error: 'x' }, statusCode });
+    expect(validatorAccepts(sample)).toBe(true);
+    expect(schemaAccepts(sample)).toBe(true);
+  });
+
+  it.each([99, 600, 404.5, '404', null, true])('rejects statusCode %p', (statusCode) => {
+    expect(schemaAccepts(withExample({ request: {}, response: {}, statusCode }))).toBe(false);
+  });
+});
