@@ -31,6 +31,12 @@ services:
       OLLAMA_KEEP_ALIVE: 24h
       # Peticiones simultaneas por modelo. Cada una reserva su propio contexto (mas memoria): subelo solo si sobra.
       OLLAMA_NUM_PARALLEL: ${OLLAMA_NUM_PARALLEL:-1}
+      # Contexto (tokens) con el que se carga el modelo. Una peticion real necesita presupuesto de contexto del repo (6000)
+      # + prompt de sistema + max_tokens de salida (5000): con el num_ctx pequeno por defecto de Ollama el servidor
+      # TRUNCA EN SILENCIO los tokens mas antiguos (el prompt de sistema) y cualquier medicion deja de ser representativa.
+      # Requiere una version de Ollama que lea OLLAMA_CONTEXT_LENGTH (verificalo contra la etiqueta fijada); si no la lee,
+      # fija num_ctx con un Modelfile (ver docs/ia-local.md, apartado 3). Cuesta memoria (cache KV): ver la guia.
+      OLLAMA_CONTEXT_LENGTH: ${OLLAMA_CONTEXT_LENGTH:-16384}
       # Un solo modelo cargado a la vez (evita que dos modelos candidatos agoten la memoria).
       OLLAMA_MAX_LOADED_MODELS: 1
     volumes:

@@ -36,6 +36,9 @@ interface ComposeFile {
   networks?: Record<string, unknown>;
 }
 
+/** contextBudget 6000 + system prompt + max_tokens 5000 does not fit in 8192; 16384 is the floor. */
+const MIN_CONTEXT = 16384;
+
 const load = (rel: string): ComposeFile => yaml.load(read(rel)) as ComposeFile;
 const asText = (v: string[] | string | undefined): string => (Array.isArray(v) ? v.join(' ') : (v ?? ''));
 const networkNames = (s: ComposeService): string[] =>
@@ -73,6 +76,13 @@ describe('docker-compose.ai.yml (Ollama)', () => {
     expect(llm.environment?.OLLAMA_KEEP_ALIVE).toBe('24h');
     expect(llm.environment?.OLLAMA_NUM_PARALLEL).toBe('${OLLAMA_NUM_PARALLEL:-1}');
     expect(llm.mem_limit).toMatch(/^\$\{LLM_MEM_LIMIT:-\d+[gGmM]\}$/);
+  });
+
+  it('gives the model a context big enough for the real requests (repo budget + system prompt + max_tokens)', () => {
+    // A small default num_ctx silently truncates the OLDEST tokens (the system prompt), which makes any evaluation unrepresentative.
+    const m = /^\$\{OLLAMA_CONTEXT_LENGTH:-(\d+)\}$/.exec(llm.environment?.OLLAMA_CONTEXT_LENGTH ?? '');
+    expect(m).not.toBeNull();
+    expect(Number(m?.[1])).toBeGreaterThanOrEqual(MIN_CONTEXT);
   });
 
   it('shares a dedicated network with the backend, valid in dev and prod', () => {
@@ -131,6 +141,13 @@ describe('docker-compose.ai.vllm.yml', () => {
     expect(command).toContain('--model ${VLLM_MODEL:-');
     expect(command).toContain('--max-model-len ${VLLM_MAX_MODEL_LEN:-');
     expect(command).toContain('--port 8000');
+  });
+
+  it('serves a context of at least 16384 tokens by default, so real prompts are not rejected with a 400', () => {
+    const command = asText(llm.command);
+    const m = /--max-model-len \$\{VLLM_MAX_MODEL_LEN:-(\d+)\}/.exec(command);
+    expect(m).not.toBeNull();
+    expect(Number(m?.[1])).toBeGreaterThanOrEqual(MIN_CONTEXT);
   });
 
   it('requires an NVIDIA GPU by itself', () => {
@@ -345,6 +362,21 @@ describe('docs/ia-local.md', () => {
     expect(doc).toMatch(/0\.85/);
     expect(doc).toMatch(/60 s/);
     expect(doc).toMatch(/Tarea 15/);
+  });
+
+  it('explains how to size the context and makes it a prerequisite of a fair evaluation', () => {
+    expect(doc).toMatch(/OLLAMA_CONTEXT_LENGTH/);
+    expect(doc).toMatch(/num_ctx 16384/);
+    expect(doc).toMatch(/KV/);
+    expect(doc).toMatch(/16384/);
+  });
+
+  it('drill expects dns_error for a stopped container and timeout for a paused one', () => {
+    const drill = doc.slice(doc.indexOf('## 10.'), doc.indexOf('## 11.'));
+    expect(drill).toMatch(/dns_error/);
+    expect(drill).toMatch(/docker compose <ficheros> pause llm/);
+    expect(drill).toMatch(/timeout/);
+    expect(drill).not.toMatch(/stop llm[\s\S]*Provider "local" failed \(connection_refused\)/);
   });
 
   it('documents how to turn it off and labels hardware figures as estimates', () => {

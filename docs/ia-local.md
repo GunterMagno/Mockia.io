@@ -53,6 +53,18 @@ Las cifras de abajo son órdenes de magnitud de la práctica habitual con modelo
 - El disco guarda los modelos en el volumen `ollama_models` (varios GB por modelo; ver apartado 8).
 - `LLM_MEM_LIMIT` (por defecto `8g` en Ollama y `16g` en vLLM) limita la RAM del contenedor; súbelo si el modelo elegido no cabe.
 
+### Tamaño del contexto (prerrequisito de cualquier medición)
+
+Una petición real de generación de endpoints necesita, en tokens, aproximadamente: **presupuesto de contexto del repositorio (6000, `contextBudget` en `prompt.service.ts`) + prompt de sistema + `max_tokens` de salida (5000)**. Eso supera los 8192 tokens, así que el servidor debe arrancar con **al menos 16384** de contexto. Los ficheros de compose ya lo hacen por defecto; no lo bajes.
+
+- **Ollama**: `OLLAMA_CONTEXT_LENGTH` (16384 por defecto en `docker-compose.ai.yml`). Si el contexto es pequeño, Ollama **trunca en silencio los tokens más antiguos, es decir, el prompt de sistema**, y el modelo responde a otra cosa sin ningún error: las métricas del banco quedarían falsamente bajas. Esa variable exige una versión de Ollama que la lea: **verifícalo contra la etiqueta fijada** (`OLLAMA_IMAGE`; ver las notas de versión de Ollama). Si tu versión no la lee, fija el contexto en el modelo con un Modelfile y usa ese nombre como `AI_LOCAL_MODEL`:
+  ```bash
+  docker compose <ficheros> exec -T llm sh -c 'printf "%s\n" "FROM qwen2.5-coder:7b-instruct" "PARAMETER num_ctx 16384" > /tmp/Modelfile && ollama create qwen2.5-coder-16k -f /tmp/Modelfile'
+  # y en el .env: AI_LOCAL_MODEL=qwen2.5-coder-16k
+  ```
+- **vLLM**: `VLLM_MAX_MODEL_LEN` (16384 por defecto). Con menos, vLLM rechaza con **400** toda petición cuyo prompt + `max_tokens` no quepa, y el backend cae a OpenRouter cada vez (parecería "el local falla" cuando es un ajuste).
+- **Coste en memoria**: el contexto se paga en **caché KV**, que crece con los tokens de contexto y con cada petición simultánea (`OLLAMA_NUM_PARALLEL`). Para un 7B suele ser del orden de 1 GB a 16384 tokens (**ESTIMACIÓN**, medir); duplicar el contexto o la concurrencia lo multiplica. Si no cabe, sube `LLM_MEM_LIMIT`/VRAM o elige un modelo menor; no reduzcas el contexto por debajo de 16384.
+
 ### Opciones de coste (sin precios: consulta los vigentes)
 
 1. **Tu propia máquina o servidor**: coste de adquisición y electricidad; ideal para evaluar sin compromiso.
@@ -103,7 +115,7 @@ Prerrequisitos: Docker con Compose v2, el `.env` de producción rellenado (ver `
 | `AI_LOCAL_BASE_URL` | backend | Raíz del servidor **sin `/v1`**. Con compose, vacía = `http://llm:11434` (Ollama). En el override de vLLM está fija en `http://llm:8000`. |
 | `AI_LOCAL_MODEL` | backend | Nombre del modelo (Ollama: `qwen2.5-coder:7b-instruct`). Con vLLM se toma de `VLLM_MODEL`. |
 | `AI_LOCAL_TIMEOUT_MS`, `AI_TOTAL_TIMEOUT_MS`, `AI_LOCAL_API_KEY` | backend | Plazos y clave opcional (ver `docs/08_despliegue.md`). |
-| `OLLAMA_IMAGE`, `OLLAMA_NUM_PARALLEL`, `LLM_MEM_LIMIT` | compose | Imagen fijada, concurrencia y tope de RAM. |
+| `OLLAMA_IMAGE`, `OLLAMA_NUM_PARALLEL`, `OLLAMA_CONTEXT_LENGTH`, `LLM_MEM_LIMIT` | compose | Imagen fijada, concurrencia, contexto (16384 por defecto, ver apartado 3) y tope de RAM. |
 | `VLLM_IMAGE`, `VLLM_MODEL`, `VLLM_MAX_MODEL_LEN`, `VLLM_GPU_MEMORY_UTILIZATION`, `VLLM_SHM_SIZE`, `HF_TOKEN` | compose | Parámetros de vLLM. |
 | `COMPOSE_FILES`, `COMPOSE_ENV_FILE`, `SKIP_WARMUP` | `scripts/pull-model.sh` | Qué ficheros usa el script, `.env` alternativo y omitir el calentamiento. |
 
@@ -128,6 +140,8 @@ El banco (`packages/backend/evals/`, ver su `README.md`) ejecuta 36 casos con el
    ```
    Lanza una petición de calentamiento antes o descarta la primera fila: la primera llamada incluye la carga del modelo. Mide con `--concurrency=1` si quieres latencias comparables.
 4. **Quita `docker-compose.ai.eval.yml`** (vuelve a levantar sin él) al terminar.
+
+> **Prerrequisito para una medición justa:** el servidor debe tener un contexto de **al menos 16384 tokens** (apartado 3, "Tamaño del contexto"). Con un contexto menor Ollama trunca el prompt de sistema o vLLM rechaza las peticiones con 400, y el resultado no representa al modelo. Comprueba `OLLAMA_CONTEXT_LENGTH` / `VLLM_MAX_MODEL_LEN` antes de ejecutar el banco, y que la fila de resultados no esté dominada por errores `http_400`.
 
 ### Regla de decisión (del plan)
 
@@ -173,15 +187,25 @@ Sin tocar código: pon `AI_PROVIDERS=openrouter` en el `.env` y recrea el backen
 
 ## 10. Simulacro de caída (checklist manual, pendiente de ejecutar)
 
-Comprueba una vez, con el modelo activado, que la caída del modelo no se nota para el usuario:
+Comprueba una vez, con el modelo activado, que la caída del modelo no se nota para el usuario. Hay dos fallos distintos y dan clases distintas en el log (`classifyFailure`):
+
+**A. Contenedor parado (fallo rápido).** Al parar el contenedor su nombre `llm` deja de resolverse en la red de compose, así que la clase esperada es `dns_error`. `connection_refused` solo aparece si el contenedor sigue en marcha pero el servidor no escucha (p. ej. proceso del modelo caído o aún arrancando).
 
 - [ ] `AI_PROVIDERS=local,openrouter` y `OPENROUTER_API_KEY` válida; el backend arrancó y `logs backend` muestra la cadena configurada.
 - [ ] Lanza una generación desde la aplicación: funciona y el log indica `provider=local`.
 - [ ] Para el modelo: `docker compose <ficheros> stop llm`.
 - [ ] Lanza otra generación: **el usuario recibe la respuesta sin error**.
-- [ ] `docker compose <ficheros> logs backend | grep "\[AI\]"` muestra `Provider "local" failed (connection_refused); falling back to "openrouter"` y la generación con `provider=openrouter`.
+- [ ] `docker compose <ficheros> logs backend | grep "\[AI\]"` muestra `Provider "local" failed (dns_error); falling back to "openrouter"` (o `connection_refused` si el contenedor seguía en marcha) y la generación con `provider=openrouter`.
 - [ ] Repite 3 veces: a partir de la tercera caída seguida el log deja de intentar el local durante ~60 s (cortacircuitos abierto).
 - [ ] Arranca de nuevo (`start llm`), espera más de 60 s, genera otra vez: vuelve a `provider=local`.
+
+**B. Modelo colgado o lento (fallo caro).** `docker compose <ficheros> pause llm` congela el contenedor: sigue resolviéndose y acepta conexiones, pero no responde. La clase esperada es `timeout`.
+
+- [ ] `docker compose <ficheros> pause llm` y lanza una generación.
+- [ ] La petición **tarda hasta `AI_LOCAL_TIMEOUT_MS`** (120 s por defecto) antes de caer a OpenRouter, y como máximo hasta el plazo total `AI_TOTAL_TIMEOUT_MS` (240 s); el usuario recibe la respuesta de OpenRouter si queda presupuesto, o un 504 si se agotó. No es un fallo del simulacro: es el coste de un modelo colgado.
+- [ ] El log muestra `Provider "local" failed (timeout); falling back to "openrouter"`.
+- [ ] Repite hasta 3 fallos seguidos: este es el caso en que el **cortacircuitos** importa, porque a partir de ahí las peticiones dejan de esperar el timeout y van directas a OpenRouter durante ~60 s.
+- [ ] `docker compose <ficheros> unpause llm`; pasado el minuto vuelve a `provider=local`.
 - [ ] Anota fecha y resultado aquí o en el registro de operaciones.
 
 ## 11. Límites conocidos
