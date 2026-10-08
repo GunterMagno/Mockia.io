@@ -7,7 +7,7 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/authenticateToken.js';
 import { asyncHandler } from '../middlewares/errorHandler.js';
 import { consumeAiQuota } from '../modules/ai/aiRateLimit.js';
-import { parseAiProviders } from '../config/ai.js';
+import { parseAiProviders, SPEC_GENERATION_DEFAULTS } from '../config/ai.js';
 import { describeError } from '../utils/safeErrorLog.js';
 import { getLlm, type LlmCompletion, type LlmRequest } from '../modules/ai/providers/index.js';
 import { AppError } from '../middlewares/errorHandler.js';
@@ -229,8 +229,8 @@ export const generateMockAPISpecHandler = asyncHandler(
     // Call the LLM provider chain with structured messages
     const completion = await complete('generate-mock-api-spec', {
       messages,
-      temperature: req.body.temperature ?? 0.85,
-      maxTokens: req.body.maxTokens ?? 5000,
+      temperature: req.body.temperature ?? SPEC_GENERATION_DEFAULTS.temperature,
+      maxTokens: req.body.maxTokens ?? SPEC_GENERATION_DEFAULTS.maxTokens,
       jsonSchema: MOCK_SPEC_JSON_SCHEMA,
     });
     const responseContent = completion.text;
@@ -307,8 +307,8 @@ export const generateAndSaveHandler = asyncHandler(
       // 2. Call the LLM provider chain
       const completion = await complete('generate-and-save', {
         messages,
-        temperature: req.body.temperature ?? 0.85,
-        maxTokens: req.body.maxTokens ?? 5000,
+        temperature: req.body.temperature ?? SPEC_GENERATION_DEFAULTS.temperature,
+        maxTokens: req.body.maxTokens ?? SPEC_GENERATION_DEFAULTS.maxTokens,
         jsonSchema: MOCK_SPEC_JSON_SCHEMA,
       });
 

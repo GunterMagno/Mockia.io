@@ -1,5 +1,7 @@
 import fs from 'fs';
 import path from 'path';
+import { Ajv } from 'ajv';
+import { MOCK_SPEC_JSON_SCHEMA } from '../modules/ai/outputSchema.js';
 import { loadCases, CASES_DIR_NAME, type EvalCase } from '../../evals/cases.js';
 import { scoreOutput } from '../../evals/scoring.js';
 import { validateGeneratedApi } from '../modules/ai/llmOutputValidator.js';
@@ -115,5 +117,17 @@ describe('evaluation cases', () => {
       expect(score.methodPathF1).toBeLessThan(1);
       expect(score.methodPathF1).toBeGreaterThan(0.5);
     });
+  });
+});
+
+describe('evaluation cases against the shipped JSON schema', () => {
+  const validate = new Ajv({ allErrors: true }).compile(MOCK_SPEC_JSON_SCHEMA);
+
+  it.each(loadCases(CASES_DIR).map((c) => [c.id, c] as const))('%s: expected is accepted by MOCK_SPEC_JSON_SCHEMA and by the production validator', (_id, c) => {
+    const answer = wrap(JSON.parse(JSON.stringify(c.expected)));
+    const ok = validate(answer);
+    expect(validate.errors ?? []).toEqual([]);
+    expect(ok).toBe(true);
+    expect(() => validateGeneratedApi(JSON.parse(JSON.stringify(answer)))).not.toThrow();
   });
 });

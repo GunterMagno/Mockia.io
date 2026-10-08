@@ -13,6 +13,12 @@ export const openRouterConfig = {
 };
 
 /**
+ * Sampling of the endpoint-generation calls (generate-mock-api-spec, generate-and-save). One definition for the
+ * controller and for the evaluation bench, so the benchmark samples exactly like production.
+ */
+export const SPEC_GENERATION_DEFAULTS = { temperature: 0.85, maxTokens: 5000 } as const;
+
+/**
  * Retry configuration for API calls
  */
 export const retryConfig = {

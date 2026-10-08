@@ -2,20 +2,22 @@
  * Core of the evaluation bench (the CLI in run.ts is a thin wrapper), so tests can run it in process.
  *
  * Every case goes through the product's own path: the prompt is built by buildPromptFromInput (the pure half of
- * buildPrompt), the call goes through getLlm() configured with that single provider (AI_PROVIDERS=<provider>, so no
- * silent fall back to another one) and carries the same JSON schema the controller sends; the answer is scored by
- * scoreOutput, which uses the production parser and validator.
+ * buildPrompt), the call goes to that ONE provider (the same client getLlm() would build, but without the fallback chain
+ * and without the circuit breaker: a benchmark measures the model, and the raw error class must reach the result rows)
+ * with the same JSON schema, temperature and max tokens the controller sends; the answer is scored by scoreOutput,
+ * which uses the production parser and validator.
  */
 
 import fs from 'fs';
 import path from 'path';
 import { performance } from 'perf_hooks';
-import { AI_PROVIDER_NAMES, getLocalAiConfig, openRouterConfig } from '../src/config/ai.js';
+import { AI_PROVIDER_NAMES, SPEC_GENERATION_DEFAULTS, getAiTotalTimeoutMs, getLocalAiConfig, openRouterConfig } from '../src/config/ai.js';
 import { buildPromptFromInput } from '../src/modules/ai/prompt.service.js';
 import { MOCK_SPEC_JSON_SCHEMA } from '../src/modules/ai/outputSchema.js';
-import { classifyFailure, getLlm, resetLlm } from '../src/modules/ai/providers/index.js';
+import { classifyFailure } from '../src/modules/ai/providers/index.js';
+import { createOpenAiCompatibleProvider, createOpenRouterProvider } from '../src/modules/ai/providers/openaiCompatible.js';
 import type { LlmProvider } from '../src/modules/ai/providers/types.js';
-import { loadCases, type EvalCase } from './cases.js';
+import { CASES_DIR_NAME, loadCases, type EvalCase } from './cases.js';
 import { createFakeProvider, isFakeProvider, FAKE_PROVIDERS } from './fakeProviders.js';
 import {
   compareResults,
@@ -37,6 +39,10 @@ export interface RunOptions {
   limit?: number;
   /** Calls in flight at once (default 1: latency is only meaningful when the server is not shared). */
   concurrency?: number;
+  /** Sampling temperature (default: the production value, SPEC_GENERATION_DEFAULTS). */
+  temperature?: number;
+  /** Max output tokens (default: the production value, SPEC_GENERATION_DEFAULTS). */
+  maxTokens?: number;
   casesDir: string;
   /** Directory where the result JSON is written. Nothing is written when absent. */
   outDir?: string;
@@ -81,11 +87,48 @@ function failedRow(id: string, latencyMs: number, error: unknown): CaseRow {
   return { id, validJson: false, schemaValid: false, methodPathF1: 0, fieldCoverage: 0, latencyMs, error: classifyFailure(error) };
 }
 
-async function runCase(c: EvalCase, llm: LlmProvider): Promise<CaseRow> {
+/**
+ * The configured provider on its own: no fallback to another one and no circuit breaker (after 3 failures the
+ * production chain skips a provider, which would hide the real error of every later case and deflate latencies).
+ * The overall request deadline (AI_TOTAL_TIMEOUT_MS) still applies.
+ */
+function createBenchLlm(provider: 'local' | 'openrouter', env: NodeJS.ProcessEnv): LlmProvider {
+  const inner = provider === 'local' ? createOpenAiCompatibleProvider({ name: 'local', ...getLocalAiConfig(env) }) : createOpenRouterProvider();
+  const totalTimeoutMs = getAiTotalTimeoutMs(env);
+  return {
+    name: inner.name,
+    async complete(req) {
+      const deadline = AbortSignal.timeout(totalTimeoutMs);
+      try {
+        return await inner.complete({ ...req, signal: deadline });
+      } catch (error) {
+        if (deadline.aborted) throw Object.assign(new Error('deadline'), { code: 'ETIMEDOUT' });
+        throw error;
+      }
+    },
+  };
+}
+
+/** Fails before any call when the chosen real provider cannot work, naming what is missing. */
+function assertProviderConfigured(provider: string, env: NodeJS.ProcessEnv): void {
+  if (provider === 'local' && getLocalAiConfig(env).baseUrl === '') {
+    throw new Error('--provider=local needs AI_LOCAL_BASE_URL: the server root without /v1, e.g. http://localhost:11434');
+  }
+  if (provider === 'openrouter' && !openRouterConfig.apiKey) {
+    throw new Error('--provider=openrouter needs OPENROUTER_API_KEY');
+  }
+}
+
+interface SamplingParams {
+  temperature: number;
+  maxTokens: number;
+}
+
+async function runCase(c: EvalCase, llm: LlmProvider, params: SamplingParams): Promise<CaseRow> {
   const started = performance.now();
   try {
     const messages = buildPromptFromInput(c.input);
-    const completion = await llm.complete({ messages, jsonSchema: MOCK_SPEC_JSON_SCHEMA });
+    const completion = await llm.complete({ messages, jsonSchema: MOCK_SPEC_JSON_SCHEMA, temperature: params.temperature, maxTokens: params.maxTokens });
     const latencyMs = performance.now() - started;
     const row: CaseRow = { id: c.id, ...scoreOutput(c.expected, completion.text), latencyMs };
     if (completion.usage) {
@@ -119,12 +162,17 @@ export async function runEval(options: RunOptions): Promise<RunOutcome> {
     throw new Error(`Unknown provider "${options.provider}" (valid: ${VALID_PROVIDERS.join(', ')})`);
   }
   const previous = options.compare ? loadPrevious(options.compare) : undefined;
+  const fake = isFakeProvider(options.provider);
+  const env: NodeJS.ProcessEnv = { ...(options.env ?? process.env), AI_PROVIDERS: options.provider };
+  if (!fake && !options.providerFactory) assertProviderConfigured(options.provider, env);
+  const params: SamplingParams = {
+    temperature: options.temperature ?? SPEC_GENERATION_DEFAULTS.temperature,
+    maxTokens: options.maxTokens ?? SPEC_GENERATION_DEFAULTS.maxTokens,
+  };
 
   let cases = loadCases(options.casesDir);
   if (options.limit !== undefined) cases = cases.slice(0, options.limit);
 
-  const fake = isFakeProvider(options.provider);
-  const env: NodeJS.ProcessEnv = { ...(options.env ?? process.env), AI_PROVIDERS: options.provider };
   if (!fake && options.provider === 'local' && options.model) env.AI_LOCAL_MODEL = options.model;
   const savedOpenRouterModel = openRouterConfig.model;
   if (!fake && options.provider === 'openrouter' && options.model) openRouterConfig.model = options.model;
@@ -138,15 +186,14 @@ export async function runEval(options: RunOptions): Promise<RunOutcome> {
   const startedAt = new Date();
   let rows: CaseRow[];
   try {
-    resetLlm();
-    const realLlm = fake || options.providerFactory ? undefined : getLlm(env);
+    const realLlm = fake || options.providerFactory ? undefined : createBenchLlm(options.provider as 'local' | 'openrouter', env);
     let done = 0;
     rows = await pool(
       cases.map((c, index) => async () => {
         const llm =
           options.providerFactory?.(c, index) ??
           (fake ? createFakeProvider(options.provider as (typeof FAKE_PROVIDERS)[number], c, index) : realLlm!);
-        const row = await runCase(c, llm);
+        const row = await runCase(c, llm, params);
         done += 1;
         log(`[${done}/${cases.length}] ${c.id}  F1=${row.methodPathF1.toFixed(2)}  ${Math.round(row.latencyMs)} ms${row.error ? `  ${row.error}` : ''}`);
         return row;
@@ -155,7 +202,6 @@ export async function runEval(options: RunOptions): Promise<RunOutcome> {
     );
   } finally {
     openRouterConfig.model = savedOpenRouterModel;
-    resetLlm();
   }
 
   const summary = summarize(rows);
@@ -163,6 +209,7 @@ export async function runEval(options: RunOptions): Promise<RunOutcome> {
     provider: options.provider,
     model: options.model && fake ? options.model : model,
     startedAt: startedAt.toISOString(),
+    params,
     summary,
     criteria: evaluateCriteria(summary),
     rows,
@@ -197,6 +244,8 @@ export interface CliArgs {
   model?: string;
   limit?: number;
   concurrency: number;
+  temperature?: number;
+  maxTokens?: number;
   out?: string;
   compare?: string;
   noFail: boolean;
@@ -231,6 +280,15 @@ export function parseArgs(argv: string[]): CliArgs {
       case 'concurrency':
         args.concurrency = positiveInt('--concurrency', value);
         break;
+      case 'temperature': {
+        const n = Number(value);
+        if (value.trim() === '' || !Number.isFinite(n) || n < 0 || n > 2) throw new Error(`--temperature must be a number between 0 and 2, got "${value}"`);
+        args.temperature = n;
+        break;
+      }
+      case 'max-tokens':
+        args.maxTokens = positiveInt('--max-tokens', value);
+        break;
       case 'out':
         args.out = value;
         break;
@@ -243,4 +301,40 @@ export function parseArgs(argv: string[]): CliArgs {
   }
   if (!args.provider) throw new Error(`--provider is required (one of: ${VALID_PROVIDERS.join(', ')})`);
   return args;
+}
+
+/**
+ * The whole command line: parses, runs, and turns every outcome into an exit code (0 criteria met or --no-fail,
+ * 1 criteria not met, 2 usage or configuration error, with the reason on stderr).
+ */
+export async function cli(argv: string[], evalsDir: string, env: NodeJS.ProcessEnv = process.env): Promise<number> {
+  let args: CliArgs;
+  try {
+    args = parseArgs(argv);
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    console.error(
+      'Usage: npm run eval -w @mockia/backend -- --provider=<local|openrouter|fake-perfect|fake-noisy> [--model=] [--limit=] [--concurrency=] [--temperature=] [--max-tokens=] [--out=] [--compare=] [--no-fail]'
+    );
+    return 2;
+  }
+  try {
+    const { exitCode } = await runEval({
+      provider: args.provider,
+      model: args.model,
+      limit: args.limit,
+      concurrency: args.concurrency,
+      temperature: args.temperature,
+      maxTokens: args.maxTokens,
+      casesDir: path.join(evalsDir, CASES_DIR_NAME),
+      outDir: path.resolve(args.out ?? path.join(evalsDir, 'results')),
+      noFail: args.noFail,
+      compare: args.compare ? path.resolve(args.compare) : undefined,
+      env,
+    });
+    return exitCode;
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    return 2;
+  }
 }

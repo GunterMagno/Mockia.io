@@ -5,7 +5,7 @@ Mide, con los datos propios de Mockia y no con opiniones de blogs, si un modelo 
 La tarea es la misma que hace el producto: dado el contexto de un repositorio (README, tipos TypeScript, rutas, OpenAPI/Swagger) y una instrucción del usuario, el modelo devuelve un JSON con la lista de endpoints. El banco:
 
 1. construye el prompt con `buildPromptFromInput` (la parte pura de `buildPrompt`, sin base de datos): el modelo recibe exactamente el prompt real;
-2. llama al modelo con `getLlm()` configurado con **un solo proveedor** (no hay reserva silenciosa a otro) y con el mismo esquema JSON (`MOCK_SPEC_JSON_SCHEMA`) que envía el controlador;
+2. llama al modelo con **un solo proveedor** (el mismo cliente que construye `getLlm()`, pero sin reserva a otro proveedor y **sin cortacircuitos**: se mide el modelo, no las redes de seguridad de producción) y con el mismo esquema JSON (`MOCK_SPEC_JSON_SCHEMA`), temperatura y máximo de tokens que envía el controlador para generar endpoints;
 3. puntúa la respuesta con el **mismo** parser tolerante y el **mismo** validador que usa el pipeline de producción (`llmOutputParser`, `llmOutputValidator`).
 
 ## Regla de decisión
@@ -52,18 +52,21 @@ Opciones:
 | `--provider=<local\|openrouter\|fake-perfect\|fake-noisy>` | Obligatoria. |
 | `--model=<nombre>` | Sustituye `AI_LOCAL_MODEL` (local) o `OPENROUTER_MODEL` (openrouter) solo en esta ejecución. |
 | `--limit=N` | Solo los N primeros casos (ordenados por `id`). |
+| `--temperature=<n>` | Temperatura de muestreo (0 a 2). Por defecto la de producción para generar endpoints (`SPEC_GENERATION_DEFAULTS.temperature`, 0.85). |
+| `--max-tokens=<n>` | Máximo de tokens de salida. Por defecto el de producción (`SPEC_GENERATION_DEFAULTS.maxTokens`, 5000). |
 | `--concurrency=N` | Llamadas simultáneas (1 por defecto: la latencia solo es comparable si el servidor no está compartido). |
 | `--out=<dir>` | Carpeta del resultado (por defecto `evals/results`). |
 | `--compare=<fichero>` | Imprime la diferencia contra un resultado anterior o contra `evals/baseline.json`. |
 | `--no-fail` | Sale con 0 aunque no se cumplan los criterios. |
 
-Códigos de salida: `0` criterios cumplidos (o `--no-fail`), `1` criterios no cumplidos, `2` error de uso (argumento desconocido, proveedor inválido, fichero de `--compare` ilegible).
+Códigos de salida: `0` criterios cumplidos (o `--no-fail`), `1` criterios no cumplidos, `2` error de uso o de configuración (argumento desconocido, proveedor inválido, fichero de `--compare` ilegible, `--provider=local` sin `AI_LOCAL_BASE_URL` o `--provider=openrouter` sin `OPENROUTER_API_KEY`; falla antes de hacer ninguna llamada y dice qué falta).
 
-El resultado completo (resumen, veredicto y una fila por caso) se guarda en `evals/results/<proveedor>-<modelo>-<fecha>.json`. Esa carpeta está en `.gitignore`.
+La temperatura y el máximo de tokens usados se imprimen en el resumen y se guardan en el campo `params` del resultado, para poder comparar ejecuciones. El resultado completo (resumen, veredicto, parámetros y una fila por caso) se guarda en `evals/results/<proveedor>-<modelo>-<fecha>.json`. Esa carpeta está en `.gitignore`.
 
 ### Notas sobre ejecuciones reales
 
-- El proveedor `local` va detrás del cortacircuitos de producción: tras 3 fallos seguidos se salta durante 60 s y los casos siguientes fallan al instante con `http_503`. Si ves una racha de `http_503`, mira los avisos `[AI] Provider "local" failed (...)` que se imprimen por consola: indican la causa real (`timeout`, `connection_refused`, `http_400`...).
+- No hay cortacircuitos ni reserva: cada caso recibe su llamada aunque los anteriores hayan fallado, y la columna `error` guarda la clase real del fallo (`timeout`, `connection_refused`, `http_500`, `invalid_envelope`, `empty_content`...). Se mantiene el plazo total de una petición (`AI_TOTAL_TIMEOUT_MS`).
+- Las latencias de OpenRouter **incluyen sus reintentos y esperas internas** (hasta 3 intentos con retroceso exponencial ante 429/5xx), así que un p95 alto puede deberse a la red o al límite de la cuenta y no al modelo.
 - La primera llamada a un modelo local incluye la carga del modelo en memoria: lanza antes una petición de calentamiento o descarta esa fila al comparar latencias.
 - A OpenRouter se le degrada el esquema a `json_object` (no todos sus modelos admiten `json_schema` estricto), igual que en producción; con `OPENROUTER_JSON_SCHEMA=1` se envía el esquema estricto. Los modelos locales sí reciben `json_schema` estricto.
 - La columna `error` de cada fila guarda solo la **clase** del fallo, nunca mensajes (podrían citar el prompt).

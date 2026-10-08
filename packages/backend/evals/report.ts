@@ -48,6 +48,8 @@ export interface EvalResult {
   provider: string;
   model: string;
   startedAt: string;
+  /** Sampling used for every call (absent in results saved before it was recorded). */
+  params?: { temperature: number; maxTokens: number };
   summary: Summary;
   criteria: Criteria;
   rows: CaseRow[];
@@ -131,10 +133,11 @@ export function formatRows(rows: CaseRow[]): string {
   return [header, ...lines].join('\n');
 }
 
-export function formatSummary(result: Pick<EvalResult, 'provider' | 'model' | 'summary' | 'criteria'>): string {
+export function formatSummary(result: Pick<EvalResult, 'provider' | 'model' | 'summary' | 'criteria' | 'params'>): string {
   const { summary: s, criteria } = result;
   const lines = [
     `Provider: ${result.provider}   Model: ${result.model}   Cases: ${s.cases}   Call errors: ${s.errors}`,
+    ...(result.params ? [`temperature     : ${result.params.temperature}`, `max tokens      : ${result.params.maxTokens}`] : []),
     `validJson%      : ${round(s.validJsonPct, 1)}`,
     `schemaValid%    : ${round(s.schemaValidPct, 1)}`,
     `methodPathF1    : ${s.meanMethodPathF1.toFixed(3)}  (mean)`,

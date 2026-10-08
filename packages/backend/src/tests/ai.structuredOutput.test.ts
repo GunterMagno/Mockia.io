@@ -8,7 +8,7 @@ import { UserModel } from '../models/User.js';
 import { ProjectModel } from '../models/Project.js';
 import { MockAPIModel, EndpointModel } from '../models/MockAPI.js';
 import { AiRateWindowModel } from '../models/AiRateWindow.js';
-import { openRouterConfig } from '../config/ai.js';
+import { openRouterConfig, SPEC_GENERATION_DEFAULTS } from '../config/ai.js';
 import * as providers from '../modules/ai/providers/index.js';
 import { createOpenRouterProvider } from '../modules/ai/providers/openaiCompatible.js';
 import { MOCK_SPEC_JSON_SCHEMA } from '../modules/ai/outputSchema.js';
@@ -74,6 +74,8 @@ describe('AI generation passes the output schema', () => {
     const req = complete.mock.calls[0][0];
     expect(req.jsonSchema).toBe(MOCK_SPEC_JSON_SCHEMA);
     expect(req.json).toBeUndefined();
+    expect(req.temperature).toBe(SPEC_GENERATION_DEFAULTS.temperature);
+    expect(req.maxTokens).toBe(SPEC_GENERATION_DEFAULTS.maxTokens);
     expect(req.messages.map((m: { role: string }) => m.role)).toEqual(['system', 'user', 'user']);
   });
 
