@@ -390,6 +390,8 @@ const zh: Messages = {
     invalidJson: 'JSON 无效。请先修正错误再保存。',
     saveFailed: '保存接口失败。请检查与后端的连接。',
     aiFailed: 'AI 生成失败：{message}',
+    aiDoneTitle: '端点已生成',
+    aiDoneText: '新的端点已经出现在你的列表中。',
     aiModalTitle: '用 AI 生成接口',
     aiModalText: '告诉 Mockia AI 你想创建哪些接口。你可以描述业务逻辑、数据模型或需要的具体路由。',
     aiModalPlaceholder: '例如：为购物车创建添加商品、移除商品和结算的接口…',
@@ -536,7 +538,30 @@ const zh: Messages = {
       subscriptionUnavailable: '你的账户有有效订阅，但此服务器未启用支付功能，无法取消订阅。未删除任何内容，请联系支持。',
       deletedNotice: '你的账户及数据已删除。',
       dismissNotice: '关闭提示',
+      aiConsent: {
+        title: '用我的生成内容帮助改进 Mockia 的 AI（可选）',
+        description:
+          '开启后，我们会保存发送给 AI 的说明（可能包含你仓库的部分内容）及其回答，最长 180 天，用于评估和改进 Mockia 的 AI。密钥和邮箱会被删除，示例中绝不包含你的身份信息。默认关闭，不影响你使用 Mockia 的任何方式。',
+        privacy: '我们如何使用（隐私政策）',
+        on: '谢谢！从现在起，你的生成内容可以帮助改进 AI。你可以随时关闭。',
+        off: '已关闭。我们为此保存的全部内容都已删除。',
+        saving: '保存中…',
+        confirmTitle: '关闭并删除你的示例？',
+        confirmText:
+          '我们为改进 AI 而保存的你的全部内容（生成内容和评价）将立即删除。已经训练好的模型无法撤销，但你的数据不会用于今后的训练。',
+        confirm: '关闭并删除',
+        keep: '保持开启',
+      },
     },
+  },
+
+  aiFeedback: {
+    group: '为这次 AI 结果打分',
+    question: '这对你有用吗？',
+    useful: '有用',
+    notUseful: '没用',
+    thanks: '感谢你的反馈！',
+    failed: '无法发送你的反馈，请重试。',
   },
 
   notifications: {

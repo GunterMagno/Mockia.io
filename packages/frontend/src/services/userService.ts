@@ -6,6 +6,8 @@ export interface UserProfile {
   email: string
   fullName?: string
   username?: string
+  /** Consent to use my AI generations to improve the AI. Absent = never decided = off. */
+  aiTrainingConsent?: { granted: boolean; at: string }
   createdAt: string
   updatedAt: string
 }
@@ -37,4 +39,12 @@ export const exportMyData = async (): Promise<{ blob: Blob; filename: string }> 
 /** Borra la cuenta y todos sus datos (DELETE /users/me). Pide la contrasena; cancela antes la suscripcion de Stripe. */
 export const deleteMyAccount = async (password: string): Promise<void> => {
   await api.delete('/users/me', { data: { password } })
+}
+
+/**
+ * Gives or withdraws the optional consent to use my AI generations to improve Mockia's AI (PUT /users/me/ai-consent).
+ * Withdrawing makes the server erase everything it stored for that purpose.
+ */
+export const setAiTrainingConsent = async (granted: boolean): Promise<void> => {
+  await api.put('/users/me/ai-consent', { granted })
 }

@@ -10,6 +10,7 @@ import { getEndpoints, updateEndpoint, createEndpoint, deleteEndpoint } from '..
 import { getProjectById, type Project } from '../../services/projectService'
 import { MOCK_API_KEY_HEADER } from '@mockia/shared'
 import { generateAndSaveEndpoints } from '../../services/aiService'
+import AiFeedback from '../../components/ui/AiFeedback/AiFeedback'
 import type { EndpointData } from '../../services/endpointService'
 
 import { Icon } from '../../components/ui/Icon/Icon'
@@ -50,6 +51,8 @@ const MockEditor: React.FC = () => {
   const [aiRequirement, setAiRequirement] = useState('')
   const [isAiGenerating, setIsAiGenerating] = useState(false)
   const [aiStatusMessage, setAiStatusMessage] = useState('')
+  // Set once a generation succeeded: the modal then shows the rating instead of the form
+  const [aiDone, setAiDone] = useState<{ generationId?: string } | null>(null)
   const currentUserId = useAuth().user?.id ?? null
   const [endpointToDelete, setEndpointToDelete] = useState<string | null>(null)
 
@@ -222,6 +225,11 @@ const MockEditor: React.FC = () => {
     }
   }
 
+  const closeAiModal = () => {
+    setShowAiModal(false)
+    setAiDone(null)
+  }
+
   const handleAiGenerate = async () => {
     if (!id || !aiRequirement) return
     setIsAiGenerating(true)
@@ -238,12 +246,12 @@ const MockEditor: React.FC = () => {
 
     try {
       // Pass project.id instead of slug/id to backend
-      await generateAndSaveEndpoints(project!.id, aiRequirement)
+      const generated = await generateAndSaveEndpoints(project!.id, aiRequirement)
       clearInterval(interval)
       console.log("AI Generation successful, fetching endpoints...")
       await fetchEndpoints()
-      setShowAiModal(false)
       setAiRequirement('')
+      setAiDone({ generationId: generated.generationId })
     } catch (error: any) {
       clearInterval(interval)
       console.error("AI Generation failed:", error)
@@ -411,7 +419,17 @@ const MockEditor: React.FC = () => {
       </section>
 
       {/* AI Generation Modal */}
-      <Modal isOpen={showAiModal} onClose={() => setShowAiModal(false)}>
+      <Modal isOpen={showAiModal} onClose={closeAiModal}>
+        {aiDone ? (
+          <article className={styles.aiModalContent}>
+            <h3>{t('editor.aiDoneTitle')}</h3>
+            <p>{t('editor.aiDoneText')}</p>
+            <AiFeedback generationId={aiDone.generationId} />
+            <nav className={styles.modalActions}>
+              <Button onClick={closeAiModal}>{t('common.close')}</Button>
+            </nav>
+          </article>
+        ) : (
         <article className={styles.aiModalContent}>
           <h3>{t('editor.aiModalTitle')}</h3>
           <p>{t('editor.aiModalText')}</p>
@@ -423,12 +441,13 @@ const MockEditor: React.FC = () => {
             className={styles.aiTextarea}
           />
           <nav className={styles.modalActions}>
-            <Button variant="ghost" onClick={() => setShowAiModal(false)} disabled={isAiGenerating}>{t('common.cancel')}</Button>
+            <Button variant="ghost" onClick={closeAiModal} disabled={isAiGenerating}>{t('common.cancel')}</Button>
             <Button onClick={handleAiGenerate} isLoading={isAiGenerating} disabled={!aiRequirement || isAiGenerating}>
               {isAiGenerating ? aiStatusMessage : t('editor.generate')}
             </Button>
           </nav>
         </article>
+        )}
       </Modal>
       {/* Project Settings Modal */}
       {project && (

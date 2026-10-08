@@ -10,6 +10,15 @@ export interface AIGenerationResponse {
   usage: {
     totalTokens: number
   }
+  /** Random id of this generation; send it back with the user's feedback. Absent on servers that predate feedback. */
+  generationId?: string
+}
+
+export type AiVerdict = 'good' | 'bad'
+
+/** Thumbs up / down on a generation (POST /ai/feedback). The latest vote per generation wins on the server. */
+export const sendAiFeedback = async (generationId: string, verdict: AiVerdict): Promise<void> => {
+  await api.post('/ai/feedback', { generationId, verdict })
 }
 
 /**

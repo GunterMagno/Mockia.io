@@ -406,6 +406,8 @@ const es: Messages = {
     invalidJson: 'JSON no válido. Corrige los errores antes de guardar.',
     saveFailed: 'No se pudo guardar el endpoint. Comprueba la conexión con el backend.',
     aiFailed: 'Falló la generación con IA: {message}',
+    aiDoneTitle: 'Endpoints generados',
+    aiDoneText: 'Los endpoints nuevos ya están en tu lista.',
     aiModalTitle: 'Generar endpoints con IA',
     aiModalText:
       'Dile a Mockia IA qué endpoints quieres crear. Puedes describir la lógica de negocio, los modelos de datos o las rutas concretas que necesitas.',
@@ -554,7 +556,30 @@ const es: Messages = {
         'Tu cuenta tiene una suscripción activa pero los pagos no están disponibles en este servidor, así que no se puede cancelar. No se ha borrado nada; contacta con soporte.',
       deletedNotice: 'Tu cuenta y sus datos se han eliminado.',
       dismissNotice: 'Cerrar aviso',
+      aiConsent: {
+        title: 'Ayudar a mejorar la IA de Mockia con mis generaciones (opcional)',
+        description:
+          'Si lo activas, guardamos hasta 180 días las instrucciones que enviamos a la IA (pueden incluir partes de tu repositorio) y sus respuestas, para evaluar y mejorar la IA de Mockia. Se eliminan claves y emails y los ejemplos nunca incluyen quién eres. Está desactivado por defecto y no cambia nada de cómo usas Mockia.',
+        privacy: 'Cómo lo usamos (Política de Privacidad)',
+        on: '¡Gracias! A partir de ahora tus generaciones pueden ayudar a mejorar la IA. Puedes desactivarlo cuando quieras.',
+        off: 'Desactivado. Todo lo que teníamos guardado para este fin se ha borrado.',
+        saving: 'Guardando…',
+        confirmTitle: '¿Desactivar y borrar tus ejemplos?',
+        confirmText:
+          'Todo lo que guardamos de ti para mejorar la IA (tus generaciones y valoraciones) se borra ahora. Un modelo que ya se hubiera entrenado no se puede deshacer, pero tus datos no se usarán en entrenamientos futuros.',
+        confirm: 'Desactivar y borrar',
+        keep: 'Mantenerlo activado',
+      },
     },
+  },
+
+  aiFeedback: {
+    group: 'Valora este resultado de la IA',
+    question: '¿Te ha resultado útil?',
+    useful: 'Sí, me ha resultado útil',
+    notUseful: 'No, no me ha resultado útil',
+    thanks: '¡Gracias por tu opinión!',
+    failed: 'No pudimos enviar tu opinión. Inténtalo de nuevo.',
   },
 
   notifications: {

@@ -9,6 +9,7 @@ import { PATHS } from '../../../routes/paths'
 import type { Project } from '../../../services/projectService'
 import styles from './CreateProjectModal.module.scss'
 import { Icon } from '../../ui/Icon/Icon'
+import AiFeedback from '../../ui/AiFeedback/AiFeedback'
 import emptyProjectIcon from '../../../assets/empty-project.svg'
 import githubIcon from '../../../assets/github.svg'
 import aiSparkleIcon from '../../../assets/ai-sparkle.svg'
@@ -56,6 +57,7 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
   const [limitReached, setLimitReached] = useState(false)
   const [createdProject, setCreatedProject] = useState<Project | null>(null)
   const [copiedUrl, setCopiedUrl] = useState(false)
+  const [generationId, setGenerationId] = useState<string | undefined>(undefined)
 
   const apiBaseUrl = import.meta.env.VITE_API_URL && (import.meta.env.VITE_API_URL.startsWith('http') || import.meta.env.VITE_API_URL.startsWith('//'))
     ? import.meta.env.VITE_API_URL
@@ -80,6 +82,7 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
     setLimitReached(false)
     setCreatedProject(null)
     setCopiedUrl(false)
+    setGenerationId(undefined)
   }
 
   const closeAndReset = () => {
@@ -162,7 +165,8 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
 
       if (shouldGenerate) {
         try {
-          await generateAndSaveEndpoints(proj.id, aiRequirement)
+          const generated = await generateAndSaveEndpoints(proj.id, aiRequirement)
+          setGenerationId(generated.generationId)
         } catch (aiErr) {
           // ROLLBACK: Delete project if AI generation fails
           await hardDeleteProject(proj.id);
@@ -416,6 +420,7 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
                   </span>
                 </article>
               </article>
+              <AiFeedback generationId={generationId} />
             </section>
 
             <nav className={styles.actions}>

@@ -411,6 +411,8 @@ const en = {
     invalidJson: 'Invalid JSON. Please fix the errors before saving.',
     saveFailed: 'Failed to save endpoint. Please check the backend connection.',
     aiFailed: 'AI generation failed: {message}',
+    aiDoneTitle: 'Endpoints generated',
+    aiDoneText: 'The new endpoints are already in your list.',
     aiModalTitle: 'Generate endpoints with AI',
     aiModalText:
       'Tell Mockia AI which endpoints you want to create. You can describe the business logic, data models or specific routes you need.',
@@ -559,7 +561,30 @@ const en = {
         'Your account has an active subscription but payments are not available on this server, so it cannot be cancelled. Nothing was deleted; contact support.',
       deletedNotice: 'Your account and its data were deleted.',
       dismissNotice: 'Dismiss',
+      aiConsent: {
+        title: 'Help improve Mockia’s AI with my generations (optional)',
+        description:
+          'If you turn this on, we keep the instructions we send to the AI (they may include parts of your repository) and its answers for up to 180 days, to evaluate and improve Mockia’s AI. Keys and emails are removed and the examples never include who you are. It is off by default and changes nothing about how you use Mockia.',
+        privacy: 'How we use it (Privacy Policy)',
+        on: 'Thanks! From now on your generations can help improve the AI. You can turn this off at any time.',
+        off: 'Turned off. Everything we had stored for this purpose was deleted.',
+        saving: 'Saving…',
+        confirmTitle: 'Turn off and delete your examples?',
+        confirmText:
+          'Everything we stored from you to improve the AI (your generations and ratings) is deleted now. A model that was already trained cannot be undone, but your data will not be used in future training.',
+        confirm: 'Turn off and delete',
+        keep: 'Keep it on',
+      },
     },
+  },
+
+  aiFeedback: {
+    group: 'Rate this AI result',
+    question: 'Was this useful?',
+    useful: 'Yes, it was useful',
+    notUseful: 'No, it was not useful',
+    thanks: 'Thanks for your feedback!',
+    failed: 'We could not send your feedback. Please try again.',
   },
 
   notifications: {

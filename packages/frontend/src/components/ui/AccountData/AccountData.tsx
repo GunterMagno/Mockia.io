@@ -2,7 +2,7 @@ import React, { useEffect, useId, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../contexts/AuthContext'
 import { useI18n } from '../../../i18n/I18nProvider'
-import { exportMyData, deleteMyAccount } from '../../../services/userService'
+import { exportMyData, deleteMyAccount, getProfile, setAiTrainingConsent } from '../../../services/userService'
 import { getBackendErrorMessage } from '../../../utils/error'
 import { playErrorSound } from '../../../utils/audio'
 import { PATHS } from '../../../routes/paths'
@@ -38,6 +38,66 @@ const AccountData: React.FC<Props> = ({ email, onDeleted }) => {
   const [password, setPassword] = useState('')
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState('')
+
+  // Optional consent to use my AI generations to improve the AI. null = still loading. Off by default.
+  const consentTitleId = `${uid}-consent-title`
+  const consentDescId = `${uid}-consent-desc`
+  const switchRef = useRef<HTMLButtonElement>(null)
+  const keepRef = useRef<HTMLButtonElement>(null)
+  const [consent, setConsent] = useState<boolean | null>(null)
+  const [consentBusy, setConsentBusy] = useState(false)
+  const [withdrawing, setWithdrawing] = useState(false)
+  const [consentStatus, setConsentStatus] = useState('')
+  const [consentError, setConsentError] = useState('')
+
+  useEffect(() => {
+    let alive = true
+    getProfile()
+      .then((p) => alive && setConsent(p.aiTrainingConsent?.granted === true))
+      .catch((err) => {
+        if (!alive) return
+        setConsentError(getBackendErrorMessage(err, t))
+      })
+    return () => {
+      alive = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // The withdrawal confirmation takes the focus on its safe option; closing it gives the focus back to the switch
+  useEffect(() => {
+    if (withdrawing) keepRef.current?.focus()
+  }, [withdrawing])
+
+  const changeConsent = async (granted: boolean) => {
+    setConsentBusy(true)
+    setConsentError('')
+    setConsentStatus(t('profile.account.aiConsent.saving'))
+    try {
+      await setAiTrainingConsent(granted)
+      setConsent(granted)
+      setWithdrawing(false)
+      setConsentStatus(t(granted ? 'profile.account.aiConsent.on' : 'profile.account.aiConsent.off'))
+      setTimeout(() => switchRef.current?.focus(), 0)
+    } catch (err) {
+      setConsentStatus('')
+      setConsentError(getBackendErrorMessage(err, t))
+      playErrorSound()
+    } finally {
+      setConsentBusy(false)
+    }
+  }
+
+  const onSwitch = () => {
+    if (consent === null || consentBusy) return
+    // Turning it on is immediate; turning it off deletes data, so it asks first
+    if (consent) {
+      setConsentStatus('')
+      setWithdrawing(true)
+    } else {
+      void changeConsent(true)
+    }
+  }
 
   const emailMatches = typedEmail.trim() === email
   const canDelete = confirming && emailMatches && password.length > 0 && !deleting
@@ -96,6 +156,58 @@ const AccountData: React.FC<Props> = ({ email, onDeleted }) => {
     <section className={styles.section} aria-labelledby={`${uid}-title`}>
       <h3 id={`${uid}-title`} className={styles.title}>{t('profile.account.title')}</h3>
       <p className={styles.intro}>{t('profile.account.intro')}</p>
+
+      <div className={styles.consent} data-ai-consent>
+        <div className={styles.consentHead}>
+          <h4 id={consentTitleId} className={styles.consentTitle}>{t('profile.account.aiConsent.title')}</h4>
+          <button
+            type="button"
+            ref={switchRef}
+            role="switch"
+            aria-checked={consent === true}
+            aria-labelledby={consentTitleId}
+            aria-describedby={consentDescId}
+            className={styles.switch}
+            disabled={consent === null || consentBusy}
+            onClick={onSwitch}
+            data-ai-consent-switch
+          >
+            <span className={styles.switchThumb} aria-hidden="true" />
+          </button>
+        </div>
+        <p id={consentDescId} className={styles.consentDesc}>
+          {t('profile.account.aiConsent.description')}{' '}
+          <a href={`${PATHS.privacy}#ai-training`} target="_blank" rel="noopener noreferrer">
+            {t('profile.account.aiConsent.privacy')}
+          </a>
+        </p>
+        <p className={styles.status} role="status" aria-live="polite">{consentStatus}</p>
+        <p className={styles.error} role="alert" aria-live="assertive">{consentError}</p>
+
+        {withdrawing && (
+          <div className={styles.confirm} role="group" aria-labelledby={`${uid}-withdraw-title`}>
+            <h5 id={`${uid}-withdraw-title`} className={styles.confirmTitle}>{t('profile.account.aiConsent.confirmTitle')}</h5>
+            <p className={styles.warning}>{t('profile.account.aiConsent.confirmText')}</p>
+            <div className={styles.confirmActions}>
+              <button
+                type="button"
+                ref={keepRef}
+                className={styles.cancelBtn}
+                onClick={() => {
+                  setWithdrawing(false)
+                  setTimeout(() => switchRef.current?.focus(), 0)
+                }}
+                disabled={consentBusy}
+              >
+                {t('profile.account.aiConsent.keep')}
+              </button>
+              <button type="button" className={styles.dangerBtn} onClick={() => changeConsent(false)} disabled={consentBusy} data-ai-consent-confirm>
+                {consentBusy ? t('profile.account.aiConsent.saving') : t('profile.account.aiConsent.confirm')}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className={styles.row}>
         <button type="button" className={styles.secondaryBtn} onClick={handleDownload} disabled={downloading}>
