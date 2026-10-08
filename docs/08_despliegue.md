@@ -19,6 +19,16 @@ Para el paso a producción se ha seleccionado la plataforma en la nube **Render*
 2. **Static Site (Frontend):** Render ejecuta el comando de *build* (`npm run build:frontend`) y sirve los archivos HTML/JS resultantes a través de un CDN ultrarrápido (Content Delivery Network), gestionando los certificados SSL/HTTPS de forma automática.
 3. **Base de Datos (Database):** El clúster principal de datos NoSQL se aloja de forma externa y segura en **MongoDB Atlas**.
 
+### Comprobación tras el despliegue (obligatoria): la IP del cliente
+
+Los límites de peticiones (login/registro: 20 cada 15 min; resto de la API: 1000 cada 15 min) van **por IP**. El navegador llega a la API a través de la regla `/api/*` del sitio estático, así que entre el cliente y Express hay dos proxies (la reescritura y el balanceador de Render): `render.yaml` fija `TRUST_PROXY=2`. Si ese número no coincide con los saltos reales, o todos los usuarios comparten un mismo cubo (con 1: la IP del proxy; 20 logins cada 15 min para toda la web) o un cliente puede inventarse la IP con su propia cabecera `X-Forwarded-For` (con un valor demasiado alto). Tras **cada** despliegue que cambie la topología (primer despliegue, dominio propio, cambio de plan o de reglas de reescritura):
+
+1. Abre la web desde dos redes distintas (p. ej. wifi y datos móviles) y haz login en cada una.
+2. En los logs del backend en Render, la primera columna de cada línea de acceso (formato `combined` de morgan = `req.ip`) debe mostrar **dos IPs distintas**, las públicas de cada red. Si sale la misma IP (de Render) en ambas, sube `TRUST_PROXY` en 1 y repite.
+3. Prueba de suplantación: `curl -s -o /dev/null -H "X-Forwarded-For: 203.0.113.7" https://<frontend>/api/health` y otra petición a una ruta registrada en el log (p. ej. `/api/auth/me`). En el log **no** debe aparecer `203.0.113.7` como IP del cliente; si aparece, baja `TRUST_PROXY` en 1.
+
+La consulta periódica de notificaciones (`GET /api/notifications`, cada 10 s solo con la pestaña visible) y `/api/health` no cuentan para el límite global.
+
 ---
 
 ## 8.3 Dockerización del Entorno (Desarrollo vs Producción)

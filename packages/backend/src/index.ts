@@ -25,7 +25,7 @@ import { mockQuotaGate } from './middlewares/planGate.js';
 import { MOCK_CORS_OPTIONS } from './modules/mock/mockAuth.js';
 import { migrateLegacyApiKeys } from './modules/projects/apiKeyMigration.js';
 import { flushUsage } from './modules/billing/usage.js';
-import { rateLimit, isStrictAuthPath } from './middlewares/rateLimit.js';
+import { rateLimit, isStrictAuthPath, skipsGlobalLimiter } from './middlewares/rateLimit.js';
 import { authenticateToken } from './middlewares/authenticateToken.js';
 import { isEmailVerificationRequired } from './middlewares/requireVerifiedEmail.js';
 import { authorizeRole } from './middlewares/authorizeRole.js';
@@ -86,9 +86,9 @@ if (process.env.NODE_ENV !== 'test') {
   // login / register brute force. AUTH_RATE_LIMIT_MAX raises it for the e2e suite, which logs in more than 20 times from one IP.
   const authLimiter = rateLimit({ windowMs: MIN15, max: Number(process.env.AUTH_RATE_LIMIT_MAX) || 20 });
   const heavyLimiter = rateLimit({ windowMs: MIN15, max: 60 }); // AI (paid upstream) and GitHub clone
-  // Public mock traffic (own quota gate), Stripe webhook and health probes are not throttled here.
+  // Public mock traffic (own quota gate), Stripe webhook, health probes and notification polling are not throttled here.
   app.use('/api', (req, res, next) =>
-    /^\/(mock|billing|health)(\/|$)/.test(req.path) ? next() : globalLimiter(req, res, next)
+    skipsGlobalLimiter(req.method, req.path) ? next() : globalLimiter(req, res, next)
   );
   // Only login, register and the password-reset pair (forgot, reset) get the strict bucket. /refresh and /logout need a
   // signed token (nothing to brute-force) and every active client calls /refresh every 15 min: sharing the 20-per-IP

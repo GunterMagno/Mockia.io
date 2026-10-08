@@ -97,9 +97,11 @@ const MockEditor: React.FC = () => {
     }
   }
 
-  // Polling for real-time updates
+  // Polling so that collaborators' changes show up (every 5 s, and not at all while the tab is hidden: each poll is two
+  // requests that count toward the per-IP API limiter)
   useEffect(() => {
     const interval = setInterval(() => {
+      if (document.visibilityState === 'hidden') return
       // Refresh project to check for membership/access changes and update members list dynamically
       if (id) {
         getProjectById(id)
@@ -114,7 +116,7 @@ const MockEditor: React.FC = () => {
       if (!isDirty && !isSaving && !isAiGenerating && !isDeleting) {
         fetchEndpoints(true)
       }
-    }, 2500) // Reduced to 2.5 seconds for better responsiveness
+    }, 5000)
 
     return () => clearInterval(interval)
   }, [id, isDirty, isSaving, isAiGenerating, isDeleting, activeEndpoint])

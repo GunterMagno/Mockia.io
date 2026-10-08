@@ -1,4 +1,4 @@
-import { isStrictAuthPath } from '../middlewares/rateLimit.js';
+import { isStrictAuthPath, skipsGlobalLimiter } from '../middlewares/rateLimit.js';
 
 // The strict limiter is off under jest (NODE_ENV=test), so the path matcher is tested directly.
 // Express routes case-insensitively and ignores a trailing slash: every spelling that reaches the login/register/forgot/reset
@@ -50,5 +50,35 @@ describe('isStrictAuthPath', () => {
     '/reset-password',
   ])('%s is not a credential endpoint', (path) => {
     expect(isStrictAuthPath(path)).toBe(false);
+  });
+});
+
+// The global limiter (1000 / 15 min per IP) is off under jest too: the predicate that decides which requests skip it
+// is tested directly. Notification polling and health probes must not eat the bucket of real API calls.
+describe('skipsGlobalLimiter', () => {
+  it.each([
+    ['GET', '/notifications'],
+    ['GET', '/notifications/'],
+    ['GET', '/Notifications'],
+    ['GET', '/health'],
+    ['HEAD', '/health'],
+    ['GET', '/mock/my-proj/users'],
+    ['POST', '/mock/my-proj/users'],
+    ['POST', '/billing/webhook'],
+  ])('%s %s skips the global limiter', (method, path) => {
+    expect(skipsGlobalLimiter(method, path)).toBe(true);
+  });
+
+  it.each([
+    ['POST', '/notifications/mark-read'],
+    ['DELETE', '/notifications/abc'],
+    ['POST', '/notifications'],
+    ['GET', '/notifications/abc'],
+    ['GET', '/projects'],
+    ['POST', '/ai/generate-and-save'],
+    ['GET', '/healthz'],
+    ['GET', '/auth/me'],
+  ])('%s %s counts toward the global limiter', (method, path) => {
+    expect(skipsGlobalLimiter(method, path)).toBe(false);
   });
 });

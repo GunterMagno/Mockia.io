@@ -18,6 +18,13 @@ services:
         generateValue: true
       - key: BACKEND_PORT
         value: 3000
+      # Proxy hops in front of Express, used to read the client IP from X-Forwarded-For (rate limits are per IP).
+      # Browsers reach the API through the frontend's /api/* rewrite, so a request crosses that rewrite proxy AND
+      # Render's load balancer: 2 hops. Too low = every user shares the proxy's IP (20 logins / 15 min for the whole
+      # site); too high = a client can spoof its IP with its own X-Forwarded-For. MANDATORY post-deploy check in
+      # docs/08_despliegue.md (8.2, "Comprobacion tras el despliegue").
+      - key: TRUST_PROXY
+        value: 2
       # Explicit frontend origin (never "*": the backend refuses to boot in production with an open CORS).
       # Adjust if you attach a custom domain to the frontend service.
       - key: CORS_ORIGIN

@@ -3,6 +3,9 @@ import { Notification } from '@mockia/shared';
 import { getNotifications } from '../services/notificationService';
 import { playNotificationSound } from '../utils/audio';
 
+/** How often an open, visible tab asks for new notifications. */
+export const POLL_INTERVAL_MS = 10_000;
+
 export const useNotifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [activeToast, setActiveToast] = useState<Notification | null>(null);
@@ -32,10 +35,35 @@ export const useNotifications = () => {
     }
   };
 
+  // Polling every POLL_INTERVAL_MS only while the tab is visible: a hidden tab does not poll at all and catches up
+  // with one request when it is shown again (every request counts toward the per-IP API limiter).
   useEffect(() => {
+    let timer: ReturnType<typeof setInterval> | undefined;
+    const start = () => {
+      if (timer === undefined) timer = setInterval(fetchNotifications, POLL_INTERVAL_MS);
+    };
+    const stop = () => {
+      if (timer !== undefined) {
+        clearInterval(timer);
+        timer = undefined;
+      }
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        stop();
+      } else {
+        fetchNotifications();
+        start();
+      }
+    };
+
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 2500);
-    return () => clearInterval(interval);
+    if (document.visibilityState !== 'hidden') start();
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      stop();
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
   }, []);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
