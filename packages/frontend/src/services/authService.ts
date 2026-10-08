@@ -1,5 +1,5 @@
 import { api, refreshSession } from './api'
-import { CSRF_HEADERS, clearSession, setAccessToken, type SessionUser } from './session'
+import { CSRF_HEADERS, clearSession, setAccessToken, setSessionUserId, type SessionUser } from './session'
 
 export interface Credentials {
   email: string
@@ -22,6 +22,7 @@ export async function loginRequest(credentials: Credentials, remember: boolean):
   const user: SessionUser | undefined = data?.user
   if (typeof accessToken !== 'string' || !user) throw new Error('Unexpected login response')
   setAccessToken(accessToken)
+  setSessionUserId(user.id)
   return { user, accessToken }
 }
 

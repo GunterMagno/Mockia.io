@@ -27,6 +27,8 @@ export const SESSION_EXPIRED_EVENT = 'mockia:session-expired'
 export const CSRF_HEADERS = { 'X-Requested-With': 'mockia' } as const
 
 let accessToken: string | null = null
+/** Id del usuario de la sesion actual: un refresh que devuelva otro usuario no se acepta (login CSRF / cookie ajena). */
+let sessionUserId: string | null = null
 
 export function getAccessToken(): string | null {
   return accessToken
@@ -36,8 +38,17 @@ export function setAccessToken(token: string | null): void {
   accessToken = token
 }
 
+export function getSessionUserId(): string | null {
+  return sessionUserId
+}
+
+export function setSessionUserId(id: string | null): void {
+  sessionUserId = id
+}
+
 export function clearSession(): void {
   accessToken = null
+  sessionUserId = null
 }
 
 /** Claves que usaban las versiones anteriores para guardar la sesion en el almacenamiento web. */

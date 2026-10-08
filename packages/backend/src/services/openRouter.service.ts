@@ -195,15 +195,18 @@ export async function callOpenRouterWithRetry(
 }
 
 /**
- * Transform OpenRouter API errors into AppError
+ * Transform OpenRouter API errors into AppError.
+ *
+ * Only 429 and 503 keep their status. Every other upstream answer (401 bad key, 402 no credits, 404 unknown model,
+ * 400/422 rejected request, other 5xx) is OUR problem, not the user's request or session: it becomes a 502 with a
+ * generic message. Passing a 401 through made the SPA read it as an expired session, refresh and repeat the whole
+ * generation; the upstream message is not echoed either (the global error handler logs and returns `message`).
  * @param error - Error from axios or any error
  * @returns AppError
  */
 function transformOpenRouterError(error: unknown): AppError {
   if (axios.isAxiosError(error)) {
-    const status = error.response?.status || 500;
-    const data = error.response?.data as OpenRouterError | undefined;
-    const message = data?.error?.message || error.message || 'Unknown error';
+    const status = error.response?.status;
 
     if (status === 429) {
       return new AppError(
@@ -213,7 +216,7 @@ function transformOpenRouterError(error: unknown): AppError {
       );
     }
 
-    if (status === 503) {
+    if (status === 503 || status === undefined) {
       return new AppError(
         'OpenRouter API temporarily unavailable. Please try again later.',
         ErrorCode.EXTERNAL_SERVICE_ERROR,
@@ -221,18 +224,18 @@ function transformOpenRouterError(error: unknown): AppError {
       );
     }
 
-    if (status === 401) {
+    if (status === 401 || status === 403) {
       return new AppError(
         'OpenRouter API authentication failed',
-        ErrorCode.AUTHENTICATION_ERROR,
-        401
+        ErrorCode.EXTERNAL_SERVICE_ERROR,
+        502
       );
     }
 
     return new AppError(
-      `OpenRouter API error: ${message}`,
+      `OpenRouter API error (upstream status ${status}). Please try again later.`,
       ErrorCode.EXTERNAL_SERVICE_ERROR,
-      status
+      502
     );
   }
 

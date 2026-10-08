@@ -421,6 +421,35 @@ describe('gestion de la clave por la API', () => {
     expect((await request(app).get(mockUrl(project.slug)).set('X-Mockia-API-Key', key)).status).toBe(401);
   });
 
+  it('revocar, rotar o cerrar surte efecto al instante tambien por la URL con el id del proyecto (sin cache vieja)', async () => {
+    const owner = await createUser();
+    const project = await createViaApi(owner.auth);
+    await seedEndpoint(project.id);
+    const key = (await request(app).post(`/api/projects/${project.id}/api-key`).set(owner.auth)).body.data.apiKey as string;
+    await request(app).put(`/api/projects/${project.id}`).set(owner.auth).send({ visibility: 'key' });
+    // Warm the cache under the ObjectId key (project:<objectId>) through the id URL
+    expect((await request(app).get(mockUrl(project.id)).set('X-Mockia-API-Key', key)).status).toBe(200);
+
+    // Rotation: the old key stops working through the id URL right away
+    const rotated = (await request(app).post(`/api/projects/${project.id}/api-key`).set(owner.auth)).body.data.apiKey as string;
+    expect((await request(app).get(mockUrl(project.id)).set('X-Mockia-API-Key', key)).status).toBe(401);
+    expect((await request(app).get(mockUrl(project.id)).set('X-Mockia-API-Key', rotated)).status).toBe(200);
+
+    // Revocation: the id URL closes right away
+    expect((await request(app).delete(`/api/projects/${project.id}/api-key`).set(owner.auth)).status).toBe(200);
+    expect((await request(app).get(mockUrl(project.id)).set('X-Mockia-API-Key', rotated)).status).toBe(401);
+  });
+
+  it('pasar de publico a "key" cierra al instante la URL con el id del proyecto', async () => {
+    const owner = await createUser();
+    const project = await createViaApi(owner.auth);
+    await seedEndpoint(project.id);
+    await request(app).post(`/api/projects/${project.id}/api-key`).set(owner.auth);
+    expect((await request(app).get(mockUrl(project.id))).status).toBe(200);
+    expect((await request(app).put(`/api/projects/${project.id}`).set(owner.auth).send({ visibility: 'key' })).status).toBe(200);
+    expect((await request(app).get(mockUrl(project.id))).status).toBe(401);
+  });
+
   it('solo el propietario gestiona la clave: editor, lector y ajeno reciben 403; sin sesion 401', async () => {
     const owner = await createUser();
     const editor = await createUser();
@@ -531,12 +560,16 @@ describe('IDOR de swagger.json y pagina de docs', () => {
     expect([400, 404]).toContain(res.status);
   });
 
-  it('la pagina /mock/:slug/docs de un proyecto normal sigue funcionando', async () => {
+  // La pagina Swagger UI por proyecto se elimino: cargaba swagger-ui sin version desde unpkg.com (tercero no declarado),
+  // nunca podia leer su spec (swagger.json exige Bearer) y revelaba el ObjectId del proyecto. /docs es ahora una ruta
+  // mas del mock: sin endpoint /docs responde 404 como cualquier otra.
+  it('ya no existe la pagina /mock/:slug/docs: 404 de mock, sin unpkg ni el id del proyecto', async () => {
     const owner = await createUser();
     const project = await seedProject(owner.user._id as Types.ObjectId);
     const res = await request(app).get(`/mock/${project.slug}/docs`);
-    expect(res.status).toBe(200);
-    expect(res.text).toContain(`Swagger UI - ${project.slug}`);
-    expect(res.text).toContain(`/api/projects/${project._id}/swagger.json`);
+    expect(res.status).toBe(404);
+    expect(res.text).not.toContain('unpkg.com');
+    expect(res.text).not.toContain('Swagger UI');
+    expect(res.text).not.toContain(String(project._id));
   });
 });

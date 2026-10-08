@@ -613,6 +613,12 @@ export async function addProjectMember(
       );
     }
 
+    // Only an owner may create another owner: an editor granting OWNER (e.g. to a second account of their own) could
+    // then remove the real owner and take the project over
+    if (String(role).toUpperCase() === 'OWNER' && inviterRole !== 'OWNER') {
+      throw new AppError('Only project owners can grant the OWNER role', ErrorCode.FORBIDDEN, 403);
+    }
+
     // Find user by email
     const targetUser = await UserModel.findOne({ email: targetEmail });
     if (!targetUser) {

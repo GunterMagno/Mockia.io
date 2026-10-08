@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { register, login, refresh, logout, logoutAll, sessions, me, forgot, reset, verify, resendVerificationEmail } from './controller.js';
 import { registerSchema, loginSchema, forgotSchema, resetSchema, verifySchema, resendSchema } from './validation.js';
-import { requireCsrfHeader } from './cookie.js';
+import { requireCsrfHeader, requireJsonBody } from './cookie.js';
 import { validate } from '../../middlewares/validateRequest.js';
 import { authenticateToken, type AuthenticatedRequest } from '../../middlewares/authenticateToken.js';
 import { rateLimit } from '../../middlewares/rateLimit.js';
@@ -54,6 +54,7 @@ const resendLimiter = rateLimit({
  */
 authRouter.post(
   '/register',
+  requireJsonBody,
   validate({ body: registerSchema }),
   register
 );
@@ -83,9 +84,12 @@ authRouter.post(
  *         description: Login successful. The body carries the access token; the refresh token is set in the HttpOnly mockia_rt cookie.
  *       401:
  *         description: Invalid credentials
+ *       415:
+ *         description: Body is not application/json (login-CSRF defence; HTML forms cannot send JSON)
  */
 authRouter.post(
   '/login',
+  requireJsonBody,
   validate({ body: loginSchema }),
   login
 );
@@ -212,7 +216,7 @@ authRouter.get(
  *       429:
  *         description: Too many requests (strict limiter shared with login and register)
  */
-authRouter.post('/forgot', validate({ body: forgotSchema }), forgot);
+authRouter.post('/forgot', requireJsonBody, validate({ body: forgotSchema }), forgot);
 
 /**
  * @swagger
@@ -240,7 +244,7 @@ authRouter.post('/forgot', validate({ body: forgotSchema }), forgot);
  *       400:
  *         description: Weak password, or invalid / expired / already used token
  */
-authRouter.post('/reset', validate({ body: resetSchema }), reset);
+authRouter.post('/reset', requireJsonBody, validate({ body: resetSchema }), reset);
 
 /**
  * @swagger

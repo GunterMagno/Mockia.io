@@ -152,6 +152,9 @@ class MockCacheService {
       if (project) {
         const projectIdStr = project._id.toString();
         this.cache.delete(`project:id:${projectIdStr}`);
+        // getProject() also caches by the ObjectId used in /mock/<objectId>/... URLs: drop it too, or a revoked or
+        // rotated key (or a public -> key switch) keeps working there until the TTL expires
+        this.cache.delete(`project:${projectIdStr}`);
         const cachedApi = this.cache.get<any>(`mockapi:${projectIdStr}`);
         if (cachedApi) this.cache.delete(`endpoints:${cachedApi._id.toString()}`);
         this.cache.delete(`mockapi:${projectIdStr}`);
@@ -181,6 +184,7 @@ class MockCacheService {
     const idKey = `project:id:${projectId}`;
     const project = this.cache.get<ProjectDocument>(idKey);
     this.cache.delete(idKey);
+    this.cache.delete(`project:${projectId}`);
 
     if (project) {
       this.cache.delete(`project:${project.slug}`);

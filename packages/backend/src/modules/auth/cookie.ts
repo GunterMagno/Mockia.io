@@ -65,6 +65,20 @@ export function readRefreshCookie(req: Request): string | undefined {
   return typeof value === 'string' && value !== '' ? value : undefined;
 }
 
+/**
+ * Login-CSRF defence for the credential endpoints (login, register, forgot, reset): only `application/json` bodies
+ * are accepted (415 otherwise). A cross-site HTML form can only send urlencoded, multipart or text/plain bodies without
+ * a CORS preflight; JSON forces the preflight, which the CORS allow-list rejects. Without this, an attacker's form
+ * could log the victim's browser into the attacker's account (SameSite=Lax cookies are set on top-level POSTs).
+ */
+export function requireJsonBody(req: Request, _res: Response, next: NextFunction): void {
+  if (!req.is('application/json')) {
+    next(new AppError('Content-Type must be application/json', ErrorCode.VALIDATION_ERROR, 415));
+    return;
+  }
+  next();
+}
+
 /** Rejects (403) the request unless it carries `X-Requested-With: mockia`. Guards the cookie-based endpoints. */
 export function requireCsrfHeader(req: Request, _res: Response, next: NextFunction): void {
   if (req.get(CSRF_HEADER_NAME) !== CSRF_HEADER_VALUE) {

@@ -15,6 +15,8 @@ import { authorizeRole } from '../middlewares/authorizeRole.js';
  * GitHub router
  * Handles GitHub repository ingestion and analysis
  *
+ * Every route requires a signed-in user (Bearer token): parse probes GitHub, ingest clones on this server.
+ *
  * Routes:
  * - POST /api/github/parse - Parse a GitHub URL
  * - POST /api/github/ingest - Clone and analyze a GitHub repository
@@ -35,6 +37,7 @@ export const githubRouter = Router();
  */
 githubRouter.post(
   '/parse',
+  authenticateToken,
   validate({ body: parseGithubUrlSchema }),
   parseGithubUrl
 );
@@ -54,6 +57,7 @@ githubRouter.post(
  */
 githubRouter.post(
   '/ingest',
+  authenticateToken,
   validate({ body: ingestGithubRepoSchema }),
   ingestGithubRepo
 );

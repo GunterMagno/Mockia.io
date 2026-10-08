@@ -102,3 +102,6 @@ packages/backend/evals/results/
 ai-datasets/
 **/ai-datasets/
 *.jsonl
+
+# Temporary GitHub clones of the ingestion service (deleted after analysis)
+.tmp-repos/

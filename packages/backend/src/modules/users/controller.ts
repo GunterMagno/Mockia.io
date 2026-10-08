@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { getUserProfile, updateUserProfile, changeUserPassword, updateUserLocale } from './service.js';
 import { exportUserData, deleteUserAccount } from './gdpr.js';
-import { clearRefreshCookie } from '../auth/cookie.js';
+import { clearRefreshCookie, readRefreshCookie, setRefreshCookie } from '../auth/cookie.js';
+import { issueFreshSession, isPersistentSession } from '../auth/service.js';
 import { setAiTrainingConsent } from '../ai/consent.js';
 import { AuthRequest } from '../../types/auth.js';
 import { asyncHandler } from '../../middlewares/errorHandler.js';
@@ -39,7 +40,11 @@ export const updateProfile = asyncHandler(async (req: AuthRequest, res: Response
 
 /**
  * POST /api/users/change-password
- * Change password after verifying the current one
+ * Change password after verifying the current one. Every older session (other devices, and the caller's own family)
+ * is revoked; the caller gets a fresh session right away so it is not silently logged out when its access token
+ * expires: a new refresh cookie and, in the body, the same shape as /auth/refresh ({ accessToken, user }).
+ * "Remember me" is kept when the caller's refresh cookie reaches this route (it is scoped to /api/auth, so browsers
+ * normally do not send it here: the new cookie then lasts for the browser session).
  */
 export const changePassword = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction) => {
   const userId = req.user?.id;
@@ -49,8 +54,15 @@ export const changePassword = asyncHandler(async (req: AuthRequest, res: Respons
   }
 
   const { currentPassword, newPassword } = req.body;
+  const persistent = await isPersistentSession(readRefreshCookie(req), userId);
   await changeUserPassword(userId, currentPassword, newPassword);
-  res.status(204).send();
+  const issued = await issueFreshSession(userId, { ip: req.ip, ua: req.get('user-agent') }, persistent);
+  setRefreshCookie(res, issued.refreshToken, issued.persistent);
+  res.status(200).json({
+    success: true,
+    data: { accessToken: issued.accessToken, user: issued.user },
+    timestamp: new Date().toISOString(),
+  });
 });
 
 /**

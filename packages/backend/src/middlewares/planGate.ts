@@ -58,9 +58,8 @@ export const mockClock = { now: (): Date => new Date() };
 export function extractMockSlug(path: string): string | null {
   const m = /^\/(api\/)?mock\/([^/]+)(\/.*)?$/.exec(path);
   if (!m) return null;
-  const [, api, rawSlug, rest = ''] = m;
+  const [, api, rawSlug] = m;
   if (api && RESERVED_API_MOCK.has(rawSlug)) return null;
-  if (!api && rest === '/docs') return null; // Swagger page, not a mock call
   try {
     return decodeURIComponent(rawSlug);
   } catch {

@@ -91,8 +91,8 @@ userRouter.put(
  *               newPassword:
  *                 type: string
  *     responses:
- *       204:
- *         description: Password changed
+ *       200:
+ *         description: Password changed. Every older session is revoked; the caller gets a fresh one (new mockia_rt cookie, and { accessToken, user } in the body like /auth/refresh).
  */
 userRouter.post(
   '/change-password',
@@ -161,7 +161,7 @@ userRouter.patch(
  *                 type: boolean
  *     responses:
  *       200:
- *         description: Consent granted ({ aiTrainingConsent: { granted, at } })
+ *         description: "Consent granted ({ aiTrainingConsent: { granted, at, grantedAt } })"
  *       204:
  *         description: Consent withdrawn and stored examples erased
  *       400:

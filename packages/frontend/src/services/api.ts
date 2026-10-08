@@ -4,7 +4,9 @@ import {
   SESSION_EXPIRED_EVENT,
   clearSession,
   getAccessToken,
+  getSessionUserId,
   setAccessToken,
+  setSessionUserId,
   type SessionUser,
 } from './session'
 
@@ -45,8 +47,18 @@ async function requestRefresh(): Promise<RefreshOutcome> {
     const res = await axios.post(`${baseURL}/auth/refresh`, null, { withCredentials: true, headers: CSRF_HEADERS })
     const data = res.data?.data
     if (typeof data?.accessToken !== 'string') return { status: 'failed' }
+    const user: SessionUser | null = data.user ?? null
+    const currentId = getSessionUserId()
+    // La cookie pertenece a OTRA cuenta (p. ej. plantada por un formulario de otro sitio): no se cambia de usuario
+    // en silencio. Se cierra la sesion (y se pide al backend borrar esa cookie) y la app vuelve al login.
+    if (currentId && user?.id && user.id !== currentId) {
+      clearSession()
+      axios.post(`${baseURL}/auth/logout`, null, { withCredentials: true, headers: CSRF_HEADERS }).catch(() => undefined)
+      return { status: 'rejected' }
+    }
     setAccessToken(data.accessToken)
-    return { status: 'ok', accessToken: data.accessToken, user: data.user ?? null }
+    if (user?.id) setSessionUserId(user.id)
+    return { status: 'ok', accessToken: data.accessToken, user }
   } catch (err) {
     const status = axios.isAxiosError(err) ? err.response?.status : undefined
     if (status === 401 || status === 400 || status === 403) {

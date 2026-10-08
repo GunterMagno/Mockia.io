@@ -112,7 +112,7 @@ describe('OpenRouter Service', () => {
       mockedAxios.isAxiosError.mockReturnValue(true);
       mockedAxios.post.mockRejectedValue(error400);
 
-      await expect(callOpenRouterWithRetry(mockMessages)).rejects.toThrow('OpenRouter API error: Bad request');
+      await expect(callOpenRouterWithRetry(mockMessages)).rejects.toThrow('OpenRouter API error (upstream status 400)');
       expect(mockedAxios.post).toHaveBeenCalledTimes(1);
     });
 
@@ -122,6 +122,36 @@ describe('OpenRouter Service', () => {
       mockedAxios.post.mockRejectedValue(error401);
 
       await expect(callOpenRouterWithRetry(mockMessages)).rejects.toThrow('OpenRouter API authentication failed');
+    });
+
+    // An upstream 401/402/404 is OUR misconfiguration (key, credits, model), never the user's session: passing the
+    // status through made the SPA read a 401 as "session expired", refresh and repeat the whole generation.
+    it.each([400, 401, 402, 403, 404, 422])('maps an upstream %i to 502 with a generic message', async (status) => {
+      const upstream = { response: { status, data: { error: { message: 'upstream secret detail' } } } };
+      mockedAxios.isAxiosError.mockReturnValue(true);
+      mockedAxios.post.mockRejectedValue(upstream);
+
+      const err = await callOpenRouterWithRetry(mockMessages).catch((e) => e);
+      expect(err).toBeInstanceOf(AppError);
+      expect(err.statusCode).toBe(502);
+      expect(err.code).toBe('EXTERNAL_SERVICE_ERROR');
+      expect(err.message).not.toContain('upstream secret detail');
+    });
+
+    it('keeps 429 as 429 and 503 as 503', async () => {
+      mockedAxios.isAxiosError.mockReturnValue(true);
+      mockedAxios.post.mockRejectedValue({ response: { status: 429 } });
+      expect((await callOpenRouterWithRetry(mockMessages).catch((e) => e)).statusCode).toBe(429);
+      mockedAxios.post.mockRejectedValue({ response: { status: 503 } });
+      expect((await callOpenRouterWithRetry(mockMessages).catch((e) => e)).statusCode).toBe(503);
+    });
+
+    it('maps any other upstream 5xx to 502', async () => {
+      mockedAxios.isAxiosError.mockReturnValue(true);
+      mockedAxios.post.mockRejectedValue({ response: { status: 500, data: { error: { message: 'boom' } } } });
+      const err = await callOpenRouterWithRetry(mockMessages).catch((e) => e);
+      expect(err.statusCode).toBe(502);
+      expect(err.message).not.toContain('boom');
     });
 
     it('should handle generic non-axios errors', async () => {

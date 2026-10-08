@@ -5,7 +5,7 @@ import { getSwaggerDirname } from './pathHelper.cjs';
 
 const swaggerDirname = getSwaggerDirname();
 
-const options: swaggerJsdoc.Options = {
+export const swaggerOptions: swaggerJsdoc.Options = {
   definition: {
     openapi: '3.0.0',
     info: {
@@ -41,4 +41,12 @@ const options: swaggerJsdoc.Options = {
   ],
 };
 
-export const specs = swaggerJsdoc(options);
+/**
+ * Builds the OpenAPI document from the @swagger annotations. A YAML error in one annotation does not throw: swagger-jsdoc
+ * only prints a report and drops that block (tests/swagger.spec.test.ts fails on such a report).
+ */
+export function buildSwaggerSpec(): object {
+  return swaggerJsdoc(swaggerOptions);
+}
+
+export const specs = buildSwaggerSpec();

@@ -84,7 +84,7 @@ describe('Password policy and bcrypt cost', () => {
         .post('/api/users/change-password')
         .set(auth)
         .send({ currentPassword: 'current-password-1', newPassword: 'tenchars-ok' });
-      expect(ok.status).toBe(204);
+      expect(ok.status).toBe(200);
       const user = await UserModel.findOne({ email: 'change@example.com' });
       expect(bcryptCostOf(user!.passwordHash)).toBe(12);
     });

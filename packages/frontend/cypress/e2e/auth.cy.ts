@@ -230,6 +230,65 @@ describe('Session renewal (access token of 15 min + rotating refresh cookie)', (
     cy.getCookie('mockia_rt').should('not.exist');
   });
 
+  it('stays logged in after changing the password (fresh session; older sessions are revoked server-side)', () => {
+    const changer = `changepw${Date.now()}@example.com`;
+    const newPassword = 'Changed-Password-456';
+    cy.request('POST', '/api/auth/register', { email: changer, password, username: 'ChangePwUser' });
+    cy.clearCookies();
+    cy.visit('/login');
+    cy.get('input[name="email"]').type(changer);
+    cy.get('input[name="password"]').type(password);
+    cy.get('button[type="submit"]').click();
+    cy.url().should('include', '/dashboard');
+
+    cy.intercept('POST', '/api/users/change-password').as('change');
+    cy.get('button[aria-label="Profile"]').first().click();
+    cy.get('[role="dialog"]').within(() => {
+      cy.get('input[placeholder="Current password"]').type(password);
+      cy.get('input[placeholder="New password"]').type(newPassword);
+      cy.contains('button', /^Save$/).click();
+    });
+    cy.wait('@change').its('response.statusCode').should('eq', 200);
+    cy.contains('Profile updated successfully!').should('be.visible');
+
+    // A reload restores the session from the NEW refresh cookie (the old one was revoked with the others)
+    cy.reload();
+    cy.location('pathname').should('include', '/dashboard');
+    cy.contains('My projects').should('be.visible');
+    // ... and the in-memory access token handed back by the change keeps working for API calls
+    cy.window().then(async (win) => {
+      const { api } = await new win.Function('return import("/src/services/api.ts")')();
+      const me = await api.get('/auth/me');
+      expect(me.status).to.eq(200);
+    });
+  });
+
+  it('sends the user to login when a refresh answers with a different account (planted cookie)', () => {
+    loginViaUi();
+    // The refresh cookie now belongs to someone else (e.g. planted by a cross-site login form): the app must not
+    // silently switch accounts
+    cy.intercept('POST', '/api/auth/refresh', {
+      statusCode: 200,
+      body: {
+        success: true,
+        data: {
+          accessToken: 'attacker.access.token',
+          user: { id: '000000000000000000000bad', email: 'attacker@example.com', username: 'attacker' },
+        },
+      },
+    }).as('foreignRefresh');
+    cy.intercept('POST', '/api/auth/logout').as('logout');
+    expireAccessToken();
+    cy.window().then(async (win) => {
+      const { api } = await new win.Function('return import("/src/services/api.ts")')();
+      await api.get('/auth/me').catch(() => undefined);
+    });
+    cy.wait('@foreignRefresh');
+    cy.location('pathname').should('eq', '/login');
+    // The foreign cookie is dropped server-side too
+    cy.wait('@logout');
+  });
+
   it('sends the user to login when the session is revoked while the page is open', () => {
     loginViaUi();
     // Revoke every session from another client (the Bearer token comes from a separate login)

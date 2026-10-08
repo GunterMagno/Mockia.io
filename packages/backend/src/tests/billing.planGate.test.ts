@@ -290,12 +290,13 @@ describe('extractMockSlug', () => {
     ['/mock/my-proj', 'my-proj'],
     ['/api/mock/my-proj/users', 'my-proj'],
     ['/mock/caf%C3%A9/x', 'café'],
+    // the per-project Swagger page is gone: /docs is an ordinary mock path and counts like any other
+    ['/mock/my-proj/docs', 'my-proj'],
   ])('%s -> %s', (path, slug) => expect(extractMockSlug(path)).toBe(slug));
 
   it.each([
     '/api/mock/resolve-route',
     '/api/mock/endpoints/my-proj',
-    '/mock/my-proj/docs',
     '/api/projects',
     '/api/billing/webhook',
     '/mock/%E0%A4%A/x',

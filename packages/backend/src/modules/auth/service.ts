@@ -1,5 +1,6 @@
 import bcrypt from 'bcrypt';
 import { UserModel } from '../../models/User.js';
+import { RefreshSessionModel } from '../../models/RefreshSession.js';
 import { toUserDTO } from '../users/dto.js';
 import { hashPassword, rehashIfOutdated } from '../../services/password.service.js';
 import { sendVerificationEmail } from './passwordReset.js';
@@ -203,6 +204,36 @@ export async function refreshTokens(refreshToken: string | undefined, meta: Sess
     refreshToken: signRefreshToken(rotated.userId, rotated.jti),
     persistent: rotated.persistent,
   };
+}
+
+/**
+ * Opens a brand-new session (new family) for a user who is already authenticated, e.g. right after a password change
+ * revoked every older session: the caller keeps working instead of being logged out 15 minutes later.
+ *
+ * @param persistent - "remember me" of the new cookie
+ * @throws AppError 404 if the user no longer exists
+ */
+export async function issueFreshSession(userId: string, meta: SessionMeta, persistent: boolean): Promise<IssuedSession> {
+  const user = await UserModel.findById(userId);
+  if (!user) throw new AppError('User not found', ErrorCode.NOT_FOUND, 404);
+  const session = await createSession(userId, meta, persistent);
+  return {
+    user: toUserDTO(user),
+    accessToken: signAccessToken(userId),
+    refreshToken: signRefreshToken(userId, session.jti),
+    persistent,
+  };
+}
+
+/**
+ * Whether the refresh session a token belongs to was opened with "remember me". False for a missing, invalid or
+ * foreign token (only a session of `userId` counts).
+ */
+export async function isPersistentSession(refreshToken: string | undefined, userId: string): Promise<boolean> {
+  const jti = refreshTokenJti(refreshToken);
+  if (!jti) return false;
+  const session = await RefreshSessionModel.findOne({ jti, userId }).select('persistent');
+  return session?.persistent === true;
 }
 
 /**

@@ -329,7 +329,7 @@ describe('Auth - sessions with rotated, revocable refresh tokens', () => {
   });
 
   describe('password change', () => {
-    it('(e) changing the password revokes every refresh session of the user', async () => {
+    it('(e) changing the password revokes every refresh session of the user that existed before', async () => {
       const a = await login();
       const b = await login();
 
@@ -337,11 +337,48 @@ describe('Auth - sessions with rotated, revocable refresh tokens', () => {
         .post('/api/users/change-password')
         .set('Authorization', `Bearer ${a.accessToken}`)
         .send({ currentPassword: PASSWORD, newPassword: 'brandnewpass456' });
-      expect(res.status).toBe(204);
+      expect(res.status).toBe(200);
 
       expect((await refresh(a.refreshToken)).status).toBe(401);
       expect((await refresh(b.refreshToken)).status).toBe(401);
-      expect(await RefreshSessionModel.countDocuments({ userId, revokedAt: { $exists: false } })).toBe(0);
+      // Only the fresh session handed to the caller is live
+      expect(await RefreshSessionModel.countDocuments({ userId, revokedAt: null })).toBe(1);
+    });
+
+    it('the caller stays logged in: a new access token in the body and a new refresh cookie that works', async () => {
+      const a = await login();
+      const other = await login();
+
+      const res = await request(app)
+        .post('/api/users/change-password')
+        .set('Authorization', `Bearer ${a.accessToken}`)
+        .send({ currentPassword: PASSWORD, newPassword: 'brandnewpass456' });
+      expect(res.status).toBe(200);
+      // Same shape as /auth/refresh: { accessToken, user }, the refresh token only in the cookie
+      expect(res.body.data.accessToken).toEqual(expect.any(String));
+      expect(res.body.data.user).toMatchObject({ id: userId, email: EMAIL });
+      expect(res.body.data).not.toHaveProperty('refreshToken');
+      const newRefresh = refreshTokenOf(res);
+      expect(newRefresh).toEqual(expect.any(String));
+
+      // The new access token works and the new cookie renews the session
+      const me = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${res.body.data.accessToken}`);
+      expect(me.status).toBe(200);
+      expect((await refresh(newRefresh!)).status).toBe(200);
+      // The other device is out
+      expect((await refresh(other.refreshToken)).status).toBe(401);
+    });
+
+    it('keeps the "remember me" choice of the caller when its cookie is sent', async () => {
+      const res0 = await request(app).post('/api/auth/login').send({ email: EMAIL, password: PASSWORD, remember: true });
+      const res = await request(app)
+        .post('/api/users/change-password')
+        .set('Authorization', `Bearer ${res0.body.data.tokens.accessToken}`)
+        .set('Cookie', `${RT_COOKIE}=${refreshTokenOf(res0)}`)
+        .send({ currentPassword: PASSWORD, newPassword: 'brandnewpass456' });
+      expect(res.status).toBe(200);
+      const live = await RefreshSessionModel.findOne({ userId, revokedAt: null });
+      expect(live?.persistent).toBe(true);
     });
 
     it('a rejected password change (wrong current password) leaves the sessions alone', async () => {

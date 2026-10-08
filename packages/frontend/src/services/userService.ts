@@ -1,4 +1,5 @@
 import { api } from './api'
+import { setAccessToken } from './session'
 import { filenameFromDisposition } from '../utils/download'
 
 export interface UserProfile {
@@ -22,8 +23,14 @@ export const updateProfile = async (payload: { fullName?: string, username?: str
   return res.data
 }
 
+/**
+ * Cambia la contrasena. El backend cierra todas las sesiones anteriores (tambien la de esta pestana) y entrega una
+ * nueva: cookie de refresh nueva y el access token en el cuerpo, que se guarda en memoria para seguir conectado.
+ */
 export const changePassword = async (payload: { currentPassword: string, newPassword: string }): Promise<void> => {
-  await api.post('/users/change-password', payload)
+  const res = await api.post('/users/change-password', payload)
+  const accessToken: unknown = res?.data?.data?.accessToken
+  if (typeof accessToken === 'string') setAccessToken(accessToken)
 }
 
 /**

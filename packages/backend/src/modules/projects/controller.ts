@@ -361,7 +361,7 @@ export const deleteProjectContextHandler = asyncHandler(
     // Verify user is the project owner
     const project = await getProjectById(id, userId);
     if (project.ownerId !== userId) {
-      throw new Error('Only project owner can delete context');
+      throw new AppError('Only project owner can delete context', ErrorCode.FORBIDDEN, 403);
     }
 
     // Delete the context

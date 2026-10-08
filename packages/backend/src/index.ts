@@ -12,7 +12,6 @@ import { projectsRouter } from './modules/projects/routes.js';
 import { userRouter } from './modules/users/routes.js';
 import { githubRouter } from './routes/github.routes.js';
 import { mockRouter } from './routes/mock.routes.js';
-import mountMockDocsRoutes from './modules/mock/mock.docs.routes.js';
 import { mockRouter as catchAllMockRouter } from './modules/mock/mockRouter.js';
 import { endpointsRouter } from './routes/endpoints.routes.js';
 import { mountInterceptorRoutes } from './modules/mock/interceptor.routes.js';
@@ -190,9 +189,6 @@ app.put(
   }
 );
 mountInterceptorRoutes(app);
-
-// Swagger Docs for Mock Router per-project (before catch-all)
-mountMockDocsRoutes(app);
 
 // Catch-all Mock Router for direct project path interception
 // Intercepts any request to /mock/:projectSlug/* and serves default responses
