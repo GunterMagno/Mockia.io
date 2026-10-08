@@ -32,6 +32,7 @@ import { isEmailVerificationRequired } from './middlewares/requireVerifiedEmail.
 import { authorizeRole } from './middlewares/authorizeRole.js';
 import { assertJwtConfig } from './services/jwt.service.js';
 import { assertProdConfig } from './config/assertProdConfig.js';
+import { getLlm } from './modules/ai/providers/index.js';
 import type { ProjectRole } from '@mockia/shared';
 
 dotenv.config();
@@ -231,12 +232,16 @@ const startServer = async (): Promise<void> => {
     assertJwtConfig();
     // Fail fast on insecure production config (open CORS, default DB password, missing APP_URL, default secrets)
     assertProdConfig();
+    // Fail fast on an AI_PROVIDERS list without a valid provider; unknown names only produce a warning.
+    const aiChain = getLlm().name;
     if (process.env.NODE_ENV === 'production' && !process.env.SMTP_URL?.trim() && isEmailVerificationRequired()) {
       console.warn(
         '[Backend] SMTP_URL is not set: verification and password reset emails cannot be delivered, and with email ' +
           'verification required users could not unlock AI generation or billing. Set SMTP_URL and MAIL_FROM.'
       );
     }
+
+    console.log(`[Backend] AI providers (in order): ${aiChain}`);
 
     // Connect to MongoDB
     await connectDB();

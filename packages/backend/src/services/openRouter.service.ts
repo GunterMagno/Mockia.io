@@ -62,13 +62,17 @@ function isRetryableError(error: unknown): boolean {
  *
  * @param messages - Array of messages for the chat completion
  * @param options - Optional parameters (temperature, max_tokens, etc.)
+ * @param requestOptions - Transport options that are not part of the request body (`signal`: aborting it cancels the
+ *   call and stops the retries)
  * @returns OpenRouter response
  * @throws AppError if API call fails after all retries
  */
 export async function callOpenRouterWithRetry(
   messages: OpenRouterMessage[],
-  options?: Partial<OpenRouterPayload>
+  options?: Partial<OpenRouterPayload>,
+  requestOptions?: { signal?: AbortSignal }
 ): Promise<OpenRouterResponse> {
+  const signal = requestOptions?.signal;
   const apiKey = getOpenRouterApiKey();
   const model = getOpenRouterModel();
   const baseUrl = getOpenRouterBaseUrl();
@@ -100,6 +104,7 @@ export async function callOpenRouterWithRetry(
             'Content-Type': 'application/json',
           },
           timeout: 30000, // 30 second timeout
+          ...(signal ? { signal } : {}),
         }
       );
 
@@ -107,6 +112,9 @@ export async function callOpenRouterWithRetry(
       return response.data;
     } catch (error) {
       lastError = error as AxiosError;
+
+      // The caller gave up: no retries and no error translation, whoever cancelled wants out.
+      if (signal?.aborted) throw error;
 
       if (!isRetryableError(error)) {
         // Special handling for credit/token limit errors from OpenRouter

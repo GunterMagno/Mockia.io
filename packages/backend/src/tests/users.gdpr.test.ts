@@ -12,6 +12,7 @@ import { EndpointConfigModel } from '../models/EndpointConfig.js';
 import { GitHubContextModel } from '../models/GitHubContext.js';
 import { NotificationModel } from '../models/Notification.js';
 import { UsageModel } from '../models/Usage.js';
+import { AiRateWindowModel } from '../models/AiRateWindow.js';
 import { RefreshSessionModel } from '../models/RefreshSession.js';
 import { AuthTokenModel } from '../models/AuthToken.js';
 
@@ -29,6 +30,7 @@ const ALL_MODELS = [
   EndpointConfigModel,
   NotificationModel,
   UsageModel,
+  AiRateWindowModel,
   RefreshSessionModel,
   AuthTokenModel,
   GitHubContextModel,
@@ -99,6 +101,7 @@ async function seedProject(ownerId: Types.ObjectId, slug: string, extra: Record<
 /** Everything that belongs to a user besides projects: session, token, usage, notification without project. */
 async function seedUserData(userId: Types.ObjectId) {
   await UsageModel.create({ ownerId: userId, period: '2026-10', requests: 7 });
+  await AiRateWindowModel.create({ userId, windowStart: new Date(), count: 3, expireAt: new Date(Date.now() + 180_000) });
   await AuthTokenModel.create({
     tokenHash: `hash-${userId.toString()}`,
     userId,

@@ -45,3 +45,65 @@ export function getOpenRouterModel(): string {
 export function getOpenRouterBaseUrl(): string {
   return openRouterConfig.baseUrl;
 }
+
+/* ------------------------------------------------------------------------------------------------------------------
+ * Provider selection and local (self-hosted, OpenAI-compatible) model
+ * ---------------------------------------------------------------------------------------------------------------- */
+
+export const AI_PROVIDER_NAMES = ['local', 'openrouter'] as const;
+export type AiProviderName = (typeof AI_PROVIDER_NAMES)[number];
+
+const DEFAULT_LOCAL_MODEL = 'qwen2.5-coder:7b-instruct';
+const DEFAULT_LOCAL_TIMEOUT_MS = 120_000; // a cold model load on a CPU/GPU box can take a minute or more
+const DEFAULT_AI_RATE_PER_MINUTE = 20;
+
+/**
+ * Parses AI_PROVIDERS: an ordered, comma separated list of provider names ("local,openrouter").
+ * Unset or blank means "openrouter" (the behaviour before providers existed). Names are case/space insensitive,
+ * duplicates collapse to their first position and unknown names are returned in `ignored` for the caller to warn about.
+ * `providers` is empty only when the variable lists nothing valid; getLlm() turns that into an error.
+ */
+export function parseAiProviders(raw: string | undefined): { providers: AiProviderName[]; ignored: string[] } {
+  if (raw === undefined || raw.trim() === '') return { providers: ['openrouter'], ignored: [] };
+  const providers: AiProviderName[] = [];
+  const ignored: string[] = [];
+  for (const item of raw.split(',')) {
+    const name = item.trim().toLowerCase();
+    if (!name) continue;
+    if ((AI_PROVIDER_NAMES as readonly string[]).includes(name)) {
+      if (!providers.includes(name as AiProviderName)) providers.push(name as AiProviderName);
+    } else if (!ignored.includes(name)) {
+      ignored.push(name);
+    }
+  }
+  return { providers, ignored };
+}
+
+export interface LocalAiConfig {
+  /** Server root WITHOUT /v1 (e.g. http://llm:11434); the client appends /v1/chat/completions. */
+  baseUrl: string;
+  model: string;
+  timeoutMs: number;
+  /** Optional: vLLM can be started with --api-key; Ollama needs none. */
+  apiKey: string | undefined;
+}
+
+function positiveInt(value: string | undefined, fallback: number): number {
+  const n = Number.parseInt((value ?? '').trim(), 10);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
+/** Local model settings, read from `env` on every call so tests (and a restart-less env change) see current values. */
+export function getLocalAiConfig(env: NodeJS.ProcessEnv = process.env): LocalAiConfig {
+  return {
+    baseUrl: (env.AI_LOCAL_BASE_URL ?? '').trim().replace(/\/+$/, ''),
+    model: (env.AI_LOCAL_MODEL ?? '').trim() || DEFAULT_LOCAL_MODEL,
+    timeoutMs: positiveInt(env.AI_LOCAL_TIMEOUT_MS, DEFAULT_LOCAL_TIMEOUT_MS),
+    apiKey: (env.AI_LOCAL_API_KEY ?? '').trim() || undefined,
+  };
+}
+
+/** AI calls one user may start per minute (AI_RATE_PER_MINUTE, default 20). */
+export function getAiRatePerMinute(env: NodeJS.ProcessEnv = process.env): number {
+  return positiveInt(env.AI_RATE_PER_MINUTE, DEFAULT_AI_RATE_PER_MINUTE);
+}

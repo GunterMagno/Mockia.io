@@ -5,60 +5,10 @@
 
 import { retryConfig } from '../config/ai.js';
 
-/**
- * Rate limiter state for tracking calls
+/*
+ * The old process-wide in-memory limiter (shouldRateLimit / resetRateLimiter / getRateLimiterState) was removed: it was
+ * shared by all users and reset on every restart. AI calls are limited per user in Mongo, see modules/ai/aiRateLimit.ts.
  */
-interface RateLimiterState {
-  calls: number;
-  resetTime: number;
-}
-
-const rateLimiterState: RateLimiterState = {
-  calls: 0,
-  resetTime: Date.now(),
-};
-
-/**
- * Check if we should rate limit based on a simple sliding window
- * This is a client-side optimization to avoid hitting the server rate limiter
- *
- * @param maxCallsPerMinute - Maximum calls allowed per minute
- * @returns true if we should rate limit (wait before calling)
- */
-export function shouldRateLimit(maxCallsPerMinute: number = 60): boolean {
-  const now = Date.now();
-  const oneMinuteInMs = 60 * 1000;
-
-  // Reset counter if the window has passed
-  if (now - rateLimiterState.resetTime > oneMinuteInMs) {
-    rateLimiterState.calls = 0;
-    rateLimiterState.resetTime = now;
-  }
-
-  // Check if we've exceeded the limit
-  if (rateLimiterState.calls >= maxCallsPerMinute) {
-    return true;
-  }
-
-  // Increment and allow
-  rateLimiterState.calls++;
-  return false;
-}
-
-/**
- * Reset rate limiter state (useful for testing)
- */
-export function resetRateLimiter(): void {
-  rateLimiterState.calls = 0;
-  rateLimiterState.resetTime = Date.now();
-}
-
-/**
- * Get current rate limiter state (for monitoring/debugging)
- */
-export function getRateLimiterState(): RateLimiterState {
-  return { ...rateLimiterState };
-}
 
 /**
  * Format retry configuration for logging

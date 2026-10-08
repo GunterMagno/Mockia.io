@@ -9,6 +9,7 @@ import { EndpointConfigModel } from '../../models/EndpointConfig.js';
 import { GitHubContextModel } from '../../models/GitHubContext.js';
 import { NotificationModel } from '../../models/Notification.js';
 import { UsageModel } from '../../models/Usage.js';
+import { AiRateWindowModel } from '../../models/AiRateWindow.js';
 import { RefreshSessionModel } from '../../models/RefreshSession.js';
 import { AuthTokenModel } from '../../models/AuthToken.js';
 import { deleteProjectsCascade } from '../projects/cascade.js';
@@ -215,6 +216,8 @@ export async function deleteUserAccount(userId: string, password: string): Promi
 
   await NotificationModel.deleteMany({ userId: uid });
   await UsageModel.deleteMany({ ownerId: uid });
+  // Per-minute AI call counters: not exported (operational, expire within minutes) but erased with the account
+  await AiRateWindowModel.deleteMany({ userId: uid });
   await revokeAllForUser(userId);
   await RefreshSessionModel.deleteMany({ userId: uid });
   await AuthTokenModel.deleteMany({ userId: uid });

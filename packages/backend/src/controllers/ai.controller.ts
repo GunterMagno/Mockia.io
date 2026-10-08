@@ -6,8 +6,9 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/authenticateToken.js';
 import { asyncHandler } from '../middlewares/errorHandler.js';
-import { generateWithOpenRouter, callOpenRouterWithRetry } from '../services/openRouter.service.js';
-import { shouldRateLimit } from '../utils/openRouterUtils.js';
+import { consumeAiQuota } from '../modules/ai/aiRateLimit.js';
+import { parseAiProviders } from '../config/ai.js';
+import { getLlm, type LlmCompletion, type LlmRequest } from '../modules/ai/providers/index.js';
 import { AppError } from '../middlewares/errorHandler.js';
 import { ErrorCode } from '@mockia/shared';
 import {
@@ -17,8 +18,43 @@ import {
 } from '../modules/ai/index.js';
 
 /**
+ * Per-user limit on AI calls (AI_RATE_PER_MINUTE, default 20), kept in Mongo: it survives restarts and holds across
+ * instances. Answers 429 with Retry-After; the other users are not affected.
+ */
+async function enforceAiRateLimit(userId: string, res: Response): Promise<void> {
+  const quota = await consumeAiQuota(userId);
+  if (quota.allowed) return;
+  res.set('Retry-After', String(quota.retryAfterSeconds));
+  throw new AppError(
+    'Too many AI generation requests. Please wait a moment.',
+    ErrorCode.RATE_LIMIT_ERROR,
+    429
+  );
+}
+
+/**
+ * Runs one completion through the configured provider chain (local model first, OpenRouter as reserve, per
+ * AI_PROVIDERS) and logs which provider answered. The log never carries the prompt or the answer.
+ */
+async function complete(operation: string, req: LlmRequest): Promise<LlmCompletion> {
+  const result = await getLlm().complete(req);
+  console.log(
+    `[AI] ${operation} done provider=${result.provider} model=${result.model} ` +
+      `inputTokens=${result.usage?.inputTokens ?? 'n/a'} outputTokens=${result.usage?.outputTokens ?? 'n/a'}`
+  );
+  return result;
+}
+
+/** Token usage in the shape the API has always returned (zeros when the provider does not report it). */
+function usageOf(result: LlmCompletion) {
+  const promptTokens = result.usage?.inputTokens ?? 0;
+  const completionTokens = result.usage?.outputTokens ?? 0;
+  return { promptTokens, completionTokens, totalTokens: promptTokens + completionTokens };
+}
+
+/**
  * POST /api/ai/generate-description
- * Generate a description for a mock endpoint using OpenRouter
+ * Generate a description for a mock endpoint using the configured LLM provider
  *
  * Body parameters:
  * - prompt (required): The system prompt/context
@@ -37,14 +73,7 @@ export const generateDescriptionHandler = asyncHandler(
       throw new Error('User ID not found in request');
     }
 
-    // Client-side rate limiting check
-    if (shouldRateLimit(60)) {
-      throw new AppError(
-        'Too many AI generation requests. Please wait a moment.',
-        ErrorCode.RATE_LIMIT_ERROR,
-        429
-      );
-    }
+    await enforceAiRateLimit(userId, res);
 
     const { prompt, userMessage, temperature, maxTokens } = req.body;
 
@@ -56,14 +85,14 @@ export const generateDescriptionHandler = asyncHandler(
       );
     }
 
-    const generatedContent = await generateWithOpenRouter(
-      prompt,
-      userMessage,
-      {
-        temperature: temperature ?? 0.7,
-        max_tokens: maxTokens ?? 1000,
-      }
-    );
+    const { text: generatedContent } = await complete('generate-description', {
+      messages: [
+        { role: 'system', content: prompt },
+        { role: 'user', content: userMessage },
+      ],
+      temperature: temperature ?? 0.7,
+      maxTokens: maxTokens ?? 1000,
+    });
 
     res.status(200).json({
       success: true,
@@ -94,13 +123,7 @@ export const generateMockDataHandler = asyncHandler(
       throw new Error('User ID not found in request');
     }
 
-    if (shouldRateLimit(60)) {
-      throw new AppError(
-        'Too many AI generation requests. Please wait a moment.',
-        ErrorCode.RATE_LIMIT_ERROR,
-        429
-      );
-    }
+    await enforceAiRateLimit(userId, res);
 
     const { schema, count = 1 } = req.body;
 
@@ -118,15 +141,15 @@ export const generateMockDataHandler = asyncHandler(
 
     const userMessage = `Generate ${count} mock data object(s) for this schema.`;
 
-    const generatedData = await generateWithOpenRouter(
-      prompt,
-      userMessage,
-      {
-        temperature: 0.8, // More creative for data generation
-        max_tokens: 2000,
-        response_format: { type: 'json_object' },
-      }
-    );
+    const { text: generatedData } = await complete('generate-mock-data', {
+      messages: [
+        { role: 'system', content: prompt },
+        { role: 'user', content: userMessage },
+      ],
+      temperature: 0.8, // More creative for data generation
+      maxTokens: 2000,
+      json: true,
+    });
 
     // Parse the JSON response from the AI
     let parsedMockData;
@@ -177,14 +200,7 @@ export const generateMockAPISpecHandler = asyncHandler(
       throw new Error('User ID not found in request');
     }
 
-    // Rate limiting check
-    if (shouldRateLimit(60)) {
-      throw new AppError(
-        'Too many AI generation requests. Please wait a moment.',
-        ErrorCode.RATE_LIMIT_ERROR,
-        429
-      );
-    }
+    await enforceAiRateLimit(userId, res);
 
     const { projectId, requirement } = req.body;
 
@@ -208,22 +224,14 @@ export const generateMockAPISpecHandler = asyncHandler(
     // Build prompt from project context and user requirement
     const messages = await buildPrompt(projectId, requirement);
 
-    // Call OpenRouter API with structured messages
-    const openRouterResponse = await callOpenRouterWithRetry(messages, {
+    // Call the LLM provider chain with structured messages
+    const completion = await complete('generate-mock-api-spec', {
+      messages,
       temperature: req.body.temperature ?? 0.85,
-      max_tokens: req.body.maxTokens ?? 5000,
-      response_format: { type: 'json_object' },
+      maxTokens: req.body.maxTokens ?? 5000,
+      json: true,
     });
-
-    // Extract the generated content from response
-    const responseContent = openRouterResponse.choices[0]?.message.content;
-    if (!responseContent) {
-      throw new AppError(
-        'No response content from AI service',
-        ErrorCode.INTERNAL_SERVER_ERROR,
-        500
-      );
-    }
+    const responseContent = completion.text;
 
     // Validate and extract the mock API specification
     const mockAPISpec = extractMockAPIFromResponse(responseContent);
@@ -233,11 +241,7 @@ export const generateMockAPISpecHandler = asyncHandler(
       success: true,
       data: {
         specification: mockAPISpec,
-        usage: {
-          promptTokens: openRouterResponse.usage.prompt_tokens,
-          completionTokens: openRouterResponse.usage.completion_tokens,
-          totalTokens: openRouterResponse.usage.total_tokens,
-        },
+        usage: usageOf(completion),
       },
       timestamp: new Date().toISOString(),
     });
@@ -258,7 +262,7 @@ export const generateMockAPISpecHandler = asyncHandler(
  * Response:
  * - specification: Complete mock API specification
  * - databaseResult: Info about created endpoints and responses
- * - totalTokens: Token usage from OpenRouter
+ * - usage.totalTokens: Token usage reported by the provider
  *
  * @param req - Authenticated request
  * @param res - Express response
@@ -271,14 +275,7 @@ export const generateAndSaveHandler = asyncHandler(
       throw new Error('User ID not found in request');
     }
 
-    // Rate limiting check
-    if (shouldRateLimit(60)) {
-      throw new AppError(
-        'Too many AI generation requests. Please wait a moment.',
-        ErrorCode.RATE_LIMIT_ERROR,
-        429
-      );
-    }
+    await enforceAiRateLimit(userId, res);
 
     const { projectId, requirement } = req.body;
 
@@ -305,37 +302,24 @@ export const generateAndSaveHandler = asyncHandler(
       const messages = await buildPrompt(projectId, requirement);
       console.log(`[AI] Prompt built with ${messages.length} messages`);
 
-      // 2. Call OpenRouter API
-      console.log('[AI] Calling OpenRouter API...');
-      const openRouterResponse = await callOpenRouterWithRetry(messages, {
+      // 2. Call the LLM provider chain
+      const completion = await complete('generate-and-save', {
+        messages,
         temperature: req.body.temperature ?? 0.85,
-        max_tokens: req.body.maxTokens ?? 5000,
-        response_format: { type: 'json_object' },
+        maxTokens: req.body.maxTokens ?? 5000,
+        json: true,
       });
 
-      // 3. Get response content
-      const responseContent = openRouterResponse.choices[0]?.message.content;
-      if (!responseContent) {
-        throw new AppError(
-          'No response content from AI service',
-          ErrorCode.INTERNAL_SERVER_ERROR,
-          500
-        );
-      }
-
+      // 3. Get response content (the provider already rejects empty answers)
+      const responseContent = completion.text;
       console.log(`[AI] Received response (${responseContent.length} chars)`);
-      console.log(`[AI] Response preview: ${responseContent.substring(0, 200)}...`);
 
       // 4. Run the complete pipeline: parse -> validate -> save to database
       console.log('[AI] Running generation pipeline...');
       const pipelineResult = await runAIGenerationPipeline(
         projectId,
         responseContent,
-        {
-          promptTokens: openRouterResponse.usage.prompt_tokens,
-          completionTokens: openRouterResponse.usage.completion_tokens,
-          totalTokens: openRouterResponse.usage.total_tokens,
-        }
+        usageOf(completion)
       );
 
       console.log(
@@ -366,7 +350,7 @@ export const generateAndSaveHandler = asyncHandler(
 );
 
 /**
- * Health check for OpenRouter integration
+ * Health check for the AI integration (reports the configured provider chain, e.g. "local,openrouter")
  * GET /api/ai/health
  */
 export const aiHealthCheckHandler = asyncHandler(
@@ -375,7 +359,7 @@ export const aiHealthCheckHandler = asyncHandler(
       success: true,
       data: {
         status: 'available',
-        service: 'openrouter',
+        service: parseAiProviders(process.env.AI_PROVIDERS).providers.join(',') || 'none',
         timestamp: new Date().toISOString(),
       },
     });
