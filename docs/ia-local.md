@@ -148,7 +148,7 @@ El banco (`packages/backend/evals/`, ver su `README.md`) ejecuta 36 casos con el
 Un modelo puede sustituir a OpenRouter **solo si cumple las tres**: `schemaValid` ≥ **95 %**, F1 medio ≥ **0.85** y latencia p95 ≤ **60 s**. El informe termina en `PASS` o `FAIL`.
 
 - **Si cumple**: activa `AI_PROVIDERS=local,openrouter` (apartado 4, paso 6) y anota el resultado abajo.
-- **Si no cumple** con prompt + esquema restringido: **no lo actives**; pasa a la **Tarea 15** (recoger datos propios y afinar con LoRA) o prueba otro modelo/cuantización.
+- **Si no cumple** con prompt + esquema restringido: **no lo actives**; pasa a la **Tarea 15** (recoger datos propios y afinar con LoRA, ver [`docs/ia-entrenamiento.md`](ia-entrenamiento.md)) o prueba otro modelo/cuantización.
 
 ### Resultados (a rellenar por el titular)
 
