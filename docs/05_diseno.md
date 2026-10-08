@@ -65,7 +65,9 @@ erDiagram
         array members "subdocument-array"
         object gitHubRepo "subdocument"
         boolean isArchived "default-false"
-        string apiKey "unique-sparse"
+        string visibility "public|key (por defecto public)"
+        string apiKeyHash "SHA-256 de la clave, select:false"
+        string apiKeyPrefix "primeros caracteres, solo para mostrar"
         date createdAt
         date updatedAt
     }
@@ -327,13 +329,14 @@ La API Core de Mockia.io sigue principios **RESTful**, utiliza payloads en forma
 | **Gestión Proyectos** | `GET` | `/api/projects` | Sí | `Authorization: Bearer <JWT>` | Lista todos los proyectos del usuario | `200 OK` | `401` |
 | | `POST` | `/api/projects` | Sí | Body: `title, description` | Crea un nuevo proyecto en el espacio de trabajo | `201 Created` | `400, 401` |
 | | `GET` | `/api/projects/:id` | Sí | Parámetro `id` en la ruta | Obtiene detalles y miembros de un proyecto específico | `200 OK` | `401, 404` |
-| | `PUT` | `/api/projects/:id` | Sí | Body: `title, description` | Actualiza los datos generales de un proyecto | `200 OK` | `400, 401, 403, 404` |
+| | `PUT` | `/api/projects/:id` | Sí | Body: `title, description, visibility` (`public` o `key`; `key` exige haber creado una clave: si no, `409 API_KEY_REQUIRED`). `PATCH` hace lo mismo | Actualiza los datos generales de un proyecto | `200 OK` | `400, 401, 403, 404` |
 | | `DELETE`| `/api/projects/:id` | Sí | Parámetro `id` en la ruta | Archiva un proyecto de forma lógica | `204 No Content` | `401, 403, 404` |
 | | `GET` | `/api/projects/:id/export` | Sí | Parámetro `id` (o slug) y query `format=openapi\|postman\|msw` | Descarga los mocks del proyecto como adjunto: OpenAPI 3.1 (`<slug>-openapi.json`), colección Postman v2.1 (`<slug>.postman_collection.json`) o handlers MSW v2 en TypeScript (`<slug>-handlers.ts`). Cualquier miembro (OWNER, EDITOR, VIEWER) puede exportar; nunca incluye la API key. 30 por usuario cada 15 min | `200 OK` | `400, 401, 403, 404, 429` |
 | | `DELETE`| `/api/projects/:id/hard`| Sí | Parámetro `id` en la ruta | Elimina de forma física y permanente un proyecto | `204 No Content`| `401, 403, 404` |
 | | `POST` | `/api/projects/:id/members`| Sí | Body: `targetEmail, role` | Añade un miembro colaborador al proyecto | `201 Created` | `400, 401, 403, 404` |
 | | `DELETE`| `/api/projects/:id/members/:targetUserId`| Sí | Parámetros `id` y `targetUserId` | Elimina a un colaborador del proyecto | `200 OK` | `401, 403, 404` |
-| | `POST` | `/api/projects/:id/regenerate-api-key`| Sí | Parámetro `id` en la ruta | Regenera la clave de API pública del proyecto | `200 OK` | `401, 403` |
+| | `POST` | `/api/projects/:id/api-key`| Sí | Parámetro `id` en la ruta (solo propietario) | Crea o rota la clave del mock. Devuelve `{ apiKey, prefix }`: la clave completa solo aparece en esta respuesta (en la BD solo queda su SHA-256); la anterior deja de valer al instante | `201 Created` | `401, 403, 404` |
+| | `DELETE`| `/api/projects/:id/api-key`| Sí | Parámetro `id` en la ruta (solo propietario) | Revoca la clave. Si el proyecto exige clave, el mock responde `401` a todos hasta que se cree otra (nunca pasa a público solo) | `200 OK` | `401, 403, 404` |
 | | `POST` | `/api/projects/:id/leave`| Sí | Parámetro `id` en la ruta | Permite al usuario actual salirse de un proyecto compartido | `200 OK` | `401, 404` |
 | **Ingesta GitHub** | `POST` | `/api/projects/:id/import/github`| Sí | Body: `repoUrl, branch` | Inicia análisis del código del repo e importa rutas | `200 OK` | `400, 401, 404` |
 | | `GET` | `/api/projects/:id/context`| Sí | Parámetro `id` en la ruta | Obtiene los ficheros y metadatos importados | `200 OK` | `401, 404` |
@@ -350,7 +353,7 @@ La API Core de Mockia.io sigue principios **RESTful**, utiliza payloads en forma
 | | `DELETE`| `/api/notifications/:id`| Sí | Parámetro `id` en la ruta | Elimina una notificación del historial | `200 OK` | `401, 404` |
 | **Mock Router** | `POST` | `/api/mock/resolve-route`| Sí | Body: `projectSlug, method, path` | Resuelve qué endpoint simularía una ruta dinámica | `200 OK` | `400, 401, 404` |
 | | `GET` | `/api/mock/endpoints/:projectSlug`| Sí | Parámetro `projectSlug` en ruta | Devuelve catálogo público/privado de endpoints | `200 OK` | `401, 404` |
-| | `ANY` | `/mock/:projectSlug/*` | Sí | Cabecera requerida: `X-Mockia-API-Key` | Intercepta y devuelve el mock JSON dinámico simulado | `Variable` | `401, 404` |
+| | `ANY` | `/mock/:projectSlug/*` | No | Cabecera `X-Mockia-API-Key` (alias `X-Mockia-Key`) solo si el proyecto tiene `visibility: key` | Intercepta y devuelve el mock JSON dinámico simulado. Lleva `X-RateLimit-Limit/Remaining/Reset`; superada la cuota mensual del plan del propietario responde `429` con `Retry-After`. Solo cuentan las peticiones servidas (no 401, 404, 429 ni el preflight `OPTIONS`) | `Variable` | `401, 404, 429` |
 
 ---
 
@@ -484,3 +487,10 @@ X-Mockia-API-Key: mk_live_72fa41bdc0...
   "inStock": true
 }
 ```
+
+### Claves de API del mock y cuota mensual (Task 11)
+
+- **Visibilidad.** Cada proyecto tiene `visibility`: `public` (por defecto, cualquiera con la URL) o `key` (hace falta la clave en `X-Mockia-API-Key`; `X-Mockia-Key` se acepta como alias). El preflight CORS (`OPTIONS`) nunca necesita clave; el CORS del mock permite cualquier cabecera solicitada y expone `X-RateLimit-*` y `Retry-After`.
+- **Almacenamiento.** Solo se guarda `apiKeyHash` (SHA-256, `select: false`) y `apiKeyPrefix` (p. ej. `mk_ab12cd`). La clave completa (`mk_` + 48 hex) se muestra una única vez al crearla o rotarla; ningún GET, exportación (OpenAPI/Postman/MSW) ni exportación RGPD la devuelve. Se compara el hash de la clave recibida con `crypto.timingSafeEqual` sobre digests de igual longitud.
+- **Migración de claves antiguas (en claro).** Antes cada proyecto guardaba `apiKey` en texto plano y el mock la exigía. Al arrancar, `migrateLegacyApiKeys()` (`modules/projects/apiKeyMigration.ts`) convierte cada `apiKey` en `apiKeyHash` + `apiKeyPrefix` (primeros 8 caracteres), pasa el proyecto a `visibility: 'key'` (ya era privado) y borra el campo en claro; los clientes que ya enviaban esa clave siguen funcionando. Es idempotente, no necesita ningún paso manual y, si falla, el servidor no arranca (para no servir como públicos mocks que eran privados). Los proyectos sin clave antigua quedan `public`. Los proyectos creados a partir de ahora nacen públicos y sin clave.
+- **Cuota.** Se reutiliza el contador mensual de `usages` (`PLAN_LIMITS[plan].maxMonthlyRequests`: 10.000 / 1.000.000 / 10.000.000) contra el plan efectivo del **propietario**. El gate comprueba el tope sin consumir y cada manejador cuenta la petición cuando ya la va a servir; el acumulado se vuelca a Mongo por lotes (`$inc` cada 5 s) y el plan se cachea 30 s, así que la ruta caliente no toca Mongo en cada petición.
