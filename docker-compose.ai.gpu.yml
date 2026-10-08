@@ -1,0 +1,16 @@
+# Reserva de GPU NVIDIA para el servicio `llm`. Se anade DESPUES de docker-compose.ai.yml (docker-compose.ai.vllm.yml
+# ya la incluye por si mismo). En un servidor solo con CPU simplemente no se incluye este fichero.
+#
+#   docker compose -f docker-compose.prod.yml -f docker-compose.ai.yml -f docker-compose.ai.gpu.yml up -d
+#
+# Requisitos del anfitrion: driver NVIDIA y NVIDIA Container Toolkit instalados (`docker run --rm --gpus all ubuntu nvidia-smi`
+# debe funcionar). Con `count: all` el contenedor ve todas las GPU; para fijar una concreta cambia `count` por `device_ids`.
+services:
+  llm:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

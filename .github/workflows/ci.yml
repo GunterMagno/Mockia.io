@@ -91,6 +91,42 @@ jobs:
           docker compose --env-file .env.example -f docker-compose.prod.yml config --format json |
             node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const p=JSON.parse(s).services.mongo.ports||[];if(p.length){console.error('mongo must not publish ports',p);process.exit(1)}})"
 
+  compose-ai-config:
+    name: Validate AI compose overrides
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Ollama on top of production
+        run: docker compose --env-file .env.example -f docker-compose.prod.yml -f docker-compose.ai.yml config -q
+
+      - name: Ollama with NVIDIA GPU on top of production
+        run: docker compose --env-file .env.example -f docker-compose.prod.yml -f docker-compose.ai.yml -f docker-compose.ai.gpu.yml config -q
+
+      - name: vLLM on top of production
+        run: docker compose --env-file .env.example -f docker-compose.prod.yml -f docker-compose.ai.vllm.yml config -q
+
+      - name: Ollama on top of the development compose
+        run: docker compose --env-file .env.example -f docker-compose.yml -f docker-compose.ai.yml config -q
+
+      - name: The model API is never published and the production secrets stay mandatory
+        run: |
+          for combo in "-f docker-compose.prod.yml -f docker-compose.ai.yml" "-f docker-compose.prod.yml -f docker-compose.ai.vllm.yml"; do
+            docker compose --env-file .env.example $combo config --format json |
+              node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const j=JSON.parse(s);const p=j.services.llm.ports||[];if(p.length){console.error('llm must not publish ports',p);process.exit(1)}if(j.services.mongo.ports&&j.services.mongo.ports.length){console.error('mongo must not publish ports');process.exit(1)}})"
+          done
+          # Los secretos obligatorios de produccion siguen siendo obligatorios con el override.
+          : > "$RUNNER_TEMP/empty.env"
+          if docker compose --env-file "$RUNNER_TEMP/empty.env" -f docker-compose.prod.yml -f docker-compose.ai.yml config -q; then
+            echo "the AI override must not remove the mandatory production variables"
+            exit 1
+          fi
+
+      - name: Shell syntax of scripts/pull-model.sh
+        run: sh -n scripts/pull-model.sh
+
   test-backend:
     name: Test - Backend
     runs-on: ubuntu-latest

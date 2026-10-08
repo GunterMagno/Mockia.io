@@ -1,0 +1,73 @@
+# IA propia con Ollama (override de compose). Se SUMA al compose base; no se usa solo:
+#
+#   Produccion:   docker compose -f docker-compose.prod.yml -f docker-compose.ai.yml up -d
+#   + GPU NVIDIA: ... -f docker-compose.ai.gpu.yml
+#   Desarrollo:   docker compose -f docker-compose.yml -f docker-compose.ai.yml up -d llm
+#
+# Alternativa para GPU con mas caudal: docker-compose.ai.vllm.yml (sustituye a ESTE fichero, no se combinan).
+# Guia completa, tallas de hardware y regla de decision: docs/ia-local.md.
+#
+# Reglas de seguridad:
+#  - El servicio `llm` NO publica puertos: la API del modelo no tiene autenticacion y solo debe ser alcanzable desde el
+#    backend. Tampoco hay ningun proxy_pass hacia el en nginx.conf (hay un test que lo comprueba).
+#  - Incluir este fichero NO cambia el comportamiento del backend: AI_PROVIDERS sigue valiendo `openrouter` hasta que
+#    el titular ponga AI_PROVIDERS=local,openrouter en su .env (despues de medir el modelo con el banco de evaluacion).
+#
+# Red: se crea una red propia (`llm-net`) y se conectan a ella `llm` y `backend`. Asi el mismo fichero sirve para el
+# compose de desarrollo (mockia-network) y el de produccion (mockia-network-prod) sin conocer sus nombres: compose SUMA
+# las redes del backend. La red tiene salida a Internet (hace falta para descargar el modelo); no es `internal`.
+#
+# Ojo: compose lee tambien el .env. Si dejaste AI_LOCAL_BASE_URL apuntando a otro sitio (p. ej. para ejecutar el banco
+# fuera de Docker), vaciala o quitala al usar este fichero; si esta vacia se usa http://llm:11434.
+services:
+  llm:
+    # Etiqueta concreta, nunca `latest`: una actualizacion del servidor cambia el comportamiento del modelo y debe ser
+    # una decision. Comprueba que existe en https://hub.docker.com/r/ollama/ollama/tags antes de subirla.
+    image: ${OLLAMA_IMAGE:-ollama/ollama:0.6.5}
+    container_name: mockia-llm
+    restart: unless-stopped
+    environment:
+      # Mantiene el modelo en memoria 24 h: sin esto Ollama lo descarga a los 5 min y el siguiente usuario paga la carga.
+      OLLAMA_KEEP_ALIVE: 24h
+      # Peticiones simultaneas por modelo. Cada una reserva su propio contexto (mas memoria): subelo solo si sobra.
+      OLLAMA_NUM_PARALLEL: ${OLLAMA_NUM_PARALLEL:-1}
+      # Un solo modelo cargado a la vez (evita que dos modelos candidatos agoten la memoria).
+      OLLAMA_MAX_LOADED_MODELS: 1
+    volumes:
+      - ollama_models:/root/.ollama
+    # Tope de RAM del contenedor (un modelo de 7B cuantizado cabe en ~8 GB; ajusta segun docs/ia-local.md).
+    mem_limit: ${LLM_MEM_LIMIT:-8g}
+    networks:
+      - llm-net
+    healthcheck:
+      # La imagen no trae curl ni wget: `ollama list` habla con el servidor local y falla si no responde.
+      test: ['CMD', 'ollama', 'list']
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  # Solo se anaden variables y la red; el resto del servicio viene del compose base.
+  backend:
+    networks:
+      - llm-net
+    environment:
+      # Seguro por defecto: sigue `openrouter` mientras el titular no ponga otra cosa. Para usar el modelo propio:
+      # AI_PROVIDERS=local,openrouter (el local primero y OpenRouter como reserva automatica).
+      AI_PROVIDERS: ${AI_PROVIDERS:-openrouter}
+      # Raiz del servidor SIN /v1.
+      AI_LOCAL_BASE_URL: ${AI_LOCAL_BASE_URL:-http://llm:11434}
+      AI_LOCAL_MODEL: ${AI_LOCAL_MODEL:-qwen2.5-coder:7b-instruct}
+      AI_LOCAL_TIMEOUT_MS: ${AI_LOCAL_TIMEOUT_MS:-120000}
+      # Debe quedar por debajo del proxy_read_timeout de /api/ai/ en nginx.conf (300 s).
+      AI_TOTAL_TIMEOUT_MS: ${AI_TOTAL_TIMEOUT_MS:-240000}
+      # Vacia = Ollama no pide clave.
+      AI_LOCAL_API_KEY: ${AI_LOCAL_API_KEY:-}
+
+volumes:
+  ollama_models:
+    driver: local
+
+networks:
+  llm-net:
+    driver: bridge

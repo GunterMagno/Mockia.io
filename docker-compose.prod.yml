@@ -2,6 +2,12 @@
 # (no hay valores por defecto para secretos ni contrasenas). Copia .env.example a .env y rellenalo.
 # El backend ademas se niega a arrancar (assertProdConfig) con CORS "*", contrasena de Mongo por defecto,
 # secretos JWT por defecto/cortos o sin APP_URL.
+#
+# IA propia (opcional): NO esta en este fichero. Se anade con ficheros de override, para que un despliegue sin IA propia
+# no cambie ni un byte de su configuracion:
+#   docker compose -f docker-compose.prod.yml -f docker-compose.ai.yml [-f docker-compose.ai.gpu.yml] up -d
+#   (vLLM, solo GPU NVIDIA: -f docker-compose.ai.vllm.yml en lugar de docker-compose.ai.yml)
+# El servicio `llm` no publica puertos y nginx no lo expone. Guia: docs/ia-local.md.
 services:
   # MongoDB Database (solo accesible desde la red interna de compose: NO se publica ningun puerto al host)
   mongo:

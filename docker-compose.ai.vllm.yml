@@ -1,0 +1,78 @@
+# IA propia con vLLM: alternativa de MAYOR CAUDAL a Ollama (batching continuo). EXIGE una GPU NVIDIA; no sirve para CPU.
+# Sustituye a docker-compose.ai.yml (ambos definen el servicio `llm`: usa uno u otro, nunca los dos).
+#
+#   docker compose -f docker-compose.prod.yml -f docker-compose.ai.vllm.yml up -d
+#
+# Diferencias con Ollama (ver docs/ia-local.md):
+#  - vLLM descarga el modelo de Hugging Face al ARRANCAR (cache en el volumen hf_cache): no hay script de descarga; la
+#    primera vez tarda y el healthcheck tiene un start_period largo.
+#  - El nombre de modelo es el id de Hugging Face (VLLM_MODEL) y el backend lo recibe como AI_LOCAL_MODEL.
+#  - Escucha en el 8000 (solo red interna, SIN puertos publicados: su API no tiene autenticacion salvo --api-key).
+#  - Incluir este fichero NO activa el modelo: AI_PROVIDERS sigue siendo `openrouter` hasta que el titular lo cambie.
+services:
+  llm:
+    # Etiqueta concreta, nunca `latest`. Comprueba que existe en https://hub.docker.com/r/vllm/vllm-openai/tags.
+    image: ${VLLM_IMAGE:-vllm/vllm-openai:v0.8.5}
+    container_name: mockia-llm
+    restart: unless-stopped
+    # La imagen ya trae el servidor de la API OpenAI como entrypoint: aqui solo van sus argumentos.
+    command:
+      - --model
+      - ${VLLM_MODEL:-Qwen/Qwen2.5-Coder-7B-Instruct}
+      - --max-model-len
+      - ${VLLM_MAX_MODEL_LEN:-8192}
+      - --gpu-memory-utilization
+      - ${VLLM_GPU_MEMORY_UTILIZATION:-0.90}
+      - --host
+      - 0.0.0.0
+      - --port
+      - '8000'
+    environment:
+      # Solo para modelos con acceso restringido en Hugging Face (los Qwen2.5-Coder no lo necesitan).
+      HUGGING_FACE_HUB_TOKEN: ${HF_TOKEN:-}
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+    # vLLM usa memoria compartida entre procesos (alternativa a ipc: host sin romper el aislamiento).
+    shm_size: ${VLLM_SHM_SIZE:-8gb}
+    mem_limit: ${LLM_MEM_LIMIT:-16g}
+    networks:
+      - llm-net
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      # La imagen trae Python; no se depende de curl.
+      test:
+        - CMD
+        - python3
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      # Descargar y cargar el modelo la primera vez puede tardar varios minutos.
+      start_period: 300s
+
+  backend:
+    networks:
+      - llm-net
+    environment:
+      AI_PROVIDERS: ${AI_PROVIDERS:-openrouter}
+      AI_LOCAL_BASE_URL: http://llm:8000
+      # Debe ser el mismo id con el que arranca vLLM.
+      AI_LOCAL_MODEL: ${VLLM_MODEL:-Qwen/Qwen2.5-Coder-7B-Instruct}
+      AI_LOCAL_TIMEOUT_MS: ${AI_LOCAL_TIMEOUT_MS:-120000}
+      AI_TOTAL_TIMEOUT_MS: ${AI_TOTAL_TIMEOUT_MS:-240000}
+      AI_LOCAL_API_KEY: ${AI_LOCAL_API_KEY:-}
+
+volumes:
+  hf_cache:
+    driver: local
+
+networks:
+  llm-net:
+    driver: bridge
