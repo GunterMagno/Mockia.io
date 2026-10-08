@@ -16,8 +16,6 @@ import loaderIcon from '../../../assets/loader.svg'
 import checkIcon from '../../../assets/check.svg'
 import linkIcon from '../../../assets/link.svg'
 import folderIcon from '../../../assets/folder.svg'
-import eyeIcon from '../../../assets/eye.svg'
-import eyeOffIcon from '../../../assets/eye-off.svg'
 import { playErrorSound } from '../../../utils/audio'
 import ModalErrorAlert from '../../ui/ModalErrorAlert/ModalErrorAlert'
 import { useI18n } from '../../../i18n/I18nProvider'
@@ -58,8 +56,6 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
   const [limitReached, setLimitReached] = useState(false)
   const [createdProject, setCreatedProject] = useState<Project | null>(null)
   const [copiedUrl, setCopiedUrl] = useState(false)
-  const [copiedKey, setCopiedKey] = useState(false)
-  const [showApiKey, setShowApiKey] = useState(false)
 
   const apiBaseUrl = import.meta.env.VITE_API_URL && (import.meta.env.VITE_API_URL.startsWith('http') || import.meta.env.VITE_API_URL.startsWith('//'))
     ? import.meta.env.VITE_API_URL
@@ -84,7 +80,6 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
     setLimitReached(false)
     setCreatedProject(null)
     setCopiedUrl(false)
-    setCopiedKey(false)
   }
 
   const closeAndReset = () => {
@@ -413,42 +408,11 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
                   </article>
                 </article>
 
-                <article className={styles.infoGroup}>
-                  <label>{t('createProject.apiKey')}</label>
-                  <article className={styles.infoDisplay}>
-                    <section className={styles.infoBox}>
-                      <code>
-                        {showApiKey 
-                          ? (createdProject.apiKey || '') 
-                          : (createdProject.apiKey ? '•'.repeat(createdProject.apiKey.length) : '')}
-                      </code>
-                      <button 
-                        className={styles.toggleBtn}
-                        onClick={() => setShowApiKey(!showApiKey)}
-                        title={showApiKey ? t('common.hideApiKey') : t('common.showApiKey')}
-                        aria-label={showApiKey ? t('common.hideApiKey') : t('common.showApiKey')}
-                      >
-                        <Icon src={showApiKey ? eyeOffIcon : eyeIcon} size={16} />
-                      </button>
-                    </section>
-                    <button 
-                      onClick={() => {
-                        navigator.clipboard.writeText(createdProject.apiKey || '')
-                        setCopiedKey(true)
-                        setTimeout(() => setCopiedKey(false), 2000)
-                      }}
-                      className={`${styles.copyBtn} ${copiedKey ? styles.copied : ''}`}
-                    >
-                      {copiedKey ? t('common.copied') : t('common.copy')}
-                    </button>
-                  </article>
-                </article>
-
                 <article className={styles.instructionNote}>
                   <figure className={styles.noteIcon} aria-hidden="true">!</figure>
                   <span className={styles.noteText}>
                     <strong>{t('createProject.important')}</strong>{' '}
-                    {rich('createProject.headerNote', { code: (chunk) => <code>{chunk}</code> })}
+                    {rich('createProject.publicNote', { strong: (chunk) => <strong>{chunk}</strong> })}
                   </span>
                 </article>
               </article>

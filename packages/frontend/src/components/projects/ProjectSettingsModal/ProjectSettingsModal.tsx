@@ -1,14 +1,11 @@
 import React, { useState, useId } from 'react'
 import { Modal } from '../../ui/Modal/Modal'
 import { Icon } from '../../ui/Icon/Icon'
-import { updateProject, archiveProject, addProjectMember, removeProjectMember, regenerateApiKey, leaveProject } from '../../../services/projectService'
+import { updateProject, archiveProject, addProjectMember, removeProjectMember, leaveProject } from '../../../services/projectService'
 import type { Project } from '@mockia/shared'
 import styles from './ProjectSettingsModal.module.scss'
 import warningIcon from '../../../assets/warning.svg'
-import copyIcon from '../../../assets/copy.svg'
-import checkIcon from '../../../assets/check.svg'
-import eyeIcon from '../../../assets/eye.svg'
-import eyeOffIcon from '../../../assets/eye-off.svg'
+import { ApiAccessPanel } from '../ApiAccessPanel'
 import githubIcon from '../../../assets/github.svg'
 import externalLinkIcon from '../../../assets/external-link.svg'
 import { playErrorSound } from '../../../utils/audio'
@@ -28,7 +25,7 @@ type Props = {
 type Tab = 'general' | 'members' | 'connection'
 
 const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isViewer = false, onUpdate, onDelete }) => {
-  const { t, rich } = useI18n()
+  const { t } = useI18n()
   const uid = useId()
   const [activeTab, setActiveTab] = useState<Tab>('general')
   const [title, setTitle] = useState(project.title)
@@ -36,13 +33,10 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
   
   // Member invite state
   const [inviteEmail, setInviteEmail] = useState('')
-  const [copiedKey, setCopiedKey] = useState(false)
-  const [showApiKey, setShowApiKey] = useState(false)
   const [inviteRole, setInviteRole] = useState<'EDITOR' | 'VIEWER'>('VIEWER')
 
   
   const [loading, setLoading] = useState(false)
-  const [isRegenerating, setIsRegenerating] = useState(false)
   const [error, setError] = useState('')
   const [showConfirmDelete, setShowConfirmDelete] = useState(false)
   const [showConfirmLeave, setShowConfirmLeave] = useState(false)
@@ -138,20 +132,6 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
       playErrorSound()
     } finally {
       setLoading(false)
-    }
-  }
-
-  const handleRegenerateKey = async () => {
-    setIsRegenerating(true)
-    setError('')
-    try {
-      const updated = await regenerateApiKey(project.id)
-      onUpdate(updated)
-    } catch (err: any) {
-      setError(t('projectSettings.regenerateFailed'))
-      playErrorSound()
-    } finally {
-      setIsRegenerating(false)
     }
   }
 
@@ -358,58 +338,15 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
                 ))}
               </section>
             </section>
-          ) : (
-            <section className={styles.connectionTab}>
-              <section className={styles.apiKeySection}>
-                <h4>{t('projectSettings.apiKeyTitle')}</h4>
-                <p>{rich('projectSettings.apiKeyText', { code: (chunk) => <code>{chunk}</code> })}</p>
-                <article className={styles.apiKeyDisplay}>
-                  <article className={styles.apiKeyBox}>
-                    <code>
-                      {showApiKey 
-                        ? (project.apiKey || t('projectSettings.noApiKey'))
-                        : (project.apiKey ? '•'.repeat(project.apiKey.length) : t('projectSettings.noApiKey'))}
-                    </code>
-                    <button 
-                      className={styles.toggleBtn}
-                      onClick={() => setShowApiKey(!showApiKey)}
-                      title={showApiKey ? t('common.hideApiKey') : t('common.showApiKey')}
-                      aria-label={showApiKey ? t('common.hideApiKey') : t('common.showApiKey')}
-                    >
-                      <Icon src={showApiKey ? eyeOffIcon : eyeIcon} size={16} />
-                    </button>
-                  </article>
-                  <button 
-                    className={`${styles.copyBtn} ${copiedKey ? styles.copied : ''}`} 
-                    onClick={() => {
-                      if (project.apiKey) {
-                        navigator.clipboard.writeText(project.apiKey)
-                        setCopiedKey(true)
-                        setTimeout(() => setCopiedKey(false), 2000)
-                      }
-                    }}
-                  >
-                    <Icon src={copiedKey ? checkIcon : copyIcon} size={16} />
-                    {copiedKey ? t('common.copied') : t('common.copy')}
-                  </button>
-                </article>
-              </section>
-
-              {!isViewer && (
-                <section className={styles.regenerateSection}>
-                  <h4>{t('projectSettings.regenerateTitle')}</h4>
-                  <p>{t('projectSettings.regenerateText')}</p>
-                  <button 
-                    className={styles.regenerateBtn} 
-                    onClick={handleRegenerateKey}
-                    disabled={isRegenerating}
-                  >
-                    {isRegenerating ? t('projectSettings.regenerating') : t('projectSettings.regenerate')}
-                  </button>
-                </section>
-              )}
-            </section>
-          )}
+          ) : null}
+          <section hidden={activeTab !== 'connection'} className={styles.connectionTab}>
+            <ApiAccessPanel
+              project={project}
+              canManageKey={project.ownerId === currentUserId}
+              canChangeVisibility={!isViewer}
+              onUpdate={onUpdate}
+            />
+          </section>
           <ModalErrorAlert message={error} />
         </section>
 

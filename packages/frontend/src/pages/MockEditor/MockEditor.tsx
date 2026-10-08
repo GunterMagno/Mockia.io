@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/Button/Button'
 import { Modal } from '../../components/ui/Modal/Modal'
 import { getEndpoints, updateEndpoint, createEndpoint, deleteEndpoint } from '../../services/endpointService'
 import { getProjectById, type Project } from '../../services/projectService'
+import { MOCK_API_KEY_HEADER } from '@mockia/shared'
 import { generateAndSaveEndpoints } from '../../services/aiService'
 import type { EndpointData } from '../../services/endpointService'
 
@@ -45,7 +46,6 @@ const MockEditor: React.FC = () => {
   // AI Generation State
   const [showAiModal, setShowAiModal] = useState(false)
   const [copiedUrl, setCopiedUrl] = useState(false)
-  const [copiedKey, setCopiedKey] = useState(false)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [aiRequirement, setAiRequirement] = useState('')
   const [isAiGenerating, setIsAiGenerating] = useState(false)
@@ -332,25 +332,16 @@ const MockEditor: React.FC = () => {
             </Button>
           </article>
 
-          <article className={styles.authInfo}>
-            <span className={styles.authLabel}>{t('editor.header')}:</span>
-            <code>X-Mockia-API-Key</code>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => {
-                if (project?.apiKey) {
-                  navigator.clipboard.writeText(project.apiKey);
-                  setCopiedKey(true);
-                  setTimeout(() => setCopiedKey(false), 2000);
-                }
-              }}
-              title={t('editor.copyApiKey')}
-              className={`${styles.copyBtn} ${copiedKey ? styles.copied : ''}`}
-            >
-              <Icon src={copiedKey ? checkIcon : copyIcon} size={16} />
-              {copiedKey ? t('editor.keyCopied') : t('editor.copyKey')}
-            </Button>
+          <article className={styles.authInfo} data-testid="editor-auth-info">
+            {project?.visibility === 'key' ? (
+              <>
+                <span className={styles.authLabel}>{t('editor.header')}:</span>
+                <code>{MOCK_API_KEY_HEADER}</code>
+                {project.apiKeyPrefix && <code>{project.apiKeyPrefix}…</code>}
+              </>
+            ) : (
+              <span className={styles.authLabel}>{t('editor.publicMock')}</span>
+            )}
           </article>
           {isDirty && <span className={styles.unsaved} role="status">• {t('editor.unsaved')}</span>}
         </section>
@@ -413,6 +404,7 @@ const MockEditor: React.FC = () => {
               onChangeMeta={handleMetaChange} 
               readOnly={isViewer}
               mockBaseUrl={mockBaseUrl}
+              apiKeyRequired={project?.visibility === 'key'}
             />
           )}
         </aside>

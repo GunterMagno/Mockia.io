@@ -19,7 +19,7 @@ import styles from './Dashboard.module.scss'
 const Dashboard: React.FC = () => {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { t, formatDate } = useI18n()
+  const { t, formatDate, formatNumber } = useI18n()
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
@@ -70,6 +70,8 @@ const Dashboard: React.FC = () => {
 
   const projectLimit = billing?.limits.maxActiveProjects ?? null
   const pastDue = billing?.billingStatus === 'past_due'
+  const requestsLimit = billing?.limits.maxMonthlyRequests ?? null
+  const requestsNearLimit = billing !== null && requestsLimit !== null && billing.usage.monthlyRequests >= requestsLimit * 0.9
   const atLimit = billing !== null && projectLimit !== null && billing.usage.activeProjects >= projectLimit
 
   const handleCreated = (p: Project) => {
@@ -86,11 +88,19 @@ const Dashboard: React.FC = () => {
           <h1>{t('dashboard.title')}</h1>
           <p>{t('dashboard.subtitle')}</p>
           {billing && (
-            <Link to={PATHS.billing} className={`${styles.planChip} ${atLimit || pastDue ? styles.planChipWarn : ''}`}>
+            <Link to={PATHS.billing} className={`${styles.planChip} ${atLimit || pastDue || requestsNearLimit ? styles.planChipWarn : ''}`}>
               <span>{t('billing.planBadge', { plan: t(`pricing.plans.${billing.plan}.name`) })}</span>
               {pastDue && <strong>· {t('billing.status.past_due')}</strong>}
               {projectLimit !== null && (
                 <span>· {t('billing.projectsUsage', { used: billing.usage.activeProjects, limit: projectLimit })}</span>
+              )}
+              {billing.limits.maxMonthlyRequests !== null && (
+                <span data-testid="plan-chip-requests" className={requestsNearLimit ? styles.planChipStrong : undefined}>
+                  · {t('billing.requestsUsage', {
+                    used: formatNumber(billing.usage.monthlyRequests),
+                    limit: formatNumber(billing.limits.maxMonthlyRequests),
+                  })}
+                </span>
               )}
               {billing.plan !== 'team' && (atLimit || billing.plan === 'free') && (
                 <strong className={styles.planChipCta}>{t('billing.upgradeCta')} →</strong>

@@ -3,10 +3,12 @@ import { filenameFromDisposition } from '../utils/download'
 import type { 
   Project, 
   CreateProjectRequest, 
-  ImportGitHubRequest 
+  ImportGitHubRequest,
+  IssuedApiKey,
+  MockVisibility
 } from '@mockia/shared'
 
-export type { Project, CreateProjectRequest, ImportGitHubRequest }
+export type { Project, CreateProjectRequest, ImportGitHubRequest, IssuedApiKey, MockVisibility }
 
 export const getProjects = async (): Promise<Project[]> => {
   const res = await api.get<{ data: Project[] }>('/projects?populate=members')
@@ -28,7 +30,7 @@ export const getProjectById = async (id: string): Promise<Project> => {
   return res.data.data
 }
 
-export const updateProject = async (id: string, payload: { title?: string, description?: string }): Promise<Project> => {
+export const updateProject = async (id: string, payload: { title?: string, description?: string, visibility?: MockVisibility }): Promise<Project> => {
   const res = await api.put<{ data: Project }>(`/projects/${id}`, payload)
   return res.data.data
 }
@@ -52,8 +54,15 @@ export const removeProjectMember = async (projectId: string, userId: string): Pr
   return res.data.data
 }
 
-export const regenerateApiKey = async (projectId: string): Promise<Project> => {
-  const res = await api.post<{ data: Project }>(`/projects/${projectId}/regenerate-api-key`)
+/** Crea o rota la clave del mock (solo propietario). La clave completa solo viene en esta respuesta. */
+export const createApiKey = async (projectId: string): Promise<IssuedApiKey> => {
+  const res = await api.post<{ data: IssuedApiKey }>(`/projects/${projectId}/api-key`)
+  return res.data.data
+}
+
+/** Revoca la clave del mock (solo propietario). */
+export const revokeApiKey = async (projectId: string): Promise<Project> => {
+  const res = await api.delete<{ data: Project }>(`/projects/${projectId}/api-key`)
   return res.data.data
 }
 

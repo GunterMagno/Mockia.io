@@ -1,5 +1,5 @@
 import React, { useId, useMemo, useState } from 'react'
-import { generateSnippets, type CodeSnippets } from '@mockia/shared'
+import { generateSnippets, MOCK_API_KEY_HEADER, type CodeSnippets } from '@mockia/shared'
 import type { EndpointData } from '../../../services/endpointService'
 import { Input } from '../../ui/Input/Input'
 import { useI18n } from '../../../i18n/I18nProvider'
@@ -10,6 +10,8 @@ export interface EndpointInspectorProps {
   readOnly?: boolean
   /** URL publica base del mock (sin el path del endpoint). */
   mockBaseUrl?: string
+  /** El proyecto exige clave de API: los fragmentos incluyen la cabecera con un marcador (nunca la clave real). */
+  apiKeyRequired?: boolean
 }
 
 const LANGS: Array<{ key: keyof CodeSnippets; label: string }> = [
@@ -21,16 +23,20 @@ const LANGS: Array<{ key: keyof CodeSnippets; label: string }> = [
 
 import styles from './EndpointInspector.module.scss'
 
-export const EndpointInspector: React.FC<EndpointInspectorProps> = ({ endpoint, onChangeMeta, readOnly, mockBaseUrl }) => {
+export const EndpointInspector: React.FC<EndpointInspectorProps> = ({ endpoint, onChangeMeta, readOnly, mockBaseUrl, apiKeyRequired }) => {
   const { t } = useI18n()
   const uid = useId()
   const [lang, setLang] = useState<keyof CodeSnippets>('curl')
   const [copied, setCopied] = useState(false)
   const snippets = useMemo(
     () => (mockBaseUrl && mockBaseUrl !== '...'
-      ? generateSnippets({ method: endpoint.method, url: `${mockBaseUrl}${endpoint.path}` })
+      ? generateSnippets({
+          method: endpoint.method,
+          url: `${mockBaseUrl}${endpoint.path}`,
+          headers: apiKeyRequired ? { [MOCK_API_KEY_HEADER]: t('inspector.keyPlaceholder') } : undefined,
+        })
       : null),
-    [mockBaseUrl, endpoint.method, endpoint.path],
+    [mockBaseUrl, endpoint.method, endpoint.path, apiKeyRequired, t],
   )
   const copy = () => {
     if (!snippets) return
