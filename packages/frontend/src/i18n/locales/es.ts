@@ -559,7 +559,7 @@ const es: Messages = {
       aiConsent: {
         title: 'Ayudar a mejorar la IA de Mockia con mis generaciones (opcional)',
         description:
-          'Si lo activas, guardamos hasta 180 días las instrucciones que enviamos a la IA (pueden incluir partes de tu repositorio) y sus respuestas, para evaluar y mejorar la IA de Mockia. Se eliminan claves y emails y los ejemplos nunca incluyen quién eres. Está desactivado por defecto y no cambia nada de cómo usas Mockia.',
+          'Si lo activas, guardamos hasta 180 días las instrucciones que enviamos a la IA (pueden incluir partes de tu repositorio) y sus respuestas, para evaluar y mejorar la IA de Mockia. Antes de usarlas se eliminan claves, emails y los nombres del repositorio y del proyecto, y los ejemplos no llevan ningún identificador de tu cuenta. No se detectan los nombres ni los datos personales que escribas dentro del README o de tus requisitos: evita incluirlos. Está desactivado por defecto y no cambia nada de cómo usas Mockia.',
         privacy: 'Cómo lo usamos (Política de Privacidad)',
         on: '¡Gracias! A partir de ahora tus generaciones pueden ayudar a mejorar la IA. Puedes desactivarlo cuando quieras.',
         off: 'Desactivado. Todo lo que teníamos guardado para este fin se ha borrado.',

@@ -8,6 +8,7 @@ import { UserModel } from '../models/User.js';
 import { AiGenerationModel } from '../models/AiGeneration.js';
 import { AiFeedbackModel } from '../models/AiFeedback.js';
 import { buildDataset, runExportCli, splitBucket } from '../modules/ai/dataset.js';
+import { buildPromptFromInput } from '../modules/ai/prompt.service.js';
 
 /**
  * The dataset exporter: only users whose consent is granted RIGHT NOW, only feedback that says "good" or carries a
@@ -227,6 +228,91 @@ describe('dataset export', () => {
       expect(text).toContain('[REDACTED_EMAIL]');
       // the target is still valid JSON after redaction
       expect(() => JSON.parse(lines(r)[0].messages[2].content)).not.toThrow();
+    });
+
+    /** Stores a generation of a fresh consenting user with an explicit prompt and a 'good' vote. */
+    const seedPrompt = async (messages: Array<{ role: 'system' | 'user'; content: string }>, output: string) => {
+      const generationId = crypto.randomUUID();
+      const { user } = await seed({ verdict: null });
+      await AiGenerationModel.create({ generationId, userId: user._id, messages, output, parsedOk: true, provider: 'p', model: 'm', expiresAt: new Date(Date.now() + 1e9) });
+      await AiFeedbackModel.create({ userId: user._id, generationId, verdict: 'good', expiresAt: new Date(Date.now() + 1e9) });
+    };
+
+    it('removes the repository, owner, URL, branch and project identifiers of the prompt (built by the real prompt builder)', async () => {
+      const ids = ['zelda-acme-labs', 'gym-booking-secret-repo', 'github.com/zelda-acme-labs', 'feature/acme-payroll', 'Acme Internal Gym Portal', 'Acme Corp Madrid'];
+      const withRepo = buildPromptFromInput({
+        projectTitle: 'Acme Internal Gym Portal',
+        projectDescription: 'Portal for the Acme Corp Madrid branch members',
+        context: {
+          repoName: 'gym-booking-secret-repo',
+          repoUrl: 'https://github.com/zelda-acme-labs/gym-booking-secret-repo',
+          repoOwner: 'zelda-acme-labs',
+          branch: 'feature/acme-payroll',
+          summary: 'Repository with 1 analyzed files',
+          files: [{ path: 'README.md', type: 'other', summary: 'Gym API' }],
+        },
+        userInput: 'Members CRUD',
+      });
+      const noRepo = buildPromptFromInput({
+        projectTitle: 'Acme Internal Gym Portal',
+        projectDescription: 'Portal for the Acme Corp Madrid branch members',
+        context: null,
+        userInput: 'Members CRUD',
+      });
+      await seedPrompt(withRepo as never, JSON.stringify(specWith()));
+      await seedPrompt(noRepo as never, JSON.stringify(specWith({}, '/other')));
+      const r = await buildDataset();
+      const text = [...r.train, ...r.val].join('\n');
+      expect(r.counts.included).toBe(2);
+      for (const id of ids) expect(text).not.toContain(id);
+      expect(text).toContain('Members CRUD');
+      expect(text).toContain('[REDACTED_REPO]');
+    });
+
+    it('the same prompt from two different repositories is one example (identifiers are neutralised before hashing)', async () => {
+      const prompt = (repo: string) =>
+        buildPromptFromInput({
+          projectTitle: repo,
+          context: { repoName: repo, repoUrl: 'https://github.com/o-' + repo + '/' + repo, repoOwner: 'o-' + repo, summary: 's', files: [] },
+          userInput: 'Members CRUD',
+        });
+      for (const repo of ['alpha-repo', 'beta-repo']) await seedPrompt(prompt(repo) as never, JSON.stringify(specWith()));
+      const r = await buildDataset();
+      expect(r.counts.included).toBe(1);
+      expect(r.counts.duplicates).toBe(1);
+    });
+
+    it('synthetic mock data in the target survives (example.com e-mails, fake passwords and tokens), real-looking keys do not, prompts stay strict', async () => {
+      const login = {
+        user: { email: 'john.doe@example.com', password: 'Secret123!' },
+        token: 'abc123',
+        accessToken: 'eyJhbGciOi.fake.token',
+      };
+      const target = specWith({
+        endpoints: [
+          {
+            path: '/login',
+            method: 'POST',
+            description: 'Login',
+            examples: [
+              { request: { email: 'jane@example.org', password: 'hunter2' }, response: login, statusCode: 200 },
+              { request: {}, response: { leaked: SK } },
+            ],
+          },
+        ],
+      });
+      await seed({ userText: 'Auth API, contact boss@real-company.io and use password = Secret123!', output: JSON.stringify(target) });
+      const r = await buildDataset();
+      const text = [...r.train, ...r.val].join('\n');
+      const out = JSON.parse(lines(r)[0].messages[2].content);
+      const example = out.endpoints[0].examples[0];
+      expect(example.response).toEqual(login);
+      expect(example.request).toEqual({ email: 'jane@example.org', password: 'hunter2' });
+      expect(text).not.toContain(SK);
+      expect(out.endpoints[0].examples[1].response.leaked).toBe('[REDACTED_KEY]');
+      const prompt = lines(r)[0].messages[1].content;
+      expect(prompt).not.toContain('boss@real-company.io');
+      expect(prompt).not.toContain('Secret123!');
     });
 
     it('does not contain the email, user id or generation id of the author', async () => {

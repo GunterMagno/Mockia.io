@@ -119,3 +119,75 @@ function walk(value: unknown, key: string | undefined): unknown {
   }
   return value;
 }
+
+/* ------------------------------------------------------------------------------------------------------------------
+ * Targets (the assistant answer of a training example)
+ * ---------------------------------------------------------------------------------------------------------------- */
+
+/**
+ * ASYMMETRY, on purpose. A PROMPT carries real user content (README text, requirements), so it goes through the strict
+ * `redactSecrets`. A TARGET is the specification a model wrote, full of synthetic mock data: login and user responses with
+ * `john.doe@example.com`, `"password": "Secret123!"`, `"token": "abc123"` are exactly what the product must learn to
+ * produce, and rewriting them to placeholders would teach it to emit `[REDACTED_KEY]` as mock values. So in a target only
+ * the following go:
+ *  - strings with the SHAPE of a real secret: the provider key patterns (Stripe, sk-, GitHub, AWS, Google, Slack) and PEM
+ *    blocks; a JWT only when its header and payload decode to JSON and its signature has a real length (a truncated or
+ *    placeholder token, and the public jwt.io sample, are mock data); the AWS documentation key (`...EXAMPLE`) stays;
+ *  - e-mail addresses on any domain that is not reserved (RFC 2606 / 6761: example.com/.org/.net, .test, .invalid,
+ *    .localhost, .example) nor obviously fake (domain.com, test.com, email.com, ...).
+ * Not applied in a target: the generic `password|secret|token = value` rule, `Bearer`, and URLs with credentials, and a
+ * value is never redacted merely because of its key name.
+ */
+const RESERVED_EMAIL_DOMAIN =
+  /(?:^|\.)(?:example\.(?:com|org|net)|domain\.com|yourdomain\.com|mydomain\.com|test\.com|email\.com|foo\.com|bar\.com|localhost)$|\.(?:example|test|invalid|localhost)$/i;
+
+const JWT_IO_SAMPLE_PAYLOAD = { sub: '1234567890', name: 'John Doe' };
+
+function decodeJwtPart(part: string): Record<string, unknown> | undefined {
+  try {
+    const parsed: unknown = JSON.parse(Buffer.from(part, 'base64url').toString('utf8'));
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** A JWT that could be a real one: decodable header (with `alg`) and payload, a signature of real length, not the public sample. */
+function isRealLookingJwt(token: string): boolean {
+  const [header, payload, signature, ...rest] = token.split('.');
+  if (rest.length > 0 || !header || !payload || !signature) return false;
+  const h = decodeJwtPart(header);
+  const p = decodeJwtPart(payload);
+  if (!h || typeof h.alg !== 'string' || !p) return false;
+  if (signature.length < 43) return false;
+  if (p.sub === JWT_IO_SAMPLE_PAYLOAD.sub && p.name === JWT_IO_SAMPLE_PAYLOAD.name) return false;
+  return true;
+}
+
+function redactTargetString(text: string): string {
+  if (!text) return text;
+  let out = text.replace(PEM_BLOCK, REDACTED_KEY).replace(PEM_UNTERMINATED, REDACTED_KEY);
+  for (const pattern of TOKEN_PATTERNS) {
+    out = out.replace(pattern, (match) => {
+      if (pattern.source.startsWith('eyJ')) return isRealLookingJwt(match) ? REDACTED_KEY : match;
+      return /EXAMPLE/.test(match) ? match : REDACTED_KEY; // the AWS documentation key AKIAIOSFODNN7EXAMPLE is mock data
+    });
+  }
+  return out.replace(EMAIL, (email) => (RESERVED_EMAIL_DOMAIN.test(email.slice(email.lastIndexOf('@') + 1)) ? email : REDACTED_EMAIL));
+}
+
+/** Target counterpart of `redactDeep`: same walk, the rules above. Returns a new value; idempotent. */
+export function redactTarget<T>(value: T): T {
+  return walkTarget(value) as T;
+}
+
+function walkTarget(value: unknown): unknown {
+  if (typeof value === 'string') return redactTargetString(value);
+  if (Array.isArray(value)) return value.map(walkTarget);
+  if (value && typeof value === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) out[k] = walkTarget(v);
+    return out;
+  }
+  return value;
+}

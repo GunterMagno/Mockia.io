@@ -6,15 +6,17 @@ import { AiGenerationModel } from '../../models/AiGeneration.js';
 import { UserModel } from '../../models/User.js';
 import { extractJsonFromLLMOutput } from './llmOutputParser.js';
 import { validateGeneratedApi } from './llmOutputValidator.js';
-import { redactDeep, redactSecrets } from './redact.js';
+import { anonymizePromptIdentifiers } from './anonymize.js';
+import { redactSecrets, redactTarget } from './redact.js';
 
 /**
  * Training/evaluation dataset exporter (chat format, one JSON object per line).
  *
  * What goes in: generations of users whose consent is granted AT EXPORT TIME, with feedback that is "good" or that
  * carries a correction. Target (assistant message) = the user's correction if there is one, else the model's output
- * when the user said "good" and it parses and validates; everything else is left out. Every message and the target go
- * through the redactor; exact duplicates (after redaction) are kept once; nothing that identifies the author (e-mail,
+ * when the user said "good" and it parses and validates; everything else is left out. Every prompt message loses the
+ * repository/owner/project identifiers (anonymize.ts) and goes through the strict redactor; the target goes through the
+ * milder target redaction (redact.ts: synthetic mock data survives, real-looking secrets do not); exact duplicates (after redaction) are kept once; nothing that identifies the author (e-mail,
  * user id, generation id) is written. The train/val split is a pure function of the generation id.
  *
  * It never prints or logs content: only counts.
@@ -158,8 +160,8 @@ export async function buildDataset(options: DatasetOptions = {}): Promise<Datase
       }
 
       const messages = [
-        ...gen.messages.map((m) => ({ role: m.role, content: redactSecrets(m.content) })),
-        { role: 'assistant' as const, content: JSON.stringify(redactDeep(picked.target)) },
+        ...gen.messages.map((m) => ({ role: m.role, content: redactSecrets(anonymizePromptIdentifiers(m.content)) })),
+        { role: 'assistant' as const, content: JSON.stringify(redactTarget(picked.target)) },
       ];
       const line = JSON.stringify({ messages });
       const key = sha256(line);

@@ -156,7 +156,7 @@ const es: LegalContent = {
                   ],
                   [
                     '**Mejora de la IA (opcional)**',
-                    'Solo si lo activas tú: las instrucciones tal como se envían al modelo (que pueden incluir fragmentos del resumen y de la documentación de tu repositorio y lo que escribes), la respuesta del modelo, las correcciones que hagas, y el momento en que diste o retiraste el consentimiento. Aparte, el voto «útil / no útil» sobre un resultado se guarda siempre, sin contenido, asociado a tu cuenta.',
+                    'Solo si lo activas tú: las instrucciones tal como se envían al modelo (que pueden incluir fragmentos del resumen y de la documentación de tu repositorio y lo que escribes), la respuesta del modelo, las correcciones que hagas, y el momento en que diste o retiraste el consentimiento.',
                     'Tú, con tu consentimiento, y el Servicio.',
                   ],
                   [
@@ -198,10 +198,6 @@ const es: LegalContent = {
                   [
                     'Mejorar el modelo de IA de Mockia: guardar, solo si lo activas, tus generaciones y correcciones para evaluar el modelo y, si hace falta, entrenar uno propio (véase «Mejorar la IA con tus generaciones»).',
                     'Consentimiento (art. 6.1.a), opcional y revocable en cualquier momento.',
-                  ],
-                  [
-                    'Medir si las generaciones te resultan útiles (el voto «útil / no útil», sin contenido).',
-                    'Interés legítimo (art. 6.1.f) en mantener la calidad del Servicio; el voto no incluye ningún contenido tuyo.',
                   ],
                   [
                     'Atender tus consultas y el ejercicio de tus derechos, y defender reclamaciones.',
@@ -251,7 +247,7 @@ const es: LegalContent = {
               ul: [
                 '**Qué guardamos si lo activas:** las instrucciones tal como se envían al modelo (que pueden incluir fragmentos del resumen y de la documentación de tu repositorio y lo que tú escribes), la respuesta del modelo, las correcciones que hagas a un resultado y el proveedor y modelo que respondieron. Si no lo activas, no guardamos nada de este contenido.',
                 '**Para qué:** preparar conjuntos de ejemplos para evaluar el modelo y, si hace falta, ajustar (entrenar) un modelo propio de Mockia.io que genere mejores APIs simuladas. No lo usamos para publicidad ni para perfilarte, y no lo vendemos.',
-                '**Cómo se usan:** antes de preparar un conjunto de ejemplos se eliminan claves, tokens, contraseñas, cadenas de conexión y direcciones de correo, y se descartan los duplicados. El conjunto resultante **no contiene tu email, tu identificador de usuario ni ningún identificador de la generación**, y solo incluye ejemplos de usuarios cuyo consentimiento sigue vigente en ese momento.',
+                '**Cómo se usan:** antes de preparar un conjunto de ejemplos se eliminan de forma automática las claves, tokens, contraseñas y cadenas de conexión, las direcciones de correo, y el nombre del repositorio, su propietario, su URL, su rama y el nombre y la descripción del proyecto; y se descartan los duplicados exactos. El conjunto resultante **no contiene tu email, tu identificador de usuario ni el identificador de la generación**, y solo incluye ejemplos de usuarios cuyo consentimiento sigue vigente en ese momento. **No se detectan** los nombres de personas, teléfonos, direcciones IP u otros datos personales que se hayan escrito dentro del texto del README o de tus propias instrucciones, ni los secretos sin forma reconocible: el filtrado es automático y heurístico, no infalible.',
                 '**Cuánto tiempo:** 180 días desde cada generación, o hasta que retires el consentimiento o elimines tu cuenta, lo que ocurra antes.',
                 '**Cómo retirarlo:** en cualquier momento, en tu perfil → «Mis datos». Al retirarlo borramos de inmediato todo lo guardado (generaciones y valoraciones). Retirarlo no afecta a la licitud del tratamiento anterior.',
                 '**Una limitación que debes conocer:** si con ejemplos tuyos ya se ha entrenado un modelo, retirar el consentimiento no puede «desentrenarlo». Lo que garantizamos es que tus datos no se usarán en entrenamientos futuros: cada conjunto de ejemplos se prepara de nuevo a partir de los datos vigentes en ese momento.',
@@ -261,7 +257,7 @@ const es: LegalContent = {
               p: 'Si lo activas, evita incluir secretos o datos personales de terceros en tus instrucciones y repositorios: aplicamos filtros automáticos, pero no son infalibles. Puedes descargar lo guardado desde perfil → «Mis datos» → «Descargar mis datos».',
             },
             {
-              p: 'Con independencia de este consentimiento, el voto «útil / no útil» que des a un resultado se guarda sin ningún contenido (solo el voto y el identificador aleatorio de la generación, asociados a tu cuenta) para medir si las generaciones funcionan. Se borra a los 180 días, con tu cuenta o al retirar el consentimiento.',
+              p: 'El voto «útil / no útil» que das a un resultado solo se guarda si has activado esta opción; si no la has activado, el voto no se almacena en ningún caso.',
             },
           ],
         },

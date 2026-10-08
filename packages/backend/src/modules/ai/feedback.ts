@@ -12,8 +12,10 @@ export type FeedbackVerdict = 'good' | 'bad';
 /**
  * Records a thumbs up/down on a generation.
  *
- *  - Without consent: stores only `{ userId, generationId, verdict, provider: null, model: null, createdAt }`. The
- *    correction, if any, is dropped; provider and model are never taken from the client.
+ *  - Without consent (RULING R14): NOTHING is persisted, not even the verdict. The caller gets the same success answer
+ *    (the route already validated the request), so the UI behaves identically; votes are only kept for users who opted in.
+ *  - With consent but no stored generation (it was generated before they consented): only `{ userId, generationId,
+ *    verdict, provider: null, model: null }`; the correction is dropped. Provider and model never come from the client.
  *  - With consent and a stored generation of the SAME user: also links it (provider/model copied from the stored
  *    generation) and keeps `correctedOutput`, after running it through the production validator (invalid -> 400, nothing
  *    changes).
@@ -36,8 +38,9 @@ export async function recordFeedback(
     throw new AppError('Generation not found', ErrorCode.NOT_FOUND, 404);
   }
 
-  const consented = generation ? await hasAiTrainingConsent(userId) : false;
-  const keepContent = Boolean(generation) && consented && correctedOutput !== undefined && correctedOutput !== null;
+  // R14: no consent, no trace (and nothing to reveal: the answer is the same success)
+  if (!(await hasAiTrainingConsent(userId))) return;
+  const keepContent = Boolean(generation) && correctedOutput !== undefined && correctedOutput !== null;
 
   let validated: unknown;
   if (keepContent) {
@@ -53,8 +56,8 @@ export async function recordFeedback(
   const now = new Date();
   const set: Record<string, unknown> = {
     verdict,
-    provider: generation && consented ? generation.provider : null,
-    model: generation && consented ? generation.model : null,
+    provider: generation ? generation.provider : null,
+    model: generation ? generation.model : null,
     expiresAt: new Date(now.getTime() + getAiGenerationRetentionDays() * 86_400_000),
   };
   const update: Record<string, unknown> = { $set: set, $setOnInsert: { userId: uid, generationId } };
@@ -63,8 +66,8 @@ export async function recordFeedback(
 
   await AiFeedbackModel.findOneAndUpdate({ userId: uid, generationId }, update, { upsert: true, setDefaultsOnInsert: true });
 
-  // The user may have withdrawn while this was being written: do not leave content behind
-  if (keepContent && !(await hasAiTrainingConsent(userId))) {
+  // The user may have withdrawn while this was being written: do not leave anything behind
+  if (!(await hasAiTrainingConsent(userId))) {
     await AiFeedbackModel.deleteOne({ userId: uid, generationId });
   }
 }

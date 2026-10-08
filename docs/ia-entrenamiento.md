@@ -26,8 +26,9 @@ genera endpoints con IA (generate-mock-api-spec / generate-and-save)
         │  TTL: 180 días (AI_GENERATION_RETENTION_DAYS)
         ▼
 el usuario vota 👍/👎 (POST /ai/feedback)
-        │  sin consentimiento: se guarda solo {userId, generationId, verdict} (sin contenido, provider/model null)
+        │  sin consentimiento: NO se guarda nada (ni el voto); la respuesta es la misma 204 (ruling R14)
         │  con consentimiento y generación propia guardada: AiFeedback enlazada (+ correctedOutput validado, solo vía API)
+        │  con consentimiento y generación no guardada (anterior al consentimiento): solo {userId, generationId, verdict}
         ▼
 npm run ai:export-dataset -- --confirm-consent-checked        (decisión humana, apartado 4)
         │  1. solo usuarios con consentimiento VIGENTE en este momento
@@ -45,14 +46,15 @@ Dónde vive cada cosa:
 |---|---|---|---|
 | Consentimiento y su fecha | `users.aiTrainingConsent` | con la cuenta | sí (`account.aiTrainingConsent`) |
 | Prompts, respuesta, proveedor, modelo | `aigenerations` | al retirar el consentimiento, al borrar la cuenta, a los 180 días | sí (`aiGenerations`) |
-| Voto, corrección | `aifeedbacks` | igual (el voto sin contenido también) | sí (`aiFeedback`) |
+| Voto, corrección (solo usuarios que consintieron) | `aifeedbacks` | igual (los votos sin contenido también) | sí (`aiFeedback`) |
 
 Los prompts pueden incluir **fragmentos del README y de los tipos del repositorio del usuario**: es dato personal potencial y se trata como tal. Nunca se escribe en registros (los `console.*` solo llevan clases de error y recuentos).
 
 ## 3. Operación de la recogida
 
 - **Variable**: `AI_GENERATION_RETENTION_DAYS` (por defecto 180; solo entero positivo, tope 3650). Se aplica al guardar: cambiarla no acorta lo ya guardado.
-- **Sin consentimiento no se persiste nada del contenido.** El `generationId` se devuelve igualmente para poder votar.
+- **Sin consentimiento no se persiste nada: ni el contenido ni el voto** (ruling R14). El `generationId` se devuelve igualmente y `POST /ai/feedback` responde 204 como siempre, de modo que la interfaz no cambia; la petición se valida y una generación ajena sigue dando 404.
+- **Borrar la cuenta** retira primero el consentimiento y después borra las colecciones del usuario, de modo que una generación que un token ya obsoleto termine justo entonces se retira sola (comprobación posterior a la escritura) y no queda ninguna fila huérfana.
 - **Retirar el consentimiento** (`PUT /users/me/ai-consent {granted:false}` → 204) marca el flag **antes** de borrar y luego borra todas las generaciones y valoraciones del usuario; una generación que se estuviera guardando en ese instante se retira sola (se comprueba el consentimiento antes y después de escribir).
 - **Un usuario solo puede valorar sus propias generaciones**: una ajena responde 404 sin guardar nada. (El `generationId` es un UUID aleatorio de 122 bits y la ruta tiene límite por usuario, de modo que descubrir un id ajeno por fuerza bruta no es realista.)
 - **Copias de seguridad de la base de datos**: el borrado no alcanza a las copias del proveedor hasta que rotan; es el mismo límite que el resto de datos de la cuenta (`docs/08_despliegue.md`).
@@ -73,8 +75,10 @@ npm run ai:export-dataset -w @mockia/backend -- --confirm-consent-checked --out 
   {"messages":[{"role":"system","content":"..."},{"role":"user","content":"..."},{"role":"assistant","content":"{\"apiVersion\":...}"}]}
   ```
 - **Qué entra**: usuarios cuyo consentimiento está concedido **ahora** (se vuelve a comprobar en la exportación, de modo que quien lo retiró desde la última vez queda fuera aunque su valoración existiera); generaciones no caducadas con valoración `good` o con corrección. **Objetivo** del ejemplo: la corrección del usuario si la hay; si no, la respuesta del modelo cuando el voto es `good` y se parsea y valida con el validador de producción (se guarda el JSON limpio, sin vallas de markdown ni prosa). Un `bad` sin corrección, una corrección que ya no valida, una respuesta que no parsea o una generación sin voto **no entran**.
-- **Redacción** (`modules/ai/redact.ts`, función pura e idempotente), aplicada a cada mensaje y al objetivo, con marcadores estables `[REDACTED_KEY]` y `[REDACTED_EMAIL]`: claves de Stripe (`sk_live_…`, `sk_test_…`, `pk_…`), `sk-…` (OpenAI/OpenRouter/Anthropic), GitHub (`ghp_`, `gho_`, `github_pat_`…), AWS (`AKIA…`), Google (`AIza…`), Slack (`xox[baprs]-…`), JWT, `Bearer <token>`, bloques PEM de clave (también truncados), URLs con credenciales (`mongodb(+srv)://usuario:clave@…`), asignaciones `password|secret|token|api_key = valor` y direcciones de correo. No toca tipos ni lectura de entorno (`password: string`, `process.env.JWT_SECRET`) para no estropear los ejemplos.
-- **Anónimo**: el fichero no contiene email, `userId` ni `generationId`. El deduplicado (hash de mensajes + objetivo, tras redactar) conserva una sola copia, la del `generationId` menor, así que no depende del orden de la base de datos.
+- **Redacción de los prompts** (`modules/ai/redact.ts`, función pura e idempotente; estricta, porque llevan contenido real del usuario), con marcadores estables `[REDACTED_KEY]` y `[REDACTED_EMAIL]`: claves de Stripe (`sk_live_…`, `sk_test_…`, `pk_…`), `sk-…` (OpenAI/OpenRouter/Anthropic), GitHub (`ghp_`, `gho_`, `github_pat_`…), AWS (`AKIA…`), Google (`AIza…`), Slack (`xox[baprs]-…`), JWT, `Bearer <token>`, bloques PEM de clave (también truncados), URLs con credenciales (`mongodb(+srv)://usuario:clave@…`), asignaciones `password|secret|token|api_key = valor` y direcciones de correo. No toca tipos ni lectura de entorno (`password: string`, `process.env.JWT_SECRET`) para no estropear los ejemplos.
+- **Identificadores del repositorio y del proyecto** (`modules/ai/anonymize.ts`, función pura e idempotente, probada con el prompt real de `buildPromptFromInput`): en cada mensaje se sustituyen por `[REDACTED_REPO]`, `[REDACTED_OWNER]`, `[REDACTED_BRANCH]`, `[REDACTED_PROJECT]` y `[REDACTED_DESCRIPTION]` el bloque `## Repository / URL / Owner / Branch`, el nombre y la descripción del proyecto (con y sin repositorio) y cualquier URL `github.com`, `gitlab.com`, `bitbucket.org` o `codeberg.org` (también `git@host:propietario/repo`).
+- **Asimetría deliberada: el objetivo se redacta de forma más suave.** La respuesta del asistente es una especificación con datos de ejemplo sintéticos (`john.doe@example.com`, `"password": "Secret123!"`, `"token": "abc123"`) que es justo lo que el modelo debe aprender; sustituirlos por marcadores le enseñaría a devolver `[REDACTED_KEY]` como dato de ejemplo. En el objetivo solo se eliminan las cadenas con forma de secreto real (claves de proveedor, bloques PEM, JWT con cabecera y carga decodificables y firma de longitud real; la clave de documentación de AWS y el JWT de ejemplo de jwt.io se consideran datos de ejemplo) y los emails de dominios no reservados (se respetan `example.com/.org/.net`, `.test`, `.invalid`, `.localhost`, `.example` y dominios obviamente falsos como `domain.com` o `test.com`). Nunca se redacta un valor solo por el nombre de su clave.
+- **Qué NO es anónimo**: el fichero no contiene email, `userId` ni `generationId`, y se retiran las claves, los emails y los identificadores del repositorio y del proyecto de arriba. **No se detectan** nombres de personas, empresas o productos, teléfonos, direcciones IP ni otros datos personales escritos dentro del texto del README o de las instrucciones del usuario, ni el nombre del repositorio cuando solo se menciona en texto libre. El conjunto está **seudonimizado de forma heurística, no anonimizado de forma garantizada**: trátalo como dato personal (apartado 5). El deduplicado (hash de mensajes + objetivo, tras redactar) conserva una sola copia, la del `generationId` menor, así que no depende del orden de la base de datos.
 - **Reparto train/val**: determinista por hash del `generationId` (90/10 por defecto). El mismo conjunto de datos da siempre el mismo reparto. El orden de las líneas es por hash de contenido (no agrupa los ejemplos de un autor).
 
 ### Límites de la redacción (léelos)
@@ -220,7 +224,7 @@ Con pocos casos, **diferencias de uno o dos casos son ruido**: repite cada medic
 
 ## 9. Retirada del consentimiento después de exportar (límite honesto)
 
-Cuando un usuario retira el consentimiento, el servidor borra sus generaciones y valoraciones **de la base de datos** al instante. Pero un dataset exportado antes **ya no contiene identificadores** (a propósito): **no puedes localizar ni borrar los ejemplos de una persona concreta dentro de un `train.jsonl` ya generado**, ni quitar su influencia de un adaptador ya entrenado. Esto no tiene arreglo técnico completo; lo que sí se puede es limitar el daño:
+Cuando un usuario retira el consentimiento, el servidor borra sus generaciones y valoraciones **de la base de datos** al instante. Pero un dataset exportado antes **ya no contiene el email, el id de usuario ni el id de la generación** (a propósito; sí puede contener texto personal que se escribió dentro del README o de las instrucciones, apartado 4): **no puedes localizar ni borrar los ejemplos de una persona concreta dentro de un `train.jsonl` ya generado**, ni quitar su influencia de un adaptador ya entrenado. Esto no tiene arreglo técnico completo; lo que sí se puede es limitar el daño:
 
 1. **Exporta siempre desde los datos vigentes**: el exportador vuelve a comprobar el consentimiento, así que cada exportación nueva ya excluye a quien se retiró.
 2. **Reentrena periódicamente desde una exportación nueva** y retira los adaptadores antiguos, en vez de acumular entrenamientos sobre ficheros viejos. Fija un plazo (decisión tuya, por ejemplo semestral) y anótalo en tu registro de tratamientos. Desde el momento de la retirada, los datos de esa persona **no se usan en entrenamientos futuros**; es exactamente lo que dice la política de privacidad, que reconoce que un modelo ya entrenado no se puede «desentrenar».
@@ -251,5 +255,5 @@ Cuando un usuario retira el consentimiento, el servidor borra sus generaciones y
 - Nada de esto se ha ejecutado de extremo a extremo con un modelo real: faltaban GPU, modelo y datos reales. La pieza más incierta es el rendimiento real del ajuste; solo la evaluación del apartado 8 lo dirá.
 - La interfaz solo ofrece 👍/👎. No hay editor de correcciones (la API ya lo admite).
 - La redacción es heurística (apartado 4). El deduplicado es exacto, no semántico.
-- El voto sin consentimiento (solo `{usuario, generationId, voto}`) se guarda para medir la calidad del servicio; su base jurídica y su texto en la política de privacidad están pendientes de revisión jurídica.
+- Sin consentimiento no se guarda ni el voto (ruling R14): la calidad del servicio solo se mide con los votos de quien aceptó.
 - La política de privacidad (es/en/zh) describe este tratamiento como **borrador** para revisión de un abogado.

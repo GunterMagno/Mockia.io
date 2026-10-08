@@ -164,7 +164,7 @@ describe('AI consent: optional, off by default, withdrawal asks first', () => {
       .and('have.attr', 'aria-labelledby')
       .and('not.be.empty');
     // short explanation + link to the privacy section
-    cy.get('[data-ai-consent]').should('contain.text', 'off by default');
+    cy.get('[data-ai-consent]').should('contain.text', 'off by default').and('contain.text', 'repository and project names').and('contain.text', 'not detected');
     cy.get('[data-ai-consent] a[href="/privacy#ai-training"]').should('have.attr', 'target', '_blank').and('have.attr', 'rel').and('contain', 'noopener');
 
     // on: immediate, announced
@@ -244,7 +244,12 @@ describe('Privacy page covers the optional AI training', () => {
       .and('contain.text', 'art. 6.1.a')
       .and('contain.text', '180 días')
       .and('contain.text', 'Mis datos')
-      .and('contain.text', 'no puede «desentrenarlo»');
+      .and('contain.text', 'no puede «desentrenarlo»')
+      // says precisely what is NOT removed, and that a vote without consent is not stored at all
+      .and('contain.text', 'No se detectan')
+      .and('contain.text', 'el nombre del repositorio')
+      .and('contain.text', 'no se almacena en ningún caso')
+      .and('not.contain.text', 'se guarda siempre');
   });
 
   it('the section is an anchor target: /privacy#ai-training scrolls to it', () => {
@@ -258,7 +263,7 @@ describe('Privacy page covers the optional AI training', () => {
 
   it('en and zh carry the same section', () => {
     visitIn('en');
-    cy.get('section#ai-training').should('contain.text', 'explicit consent').and('contain.text', '180 days').and('contain.text', 'untrain');
+    cy.get('section#ai-training').should('contain.text', 'explicit consent').and('contain.text', '180 days').and('contain.text', 'untrain').and('contain.text', 'Not detected').and('contain.text', 'not stored at all');
     visitIn('zh');
     cy.get('section#ai-training').invoke('text').should('match', /同意/).and('match', /180/);
   });

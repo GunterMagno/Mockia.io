@@ -155,7 +155,7 @@ const en: LegalContent = {
                   ],
                   [
                     "**AI improvement (optional)**",
-                    "Only if you turn it on: the prompts as they are sent to the model (which can include fragments of your repository's summary and documentation and what you write), the model's answer, any corrections you make, and when you gave or withdrew consent. Separately, the \"useful / not useful\" vote on a result is always kept, without content, linked to your account.",
+                    "Only if you turn it on: the prompts as they are sent to the model (which can include fragments of your repository's summary and documentation and what you write), the model's answer, any corrections you make, and when you gave or withdrew consent.",
                     "You, with your consent, and the Service.",
                   ],
                   [
@@ -197,10 +197,6 @@ const en: LegalContent = {
                   [
                     "Improving Mockia's AI model: storing, only if you turn it on, your generations and corrections to evaluate the model and, if needed, train our own (see \"Improving the AI with your generations\").",
                     "Consent (art. 6.1.a), optional and revocable at any time.",
-                  ],
-                  [
-                    "Measuring whether generations are useful to you (the \"useful / not useful\" vote, without content).",
-                    "Legitimate interest (art. 6.1.f) in keeping the Service's quality; the vote contains none of your content.",
                   ],
                   [
                     "Handling your enquiries and the exercise of your rights, and defending claims.",
@@ -250,7 +246,7 @@ const en: LegalContent = {
               ul: [
                 "**What we store if you turn it on:** the prompts as they are sent to the model (which can include fragments of your repository's summary and documentation and what you write), the model's answer, any corrections you make to a result, and the provider and model that answered. If you do not turn it on, we store none of this content.",
                 "**What for:** preparing sets of examples to evaluate the model and, if needed, to fine-tune (train) a Mockia.io model of our own that generates better mock APIs. We do not use it for advertising or profiling you, and we do not sell it.",
-                "**How it is used:** before a set of examples is prepared, keys, tokens, passwords, connection strings and email addresses are removed and duplicates are dropped. The resulting set **contains no email, user identifier or generation identifier**, and only includes examples from users whose consent is still in force at that moment.",
+                "**How it is used:** before a set of examples is prepared, keys, tokens, passwords and connection strings, e-mail addresses, and the repository name, its owner, URL and branch and the project name and description are removed automatically, and exact duplicates are dropped. The resulting set **contains no email, user identifier or generation identifier**, and only includes examples from users whose consent is still in force at that moment. **Not detected:** names of people, phone numbers, IP addresses or other personal data written inside the README text or your own instructions, and secrets without a recognisable shape: the filtering is automatic and heuristic, not infallible.",
                 "**How long:** 180 days from each generation, or until you withdraw consent or delete your account, whichever comes first.",
                 "**How to withdraw:** at any time, in your profile → \"Your data\". When you withdraw, everything stored (generations and ratings) is deleted immediately. Withdrawing does not affect the lawfulness of earlier processing.",
                 "**A limitation you should know about:** if a model has already been trained with examples from you, withdrawing consent cannot \"untrain\" it. What we guarantee is that your data will not be used in future training runs: every set of examples is prepared again from the data in force at that moment.",
@@ -260,7 +256,7 @@ const en: LegalContent = {
               p: "If you turn it on, avoid putting secrets or third parties' personal data in your instructions and repositories: we apply automatic filters, but they are not infallible. You can download what is stored from profile → \"Your data\" → \"Download my data\".",
             },
             {
-              p: "Regardless of this consent, the \"useful / not useful\" vote you give a result is kept without any content (only the vote and the random identifier of the generation, linked to your account) to measure whether generations work. It is deleted after 180 days, with your account or when you withdraw consent.",
+              p: "The \"useful / not useful\" vote you give a result is only kept if you have turned this option on; if you have not, the vote is not stored at all.",
             },
           ],
         },

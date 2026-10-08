@@ -1,4 +1,4 @@
-import { redactSecrets, redactDeep } from '../modules/ai/redact.js';
+import { redactSecrets, redactDeep, redactTarget } from '../modules/ai/redact.js';
 
 /**
  * Redaction of training data. Fixtures are assembled at runtime ('sk_' + 'live_' ...) so the source file itself never
@@ -219,5 +219,87 @@ describe('redactDeep (structured targets)', () => {
     const copy = JSON.parse(JSON.stringify(input));
     redactDeep(input);
     expect(input).toEqual(copy);
+  });
+});
+
+/**
+ * The asymmetry: PROMPTS carry real user content and are redacted strictly; the TARGET (assistant answer) is synthetic
+ * mock data written by a model, where emails like john.doe@example.com and passwords like "Secret123!" are the product.
+ * In a target only things with the SHAPE of a real secret, and e-mails outside reserved/obviously fake domains, go.
+ */
+describe('redactTarget (synthetic mock data survives, real-looking secrets do not)', () => {
+  const FAKE_JWT_SHORT = 'eyJhbGciOi.fake.token';
+  const FAKE_JWT_PLACEHOLDER = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyXzEifQ.signature-placeholder';
+  const JWT_IO_SAMPLE =
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
+
+  const loginResponse = {
+    user: { id: 'usr_1', email: 'john.doe@example.com', password: 'Secret123!', username: 'johndoe' },
+    token: 'abc123',
+    accessToken: FAKE_JWT_SHORT,
+    refreshToken: FAKE_JWT_PLACEHOLDER,
+    idToken: JWT_IO_SAMPLE,
+    apiKey: 'my-api-key',
+    secret: 'changeit',
+    contact: ['test@test.com', 'user@domain.com', 'a@b.example', 'x@host.test', 'ops@corp.invalid', 'me@localhost.localhost', 'a@example.org', 'b@sub.example.net'],
+  };
+
+  it('a typical login / user mock response survives intact', () => {
+    expect(redactTarget(loginResponse)).toEqual(loginResponse);
+  });
+
+  it('survives inside a whole specification', () => {
+    const spec = { endpoints: [{ path: '/login', examples: [{ request: { email: 'jane@example.com', password: 'hunter2' }, response: loginResponse }] }] };
+    expect(redactTarget(spec)).toEqual(spec);
+  });
+
+  it('a real-looking provider key in a target is still redacted', () => {
+    const out = JSON.stringify(
+      redactTarget({
+        stripe: SK_LIVE,
+        gh: GHP,
+        aws: AKIA,
+        google: AIZA,
+        slack: XOX,
+        pem: PEM,
+        nested: { list: [`key ${SK_TEST} end`] },
+      })
+    );
+    for (const s of [SK_LIVE, GHP, AKIA, AIZA, XOX, SK_TEST, 'MIIEowIBAAKCAQEA']) expect(out).not.toContain(s);
+    expect(out).toContain('[REDACTED_KEY]');
+    expect(() => JSON.parse(out)).not.toThrow();
+  });
+
+  it('a JWT with a real structure (decodable header and payload, a full-length signature) is redacted unless it is the public jwt.io sample', () => {
+    const real = [
+      b64('{"alg":"RS256","typ":"JWT","kid":"k1"}'),
+      b64('{"sub":"auth0|5f7c8ec7c33c6c004bbafe82","iss":"https://tenant.auth0.com/"}'),
+      rep('Ab1_-', 12),
+    ].join('.');
+    expect(JSON.stringify(redactTarget({ t: real }))).not.toContain(real);
+    expect(redactTarget({ t: JWT_IO_SAMPLE })).toEqual({ t: JWT_IO_SAMPLE });
+  });
+
+  it('e-mails: reserved and obviously fake domains stay, any other domain goes', () => {
+    const out = redactTarget({ a: 'jane.real@gmail.com', b: 'bob@acme-corp.io', c: 'ok@example.com' }) as Record<string, string>;
+    expect(out.a).toBe(REDACTED_EMAIL);
+    expect(out.b).toBe(REDACTED_EMAIL);
+    expect(out.c).toBe('ok@example.com');
+  });
+
+  it('does not mutate its input and is idempotent', () => {
+    const input = { a: [SK_LIVE, 'x@gmail.com'] };
+    const copy = JSON.parse(JSON.stringify(input));
+    const once = redactTarget(input);
+    expect(input).toEqual(copy);
+    expect(redactTarget(once)).toEqual(once);
+  });
+
+  it('the strict (prompt) mode still redacts all of it', () => {
+    expect(redactSecrets('mail john.doe@example.com')).toBe(`mail ${REDACTED_EMAIL}`);
+    expect(redactSecrets('password: "Secret123!"')).toBe(`password: "${REDACTED_KEY}"`);
+    expect(redactSecrets(`token ${FAKE_JWT_PLACEHOLDER}`)).toContain(REDACTED_KEY);
+    expect(redactSecrets('Bearer abcd1234efgh5678')).toBe(`Bearer ${REDACTED_KEY}`);
+    expect(redactSecrets(MONGO)).not.toContain('s3cr3tP4ss');
   });
 });

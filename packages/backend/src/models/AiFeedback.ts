@@ -1,9 +1,10 @@
 import { Schema, model, Types } from 'mongoose';
 
 /**
- * Thumbs up / down on a generation. Accepted from every user, but it carries NO content unless the user consented and
- * the generation was stored: then `correctedOutput` (the spec the user wanted, already passed through the production
- * validator) is kept too. `provider`/`model` come from the stored generation, never from the client (null otherwise).
+ * Thumbs up / down on a generation, kept ONLY for users who consented (RULING R14: without consent nothing is stored).
+ * It carries content only when the generation was stored too: then `correctedOutput` (the spec the user wanted, already
+ * passed through the production validator) is kept. `provider`/`model` come from the stored generation, never from the
+ * client (null otherwise).
  *
  * One row per (userId, generationId): later feedback replaces the earlier one. Deleted when the consent is withdrawn,
  * when the account is deleted, and by the TTL index on `expiresAt`.

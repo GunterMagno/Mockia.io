@@ -183,11 +183,12 @@ describe('AI training consent, generation storage and feedback', () => {
       expect(doc?.aiTrainingConsent?.granted).toBe(false);
     });
 
-    it('withdrawing also erases verdict-only rows, and works when nothing was ever stored or granted', async () => {
+    it('withdrawing also erases verdict-only rows (consenting user, generation not stored), and works when nothing was ever stored or granted', async () => {
       const a = await makeActor('alice');
       expect((await consent(a, false)).status).toBe(204);
-      const g = (await generate(a)).body.data.generationId as string;
-      await feedback(a, { generationId: g, verdict: 'bad' }); // no consent: verdict only
+      const g = (await generate(a)).body.data.generationId as string; // generated before consenting: not stored
+      await consent(a, true);
+      await feedback(a, { generationId: g, verdict: 'bad' });
       expect(await AiFeedbackModel.countDocuments({})).toBe(1);
       expect((await consent(a, false)).status).toBe(204);
       expect(await AiFeedbackModel.countDocuments({})).toBe(0);
@@ -393,7 +394,7 @@ describe('AI training consent, generation storage and feedback', () => {
       expect(ok.status).toBe(204);
     });
 
-    it('without consent it stores the verdict only: no content, no provider or model (the client is not trusted)', async () => {
+    it('RULING R14: without consent nothing at all is stored (no verdict row either); the answer is the same 204 and the request is still validated', async () => {
       const a = await makeActor('alice');
       const id = (await generate(a)).body.data.generationId as string;
       const res = await feedback(a, {
@@ -407,6 +408,27 @@ describe('AI training consent, generation storage and feedback', () => {
       });
       expect(res.status).toBe(204);
       expect(res.text).toBe('');
+      expect(await AiFeedbackModel.countDocuments({})).toBe(0);
+      expect(await AiGenerationModel.countDocuments({})).toBe(0);
+      // still validated like any other request
+      expect((await feedback(a, { generationId: id, verdict: 'meh' })).status).toBe(400);
+      expect(await AiFeedbackModel.countDocuments({})).toBe(0);
+    });
+
+    it('with consent and a generation that was never stored the vote is kept without content: no provider or model, the client is not trusted', async () => {
+      const a = await makeActor('alice');
+      const id = (await generate(a)).body.data.generationId as string; // not stored: generated before consenting
+      await consent(a, true);
+      const res = await feedback(a, {
+        generationId: id,
+        verdict: 'bad',
+        correctedOutput: CORRECTED,
+        provider: 'evil-provider',
+        model: 'evil-model',
+        output: 'x',
+        messages: [{ role: 'user', content: 'x' }],
+      });
+      expect(res.status).toBe(204);
       const rows = await AiFeedbackModel.find({}).lean();
       expect(rows).toHaveLength(1);
       const row = rows[0] as Record<string, unknown>;
@@ -420,7 +442,6 @@ describe('AI training consent, generation storage and feedback', () => {
       expect(Object.keys(row).filter((k) => !allowed.includes(k))).toEqual([]);
       expect(JSON.stringify(row)).not.toContain('evil');
       expect(JSON.stringify(row)).not.toContain('classes');
-      expect(await AiGenerationModel.countDocuments({})).toBe(0);
     });
 
     it('with consent and a stored generation of the same user it links it, copies provider/model and keeps the verdict', async () => {
@@ -520,10 +541,11 @@ describe('AI training consent, generation storage and feedback', () => {
       expect(rows[0].correctedOutput).toBeDefined();
     });
 
-    it('is idempotent without consent too, and different generations make different rows', async () => {
+    it('is idempotent for a consenting user whose generations were not stored, and different generations make different rows', async () => {
       const a = await makeActor('alice');
       const id1 = (await generate(a)).body.data.generationId as string;
       const id2 = (await generate(a)).body.data.generationId as string;
+      await consent(a, true);
       await feedback(a, { generationId: id1, verdict: 'good' });
       await feedback(a, { generationId: id1, verdict: 'bad' });
       await feedback(a, { generationId: id2, verdict: 'good' });
@@ -532,9 +554,11 @@ describe('AI training consent, generation storage and feedback', () => {
       expect(rows.find((r) => r.generationId === id1)?.verdict).toBe('bad');
     });
 
-    it('two users may rate the same (random) id without clobbering each other when neither generation is stored', async () => {
+    it('two consenting users may rate the same (random) id without clobbering each other when neither generation is stored', async () => {
       const a = await makeActor('alice');
       const b = await makeActor('bob');
+      await consent(a, true);
+      await consent(b, true);
       const id = '8d1c9f0e-5b5a-4a3e-9e63-0f0f6f4f9c11';
       expect((await feedback(a, { generationId: id, verdict: 'good' })).status).toBe(204);
       expect((await feedback(b, { generationId: id, verdict: 'bad' })).status).toBe(204);
@@ -570,6 +594,7 @@ describe('AI training consent, generation storage and feedback', () => {
 
     it('feedback has the same retention as generations (TTL field set)', async () => {
       const a = await makeActor('alice');
+      await consent(a, true);
       await feedback(a, { generationId: '8d1c9f0e-5b5a-4a3e-9e63-0f0f6f4f9c11', verdict: 'good' });
       const row = (await AiFeedbackModel.findOne({}).lean())!;
       const days = (row.expiresAt.getTime() - row.createdAt.getTime()) / 86_400_000;
@@ -666,6 +691,55 @@ describe('AI training consent, generation storage and feedback', () => {
       expect(await AiFeedbackModel.countDocuments({ userId: new Types.ObjectId(a.id) })).toBe(0);
       expect(await AiGenerationModel.countDocuments({})).toBe(1);
       expect(await AiFeedbackModel.countDocuments({})).toBe(1);
+    });
+
+    it('a generation that persists WHILE the account is being deleted leaves no AI rows behind (consent is withdrawn before the erase)', async () => {
+      const a = await makeActor('alice');
+      await consent(a, true);
+      const realDeleteMany = AiGenerationModel.deleteMany.bind(AiGenerationModel);
+      let injected = false;
+      const deleteSpy = jest.spyOn(AiGenerationModel, 'deleteMany').mockImplementation((async (filter: never) => {
+        const result = await realDeleteMany(filter);
+        if (!injected) {
+          injected = true;
+          // a stale access token finishing a generation right after the erase: it already passed its first consent check
+          jest.spyOn(consentModule, 'hasAiTrainingConsent').mockResolvedValueOnce(true);
+          await persistGeneration({
+            generationId: '8d1c9f0e-5b5a-4a3e-9e63-0f0f6f4f9c11',
+            userId: a.id,
+            messages: [{ role: 'system', content: 's' }, { role: 'user', content: 'u' }],
+            output: SPEC_TEXT,
+            parsedOk: true,
+            provider: 'p',
+            model: 'm',
+          });
+        }
+        return result;
+      }) as never);
+      const del = await request(app).delete('/api/users/me').set(a.auth).send({ password: PASSWORD });
+      deleteSpy.mockRestore();
+      expect(injected).toBe(true);
+      expect(del.status).toBe(204);
+      expect(await AiGenerationModel.countDocuments({ userId: new Types.ObjectId(a.id) })).toBe(0);
+      expect(await AiFeedbackModel.countDocuments({ userId: new Types.ObjectId(a.id) })).toBe(0);
+    });
+
+    it('a stale token that generates after the account is gone stores nothing', async () => {
+      const a = await makeActor('alice');
+      await consent(a, true);
+      await request(app).delete('/api/users/me').set(a.auth).send({ password: PASSWORD });
+      expect(
+        await persistGeneration({
+          generationId: '9d1c9f0e-5b5a-4a3e-9e63-0f0f6f4f9c11',
+          userId: a.id,
+          messages: [{ role: 'user', content: 'u' }],
+          output: SPEC_TEXT,
+          parsedOk: true,
+          provider: 'p',
+          model: 'm',
+        })
+      ).toBe(false);
+      expect(await AiGenerationModel.countDocuments({})).toBe(0);
     });
   });
 });

@@ -564,7 +564,7 @@ const en = {
       aiConsent: {
         title: 'Help improve Mockia’s AI with my generations (optional)',
         description:
-          'If you turn this on, we keep the instructions we send to the AI (they may include parts of your repository) and its answers for up to 180 days, to evaluate and improve Mockia’s AI. Keys and emails are removed and the examples never include who you are. It is off by default and changes nothing about how you use Mockia.',
+          'If you turn this on, we keep the instructions we send to the AI (they may include parts of your repository) and its answers for up to 180 days, to evaluate and improve Mockia’s AI. Keys, e-mails and the repository and project names are removed before use and the examples carry no account identifier. Names or personal data you type inside your README or requirements are not detected, so avoid including them. It is off by default and changes nothing about how you use Mockia.',
         privacy: 'How we use it (Privacy Policy)',
         on: 'Thanks! From now on your generations can help improve the AI. You can turn this off at any time.',
         off: 'Turned off. Everything we had stored for this purpose was deleted.',

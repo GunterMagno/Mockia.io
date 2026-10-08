@@ -16,6 +16,7 @@ import { RefreshSessionModel } from '../../models/RefreshSession.js';
 import { AuthTokenModel } from '../../models/AuthToken.js';
 import { deleteProjectsCascade } from '../projects/cascade.js';
 import { cancelSubscriptionNow } from '../billing/service.js';
+import { setAiTrainingConsent } from '../ai/consent.js';
 import { invalidatePlanCache } from '../billing/plans.js';
 import { listActiveSessions, revokeAllForUser } from '../auth/sessions.js';
 
@@ -245,9 +246,10 @@ export async function deleteUserAccount(userId: string, password: string): Promi
   await UsageModel.deleteMany({ ownerId: uid });
   // Per-minute AI call counters: not exported (operational, expire within minutes) but erased with the account
   await AiRateWindowModel.deleteMany({ userId: uid });
-  // Stored AI generations and feedback (only exist with the user's consent): exported above, erased with the account
-  await AiGenerationModel.deleteMany({ userId: uid });
-  await AiFeedbackModel.deleteMany({ userId: uid });
+  // Stored AI generations and feedback (only exist with the user's consent): exported above, erased with the account.
+  // The consent is withdrawn FIRST: until the user document goes a stale access token could still finish a generation and
+  // persistGeneration would keep it (granted still true); with the flag already false its post-write check removes it.
+  await setAiTrainingConsent(userId, false);
   await revokeAllForUser(userId);
   await RefreshSessionModel.deleteMany({ userId: uid });
   await AuthTokenModel.deleteMany({ userId: uid });
