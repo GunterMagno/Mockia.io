@@ -11,6 +11,8 @@ import { AiGenerationModel } from '../models/AiGeneration.js';
 import { AiFeedbackModel } from '../models/AiFeedback.js';
 import * as providers from '../modules/ai/providers/index.js';
 import { recordFeedback } from '../modules/ai/feedback.js';
+import * as consentModule from '../modules/ai/consent.js';
+import { persistGeneration } from '../modules/ai/generationStore.js';
 import { AppError } from '../middlewares/errorHandler.js';
 
 /**
@@ -572,6 +574,45 @@ describe('AI training consent, generation storage and feedback', () => {
       const row = (await AiFeedbackModel.findOne({}).lean())!;
       const days = (row.expiresAt.getTime() - row.createdAt.getTime()) / 86_400_000;
       expect(days).toBeCloseTo(180, 1);
+    });
+  });
+
+  /* ---------------------------------------------------------------------------- withdrawal in flight */
+  describe('a withdrawal that happens while content is being written', () => {
+    const generation = (userId: string) => ({
+      generationId: '8d1c9f0e-5b5a-4a3e-9e63-0f0f6f4f9c11',
+      userId,
+      messages: [{ role: 'system' as const, content: 's' }, { role: 'user' as const, content: 'u' }],
+      output: SPEC_TEXT,
+      parsedOk: true,
+      provider: 'p',
+      model: 'm',
+    });
+
+    it('persistGeneration removes what it just wrote when the consent is gone after the write', async () => {
+      const a = await makeActor('alice');
+      const spy = jest.spyOn(consentModule, 'hasAiTrainingConsent').mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+      const stored = await persistGeneration(generation(a.id));
+      spy.mockRestore();
+      expect(stored).toBe(false);
+      expect(await AiGenerationModel.countDocuments({})).toBe(0);
+    });
+
+    it('recordFeedback removes a correction it just wrote when the consent is gone after the write', async () => {
+      const a = await makeActor('alice');
+      await consent(a, true);
+      const id = (await generate(a)).body.data.generationId as string;
+      // generation lookup + consent check pass, the post-write check says withdrawn
+      const spy = jest.spyOn(consentModule, 'hasAiTrainingConsent').mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+      await recordFeedback(a.id, id, 'bad', CORRECTED);
+      spy.mockRestore();
+      expect(await AiFeedbackModel.countDocuments({})).toBe(0);
+    });
+
+    it('persistGeneration without consent returns false and writes nothing', async () => {
+      const a = await makeActor('alice');
+      expect(await persistGeneration(generation(a.id))).toBe(false);
+      expect(await AiGenerationModel.countDocuments({})).toBe(0);
     });
   });
 
