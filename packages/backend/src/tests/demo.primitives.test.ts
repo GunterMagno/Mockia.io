@@ -4,7 +4,7 @@ import { assertProdConfig } from '../config/assertProdConfig.js';
 import { getDemoConfig } from '../modules/demo/config.js';
 import { pseudonymizeIp } from '../modules/demo/ipHash.js';
 import { issueChallenge, verifyProof } from '../modules/demo/pow.js';
-import { tryConsumeDemoBudget, acquireGenerationSlot } from '../modules/demo/budget.js';
+import { tryConsumeDemoBudget, acquireGenerationSlot, refundDemoBudget, peekDemoBudget } from '../modules/demo/budget.js';
 import { DemoBudgetModel } from '../models/DemoBudget.js';
 import { DemoSpentChallengeModel } from '../models/DemoSpentChallenge.js';
 
@@ -314,6 +314,64 @@ describe('tryConsumeDemoBudget', () => {
     expect(rows.length).toBeGreaterThan(0);
     expect(JSON.stringify(rows)).not.toContain('203.0.113.7');
     for (const row of rows) expect(row.expiresAt.getTime()).toBeGreaterThanOrEqual(T0.getTime() + 47 * 3600_000);
+  });
+});
+
+describe('refundDemoBudget and peekDemoBudget (B3)', () => {
+  const count = async (scope: 'ip' | 'global', key: string, kind: 'generation' | 'mockRequest' = 'generation') =>
+    (await DemoBudgetModel.findOne({ scope, key, kind }).lean())?.count ?? 0;
+
+  it('gives back one generation unit to the visitor and to the global budget, atomically', async () => {
+    const ip = pseudonymizeIp('203.0.113.7', T0);
+    await tryConsumeDemoBudget(ip, 'generation', T0);
+    await tryConsumeDemoBudget(ip, 'generation', T0);
+    expect(await count('ip', ip)).toBe(2);
+    expect(await count('global', 'global')).toBe(2);
+
+    await refundDemoBudget(ip, 'generation', T0);
+    expect(await count('ip', ip)).toBe(1);
+    expect(await count('global', 'global')).toBe(1);
+    await expect(tryConsumeDemoBudget(ip, 'generation', T0)).resolves.toEqual({ ok: true });
+  });
+
+  it('never takes a counter below zero, however many refunds arrive', async () => {
+    const ip = pseudonymizeIp('203.0.113.7', T0);
+    await tryConsumeDemoBudget(ip, 'generation', T0);
+    await Promise.all(Array.from({ length: 10 }, () => refundDemoBudget(ip, 'generation', T0)));
+    expect(await count('ip', ip)).toBe(0);
+    expect(await count('global', 'global')).toBe(0);
+    await refundDemoBudget(pseudonymizeIp('198.51.100.1', T0), 'generation', T0); // nothing to refund: no row, no error
+    expect(await DemoBudgetModel.countDocuments({ key: pseudonymizeIp('198.51.100.1', T0) })).toBe(0);
+  });
+
+  it('refunds the UTC day it is told (a refund after midnight does not touch the new day)', async () => {
+    const ip = pseudonymizeIp('203.0.113.7', T0);
+    await tryConsumeDemoBudget(ip, 'generation', T0);
+    const nextDay = new Date(Date.UTC(2026, 9, 10, 0, 5, 0));
+    await tryConsumeDemoBudget(pseudonymizeIp('203.0.113.7', nextDay), 'generation', nextDay);
+    await refundDemoBudget(ip, 'generation', T0);
+    expect(await DemoBudgetModel.countDocuments({ day: '2026-10-09', scope: 'ip', count: 0 })).toBe(1);
+    expect(await DemoBudgetModel.countDocuments({ day: '2026-10-10', scope: 'ip', count: 1 })).toBe(1);
+  });
+
+  it('refunds a mock request only to the visitor (the global budget is for generations)', async () => {
+    const ip = pseudonymizeIp('203.0.113.7', T0);
+    await tryConsumeDemoBudget(ip, 'generation', T0);
+    await tryConsumeDemoBudget(ip, 'mockRequest', T0);
+    await refundDemoBudget(ip, 'mockRequest', T0);
+    expect(await count('ip', ip, 'mockRequest')).toBe(0);
+    expect(await count('global', 'global')).toBe(1);
+  });
+
+  it('peekDemoBudget reads what is left today without consuming anything', async () => {
+    process.env.DEMO_DAILY_GENERATIONS = '3';
+    const ip = pseudonymizeIp('203.0.113.7', T0);
+    await expect(peekDemoBudget(ip, T0)).resolves.toEqual({ ipLeft: 2, globalLeft: 3 });
+    await tryConsumeDemoBudget(ip, 'generation', T0);
+    await expect(peekDemoBudget(ip, T0)).resolves.toEqual({ ipLeft: 1, globalLeft: 2 });
+    await tryConsumeDemoBudget(ip, 'generation', T0);
+    await expect(peekDemoBudget(ip, T0)).resolves.toEqual({ ipLeft: 0, globalLeft: 1 });
+    expect(await count('ip', ip)).toBe(2);
   });
 });
 

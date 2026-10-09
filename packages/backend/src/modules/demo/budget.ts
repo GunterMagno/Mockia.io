@@ -43,10 +43,13 @@ async function increment(day: string, scope: 'ip' | 'global', key: string, kind:
   return false;
 }
 
-/** Takes one unit back (a refused global slot must not leave the visitor charged). */
-async function refund(day: string, key: string, kind: BudgetKind): Promise<void> {
-  await DemoBudgetModel.updateOne({ day, scope: 'ip', key, kind, count: { $gt: 0 } }, { $inc: { count: -1 } }).catch(() => undefined);
+/** Takes one unit back from a counter, never below zero (a single conditional $inc: atomic). */
+async function decrement(day: string, scope: 'ip' | 'global', key: string, kind: BudgetKind): Promise<void> {
+  await DemoBudgetModel.updateOne({ day, scope, key, kind, count: { $gt: 0 } }, { $inc: { count: -1 } }).catch(() => undefined);
 }
+
+/** Takes the visitor's unit back (a refused global slot must not leave the visitor charged). */
+const refund = (day: string, key: string, kind: BudgetKind): Promise<void> => decrement(day, 'ip', key, kind);
 
 /**
  * Spends one unit of the visitor's daily allowance and, for generations, of the demo's global one. The visitor's own
@@ -64,6 +67,36 @@ export async function tryConsumeDemoBudget(ipHash: string, kind: BudgetKind, now
     return { ok: false, scope: 'global' };
   }
   return { ok: true };
+}
+
+/**
+ * Gives back ONE unit that tryConsumeDemoBudget took, on the same UTC day it was taken (pass the same `now`): the
+ * visitor's and, for generations, the demo's global one. Each counter goes down with one conditional $inc, so it can
+ * never go below zero; the caller must call it at most once per successful consume (the service guards that).
+ *
+ * Only for work that never reached the model: a refund after the model answered would turn failures into free calls.
+ */
+export async function refundDemoBudget(ipHash: string, kind: BudgetKind, now: Date = new Date()): Promise<void> {
+  const day = utcDay(now);
+  await decrement(day, 'ip', ipHash, kind);
+  if (kind === 'generation') await decrement(day, 'global', 'global', kind);
+}
+
+/**
+ * Generations left today (the visitor's and the demo's), read-only. Callers decide what to reveal: the status route
+ * only ever tells a visitor their own number and whether the demo has anything left, never the global counters.
+ */
+export async function peekDemoBudget(ipHash: string, now: Date = new Date()): Promise<{ ipLeft: number; globalLeft: number }> {
+  const cfg = getDemoConfig();
+  const day = utcDay(now);
+  const [ip, global] = await Promise.all([
+    DemoBudgetModel.findOne({ day, scope: 'ip', key: ipHash, kind: 'generation' }).lean(),
+    DemoBudgetModel.findOne({ day, scope: 'global', key: 'global', kind: 'generation' }).lean(),
+  ]);
+  return {
+    ipLeft: Math.max(0, cfg.perIpGenerationsPerDay - (ip?.count ?? 0)),
+    globalLeft: Math.max(0, cfg.dailyGenerations - (global?.count ?? 0)),
+  };
 }
 
 const running = new Map<string, number>();
