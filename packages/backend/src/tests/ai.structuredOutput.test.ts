@@ -86,14 +86,12 @@ describe('AI generation passes the output schema', () => {
     expect(complete.mock.calls[0][0].jsonSchema).toBe(MOCK_SPEC_JSON_SCHEMA);
   });
 
-  it('the other call sites keep their plain request (no schema)', async () => {
-    await request(app).post('/api/ai/generate-description').set(auth).send({ prompt: 'p', userMessage: 'u' });
-    complete.mockResolvedValueOnce({ text: '{"a":1}', provider: 'fake', model: 'm' });
-    await request(app).post('/api/ai/generate-mock-data').set(auth).send({ schema: { a: 'number' } });
-    expect(complete).toHaveBeenCalledTimes(2);
-    expect(complete.mock.calls[0][0].jsonSchema).toBeUndefined();
-    expect(complete.mock.calls[1][0].jsonSchema).toBeUndefined();
-    expect(complete.mock.calls[1][0].json).toBe(true);
+  // The plain-request call sites (generate-description, generate-mock-data) were removed: every remaining generation
+  // route sends the schema
+  it('the removed plain-request routes answer 404 and call no model', async () => {
+    expect((await request(app).post('/api/ai/generate-description').set(auth).send({ prompt: 'p', userMessage: 'u' })).status).toBe(404);
+    expect((await request(app).post('/api/ai/generate-mock-data').set(auth).send({ schema: { a: 'number' } })).status).toBe(404);
+    expect(complete).not.toHaveBeenCalled();
   });
 });
 

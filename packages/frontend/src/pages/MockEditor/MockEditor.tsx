@@ -9,7 +9,7 @@ import { Modal } from '../../components/ui/Modal/Modal'
 import { getEndpoints, updateEndpoint, createEndpoint, deleteEndpoint } from '../../services/endpointService'
 import { getProjectById, type Project } from '../../services/projectService'
 import { MOCK_API_KEY_HEADER } from '@mockia/shared'
-import { generateAndSaveEndpoints } from '../../services/aiService'
+import { generateAndSaveEndpoints, MAX_AI_REQUIREMENT_CHARS } from '../../services/aiService'
 import AiFeedback from '../../components/ui/AiFeedback/AiFeedback'
 import type { EndpointData } from '../../services/endpointService'
 
@@ -438,6 +438,7 @@ const MockEditor: React.FC = () => {
           <textarea
             value={aiRequirement}
             onChange={(e) => setAiRequirement(e.target.value)}
+            maxLength={MAX_AI_REQUIREMENT_CHARS}
             placeholder={t('editor.aiModalPlaceholder')}
             aria-label={t('editor.aiModalTitle')}
             className={styles.aiTextarea}

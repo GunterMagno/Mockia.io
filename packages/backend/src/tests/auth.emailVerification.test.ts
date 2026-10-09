@@ -181,8 +181,6 @@ describe('Email verification', () => {
     });
 
     const gated: Array<[string, string]> = [
-      ['post', '/api/ai/generate-description'],
-      ['post', '/api/ai/generate-mock-data'],
       ['post', '/api/ai/generate-mock-api-spec'],
       ['post', '/api/ai/generate-and-save'],
       ['post', '/api/billing/checkout'],

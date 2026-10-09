@@ -314,14 +314,16 @@ describe('AI training consent, generation storage and feedback', () => {
       expect(await AiGenerationModel.countDocuments({})).toBe(0);
     });
 
-    it('the other AI routes neither return an id nor store anything', async () => {
+    // generate-description / generate-mock-data were removed (open LLM proxy, see ai.inputLimits.test.ts)
+    it('the removed AI routes neither return an id nor store anything (404)', async () => {
       const a = await makeActor('alice');
       await consent(a, true);
       const d = await request(app).post('/api/ai/generate-description').set(a.auth).send({ prompt: 'p', userMessage: 'u' });
-      expect(d.body.data.generationId).toBeUndefined();
-      complete.mockResolvedValueOnce({ text: '{"a":1}', provider: 'fake', model: 'm' });
+      expect(d.status).toBe(404);
+      expect(d.body.data?.generationId).toBeUndefined();
       const m = await request(app).post('/api/ai/generate-mock-data').set(a.auth).send({ schema: { a: 'number' } });
-      expect(m.body.data.generationId).toBeUndefined();
+      expect(m.status).toBe(404);
+      expect(m.body.data?.generationId).toBeUndefined();
       expect(await AiGenerationModel.countDocuments({})).toBe(0);
     });
 

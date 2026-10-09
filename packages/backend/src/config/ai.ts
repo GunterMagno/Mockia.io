@@ -135,3 +135,15 @@ export function getAiGenerationRetentionDays(env: NodeJS.ProcessEnv = process.en
   const n = Number.parseInt(raw, 10);
   return n > 0 ? Math.min(n, MAX_AI_GENERATION_RETENTION_DAYS) : DEFAULT_AI_GENERATION_RETENTION_DAYS;
 }
+
+/**
+ * Sampling of the endpoint-generation routes. Always the server's: the client cannot choose temperature or max tokens
+ * (a huge max_tokens could keep the local model busy and its breaker open for everyone). AI_SPEC_TEMPERATURE lets the
+ * owner tune the temperature after running the evaluation bench (a number from 0 to 2; empty or invalid keeps 0.85).
+ */
+export function getSpecGenerationSampling(env: NodeJS.ProcessEnv = process.env): { temperature: number; maxTokens: number } {
+  const raw = (env.AI_SPEC_TEMPERATURE ?? '').trim();
+  const value = raw === '' ? Number.NaN : Number(raw);
+  const temperature = Number.isFinite(value) && value >= 0 && value <= 2 ? value : SPEC_GENERATION_DEFAULTS.temperature;
+  return { temperature, maxTokens: SPEC_GENERATION_DEFAULTS.maxTokens };
+}

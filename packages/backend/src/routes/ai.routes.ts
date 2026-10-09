@@ -5,8 +5,6 @@
 
 import { Router } from 'express';
 import {
-  generateDescriptionHandler,
-  generateMockDataHandler,
   generateMockAPISpecHandler,
   generateAndSaveHandler,
   aiHealthCheckHandler,
@@ -17,13 +15,13 @@ import { requireVerifiedEmail } from '../middlewares/requireVerifiedEmail.js';
 import { authorizeRole } from '../middlewares/authorizeRole.js';
 import { rateLimit } from '../middlewares/rateLimit.js';
 import { validate } from '../middlewares/validateRequest.js';
-import { feedbackSchema } from '../modules/ai/feedbackValidation.js';
+import { feedbackSchema, generationBodySchema } from '../modules/ai/feedbackValidation.js';
 
 /**
  * Both project-bound routes take the project (id or slug) from the body. The caller must belong to it BEFORE any prompt
  * is built or any model is called: building the prompt pulls the project's GitHub context, and generate-and-save writes
  * endpoints into it. Unknown project -> 404, not a member / insufficient role -> 403, no project reference -> 400.
- * generate-description and generate-mock-data take no project reference.
+ * The body is validated first (generationBodySchema): requirement at most 4000 characters, client sampling stripped.
  */
 const bodyProjectRef = (req: { body?: { projectId?: unknown } }) => req.body?.projectId;
 
@@ -48,33 +46,8 @@ const feedbackLimiter = rateLimit({
  *   description: AI-powered generation and analysis
  */
 
-/**
- * @swagger
- * /ai/generate-description:
- *   post:
- *     summary: Generate feature description
- *     tags: [AI]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Success
- */
-router.post('/generate-description', authenticateToken, requireVerifiedEmail, generateDescriptionHandler);
-
-/**
- * @swagger
- * /ai/generate-mock-data:
- *   post:
- *     summary: Generate mock data
- *     tags: [AI]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Success
- */
-router.post('/generate-mock-data', authenticateToken, requireVerifiedEmail, generateMockDataHandler);
+// generate-description and generate-mock-data were removed: the frontend never called them and they were an open LLM
+// proxy (client-written system prompt, client-chosen size). Endpoint generation goes through the two routes below.
 
 /**
  * @swagger
@@ -98,6 +71,7 @@ router.post('/generate-mock-data', authenticateToken, requireVerifiedEmail, gene
  *                 type: string
  *               requirement:
  *                 type: string
+ *                 maxLength: 4000
  *     responses:
  *       200:
  *         description: Success
@@ -107,6 +81,7 @@ router.post(
   '/generate-mock-api-spec',
   authenticateToken,
   requireVerifiedEmail,
+  validate({ body: generationBodySchema }),
   authorizeRole(['OWNER', 'EDITOR', 'VIEWER'], bodyProjectRef),
   generateMockAPISpecHandler
 );
@@ -133,6 +108,7 @@ router.post(
  *                 type: string
  *               requirement:
  *                 type: string
+ *                 maxLength: 4000
  *     responses:
  *       200:
  *         description: Success
@@ -142,6 +118,7 @@ router.post(
   '/generate-and-save',
   authenticateToken,
   requireVerifiedEmail,
+  validate({ body: generationBodySchema }),
   authorizeRole(['OWNER', 'EDITOR'], bodyProjectRef),
   generateAndSaveHandler
 );

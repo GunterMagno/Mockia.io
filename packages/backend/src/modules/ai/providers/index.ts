@@ -122,7 +122,38 @@ function deadlineError(): AppError {
 
 function toServiceError(err: unknown): AppError {
   if (err instanceof AppError) return err;
+  if (err instanceof LlmResponseError && (err.kind === 'invalid_output' || err.kind === 'truncated')) {
+    return new AppError('The AI returned an invalid answer. Please try again.', ErrorCode.EXTERNAL_SERVICE_ERROR, 502);
+  }
   return new AppError('AI service temporarily unavailable. Please try again later.', ErrorCode.EXTERNAL_SERVICE_ERROR, 503);
+}
+
+/** HTTP statuses that depend on the request itself (too large, rejected parameters), not on the server's health. */
+const INPUT_DEPENDENT_FAILURES = new Set(['http_400', 'http_413', 'http_422']);
+
+/** The extra turn of a repair retry: only the validator's content-free reason, never the rejected output. */
+function repairMessage(reason: string) {
+  return {
+    role: 'user' as const,
+    content:
+      `Your previous output was invalid: ${reason}. Return only valid JSON that matches the required schema, ` +
+      'with no explanation and no markdown.',
+  };
+}
+
+/**
+ * One provider's answer, validated with the caller's validator: an invalid text gets ONE repair retry on the same
+ * provider (same deadline signal); a second invalid text throws LlmResponseError('invalid_output').
+ */
+async function completeValidated(provider: LlmProvider, req: LlmRequest): Promise<LlmCompletion> {
+  const first = await provider.complete(req);
+  if (!req.validate) return first;
+  const reason = req.validate(first.text);
+  if (reason === null) return first;
+  console.warn(`[AI] Provider "${provider.name}" returned an invalid answer (invalid_output); asking it once to repair it`);
+  const second = await provider.complete({ ...req, messages: [...req.messages, repairMessage(reason)] });
+  if (req.validate(second.text) !== null) throw new LlmResponseError('invalid_output');
+  return second;
 }
 
 export function createFallbackLlm(entries: FallbackEntry[], options: FallbackOptions = {}): LlmProvider {
@@ -150,7 +181,7 @@ export function createFallbackLlm(entries: FallbackEntry[], options: FallbackOpt
           continue;
         }
         try {
-          const result = await provider.complete(providerReq);
+          const result = await completeValidated(provider, providerReq);
           breaker?.onSuccess();
           return result;
         } catch (err) {
@@ -158,7 +189,10 @@ export function createFallbackLlm(entries: FallbackEntry[], options: FallbackOpt
             breaker?.onAbandoned();
             throw err;
           }
-          breaker?.onFailure();
+          // A 400/413/422 is caused by this request (size, parameters): fall back, but do not let one user's input
+          // open the circuit for everybody
+          if (INPUT_DEPENDENT_FAILURES.has(classifyFailure(err))) breaker?.onAbandoned();
+          else breaker?.onFailure();
           if (deadline.aborted) {
             console.warn(`[AI] Provider "${provider.name}" cut by the overall deadline (${totalTimeoutMs} ms)`);
             throw deadlineError();

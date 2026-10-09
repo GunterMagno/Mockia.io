@@ -2,7 +2,7 @@ import React, { useId, useState } from 'react'
 import { Modal } from '../../ui/Modal/Modal'
 import { createProject, importFromGitHub, hardDeleteProject } from '../../../services/projectService'
 import { parseGithubUrl } from '../../../services/githubService'
-import { generateAndSaveEndpoints } from '../../../services/aiService'
+import { generateAndSaveEndpoints, MAX_AI_REQUIREMENT_CHARS } from '../../../services/aiService'
 import { getBackendErrorCode, getBackendErrorMessage } from '../../../utils/error'
 import { Link } from 'react-router-dom'
 import { PATHS } from '../../../routes/paths'
@@ -342,6 +342,7 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
                     className={styles.textarea}
                     value={aiRequirement}
                     onChange={e => setAiRequirement(e.target.value)}
+                    maxLength={MAX_AI_REQUIREMENT_CHARS}
                     placeholder={t('createProject.aiPromptPlaceholder')}
                   />
                 </article>

@@ -735,39 +735,18 @@ describe('AI providers (local first, OpenRouter as reserve)', () => {
       await disconnectDB();
     });
 
-    it('generate-description: 200 with the OpenRouter text and the same response shape', async () => {
-      const { auth } = await createUser('d1@example.com');
-      const res = await request(app)
-        .post('/api/ai/generate-description')
-        .set(auth)
-        .send({ prompt: 'be nice', userMessage: 'describe GET /users' });
-      expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data).toEqual({ generatedContent: 'from-openrouter' });
-      expect(remote.seen[0].body.messages).toEqual([
-        { role: 'system', content: 'be nice' },
-        { role: 'user', content: 'describe GET /users' },
-      ]);
-      expect(remote.seen[0].body.temperature).toBe(0.7);
-      expect(remote.seen[0].body.max_tokens).toBe(1000);
-    });
-
-    it('generate-mock-data: JSON object mode, parsed result, local answers when it is up', async () => {
-      const { auth } = await createUser('d2@example.com');
-      remote.setHandler(answer('{"id":1,"name":"Ada"}'));
-      const down = await request(app).post('/api/ai/generate-mock-data').set(auth).send({ schema: { id: 'number' } });
-      expect(down.status).toBe(200);
-      expect(down.body.data.mockData).toEqual({ id: 1, name: 'Ada' });
-      expect(remote.seen[0].body.response_format).toEqual({ type: 'json_object' });
-      expect(remote.seen[0].body.temperature).toBe(0.8);
-
+    // generate-description / generate-mock-data (open LLM proxy) were removed with their response-shape tests; the
+    // "local is back up" case is kept on the spec route
+    it('generate-mock-api-spec: local answers again as soon as it is back up', async () => {
+      const { id, auth } = await createUser('d2@example.com');
+      const project = await ProjectModel.create({ title: 'Gym', slug: 'gym-t12-up', ownerId: id, members: [{ userId: id, role: 'owner' }] });
       process.env.AI_LOCAL_BASE_URL = local.url; // Ollama is back
-      local.setHandler(answer('[{"id":2}]'));
+      local.setHandler(answer(JSON.stringify({ apiVersion: '1.0.0', title: 'Gym API', description: 'd', endpoints: [], dataModels: [] })));
       resetLlm();
-      const up = await request(app).post('/api/ai/generate-mock-data').set(auth).send({ schema: { id: 'number' } });
+      const up = await request(app).post('/api/ai/generate-mock-api-spec').set(auth).send({ projectId: project._id.toString(), requirement: 'x' });
       expect(up.status).toBe(200);
-      expect(up.body.data.mockData).toEqual([{ id: 2 }]);
       expect(local.seen).toHaveLength(1);
+      expect(remote.seen).toHaveLength(0);
     });
 
     it('generate-mock-api-spec: usage keeps its shape (promptTokens/completionTokens/totalTokens)', async () => {
@@ -787,12 +766,21 @@ describe('AI providers (local first, OpenRouter as reserve)', () => {
     });
 
     it('the generation log names the provider but never the prompt or the answer', async () => {
-      const { auth } = await createUser('d4@example.com');
-      remote.setHandler(answer('PRIVATE-ANSWER-TEXT'));
+      const { id, auth } = await createUser('d4@example.com');
+      const project = await ProjectModel.create({
+        title: 'Gym',
+        description: 'PRIVATE-PROMPT',
+        slug: 'gym-t12-log',
+        ownerId: id,
+        members: [{ userId: id, role: 'owner' }],
+      });
+      remote.setHandler(
+        answer(JSON.stringify({ apiVersion: '1.0.0', title: 'PRIVATE-ANSWER-TEXT', description: 'd', endpoints: [], dataModels: [] }))
+      );
       await request(app)
-        .post('/api/ai/generate-description')
+        .post('/api/ai/generate-mock-api-spec')
         .set(auth)
-        .send({ prompt: 'PRIVATE-PROMPT', userMessage: 'PRIVATE-USER-MESSAGE' });
+        .send({ projectId: project._id.toString(), requirement: 'PRIVATE-USER-MESSAGE' });
       const all = [...log.mock.calls, ...warn.mock.calls].map((c) => c.map(String).join(' ')).join('\n');
       expect(all).toMatch(/provider=openrouter/);
       for (const secret of ['PRIVATE-PROMPT', 'PRIVATE-USER-MESSAGE', 'PRIVATE-ANSWER-TEXT']) {
@@ -804,8 +792,18 @@ describe('AI providers (local first, OpenRouter as reserve)', () => {
       process.env.AI_RATE_PER_MINUTE = '2';
       const a = await createUser('rl-a@example.com');
       const b = await createUser('rl-b@example.com');
+      remote.setHandler(answer(JSON.stringify({ apiVersion: '1.0.0', title: 'Gym API', description: 'd', endpoints: [], dataModels: [] })));
+      const projectOf = async (u: { id: unknown }, slug: string) =>
+        (await ProjectModel.create({ title: 'P', slug, ownerId: u.id, members: [{ userId: u.id, role: 'owner' }] }))._id.toString();
+      const projects = new Map([
+        [a.auth.Authorization, await projectOf(a, 'rl-a-p')],
+        [b.auth.Authorization, await projectOf(b, 'rl-b-p')],
+      ]);
       const call = (auth: Record<string, string>) =>
-        request(app).post('/api/ai/generate-description').set(auth).send({ prompt: 'p', userMessage: 'm' });
+        request(app)
+          .post('/api/ai/generate-mock-api-spec')
+          .set(auth)
+          .send({ projectId: projects.get(auth.Authorization), requirement: 'm' });
 
       expect((await call(a.auth)).status).toBe(200);
       expect((await call(a.auth)).status).toBe(200);
@@ -823,9 +821,9 @@ describe('AI providers (local first, OpenRouter as reserve)', () => {
       process.env.AI_RATE_PER_MINUTE = '2';
       const a = await createUser('rl-c@example.com');
       const own = await ProjectModel.create({ title: 'Own', slug: 'own-t12', ownerId: a.id, members: [{ userId: a.id, role: 'owner' }] });
-      remote.setHandler(answer('{"a":1}'));
-      await request(app).post('/api/ai/generate-description').set(a.auth).send({ prompt: 'p', userMessage: 'm' });
-      await request(app).post('/api/ai/generate-mock-data').set(a.auth).send({ schema: { a: 'n' } });
+      remote.setHandler(answer(JSON.stringify({ apiVersion: '1.0.0', title: 'Gym API', description: 'd', endpoints: [], dataModels: [] })));
+      await request(app).post('/api/ai/generate-mock-api-spec').set(a.auth).send({ projectId: own._id.toString(), requirement: 'm' });
+      await request(app).post('/api/ai/generate-and-save').set(a.auth).send({ projectId: own._id.toString(), requirement: 'm' });
       const third = await request(app)
         .post('/api/ai/generate-mock-api-spec')
         .set(a.auth)
@@ -1044,9 +1042,11 @@ describe('AI providers (local first, OpenRouter as reserve)', () => {
         .post('/api/ai/generate-and-save')
         .set(auth)
         .send({ projectId: project._id.toString(), requirement: PROMPT });
-      expect(res.status).toBeGreaterThanOrEqual(400);
+      // The chain now validates the answer itself: one repair request, then a 502 before the pipeline runs
+      expect(res.status).toBe(502);
+      expect(remote.seen).toHaveLength(2);
       const out = everything();
-      expect(out).toContain('[Pipeline]');
+      expect(out).toContain('invalid_output');
       for (const secret of [PROMPT, BODY]) expect(out).not.toContain(secret);
       await UserModel.deleteMany({});
       await ProjectModel.deleteMany({});

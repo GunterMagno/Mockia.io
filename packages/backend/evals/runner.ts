@@ -11,7 +11,7 @@
 import fs from 'fs';
 import path from 'path';
 import { performance } from 'perf_hooks';
-import { AI_PROVIDER_NAMES, SPEC_GENERATION_DEFAULTS, getAiTotalTimeoutMs, getLocalAiConfig, openRouterConfig } from '../src/config/ai.js';
+import { AI_PROVIDER_NAMES, getAiTotalTimeoutMs, getLocalAiConfig, getSpecGenerationSampling, openRouterConfig } from '../src/config/ai.js';
 import { buildPromptFromInput } from '../src/modules/ai/prompt.service.js';
 import { MOCK_SPEC_JSON_SCHEMA } from '../src/modules/ai/outputSchema.js';
 import { classifyFailure } from '../src/modules/ai/providers/index.js';
@@ -39,9 +39,9 @@ export interface RunOptions {
   limit?: number;
   /** Calls in flight at once (default 1: latency is only meaningful when the server is not shared). */
   concurrency?: number;
-  /** Sampling temperature (default: the production value, SPEC_GENERATION_DEFAULTS). */
+  /** Sampling temperature (default: the production value, getSpecGenerationSampling(): AI_SPEC_TEMPERATURE or 0.85, 5000 tokens). */
   temperature?: number;
-  /** Max output tokens (default: the production value, SPEC_GENERATION_DEFAULTS). */
+  /** Max output tokens (default: the production value, getSpecGenerationSampling(): AI_SPEC_TEMPERATURE or 0.85, 5000 tokens). */
   maxTokens?: number;
   casesDir: string;
   /** Directory where the result JSON is written. Nothing is written when absent. */
@@ -166,8 +166,8 @@ export async function runEval(options: RunOptions): Promise<RunOutcome> {
   const env: NodeJS.ProcessEnv = { ...(options.env ?? process.env), AI_PROVIDERS: options.provider };
   if (!fake && !options.providerFactory) assertProviderConfigured(options.provider, env);
   const params: SamplingParams = {
-    temperature: options.temperature ?? SPEC_GENERATION_DEFAULTS.temperature,
-    maxTokens: options.maxTokens ?? SPEC_GENERATION_DEFAULTS.maxTokens,
+    temperature: options.temperature ?? getSpecGenerationSampling().temperature,
+    maxTokens: options.maxTokens ?? getSpecGenerationSampling().maxTokens,
   };
 
   let cases = loadCases(options.casesDir);

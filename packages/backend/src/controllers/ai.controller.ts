@@ -7,7 +7,7 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/authenticateToken.js';
 import { asyncHandler } from '../middlewares/errorHandler.js';
 import { consumeAiQuota } from '../modules/ai/aiRateLimit.js';
-import { parseAiProviders, SPEC_GENERATION_DEFAULTS } from '../config/ai.js';
+import { parseAiProviders, getSpecGenerationSampling } from '../config/ai.js';
 import { describeError } from '../utils/safeErrorLog.js';
 import { getLlm, type LlmCompletion, type LlmRequest } from '../modules/ai/providers/index.js';
 import { newGenerationId, persistGeneration } from '../modules/ai/generationStore.js';
@@ -17,6 +17,8 @@ import { ErrorCode } from '@mockia/shared';
 import {
   buildPrompt,
   extractMockAPIFromResponse,
+  extractJsonFromLLMOutput,
+  validateGeneratedApi,
   runAIGenerationPipeline,
   MOCK_SPEC_JSON_SCHEMA,
 } from '../modules/ai/index.js';
@@ -56,126 +58,45 @@ function usageOf(result: LlmCompletion) {
   return { promptTokens, completionTokens, totalTokens: promptTokens + completionTokens };
 }
 
-/**
- * POST /api/ai/generate-description
- * Generate a description for a mock endpoint using the configured LLM provider
- *
- * Body parameters:
- * - prompt (required): The system prompt/context
- * - userMessage (required): The user message to generate a response for
- * - temperature (optional): Model temperature (0-1)
- * - maxTokens (optional): Maximum tokens in response
- *
- * @param req - Authenticated request
- * @param res - Express response
- * @returns 200 with generated content
- */
-export const generateDescriptionHandler = asyncHandler(
-  async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.id;
-    if (!userId) {
-      throw new Error('User ID not found in request');
-    }
+/** Content-free reasons the validators hand back to the model in a repair request (never quote the output). */
+const NOT_JSON = 'the output is not valid JSON';
+const WRONG_SHAPE = 'the JSON does not match the required schema (an object with apiVersion, title, description, endpoints and dataModels)';
 
-    await enforceAiRateLimit(userId, res);
-
-    const { prompt, userMessage, temperature, maxTokens } = req.body;
-
-    if (!prompt || !userMessage) {
-      throw new AppError(
-        'Both prompt and userMessage are required',
-        ErrorCode.VALIDATION_ERROR,
-        400
-      );
-    }
-
-    const { text: generatedContent } = await complete('generate-description', {
-      messages: [
-        { role: 'system', content: prompt },
-        { role: 'user', content: userMessage },
-      ],
-      temperature: temperature ?? 0.7,
-      maxTokens: maxTokens ?? 1000,
-    });
-
-    res.status(200).json({
-      success: true,
-      data: {
-        generatedContent,
-      },
-      timestamp: new Date().toISOString(),
-    });
+/** Which content-free reason applies to a text the downstream step rejected. */
+function invalidReason(text: string): string {
+  try {
+    extractJsonFromLLMOutput(text, { silent: true });
+    return WRONG_SHAPE;
+  } catch {
+    return NOT_JSON;
   }
-);
+}
 
-/**
- * POST /api/ai/generate-mock-data
- * Generate mock data for an API endpoint
- *
- * Body parameters:
- * - schema (required): API schema/interface description
- * - count (optional): Number of mock records to generate (default 1)
- *
- * @param req - Authenticated request
- * @param res - Express response
- * @returns 200 with generated mock data
- */
-export const generateMockDataHandler = asyncHandler(
-  async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.id;
-    if (!userId) {
-      throw new Error('User ID not found in request');
-    }
-
-    await enforceAiRateLimit(userId, res);
-
-    const { schema, count = 1 } = req.body;
-
-    if (!schema) {
-      throw new AppError(
-        'Schema is required',
-        ErrorCode.VALIDATION_ERROR,
-        400
-      );
-    }
-
-    const prompt = `You are an expert at generating realistic mock data. 
-    Generate ${count} JSON object(s) that match this schema. Return only valid JSON, no explanation.
-    Schema: ${JSON.stringify(schema)}`;
-
-    const userMessage = `Generate ${count} mock data object(s) for this schema.`;
-
-    const { text: generatedData } = await complete('generate-mock-data', {
-      messages: [
-        { role: 'system', content: prompt },
-        { role: 'user', content: userMessage },
-      ],
-      temperature: 0.8, // More creative for data generation
-      maxTokens: 2000,
-      json: true,
-    });
-
-    // Parse the JSON response from the AI
-    let parsedMockData;
-    try {
-      parsedMockData = JSON.parse(generatedData);
-    } catch (error) {
-      throw new AppError(
-        'Generated data is not valid JSON',
-        ErrorCode.VALIDATION_ERROR,
-        400
-      );
-    }
-
-    res.status(200).json({
-      success: true,
-      data: {
-        mockData: parsedMockData,
-      },
-      timestamp: new Date().toISOString(),
-    });
+/** Validator of generate-mock-api-spec: exactly the parse the route applies to the answer (extractMockAPIFromResponse). */
+export function specRouteValidator(text: string): string | null {
+  try {
+    extractMockAPIFromResponse(text);
+    return null;
+  } catch {
+    return invalidReason(text);
   }
-);
+}
+
+/** Validator of generate-and-save: exactly the pipeline's parse + validation (extractJsonFromLLMOutput + validateGeneratedApi). */
+export function saveRouteValidator(text: string): string | null {
+  let parsed: unknown;
+  try {
+    parsed = extractJsonFromLLMOutput(text, { silent: true });
+  } catch {
+    return NOT_JSON;
+  }
+  try {
+    validateGeneratedApi(parsed);
+    return null;
+  } catch {
+    return WRONG_SHAPE;
+  }
+}
 
 /**
  * POST /api/ai/generate-mock-api-spec
@@ -185,8 +106,7 @@ export const generateMockDataHandler = asyncHandler(
  * Body parameters:
  * - projectId (required): The project ID to load GitHub context from
  * - requirement (required): Description of what the mock API should do
- * - temperature (optional): Model temperature (0-1), default 0.7
- * - maxTokens (optional): Maximum tokens in response, default 4000
+ * (temperature / maxTokens are no longer accepted from the client: AI_SPEC_TEMPERATURE, 5000 tokens)
  *
  * Response:
  * - apiVersion, title, description
@@ -229,11 +149,12 @@ export const generateMockAPISpecHandler = asyncHandler(
     const messages = await buildPrompt(projectId, requirement);
 
     // Call the LLM provider chain with structured messages
+    // Sampling is the server's (the validate middleware strips any client temperature / maxTokens)
     const completion = await complete('generate-mock-api-spec', {
       messages,
-      temperature: req.body.temperature ?? SPEC_GENERATION_DEFAULTS.temperature,
-      maxTokens: req.body.maxTokens ?? SPEC_GENERATION_DEFAULTS.maxTokens,
+      ...getSpecGenerationSampling(),
       jsonSchema: MOCK_SPEC_JSON_SCHEMA,
+      validate: specRouteValidator,
     });
     const responseContent = completion.text;
 
@@ -273,8 +194,7 @@ export const generateMockAPISpecHandler = asyncHandler(
  * Body parameters:
  * - projectId (required): The project ID to load GitHub context from
  * - requirement (required): Description of what the mock API should do
- * - temperature (optional): Model temperature (0-1), default 0.7
- * - maxTokens (optional): Maximum tokens in response, default 4000
+ * (temperature / maxTokens are no longer accepted from the client: AI_SPEC_TEMPERATURE, 5000 tokens)
  *
  * Response:
  * - specification: Complete mock API specification
@@ -322,9 +242,9 @@ export const generateAndSaveHandler = asyncHandler(
       // 2. Call the LLM provider chain
       const completion = await complete('generate-and-save', {
         messages,
-        temperature: req.body.temperature ?? SPEC_GENERATION_DEFAULTS.temperature,
-        maxTokens: req.body.maxTokens ?? SPEC_GENERATION_DEFAULTS.maxTokens,
+        ...getSpecGenerationSampling(),
         jsonSchema: MOCK_SPEC_JSON_SCHEMA,
+        validate: saveRouteValidator,
       });
 
       // 3. Get response content (the provider already rejects empty answers)

@@ -46,7 +46,7 @@ export function buildChatParams(req: LlmRequest): {
 export function readCompletion(data: unknown, provider: string, configuredModel: string): LlmCompletion {
   const body = data as {
     model?: unknown;
-    choices?: Array<{ message?: { content?: unknown } }>;
+    choices?: Array<{ message?: { content?: unknown }; finish_reason?: unknown }>;
     usage?: { prompt_tokens?: unknown; completion_tokens?: unknown };
   } | null;
   if (!body || typeof body !== 'object' || !Array.isArray(body.choices) || body.choices.length === 0) {
@@ -54,6 +54,8 @@ export function readCompletion(data: unknown, provider: string, configuredModel:
   }
   const message = body.choices[0]?.message;
   if (!message || typeof message !== 'object') throw new LlmResponseError('invalid_envelope');
+  // Cut by max_tokens: whatever came back is an incomplete document, never a usable answer
+  if (body.choices[0]?.finish_reason === 'length') throw new LlmResponseError('truncated');
   const content = message.content;
   if (typeof content !== 'string' || content.trim() === '') throw new LlmResponseError('empty_content');
 

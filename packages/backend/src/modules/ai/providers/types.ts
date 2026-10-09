@@ -22,6 +22,12 @@ export interface LlmRequest {
   temperature?: number;
   /** Aborting it cancels the HTTP call and is never treated as a provider failure (no fallback). */
   signal?: AbortSignal;
+  /**
+   * Checks the answer text with the SAME parse + validation the caller applies afterwards. Returns null when it is
+   * usable, or a short CONTENT-FREE reason (it is sent back to the model and may be logged: never quote the output).
+   * An invalid answer gets one repair retry on the same provider; a second invalid answer is a provider failure.
+   */
+  validate?: (text: string) => string | null;
 }
 
 export interface LlmCompletion {
@@ -38,9 +44,13 @@ export interface LlmProvider {
   complete(req: LlmRequest): Promise<LlmCompletion>;
 }
 
-/** The provider answered, but not with a usable chat completion. Always a reason to try the next provider. */
+/**
+ * The provider answered, but not with a usable chat completion. Always a reason to try the next provider.
+ *  - truncated: finish_reason "length" (cut by max_tokens: the JSON is incomplete)
+ *  - invalid_output: the text failed the caller's validator twice (first answer + one repair)
+ */
 export class LlmResponseError extends Error {
-  constructor(public readonly kind: 'invalid_envelope' | 'empty_content') {
+  constructor(public readonly kind: 'invalid_envelope' | 'empty_content' | 'truncated' | 'invalid_output') {
     // The message carries only the kind: it can end up in logs, and a response body must never be logged.
     super(kind);
     this.name = 'LlmResponseError';

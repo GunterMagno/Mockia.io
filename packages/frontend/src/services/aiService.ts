@@ -1,5 +1,8 @@
 import { api } from './api'
 
+/** Longest requirement the backend accepts (generationBodySchema: 4000 characters). */
+export const MAX_AI_REQUIREMENT_CHARS = 4000
+
 export interface AIGenerationResponse {
   specification: any
   database: {

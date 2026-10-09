@@ -166,9 +166,10 @@ describe('AI routes: project access control', () => {
     });
   });
 
-  it('the routes without a project reference are unaffected (still reachable for any verified user)', async () => {
+  // The routes without a project reference (generate-description, generate-mock-data) were removed: open LLM proxy
+  it('the old routes without a project reference no longer exist (404, no model call)', async () => {
     const d = await request(app).post('/api/ai/generate-description').set(stranger.auth).send({ prompt: 'p', userMessage: 'm' });
-    expect(d.status).toBe(200);
-    expect(complete).toHaveBeenCalledTimes(1);
+    expect(d.status).toBe(404);
+    expect(complete).not.toHaveBeenCalled();
   });
 });
