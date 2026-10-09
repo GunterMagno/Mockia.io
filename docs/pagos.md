@@ -4,6 +4,8 @@ El código ya crea el Checkout con IVA automático, recogida de NIF-IVA, direcci
 
 > Este documento es una guía técnica, no asesoramiento fiscal. Confirma el tratamiento del IVA y la facturación con una gestoría antes de cobrar a clientes reales (paso 11).
 
+Cuánto cuesta cada plan y cómo fijar sus límites con datos: [economia-planes.md](economia-planes.md).
+
 Convención: `<APP_URL>` es la URL pública de la aplicación (variable `APP_URL`) y `<API_URL>` la del backend. En Render con las rutas de `render.yaml` el navegador llega a la API a través del frontend, así que `<API_URL>` = `<APP_URL>`; en un servidor propio con nginx, también (nginx reenvía `/api`).
 
 ## Checklist
@@ -194,7 +196,7 @@ La web anuncia los precios en **USD** (`PLAN_PRICE_USD` en `@mockia/shared`) y c
 - [ ] Abre cada uno de los seis Price (Catálogo de productos → el producto → el precio) → **Editar precio → Añadir precios para otras monedas** (`currency_options`) y añade **EUR** con el importe que quieras cobrar (p. ej. Starter 5 € / 50 €; el importe lo decides tú, no se convierte solo).
 - [ ] Mantén **Tax behavior = Exclusive** también en la opción en euros.
 
-Stripe Checkout elige la moneda según el país del cliente entre las que ofrece el Price; si no hay una moneda configurada para ese país, cobra en la moneda base (USD). El código no cambia: sigue enviando el mismo `price_...`, y ese `price_...` identifica el plan y el intervalo sea cual sea la moneda. La web seguirá anunciando dólares: los importes en euros solo se ven en el Checkout, en la factura y en el portal.
+Stripe Checkout elige la moneda según el país del cliente entre las que ofrece el Price; si no hay una moneda configurada para ese país, cobra en la moneda base (USD). El código no cambia: sigue enviando el mismo `price_...`, y ese `price_...` identifica el plan y el intervalo sea cual sea la moneda. La web seguirá anunciando dólares: los importes en euros solo se ven en el Checkout, en la factura y en el portal. Un cliente que ya pagó en USD sigue en USD (la moneda queda fijada en su suscripción): verifica en modo de prueba cómo se comporta el portal de cliente antes de ofrecer cambios de plan a quien contrató en una moneda distinta de la que le correspondería ahora.
 
 **Fuera de alcance: precio por poder adquisitivo (PPP) por país.** Se haría añadiendo más `currency_options` a mano (una por moneda; Stripe no admite importes distintos por país dentro de una misma moneda). No está implementado y la web no lo anuncia.
 

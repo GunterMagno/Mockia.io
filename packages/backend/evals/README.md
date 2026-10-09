@@ -161,6 +161,16 @@ npm run eval -w @mockia/backend -- --provider=local --cases=./ai-datasets/val-ca
 
 Cada línea se convierte en un caso cuyo prompt son **exactamente** los mensajes guardados (campo opcional `messages` del caso; `input` queda como un resto sin uso) y cuyo esperado son los endpoints de la respuesta final. Los ficheros se escriben con modo 0600 y salen de datos de usuarios (ya redactados y sin identificadores): déjalos en `ai-datasets/`, que está en `.gitignore`.
 
+## Coste por generación
+
+El banco imprime los tokens de salida y los tokens por segundo (`tokens/s`), y cada fila de `results/` guarda `outputTokens`. Con eso y el precio por token del modelo se calcula el **coste por generación** que necesita `docs/economia-planes.md` para fijar los cupos de IA de cada plan:
+
+1. Ejecuta el banco contra el proveedor real (`npm run eval -w @mockia/backend -- --provider=openrouter`, o `--provider=local`).
+2. Toma los tokens de salida del percentil alto y, para los de entrada, el tamaño del prompt (cada caso cabe en unos 6000 tokens; el panel de actividad de OpenRouter muestra entrada, salida y coste exactos por llamada).
+3. `coste por generación = tokens de entrada × precio de entrada + tokens de salida × precio de salida`. Con un modelo local, el coste es el de la máquina entre las generaciones que hace.
+
+No guardes cifras de coste en el repositorio: cámbian con el modelo y el proveedor, y las anota el titular.
+
 ## Estructura
 
 | Fichero | Contenido |
