@@ -110,15 +110,12 @@ function cleanEndpoint(raw: DemoEndpoint): DemoEndpointDocument {
 }
 
 /**
- * Creates the mock of one visitor. Keeps the first `maxEndpoints` endpoints, ignores a repeated method+path, and
- * throws DemoMockError for anything it will not serve (nothing is silently "fixed" except headers outside the
- * allow-list, which are dropped). The router always answers `Content-Type: application/json`.
+ * Validates and cleans what will be stored, without touching the database: keeps the first `maxEndpoints` endpoints,
+ * ignores a repeated method+path and throws DemoMockError for anything the router will not serve. Nothing is silently
+ * "fixed" except headers outside the allow-list, which are dropped. The AI generation uses it as its validator, so a
+ * model output that cannot become a mock is caught (and repaired) before anything is created.
  */
-export async function createDemoMock(
-  ipHash: string,
-  endpoints: DemoEndpoint[],
-  now: Date = new Date(),
-): Promise<{ demoId: string; expiresAt: Date }> {
+export function prepareDemoEndpoints(endpoints: DemoEndpoint[]): DemoEndpointDocument[] {
   const cfg = getDemoConfig();
   const kept = (Array.isArray(endpoints) ? endpoints : []).slice(0, cfg.maxEndpoints);
   const seen = new Set<string>();
@@ -131,11 +128,33 @@ export async function createDemoMock(
     clean.push(endpoint);
   }
   if (clean.length === 0) throw new DemoMockError('no endpoints');
+  return clean;
+}
 
+/** An endpoint as the visitor sees it (the body parsed back from its stored JSON text). */
+export const toPublicEndpoint = (e: DemoEndpointDocument): DemoEndpoint => ({
+  method: e.method as DemoMethod,
+  path: e.path,
+  statusCode: e.statusCode,
+  body: JSON.parse(e.bodyJson),
+  ...(e.headers && Object.keys(e.headers).length > 0 ? { headers: { ...e.headers } } : {}),
+});
+
+/**
+ * Creates the mock of one visitor (see prepareDemoEndpoints for what is kept and rejected). The router always answers
+ * `Content-Type: application/json`. Returns the endpoints exactly as stored.
+ */
+export async function createDemoMock(
+  ipHash: string,
+  endpoints: DemoEndpoint[],
+  now: Date = new Date(),
+): Promise<{ demoId: string; expiresAt: Date; endpoints: DemoEndpoint[] }> {
+  const cfg = getDemoConfig();
+  const clean = prepareDemoEndpoints(endpoints);
   const demoId = crypto.randomBytes(16).toString('hex');
   const expiresAt = new Date(now.getTime() + cfg.mockTtlMinutes * 60 * 1000);
   await DemoMockModel.create({ demoId, ipHash, endpoints: clean, requestCount: 0, createdAt: now, expiresAt });
-  return { demoId, expiresAt };
+  return { demoId, expiresAt, endpoints: clean.map(toPublicEndpoint) };
 }
 
 export const isDemoId = (value: string): boolean => /^[0-9a-f]{32}$/.test(value);

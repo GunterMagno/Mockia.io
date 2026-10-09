@@ -23,6 +23,7 @@ import { specs } from './config/swagger.js';
 import { billingRouter } from './modules/billing/routes.js';
 import { mockQuotaGate } from './middlewares/planGate.js';
 import { demoMockRouter } from './modules/demo/mockRouter.js';
+import { demoRouter } from './modules/demo/routes.js';
 import { MOCK_CORS_OPTIONS } from './modules/mock/mockAuth.js';
 import { migrateLegacyApiKeys } from './modules/projects/apiKeyMigration.js';
 import { flushUsage } from './modules/billing/usage.js';
@@ -109,6 +110,10 @@ app.use(mockQuotaGate);
 // Public demo mocks (anonymous, ephemeral). Before the body parsers (it never reads a body) and with no
 // authenticateToken: its own per-mock and per-visitor limits apply, not the general limiter (skipsGlobalLimiter).
 app.use('/api/demo-mock', demoMockRouter);
+
+// Public demo API (status, proof-of-work challenge, AI generation): anonymous, so no authenticateToken, and it parses its
+// own small JSON body, which is why it sits before express.json. The site's CORS allow-list above applies to it.
+app.use('/api/demo', demoRouter);
 
 // Body size limit (1mb: enough for OpenAPI/spec payloads, cuts memory-exhaustion DoS)
 app.use(express.json({ limit: '1mb' }));
