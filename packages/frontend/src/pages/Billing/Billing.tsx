@@ -18,16 +18,23 @@ type Busy = Plan | 'portal' | null
 
 const asPaidPlan = (v: string | null): PaidPlan | null => (v === 'starter' || v === 'pro' || v === 'team' ? v : null)
 
-/** Barra de uso accesible: el valor va en aria-valuenow/valuetext, el color no es la unica pista (texto al lado). */
-const UsageMeter: React.FC<{ label: string; used: number; limit: number | null; format: (n: number) => string }> = ({
+/** Desde este porcentaje del tope de IA se avisa (role=status); al llegar al 100 % el aviso es mas fuerte. */
+const AI_WARN_RATIO = 0.8
+
+/**
+ * Barra de uso accesible: el valor va en aria-valuenow/valuetext (con la pista opcional, p. ej. cuando se reinicia),
+ * el color no es la unica pista (texto al lado).
+ */
+const UsageMeter: React.FC<{ label: string; used: number; limit: number | null; format: (n: number) => string; hint?: string }> = ({
   label,
   used,
   limit,
   format,
+  hint,
 }) => {
   const { t } = useI18n()
   const ratio = limit ? Math.min(used / limit, 1) : 0
-  const level = limit === null ? 'ok' : used >= limit ? 'full' : ratio >= 0.8 ? 'warn' : 'ok'
+  const level = limit === null ? 'ok' : used >= limit ? 'full' : ratio >= AI_WARN_RATIO ? 'warn' : 'ok'
   const text = limit === null ? `${format(used)} · ${t('billing.unlimited')}` : t('billing.usageOf', { used: format(used), limit: format(limit) })
   return (
     <div className={styles.meter}>
@@ -42,10 +49,11 @@ const UsageMeter: React.FC<{ label: string; used: number; limit: number | null; 
         aria-valuemin={0}
         aria-valuemax={limit ?? undefined}
         aria-valuenow={used}
-        aria-valuetext={text}
+        aria-valuetext={hint ? `${text}. ${hint}` : text}
       >
         <span className={styles.fill} style={{ width: `${limit === null ? 100 : ratio * 100}%` }} />
       </div>
+      {hint && <p className={styles.meterHint}>{hint}</p>}
     </div>
   )
 }
@@ -142,6 +150,12 @@ const Billing: React.FC = () => {
   // UTC: the counter restarts at 00:00 UTC on the 1st and Stripe periods end at UTC instants (same as the emails)
   const date = (iso: string) => formatDate(iso, { dateStyle: 'long', timeZone: 'UTC' })
   const count = (n: number) => formatNumber(n)
+  const goToPlans = () => plansRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  // Generaciones de IA del mes. Si la API no manda el contador (servidor mas antiguo) no se dibuja un medidor con NaN.
+  const aiUsed = overview?.usage.aiGenerations
+  const aiLimit = overview?.limits.maxMonthlyAiGenerations ?? null
+  const showAi = typeof aiUsed === 'number'
+  const aiLevel = showAi && aiLimit !== null ? (aiUsed >= aiLimit ? 'full' : aiUsed / aiLimit >= AI_WARN_RATIO ? 'warn' : null) : null
 
   return (
     <Layout>
@@ -211,7 +225,7 @@ const Billing: React.FC = () => {
                   {busy === 'portal' ? t('billing.opening') : t('billing.manage')}
                 </button>
               )}
-              {!overview.canManageBilling && !overview.checkoutAvailable.pro && !overview.checkoutAvailable.team && (
+              {!overview.canManageBilling && !Object.values(overview.checkoutAvailable).some(Boolean) && (
                 <p className={styles.muted}>{t('billing.paymentsOff')}</p>
               )}
             </article>
@@ -231,6 +245,33 @@ const Billing: React.FC = () => {
                 format={count}
               />
               <p className={styles.muted}>{t('billing.resetsOn', { date: date(overview.usage.periodResetAt) })}</p>
+              {showAi && (
+                <UsageMeter
+                  label={t('billing.aiLabel')}
+                  used={aiUsed}
+                  limit={aiLimit}
+                  format={count}
+                  hint={t('billing.aiResetsOn', { date: date(overview.usage.periodResetAt) })}
+                />
+              )}
+              {showAi && aiLevel && aiLimit !== null && (
+                <p
+                  className={`${styles.notice} ${aiLevel === 'full' ? styles.danger : styles.warn}`}
+                  role="status"
+                  data-testid="ai-quota-warning"
+                >
+                  <span>
+                    {aiLevel === 'full'
+                      ? t('billing.aiFull', { limit: count(aiLimit), plan: planName(overview.plan), date: date(overview.usage.periodResetAt) })
+                      : t('billing.aiWarn', { used: count(aiUsed), limit: count(aiLimit), date: date(overview.usage.periodResetAt) })}
+                  </span>
+                  {aiLevel === 'full' && overview.plan !== 'team' && (
+                    <button type="button" className={styles.inlineBtn} onClick={goToPlans}>
+                      {t('billing.viewPlans')}
+                    </button>
+                  )}
+                </p>
+              )}
               {overview.limits.maxActiveProjects !== null && overview.usage.activeProjects > overview.limits.maxActiveProjects && (
                 <p className={`${styles.notice} ${styles.warn}`}>{t('billing.overLimit')}</p>
               )}

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import Layout from '../../layouts/Layout'
 import EndpointTree from '../../components/editor/EndpointTree/EndpointTree'
 import JsonEditor from '../../components/editor/JsonEditor/JsonEditor'
@@ -21,7 +21,8 @@ import { ExportMenu } from '../../components/projects/ExportMenu'
 
 import styles from './MockEditor.module.scss'
 import ProjectSettingsModal from '../../components/projects/ProjectSettingsModal'
-import { getBackendErrorMessage } from '../../utils/error'
+import { getBackendErrorCode, getBackendErrorMessage } from '../../utils/error'
+import ModalErrorAlert from '../../components/ui/ModalErrorAlert/ModalErrorAlert'
 import { PATHS } from '../../routes/paths'
 import { useI18n } from '../../i18n/I18nProvider'
 import { useAuth } from '../../contexts/AuthContext'
@@ -51,6 +52,8 @@ const MockEditor: React.FC = () => {
   const [aiRequirement, setAiRequirement] = useState('')
   const [isAiGenerating, setIsAiGenerating] = useState(false)
   const [aiStatusMessage, setAiStatusMessage] = useState('')
+  // Failure of the last generation, shown inside the panel (quota: with a link to the plans, which an alert() cannot hold)
+  const [aiError, setAiError] = useState<{ message: string; quota: boolean } | null>(null)
   // Set once a generation succeeded: the modal then shows the rating instead of the form
   const [aiDone, setAiDone] = useState<{ generationId?: string } | null>(null)
   const currentUserId = useAuth().user?.id ?? null
@@ -230,11 +233,13 @@ const MockEditor: React.FC = () => {
   const closeAiModal = () => {
     setShowAiModal(false)
     setAiDone(null)
+    setAiError(null)
   }
 
   const handleAiGenerate = async () => {
     if (!id || !aiRequirement) return
     setIsAiGenerating(true)
+    setAiError(null)
     
     const messages = tl('editor.aiProgress')
     
@@ -257,7 +262,10 @@ const MockEditor: React.FC = () => {
     } catch (error: any) {
       clearInterval(interval)
       console.error("AI Generation failed:", error)
-      alert(t('editor.aiFailed', { message: getBackendErrorMessage(error, t) }))
+      const quota = getBackendErrorCode(error) === 'AI_QUOTA_EXCEEDED'
+      const message = getBackendErrorMessage(error, t)
+      // The quota message already says what happened and when it resets: it is not wrapped in "AI generation failed: ..."
+      setAiError({ message: quota ? message : t('editor.aiFailed', { message }), quota })
     } finally {
       setIsAiGenerating(false)
     }
@@ -443,6 +451,12 @@ const MockEditor: React.FC = () => {
             aria-label={t('editor.aiModalTitle')}
             className={styles.aiTextarea}
           />
+          <ModalErrorAlert message={aiError?.message} className={styles.aiError} />
+          {aiError?.quota && (
+            <Link to={PATHS.billing} className={styles.upgradeLink}>
+              {t('billing.viewPlans')} →
+            </Link>
+          )}
           <nav className={styles.modalActions}>
             <Button variant="ghost" onClick={closeAiModal} disabled={isAiGenerating}>{t('common.cancel')}</Button>
             <Button onClick={handleAiGenerate} isLoading={isAiGenerating} disabled={!aiRequirement || isAiGenerating}>

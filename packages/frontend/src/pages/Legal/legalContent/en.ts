@@ -424,7 +424,7 @@ const en: LegalContent = {
           heading: "Plans and prices",
           blocks: [
             {
-              p: "We offer the Free, Pro and Team plans. Current prices, the limits of each plan (active projects and monthly requests) and, when available, annual billing are shown in the [pricing section](/) of the home page and are the ones that apply to your purchase at the time you make it. The Free plan is free of charge and may change or be withdrawn with notice.",
+              p: "We offer the Free, Starter, Pro and Team plans. Current prices, the limits of each plan (active projects, monthly requests and AI generations per month) and, when available, annual billing are shown in the [pricing section](/) of the home page and are the ones that apply to your purchase at the time you make it. The Free plan is free of charge and may change or be withdrawn with notice.",
             },
             {
               p: "Prices are shown excluding taxes where applicable. VAT or other applicable taxes are calculated based on your country and shown at checkout before you confirm.",

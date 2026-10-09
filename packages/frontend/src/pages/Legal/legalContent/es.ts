@@ -428,7 +428,7 @@ const es: LegalContent = {
           heading: 'Planes y precios',
           blocks: [
             {
-              p: 'Ofrecemos los planes Free, Pro y Team. Los precios vigentes, los límites de cada plan (proyectos activos y peticiones mensuales) y, cuando esté disponible, la modalidad de pago anual se muestran en la [sección de precios](/) de la página principal y son los que se aplican a tu contratación en el momento de hacerla. El plan Free es gratuito y puede cambiar o retirarse con aviso.',
+              p: 'Ofrecemos los planes Free, Starter, Pro y Team. Los precios vigentes, los límites de cada plan (proyectos activos, peticiones mensuales y generaciones de IA al mes) y, cuando esté disponible, la modalidad de pago anual se muestran en la [sección de precios](/) de la página principal y son los que se aplican a tu contratación en el momento de hacerla. El plan Free es gratuito y puede cambiar o retirarse con aviso.',
             },
             {
               p: 'Los precios se indican sin impuestos cuando proceda. El IVA u otros impuestos aplicables se calculan según tu país y se muestran en el proceso de pago antes de que confirmes.',

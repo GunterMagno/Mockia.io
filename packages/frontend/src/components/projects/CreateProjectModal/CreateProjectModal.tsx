@@ -54,7 +54,9 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
   const [progress, setProgress] = useState<string[]>([])
   const [progressIdx, setProgressIdx] = useState(0)
   const [error, setError] = useState('')
+  // Un 402 de proyectos (limitReached) o un 429 de cuota de IA (quotaReached): ambos llevan a los planes
   const [limitReached, setLimitReached] = useState(false)
+  const [quotaReached, setQuotaReached] = useState(false)
   const [createdProject, setCreatedProject] = useState<Project | null>(null)
   const [copiedUrl, setCopiedUrl] = useState(false)
   const [generationId, setGenerationId] = useState<string | undefined>(undefined)
@@ -80,6 +82,7 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
     setProgressIdx(0)
     setError('')
     setLimitReached(false)
+    setQuotaReached(false)
     setCreatedProject(null)
     setCopiedUrl(false)
     setGenerationId(undefined)
@@ -128,6 +131,8 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
   const createProjectFlow = async () => {
     setLoading(true)
     setError('')
+    setLimitReached(false)
+    setQuotaReached(false)
     
     const messages = mode === 'github' ? tl('createProject.progressGithub') : tl('createProject.progressEmpty')
 
@@ -182,6 +187,7 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
       clearInterval(interval)
       setError(getBackendErrorMessage(err, t))
       setLimitReached(getBackendErrorCode(err) === 'PLAN_LIMIT_REACHED')
+      setQuotaReached(getBackendErrorCode(err) === 'AI_QUOTA_EXCEEDED')
       playErrorSound()
       setLoading(false)
     }
@@ -349,9 +355,9 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
               )}
 
               <ModalErrorAlert message={error} />
-              {limitReached && (
+              {(limitReached || quotaReached) && (
                 <Link to={PATHS.billing} className={styles.upgradeLink} onClick={closeAndReset}>
-                  {t('billing.upgradeCta')} →
+                  {t(quotaReached ? 'billing.viewPlans' : 'billing.upgradeCta')} →
                 </Link>
               )}
 

@@ -49,4 +49,49 @@ describe('Error messages: the new AI / request errors are translated', () => {
       }
     });
   });
+
+  // 402 PLAN_LIMIT_REACHED names the plan through the same keys as the pricing cards (Starter used to show as "starter")
+  it('names every plan in the project limit error, Starter included', () => {
+    cy.visit('/');
+    cy.window().then(async (win) => {
+      const { getBackendErrorMessage } = await new win.Function('return import("/src/utils/error.ts")')();
+      const t = (key: string, vars?: Record<string, unknown>) => (vars ? `${key}|${JSON.stringify(vars)}` : key);
+      const limit = (plan: string) => ({ response: { status: 402, data: { success: false, error: { code: 'PLAN_LIMIT_REACHED', message: 'x', details: { plan, limit: 15 } } } } });
+      for (const plan of ['free', 'starter', 'pro', 'team']) {
+        expect(getBackendErrorMessage(limit(plan), t)).to.eq(`billing.errors.limitReached|${JSON.stringify({ plan: `pricing.plans.${plan}.name`, limit: 15 })}`);
+      }
+      // An unknown plan is shown as the server sent it
+      expect(getBackendErrorMessage(limit('enterprise'), t)).to.contain('"plan":"enterprise"');
+    });
+  });
+
+  // 429 AI_QUOTA_EXCEEDED carries used / limit / resetsAt: the message gets them, the date in UTC
+  it('turns AI_QUOTA_EXCEEDED into the quota message with used, limit and the reset date', () => {
+    cy.visit('/');
+    cy.window().then(async (win) => {
+      const { getBackendErrorMessage, getAiQuotaInfo } = await new win.Function('return import("/src/utils/error.ts")')();
+      const t = (key: string, vars?: Record<string, unknown>) => (vars ? `${key}|${JSON.stringify(vars)}` : key);
+      const quota = (error: Record<string, unknown>) => ({ response: { status: 429, data: { success: false, error: { code: 'AI_QUOTA_EXCEEDED', message: 'Monthly AI generation limit reached', ...error } } } });
+      const ok = quota({ used: 1500, limit: 1500, resetsAt: '2026-10-31T23:30:00.000Z' });
+      expect(getBackendErrorMessage(ok, t)).to.eq(`billing.errors.aiQuota|${JSON.stringify({ used: '1,500', limit: '1,500', date: 'October 31, 2026' })}`);
+      expect(getAiQuotaInfo(ok)).to.deep.eq({ used: 1500, limit: 1500, resetsAt: '2026-10-31T23:30:00.000Z' });
+      // Anything else is not a quota error: no quota info, and a malformed body falls back to the server text
+      expect(getAiQuotaInfo(quota({ used: 1, limit: 5 }))).to.eq(null);
+      expect(getAiQuotaInfo(quota({ used: 1, limit: 5, resetsAt: 'soon' }))).to.eq(null);
+      expect(getAiQuotaInfo({ response: { status: 429, data: { error: { message: 'Too many AI generation requests. Please wait a moment.' } } } })).to.eq(null);
+      expect(getBackendErrorMessage(quota({ used: 1, limit: 5 }), t)).to.eq('Monthly AI generation limit reached');
+    });
+  });
+
+  it('the plan names and the quota message exist in en, es and zh', () => {
+    cy.visit('/');
+    cy.window().then(async (win) => {
+      for (const lang of ['en', 'es', 'zh']) {
+        const mod = await new win.Function(`return import("/src/i18n/locales/${lang}.ts")`)();
+        const messages = mod.default ?? mod[lang];
+        expect(messages.billing.errors.aiQuota, `${lang}.billing.errors.aiQuota`).to.be.a('string').and.match(/\{used\}/).and.match(/\{limit\}/).and.match(/\{date\}/);
+        for (const plan of ['free', 'starter', 'pro', 'team']) expect(messages.pricing.plans[plan].name, `${lang} ${plan}`).to.be.a('string').and.not.be.empty;
+      }
+    });
+  });
 });

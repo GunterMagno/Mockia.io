@@ -1,4 +1,8 @@
-/* Tarjetas de planes (landing y facturacion), cinco con Enterprise. Movil: una columna; >=40rem: dos; >=75rem: cinco. */
+/*
+ * Tarjetas de planes (landing y facturacion): Free, Starter, Pro, Team y Enterprise.
+ * Movil: una columna; >=40rem: dos; >=62rem: tres, y las dos ultimas centradas en la fila de abajo (3+2).
+ * Las cinco en una fila no caben con holgura (importes como "$82.50 /month" y textos de seis lineas se cortarian).
+ */
 .grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -14,10 +18,13 @@
     align-items: stretch;
   }
 
-  @media (min-width: 75rem) {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+  /* Seis columnas: cada tarjeta ocupa dos; la cuarta y la quinta se colocan en el centro de la segunda fila */
+  @media (min-width: 62rem) {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
 
-    .card { padding: var(--spacing-6); }
+    > .card { grid-column: span 2; }
+    > .card:nth-child(4) { grid-column: 2 / span 2; }
+    > .card:nth-child(5) { grid-column: 4 / span 2; }
   }
 }
 
@@ -50,9 +57,10 @@
 
 .head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--spacing-3);
+  gap: var(--spacing-2) var(--spacing-3);
   margin-bottom: var(--spacing-2);
 
   h3 {
@@ -71,13 +79,14 @@
   white-space: nowrap;
 }
 
-.tagline {
+/* `.card` delante: la landing reinicia los margenes de p y ul con mas especificidad y las tarjetas quedaban sin aire */
+.card .tagline {
   margin: 0 0 var(--spacing-6);
   color: var(--color-text-muted);
   min-height: 3em;
 }
 
-.price {
+.card .price {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
@@ -89,7 +98,7 @@
   display: inline-flex;
   align-items: flex-start;
   gap: 0.12em;
-  /* Con cuatro tarjetas en fila un importe como 82.50 no cabe en step-4: se limita para que "/mes" no se corte */
+  /* Un importe como 82.50 no cabe en step-4 dentro de una tarjeta: se limita para que "/mes" no se corte */
   font-size: min(var(--step-3), 2.5rem);
   font-weight: 800;
   font-family: var(--font-mono);
@@ -110,7 +119,7 @@
   white-space: nowrap;
 }
 
-.features {
+.card .features {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-3);
@@ -244,7 +253,7 @@
 }
 
 /* "Facturado anualmente $290" bajo el precio; reserva la altura para que las tarjetas queden alineadas */
-.billed {
+.card .billed {
   display: flex;
   flex-wrap: wrap;
   align-items: center;

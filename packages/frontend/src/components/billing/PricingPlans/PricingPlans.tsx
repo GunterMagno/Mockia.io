@@ -48,6 +48,17 @@ export const hasOpenSubscription = (o: BillingOverview) => o.subscribedPlan !== 
 /** Sin decimales cuando el importe es entero ($29); con dos si no ($24.17). */
 const fractionDigits = (amount: number) => (Number.isInteger(amount) ? 0 : 2)
 
+/**
+ * El plan de pago mas barato segun el catalogo (precio mensual), o null si hay empate: la etiqueta "Mas economico"
+ * solo se pone cuando es verdad por precio, y sigue siendolo si cambia el catalogo.
+ */
+export const cheapestPaidPlan = (): PaidPlan | null => {
+  const paid = PLANS.filter((plan): plan is PaidPlan => plan !== 'free')
+  const cheapest = Math.min(...paid.map((plan) => PLAN_PRICE_USD[plan].monthly))
+  const winners = paid.filter((plan) => PLAN_PRICE_USD[plan].monthly === cheapest)
+  return winners.length === 1 ? winners[0] : null
+}
+
 export const PricingPlans: React.FC<Props> = ({ mode, overview, highlight, initialInterval, busy = null, onCheckout, onPortal }) => {
   const { t, formatNumber, locale } = useI18n()
   const [interval, setInterval] = useState<BillingInterval>(
@@ -88,13 +99,21 @@ export const PricingPlans: React.FC<Props> = ({ mode, overview, highlight, initi
     return Number.isFinite(max) ? t('pricing.features.projects', { count: max }) : t('pricing.features.unlimitedProjects')
   }
 
-  const features: Record<Plan, string[]> = {
-    // No support line on Free: the Terms make no support commitment for it (ruling R15)
-    free: [projects('free'), requests('free'), t('pricing.features.aiAndGithub')],
-    starter: [t('pricing.features.everythingFree'), projects('starter'), requests('starter'), t('pricing.features.cancelAnytime')],
-    pro: [t('pricing.features.everythingFree'), projects('pro'), requests('pro'), t('pricing.features.cancelAnytime')],
-    team: [t('pricing.features.everythingPro'), projects('team'), requests('team'), t('pricing.features.prioritySupport')],
+  // Tope mensual de generaciones de IA: el unico coste variable del servicio, asi que cada plan lo anuncia
+  const aiGenerations = (plan: Plan) => {
+    const max = PLAN_LIMITS[plan].maxMonthlyAiGenerations
+    return t('pricing.features.aiGenerations', { count: max, n: formatNumber(max) })
   }
+
+  const features: Record<Plan, string[]> = {
+    // Solo lo que existe. Sin linea de soporte en Free: los Terminos no prometen soporte para ese plan (ruling R15);
+    // Starter solo promete el soporte de la comunidad (ni correo ni prioritario)
+    free: [projects('free'), requests('free'), aiGenerations('free'), t('pricing.features.githubImport')],
+    starter: [t('pricing.features.everythingFree'), projects('starter'), requests('starter'), aiGenerations('starter'), t('pricing.features.communitySupport'), t('pricing.features.cancelAnytime')],
+    pro: [t('pricing.features.everythingFree'), projects('pro'), requests('pro'), aiGenerations('pro'), t('pricing.features.cancelAnytime')],
+    team: [t('pricing.features.everythingPro'), projects('team'), requests('team'), aiGenerations('team'), t('pricing.features.prioritySupport')],
+  }
+  const cheapest = cheapestPaidPlan()
 
   const publicCta = (plan: Plan): Cta => {
     if (plan === 'free') {
@@ -173,10 +192,12 @@ export const PricingPlans: React.FC<Props> = ({ mode, overview, highlight, initi
                 isCurrent ? styles.current : '',
               ].join(' ')}
               aria-current={isCurrent ? 'true' : undefined}
+              data-testid={`plan-${plan}`}
             >
               <header className={styles.head}>
                 <h3>{planName(plan)}</h3>
                 {plan === 'pro' && <span className={styles.badge}>{t('pricing.recommended')}</span>}
+                {plan === cheapest && <span className={styles.badge}>{t('pricing.cheapest')}</span>}
               </header>
               <p className={styles.tagline}>{t(`pricing.plans.${plan}.tagline`)}</p>
               <p className={styles.price}>

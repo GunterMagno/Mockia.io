@@ -1,3 +1,4 @@
+import { PLANS, type Plan } from '@mockia/shared'
 import type { MessageKey } from '../i18n/I18nProvider'
 
 type Translate = (key: MessageKey, vars?: Record<string, string | number>) => string
@@ -51,13 +52,28 @@ const translateKnown = (message: string, t: Translate): string => {
   return hit ? t(hit[1]) : message
 }
 
-const PLAN_NAMES: Record<string, string> = { free: 'Free', pro: 'Pro', team: 'Team' }
+/** Nombre del plan con las mismas claves que las tarjetas de precios (un plan desconocido se muestra tal cual). */
+const planName = (plan: unknown, t: Translate): string =>
+  PLANS.includes(plan as Plan) ? t(`pricing.plans.${plan as Plan}.name`) : String(plan ?? '')
+
+/** Cuota mensual de IA agotada (429 AI_QUOTA_EXCEEDED): uso, tope y el instante en que vuelve a haber generaciones. */
+export type AiQuotaInfo = { used: number; limit: number; resetsAt: string }
+
+/** Datos de la cuota si el error es AI_QUOTA_EXCEEDED con el cuerpo esperado; null en cualquier otro caso. */
+export function getAiQuotaInfo(err: any): AiQuotaInfo | null {
+  const e = err?.response?.data?.error
+  if (e?.code !== 'AI_QUOTA_EXCEEDED') return null
+  const { used, limit, resetsAt } = e
+  const at = typeof resetsAt === 'string' ? new Date(resetsAt) : null
+  if (typeof used !== 'number' || typeof limit !== 'number' || !at || Number.isNaN(at.getTime())) return null
+  return { used, limit, resetsAt }
+}
 
 /** Errores de facturacion con codigo propio: sus details son datos (plan, limite), no mensajes. */
 function billingError(code: unknown, details: any, t: Translate): string | null {
   switch (code) {
     case 'PLAN_LIMIT_REACHED':
-      return t('billing.errors.limitReached', { plan: PLAN_NAMES[details?.plan] ?? String(details?.plan ?? ''), limit: details?.limit ?? '' })
+      return t('billing.errors.limitReached', { plan: planName(details?.plan, t), limit: details?.limit ?? '' })
     case 'ALREADY_SUBSCRIBED':
       return t('billing.errors.alreadySubscribed')
     case 'NO_BILLING_ACCOUNT':
@@ -78,6 +94,19 @@ export function getBackendErrorMessage(err: any, t: Translate): string {
     const data = err.response.data
 
     if (data?.error?.code === 'EMAIL_NOT_VERIFIED') return t('errors.emailNotVerified')
+
+    // Cuota de IA agotada: mensaje propio con cifras y fecha (en el idioma activo, que el proveedor deja en <html lang>)
+    const quota = getAiQuotaInfo(err)
+    if (quota) {
+      const lang = document.documentElement.lang || 'en'
+      const number = new Intl.NumberFormat(lang)
+      return t('billing.errors.aiQuota', {
+        used: number.format(quota.used),
+        limit: number.format(quota.limit),
+        // UTC: el contador se reinicia a las 00:00 UTC del dia 1 (igual que el medidor de /billing)
+        date: new Intl.DateTimeFormat(lang, { dateStyle: 'long', timeZone: 'UTC' }).format(new Date(quota.resetsAt)),
+      })
+    }
 
     const billing = billingError(data?.error?.code, data?.error?.details, t)
     if (billing) return billing
