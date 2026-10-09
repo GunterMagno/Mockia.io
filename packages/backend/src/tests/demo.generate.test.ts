@@ -25,6 +25,7 @@ import { createFallbackLlm, getLlm, resetLlm } from '../modules/ai/providers/ind
 import { LlmResponseError, type LlmProvider } from '../modules/ai/providers/types.js';
 import { invalidatePlanCache } from '../modules/billing/plans.js';
 import { openRouterConfig } from '../config/ai.js';
+import * as budget from '../modules/demo/budget.js';
 
 /**
  * Task B3: POST /api/demo/challenge, POST /api/demo/generate and GET /api/demo/status. Real Mongo, the real Express app
@@ -48,6 +49,7 @@ const ENV_KEYS = [
   'DEMO_MOCK_TTL_MINUTES',
   'AI_PROVIDERS',
   'AI_DEMO_PROVIDERS',
+  'AI_DEMO_TIMEOUT_MS',
   'AI_LOCAL_BASE_URL',
   'AI_LOCAL_MODEL',
   'AI_LOCAL_API_KEY',
@@ -324,23 +326,35 @@ describe('demo publica: reto y generacion con IA', () => {
       expect(after.body.data.remainingToday).toBe(1);
     });
 
-    it('asks the model with the demo limits: 1500 tokens, the server temperature, a JSON schema and the guard rules last', async () => {
+    it('asks the model with the demo limits: 2000 tokens, the server temperature, a JSON schema and its OWN prompt (at most 5 endpoints)', async () => {
       process.env.AI_SPEC_TEMPERATURE = '0.3';
       const res = await generate(newIp(), { type: 'text', text: `Users have an id and a ${TEXT_SENTINEL} field.` });
       expect(res.status).toBe(201);
       expect(fake.hits).toBe(1);
       const sent = fake.bodies[0];
-      expect(sent.max_tokens).toBe(1500);
+      expect(sent.max_tokens).toBe(2000);
       expect(sent.temperature).toBe(0.3);
       expect(sent.response_format?.type).toBe('json_schema');
       const messages = sent.messages as Array<{ role: string; content: string }>;
       expect(messages[0].role).toBe('system');
       expect(messages[0].content).not.toContain(TEXT_SENTINEL); // the visitor's text never reaches the system prompt
+      expect(messages[0].content).toMatch(/at most 5 endpoints/i);
       expect(messages.some((m) => m.content.includes(TEXT_SENTINEL))).toBe(true);
+      const all = messages.map((m) => m.content).join('\n');
+      // none of the product prompt's size demands (5-10 endpoints, rich data) that made the demo output overflow
+      expect(all).not.toMatch(/5 and 10|RICH|MAXIMUM CREATIVE/i);
+      expect(all).not.toMatch(/undefined/);
       const last = messages[messages.length - 1];
       expect(last.role).toBe('user');
       expect(last.content).toMatch(/at most 5 endpoints/i);
       expect(last.content).not.toContain(TEXT_SENTINEL);
+    });
+
+    it('a template is described to the model in the same own prompt', async () => {
+      expect((await generate(newIp(), { type: 'template', id: 'blog' })).status).toBe(201);
+      const messages = fake.bodies[0].messages as Array<{ role: string; content: string }>;
+      expect(messages[0].content).toMatch(/at most 5 endpoints/i);
+      expect(messages.map((m) => m.content).join('\n')).toMatch(/blog/i);
     });
 
     it('each template is a small static PromptInput', () => {
@@ -359,17 +373,20 @@ describe('demo publica: reto y generacion con IA', () => {
       expect(fake.hits).toBe(3);
     });
 
-    it('uses AI_DEMO_PROVIDERS when set, without disturbing the chain of the registered users', async () => {
+    it('uses AI_DEMO_PROVIDERS when set, and always its own cached chain apart from the registered users', async () => {
       process.env.AI_PROVIDERS = 'openrouter'; // would need a key: the demo must not use it
       process.env.AI_DEMO_PROVIDERS = 'local';
       resetLlm();
       const res = await generate(newIp());
       expect(res.status).toBe(201);
       expect(fake.hits).toBe(1);
-      const demoChain = getLlm({ ...process.env, AI_PROVIDERS: 'local' });
-      expect(getLlm()).not.toBe(demoChain);
-      expect(getLlm()).toBe(getLlm()); // alternating chains does not rebuild (and so reset) either
-      expect(getLlm({ ...process.env, AI_PROVIDERS: 'local' })).toBe(demoChain);
+      const users = getLlm();
+      const demoEnv = { ...process.env, AI_PROVIDERS: 'local' };
+      expect(users).not.toBe(getLlm(demoEnv, 'demo'));
+      expect(getLlm()).toBe(users); // alternating chains does not rebuild (and so reset) either
+      expect(getLlm(demoEnv, 'demo')).toBe(getLlm(demoEnv, 'demo'));
+      // same provider list, different scope: different chain (and so different circuit breakers)
+      expect(getLlm(demoEnv, 'users')).not.toBe(getLlm(demoEnv, 'demo'));
     });
   });
 
@@ -603,7 +620,7 @@ describe('demo publica: reto y generacion con IA', () => {
       expect(res.body.error.message.length).toBeGreaterThan(5);
     };
 
-    it('a model that answers 500 gives a friendly error and the budget unit back', async () => {
+    it('a model that answers 500 gives a friendly error, and the unit stays spent: the request left for the provider', async () => {
       fake.setHandler((res) => {
         res.statusCode = 500;
         res.end('boom');
@@ -611,26 +628,22 @@ describe('demo publica: reto y generacion con IA', () => {
       const ip = newIp();
       const res = await generate(ip);
       friendly(res);
-      expect(await ipCount(ip)).toBe(0);
-      expect(await globalCount()).toBe(0);
+      expect(fake.hits).toBe(1);
+      expect(await ipCount(ip)).toBe(1);
+      expect(await globalCount()).toBe(1);
       expect(await DemoMockModel.countDocuments({})).toBe(0);
-      // the visitor still has both of their daily generations
-      fake.setHandler(answer(GOOD_SPEC));
-      resetLlm();
-      expect((await generate(ip)).status).toBe(201);
-      expect((await generate(ip)).status).toBe(201);
     });
 
-    it('a model that is not reachable gives the unit back', async () => {
+    it('a model that is not reachable (connection refused) also keeps the unit: a request was started', async () => {
       process.env.AI_LOCAL_BASE_URL = 'http://127.0.0.1:1';
       resetLlm();
       const ip = newIp();
       friendly(await generate(ip));
-      expect(await ipCount(ip)).toBe(0);
-      expect(await globalCount()).toBe(0);
+      expect(await ipCount(ip)).toBe(1);
+      expect(await globalCount()).toBe(1);
     });
 
-    it('a model chain that cannot be built (no valid provider) is a 503 and gives the unit back', async () => {
+    it('a model chain that cannot be built (no valid provider) is a 503 and gives the unit back (nothing was sent)', async () => {
       process.env.AI_DEMO_PROVIDERS = 'nope';
       resetLlm();
       const ip = newIp();
@@ -638,29 +651,93 @@ describe('demo publica: reto y generacion con IA', () => {
       expect(res.status).toBe(503);
       expect(res.body.error.code).toBe(ErrorCode.DEMO_UNAVAILABLE);
       expect(await ipCount(ip)).toBe(0);
+      expect(await globalCount()).toBe(0);
     });
 
-    it('the overall deadline answers 504 and gives the unit back', async () => {
-      process.env.AI_TOTAL_TIMEOUT_MS = '300';
+    it('the demo has its own short deadline (AI_DEMO_TIMEOUT_MS): 504, and the unit stays spent (the provider may bill what it generated)', async () => {
+      process.env.AI_DEMO_TIMEOUT_MS = '300';
+      process.env.AI_TOTAL_TIMEOUT_MS = '240000'; // the users' deadline is not the demo's
       process.env.AI_LOCAL_TIMEOUT_MS = '5000';
       resetLlm();
       fake.setHandler(() => undefined); // never answers
       const ip = newIp();
+      const started = Date.now();
       const res = await generate(ip);
       expect(res.status).toBe(504);
+      expect(Date.now() - started).toBeLessThan(3000);
       expect(typeof res.body.error.message).toBe('string');
-      expect(await ipCount(ip)).toBe(0);
-      expect(await globalCount()).toBe(0);
+      expect(await ipCount(ip)).toBe(1);
+      expect(await globalCount()).toBe(1);
     });
 
-    it('a response that is not a chat completion (no model output at all) gives the unit back', async () => {
+    it('the demo deadline defaults to 45 s and is a positive integer setting', async () => {
+      const { getDemoAiTimeoutMs } = await import('../config/ai.js');
+      expect(getDemoAiTimeoutMs({})).toBe(45_000);
+      expect(getDemoAiTimeoutMs({ AI_DEMO_TIMEOUT_MS: '9000' })).toBe(9000);
+      expect(getDemoAiTimeoutMs({ AI_DEMO_TIMEOUT_MS: '-1' })).toBe(45_000);
+      expect(getDemoAiTimeoutMs({ AI_DEMO_TIMEOUT_MS: 'abc' })).toBe(45_000);
+    });
+
+    it('C1: three timeouts in a row from an address with a budget of 1 never reach the model more than once', async () => {
+      process.env.DEMO_DAILY_GENERATIONS = '1';
+      process.env.DEMO_PER_IP_GENERATIONS = '1';
+      process.env.AI_DEMO_TIMEOUT_MS = '200';
+      resetLlm();
+      fake.setHandler(() => undefined);
+      const ip = newIp();
+      const statuses: number[] = [];
+      for (let i = 0; i < 3; i++) statuses.push((await generate(ip)).status);
+      expect(statuses).toEqual([504, 429, 429]);
+      expect(fake.hits).toBe(1);
+      // and nobody else gets to use the global unit the timeout spent
+      expect((await generate(newIp())).status).toBe(503);
+      expect(fake.hits).toBe(1);
+      expect(await globalCount()).toBe(1);
+    });
+
+    it('a response that is not a chat completion keeps the unit too (the provider answered with something)', async () => {
       fake.setHandler((res) => {
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify({ choices: [] }));
       });
       const ip = newIp();
       friendly(await generate(ip));
+      expect(await ipCount(ip)).toBe(1);
+    });
+
+    it('with the demo circuit open (no provider is even tried) the unit is given back', async () => {
+      process.env.DEMO_PER_IP_GENERATIONS = '10';
+      fake.setHandler((res) => {
+        res.statusCode = 500;
+        res.end('x');
+      });
+      for (let i = 0; i < 3; i++) friendly(await generate(newIp())); // opens the demo chain's breaker
+      expect(fake.hits).toBe(3);
+      const ip = newIp();
+      const blocked = await generate(ip);
+      expect(blocked.status).toBe(503);
+      expect(fake.hits).toBe(3); // skipped: the model was not called
       expect(await ipCount(ip)).toBe(0);
+      expect(await globalCount()).toBe(3);
+    });
+
+    it('I1: failures of the demo never open the circuit of the registered users (same provider list, own chain)', async () => {
+      process.env.DEMO_PER_IP_GENERATIONS = '10';
+      expect(process.env.AI_DEMO_PROVIDERS).toBeUndefined();
+      process.env.AI_DEMO_TIMEOUT_MS = '240000'; // same deadline as the users': only the scope tells the two chains apart
+      resetLlm();
+      fake.setHandler(answer('banana'));
+      for (let i = 0; i < 3; i++) expect((await generate(newIp())).status).toBe(502); // invalid_output x3 would trip a shared breaker
+      const hitsBefore = fake.hits;
+      fake.setHandler(answer(GOOD_SPEC));
+      const user = await createUser('registered-i1@example.com');
+      const project = await ProjectModel.create({ title: 'p', slug: 'i1-p', ownerId: user.id, members: [{ userId: user.id, role: 'owner' }] });
+      const saved = await request(app)
+        .post('/api/ai/generate-and-save')
+        .set(user.auth)
+        .send({ projectId: project._id.toString(), requirement: 'members CRUD' });
+      expect(saved.status).toBe(200);
+      expect(fake.hits).toBe(hitsBefore + 1);
     });
 
     it('RULING: when the model DID answer but the output is unusable after the repair, the unit is NOT given back (no free model calls by prompt injection)', async () => {
@@ -683,24 +760,32 @@ describe('demo publica: reto y generacion con IA', () => {
       expect(await ipCount(ip)).toBe(1);
     });
 
-    it('the chain tells the caller when a provider produced an answer (onModelAnswer), and only then', async () => {
+    it('the chain tells the caller when a request is about to leave for a provider (onProviderCall), and only then', async () => {
       const reply = (text: string): LlmProvider => ({ name: 'p', complete: async () => ({ text, provider: 'p', model: 'm' }) });
       const failing = (err: unknown): LlmProvider => ({ name: 'p', complete: async () => Promise.reject(err) });
-      const run = async (provider: LlmProvider, validate?: (t: string) => string | null) => {
-        let answered = 0;
+      const hanging: LlmProvider = { name: 'p', complete: () => new Promise(() => undefined) };
+      const run = async (provider: LlmProvider, validate?: (t: string) => string | null, totalTimeoutMs = 1000) => {
+        let calls = 0;
         try {
-          await createFallbackLlm([{ provider }], { totalTimeoutMs: 1000 }).complete({ messages: [], validate, onModelAnswer: () => answered++ });
+          await createFallbackLlm([{ provider }], { totalTimeoutMs }).complete({ messages: [], validate, onProviderCall: () => calls++ });
         } catch {
           /* expected for the failing ones */
         }
-        return answered > 0;
+        return calls;
       };
-      expect(await run(reply('ok'))).toBe(true);
-      expect(await run(reply('bad'), () => 'invalid')).toBe(true);
-      expect(await run(failing(new LlmResponseError('truncated')))).toBe(true);
-      expect(await run(failing(new LlmResponseError('empty_content')))).toBe(true);
-      expect(await run(failing(new LlmResponseError('invalid_envelope')))).toBe(false);
-      expect(await run(failing(new Error('ECONNREFUSED')))).toBe(false);
+      expect(await run(reply('ok'))).toBe(1);
+      expect(await run(reply('bad'), () => 'invalid')).toBe(2); // the answer and its repair: two requests
+      expect(await run(failing(new LlmResponseError('truncated')))).toBe(1);
+      expect(await run(failing(new Error('ECONNREFUSED')))).toBe(1);
+
+      // a provider skipped by an open circuit never gets a request
+      let calls = 0;
+      const flaky: LlmProvider = { name: 'flaky', complete: async () => Promise.reject(new Error('down')) };
+      const chain = createFallbackLlm([{ provider: flaky, breaker: { failureThreshold: 1, cooldownMs: 60_000 } }], { totalTimeoutMs: 1000 });
+      await chain.complete({ messages: [], onProviderCall: () => calls++ }).catch(() => undefined);
+      expect(calls).toBe(1);
+      await chain.complete({ messages: [], onProviderCall: () => calls++ }).catch(() => undefined);
+      expect(calls).toBe(1);
     });
   });
 
@@ -845,6 +930,33 @@ describe('demo publica: reto y generacion con IA', () => {
     });
   });
 
+  /* ------------------------------------------------------------------------------------- timing and fallbacks */
+
+  describe('the mock keeps its full lifetime and the response survives a failed counter read', () => {
+    it('expiresAt counts from when the mock is created (after the model call), not from the start of the request', async () => {
+      fake.delayMs = 900;
+      const res = await generate(newIp());
+      const finished = Date.now();
+      expect(res.status).toBe(201);
+      const expires = Date.parse(res.body.data.expiresAt);
+      expect(expires).toBeGreaterThanOrEqual(finished - 400 + 30 * 60 * 1000);
+      const stored = await DemoMockModel.findOne({}).lean();
+      expect(stored!.createdAt.getTime()).toBeGreaterThan(finished - 600);
+    });
+
+    it('if reading the remaining budget fails after the mock exists, the visitor still gets the 201 with remainingToday null', async () => {
+      const spy = jest.spyOn(budget, 'peekDemoBudget').mockRejectedValueOnce(new Error('mongo went away'));
+      try {
+        const res = await generate(newIp());
+        expect(res.status).toBe(201);
+        expect(res.body.data.remainingToday).toBeNull();
+        expect(res.body.data.demoId).toMatch(/^[0-9a-f]{32}$/);
+      } finally {
+        spy.mockRestore();
+      }
+    });
+  });
+
   /* ------------------------------------------------------------------------------------------ (j) persistence */
 
   describe('(j) nada se guarda ni se registra', () => {
@@ -910,7 +1022,7 @@ describe('demo publica: reto y generacion con IA', () => {
       for (let i = 0; i < 30; i++) expect((await challengeFor(ip)).status).toBe(200);
       const over = await challengeFor(ip);
       expect(over.status).toBe(429);
-      expect(over.body.error.code).toBe(ErrorCode.DEMO_LIMIT_REACHED);
+      expect(over.body.error.code).toBe(ErrorCode.DEMO_RATE_LIMIT); // "wait a while", not "come back tomorrow"
       expect(Number(over.headers['retry-after'])).toBeGreaterThan(0);
       expect((await challengeFor(newIp())).status).toBe(200);
       clockOffset = HOUR + 1000;

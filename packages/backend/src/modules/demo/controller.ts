@@ -66,7 +66,7 @@ export async function challengeHandler(req: Request, res: Response): Promise<voi
   if (!verdict.ok) {
     throw new DemoRefusal(
       'Too many challenges requested. Please wait a while before trying again.',
-      ErrorCode.DEMO_LIMIT_REACHED,
+      ErrorCode.DEMO_RATE_LIMIT,
       429,
       verdict.retryAfterSeconds,
     );
