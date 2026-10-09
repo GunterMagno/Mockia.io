@@ -16,22 +16,24 @@ Convención: `<APP_URL>` es la URL pública de la aplicación (variable `APP_URL
 
 Por qué: el código solo habla con la cuenta cuyas claves le des. Mezclar claves de prueba con precios reales (o al revés) da errores `No such price`.
 
-### 2. Productos y precios (Pro y Team)
+### 2. Productos y precios (Starter, Pro y Team)
 
-- [ ] Crear dos productos: **Pro** y **Team** (Dashboard → Catálogo de productos).
+- [ ] Crear tres productos: **Starter**, **Pro** y **Team** (Dashboard → Catálogo de productos).
 - [ ] En cada producto, **dos precios recurrentes** en **USD** (los importes que muestra la web están en dólares: ver `PLAN_PRICE_USD` en `@mockia/shared`):
 
   | Producto | Mensual (`interval = month`) | Anual (`interval = year`) |
   | --- | --- | --- |
+  | Starter | 5 USD | 50 USD |
   | Pro | 29 USD | 290 USD |
   | Team | 99 USD | 990 USD |
 
   El anual es **10 veces el mensual** (dos meses gratis, un 17 % de ahorro): es lo que anuncia la web, calculado en `@mockia/shared` (`ANNUAL_MONTHS_CHARGED`, `ANNUAL_DISCOUNT_PERCENT`). Si cambias un importe en Stripe, cámbialo también en `PLAN_PRICE_USD` (`packages/shared/src/billing.ts`) y reconstruye `@mockia/shared`: Stripe cobra lo que tenga el Price, la web solo anuncia.
-- [ ] En **cada uno de los cuatro precios**, **Tax behavior = Exclusive** (el impuesto se suma al precio mostrado). Es lo que prometen los Términos ("los precios se indican sin impuestos").
+- [ ] En **cada uno de los seis precios**, **Tax behavior = Exclusive** (el impuesto se suma al precio mostrado). Es lo que prometen los Términos ("los precios se indican sin impuestos").
 - [ ] En cada producto, **Tax code = `txcd_35000000`** (el código fiscal acordado para el software como servicio). Comprueba en el selector de códigos del producto que ese código sigue siendo el de SaaS que quieres (Stripe distingue algunos usos, p. ej. personal o empresarial) y confírmalo con la gestoría.
-- [ ] Copiar los cuatro identificadores `price_...` (no `prod_...`) a `STRIPE_PRICE_PRO`, `STRIPE_PRICE_TEAM`, `STRIPE_PRICE_PRO_YEARLY` y `STRIPE_PRICE_TEAM_YEARLY` (paso 9).
+- [ ] Copiar los seis identificadores `price_...` (no `prod_...`) a `STRIPE_PRICE_STARTER_MONTHLY`, `STRIPE_PRICE_STARTER_YEARLY`, `STRIPE_PRICE_PRO`, `STRIPE_PRICE_TEAM`, `STRIPE_PRICE_PRO_YEARLY` y `STRIPE_PRICE_TEAM_YEARLY` (paso 9).
+- [ ] Opcional pero recomendable: añadir el precio en euros a cada Price (ver "Precio en euros" más abajo).
 
-Por qué: el código deduce el plan **y el intervalo** del `price_...` de la suscripción (un `price_...` que no sea uno de los cuatro configurados nunca concede un plan de pago). Con `tax_behavior` vacío Stripe Tax no sabe si el importe incluye impuesto y rechaza la sesión o cobra de más; el tax code decide el tipo aplicable.
+Por qué: el código deduce el plan **y el intervalo** del `price_...` de la suscripción (un `price_...` que no sea uno de los seis configurados nunca concede un plan de pago). Con `tax_behavior` vacío Stripe Tax no sabe si el importe incluye impuesto y rechaza la sesión o cobra de más; el tax code decide el tipo aplicable.
 
 ### 3. Activar Stripe Tax
 
@@ -63,7 +65,7 @@ Por qué: en una suscripción Stripe genera la factura automáticamente en cada 
 
 - [ ] Dashboard → Configuración → Facturación → **Portal de cliente** → guardar la configuración (hasta guardarla, `POST /api/billing/portal` da error 502).
 - [ ] Activar: **cancelar suscripciones** (la cancelación **al final del periodo de facturación**), **actualizar el método de pago**, **historial de facturas**, y la actualización de datos de facturación (nombre, dirección, NIF-IVA).
-- [ ] Si quieres cambio de plan desde el portal (la web lo ofrece como "Cambiar a Pro/Team"): activar **actualizar suscripciones** y añadir los productos Pro y Team **con sus precios mensual y anual**, para que el cliente pueda pasar de mensual a anual (y al revés) desde el portal; el webhook actualiza plan e intervalo solo.
+- [ ] Si quieres cambio de plan desde el portal (la web lo ofrece como "Cambiar a Starter/Pro/Team"): activar **actualizar suscripciones** y añadir los productos Starter, Pro y Team **con sus precios mensual y anual**, para que el cliente pueda pasar de mensual a anual (y al revés) desde el portal; el webhook actualiza plan e intervalo solo.
 
 Por qué: la interfaz envía al usuario al portal para cambiar de plan, cancelar y ver facturas; la lógica del webhook (`customer.subscription.updated`) deduce el plan del precio, así que un cambio de plan en el portal se aplica solo.
 
@@ -126,12 +128,14 @@ Se definen en `.env` (Docker/servidor propio) o en el panel de Render (`render.y
 | --- | --- |
 | `STRIPE_SECRET_KEY` | Clave secreta `sk_test_...` (prueba) o `sk_live_...` (real). Nunca en el frontend ni en Git. |
 | `STRIPE_WEBHOOK_SECRET` | `whsec_...` del paso 8. |
+| `STRIPE_PRICE_STARTER_MONTHLY` | `price_...` del precio mensual de Starter (5 USD). |
+| `STRIPE_PRICE_STARTER_YEARLY` | `price_...` del precio anual de Starter (50 USD). |
 | `STRIPE_PRICE_PRO` | `price_...` del precio mensual de Pro. |
 | `STRIPE_PRICE_TEAM` | `price_...` del precio mensual de Team. |
 | `STRIPE_PRICE_PRO_YEARLY` | `price_...` del precio anual de Pro (290 USD). |
 | `STRIPE_PRICE_TEAM_YEARLY` | `price_...` del precio anual de Team (990 USD). |
 
-Las dos variables `*_YEARLY` son opcionales: sin ellas el backend arranca y se puede contratar al mes, pero `POST /api/billing/checkout` con `interval: "year"` responde **501** nombrando la variable que falta y la web no ofrece comprar al año ese plan (`yearlyCheckoutAvailable` en `GET /api/billing/me`).
+Una variable vacía cuenta como no configurada. Las tres variables `*_YEARLY` son opcionales: sin ellas el backend arranca y se puede contratar al mes, pero `POST /api/billing/checkout` con `interval: "year"` responde **501** nombrando la variable que falta y la web no ofrece comprar al año ese plan (`yearlyCheckoutAvailable` en `GET /api/billing/me`).
 
 Opcionales: `STRIPE_SUCCESS_URL`, `STRIPE_CANCEL_URL`, `STRIPE_PORTAL_RETURN_URL` (por defecto `/billing` de la aplicación). Importante: `APP_URL` también es obligatoria en producción y de ahí sale el enlace a los Términos que ve el cliente en el pago.
 
@@ -147,7 +151,7 @@ Opcionales: `STRIPE_SUCCESS_URL`, `STRIPE_CANCEL_URL`, `STRIPE_PORTAL_RETURN_URL
 
 Con el interruptor de prueba activo y las claves `sk_test_...`:
 
-1. Arranca el backend con las variables del paso 9 (las 4 de siempre y, para probar el anual, las dos `*_YEARLY`) y la web en local.
+1. Arranca el backend con las variables del paso 9 (las de siempre y, para probar el anual, las `*_YEARLY`) y la web en local.
 2. Reenvía los webhooks a tu máquina con la CLI de Stripe (instálala y haz `stripe login`):
 
    ```bash
@@ -155,7 +159,7 @@ Con el interruptor de prueba activo y las claves `sk_test_...`:
    ```
 
    La CLI imprime un `whsec_...` temporal: ponlo como `STRIPE_WEBHOOK_SECRET` mientras pruebas (es distinto del secreto del endpoint real).
-3. En la web: registra un usuario, **verifica el correo** (el checkout lo exige), ve a *Plan y facturación*, elige **Mensual** o **Anual** con el selector y pulsa Pro o Team. En el Checkout el importe debe ser el del intervalo elegido; tras pagar, *Plan y facturación* indica "Facturación anual" o "mensual".
+3. En la web: registra un usuario, **verifica el correo** (el checkout lo exige), ve a *Plan y facturación*, elige **Mensual** o **Anual** con el selector y pulsa Starter, Pro o Team. En el Checkout el importe debe ser el del intervalo elegido; tras pagar, *Plan y facturación* indica "Facturación anual" o "mensual".
 4. En el Checkout comprueba: dirección de facturación obligatoria, campo de **NIF-IVA**, casilla de aceptación de los Términos con el texto de acceso inmediato y pérdida del desistimiento, y la línea de **impuestos** calculada según el país.
 5. Tarjetas de prueba (cualquier fecha futura, CVC y código postal):
 
@@ -182,6 +186,17 @@ El Checkout no se puede completar con la tarjeta `4000 0000 0000 0341` (el prime
 Para comprobar a mano el **500 de cliente desconocido**, `stripe trigger invoice.payment_failed` crea un cliente que no pertenece a ningún usuario: el webhook responde 500 mientras el evento tenga menos de una hora (la CLI lo muestra como fallo), y 200 si lo reenvías pasada la hora.
 
 > Estos pasos no se han podido ejecutar contra Stripe real desde el repositorio. Lo que sí está cubierto por tests automáticos (`billing.webhook.test.ts`, `billing.dunning.test.ts` con MongoDB real, `billing.planGate.test.ts` y `billing.cy.ts`) es toda la lógica del webhook, la gracia de 7 días (día 6,9 mantiene el plan, día 7,1 pasa a Free), el aviso único y la pantalla.
+
+## Precio en euros
+
+La web anuncia los precios en **USD** (`PLAN_PRICE_USD` en `@mockia/shared`) y cada Price de Stripe se crea en USD. Para que un cliente de España (o de otro país del euro) vea y pague en euros sin cambiar nada en el código:
+
+- [ ] Abre cada uno de los seis Price (Catálogo de productos → el producto → el precio) → **Editar precio → Añadir precios para otras monedas** (`currency_options`) y añade **EUR** con el importe que quieras cobrar (p. ej. Starter 5 € / 50 €; el importe lo decides tú, no se convierte solo).
+- [ ] Mantén **Tax behavior = Exclusive** también en la opción en euros.
+
+Stripe Checkout elige la moneda según el país del cliente entre las que ofrece el Price; si no hay una moneda configurada para ese país, cobra en la moneda base (USD). El código no cambia: sigue enviando el mismo `price_...`, y ese `price_...` identifica el plan y el intervalo sea cual sea la moneda. La web seguirá anunciando dólares: los importes en euros solo se ven en el Checkout, en la factura y en el portal.
+
+**Fuera de alcance: precio por poder adquisitivo (PPP) por país.** Se haría añadiendo más `currency_options` a mano (una por moneda; Stripe no admite importes distintos por país dentro de una misma moneda). No está implementado y la web no lo anuncia.
 
 ## Lo que hace el código y lo que no
 
