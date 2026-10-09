@@ -3,6 +3,8 @@ import os from 'os';
 import path from 'path';
 import { spawnSync } from 'child_process';
 import yaml from 'js-yaml';
+import * as ai from '../config/ai.js';
+import { openRouterSupportsJsonSchema } from '../modules/ai/providers/openaiCompatible.js';
 
 /**
  * Static checks of the self-hosted AI service (Task 14). There is no Docker daemon in unit tests: the compose files
@@ -401,5 +403,51 @@ describe('CI validates every AI compose combination', () => {
     '-f docker-compose.prod.yml -f docker-compose.ai.yml -f docker-compose.ai.eval.yml config',
   ])('runs docker compose %s', (combo) => {
     expect(ci).toContain(combo);
+  });
+});
+
+/**
+ * C3: the production stack must forward every AI setting the backend reads, in a form where an unset variable reaches
+ * the backend as an EMPTY string, and an empty string must keep the backend's own default (never override it).
+ */
+describe('AI settings reach the backend in production', () => {
+  const AI_VARS = ['OPENROUTER_MODEL', 'AI_RATE_PER_MINUTE', 'AI_GENERATION_RETENTION_DAYS', 'OPENROUTER_JSON_SCHEMA', 'AI_SPEC_TEMPERATURE'];
+
+  it('docker-compose.prod.yml forwards each one as ${VAR:-} (empty when unset)', () => {
+    const env = load('docker-compose.prod.yml').services.backend.environment ?? {};
+    for (const name of AI_VARS) expect(env[name]).toBe(`\${${name}:-}`);
+    expect(env.OPENROUTER_API_KEY).toBe('${OPENROUTER_API_KEY:-}');
+  });
+
+  it('render.yaml lists them on the backend as optional (sync: false)', () => {
+    const render = yaml.load(read('render.yaml')) as { services: Array<{ name: string; envVars: Array<{ key: string; sync?: boolean }> }> };
+    const backend = render.services.find((s) => s.name === 'mockia-backend')!;
+    for (const name of AI_VARS) {
+      expect(backend.envVars.find((v) => v.key === name)).toEqual({ key: name, sync: false });
+    }
+  });
+
+  it('an empty value keeps every default of the backend', () => {
+    const empty = Object.fromEntries(AI_VARS.map((n) => [n, '']));
+    expect(ai.openRouterModelFrom(empty)).toBe('google/gemini-flash-1.5');
+    expect(ai.openRouterModelFrom({ OPENROUTER_MODEL: '  ' })).toBe('google/gemini-flash-1.5');
+    expect(ai.openRouterModelFrom({ OPENROUTER_MODEL: 'vendor/model' })).toBe('vendor/model');
+    expect(ai.getAiRatePerMinute(empty)).toBe(20);
+    expect(ai.getAiGenerationRetentionDays(empty)).toBe(180);
+    expect(ai.getSpecGenerationSampling(empty).temperature).toBe(0.85);
+    expect(openRouterSupportsJsonSchema(empty)).toBe(false);
+  });
+
+  it('warns at startup in production when OPENROUTER_MODEL is not set (the default model may be retired)', () => {
+    expect(ai.openRouterModelWarning({ NODE_ENV: 'production' })).toMatch(/OPENROUTER_MODEL/);
+    expect(ai.openRouterModelWarning({ NODE_ENV: 'production', OPENROUTER_MODEL: '' })).toMatch(/OPENROUTER_MODEL/);
+    expect(ai.openRouterModelWarning({ NODE_ENV: 'production', OPENROUTER_MODEL: 'vendor/model' })).toBeNull();
+    expect(ai.openRouterModelWarning({ NODE_ENV: 'development' })).toBeNull();
+    // Only when OpenRouter is in the chain
+    expect(ai.openRouterModelWarning({ NODE_ENV: 'production', AI_PROVIDERS: 'local' })).toBeNull();
+  });
+
+  it('index.ts prints that warning at startup', () => {
+    expect(read('packages/backend/src/index.ts')).toMatch(/openRouterModelWarning\(\)/);
   });
 });

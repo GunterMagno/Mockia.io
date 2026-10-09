@@ -32,6 +32,7 @@ import { authorizeRole } from './middlewares/authorizeRole.js';
 import { assertJwtConfig } from './services/jwt.service.js';
 import { assertProdConfig } from './config/assertProdConfig.js';
 import { getLlm } from './modules/ai/providers/index.js';
+import { openRouterModelWarning } from './config/ai.js';
 import type { ProjectRole } from '@mockia/shared';
 
 dotenv.config();
@@ -238,6 +239,8 @@ const startServer = async (): Promise<void> => {
     }
 
     console.log(`[Backend] AI providers (in order): ${aiChain}`);
+    const modelWarning = openRouterModelWarning();
+    if (modelWarning) console.warn(modelWarning);
 
     // Connect to MongoDB
     await connectDB();

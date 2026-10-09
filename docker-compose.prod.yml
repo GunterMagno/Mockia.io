@@ -45,6 +45,13 @@ services:
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?falta JWT_ACCESS_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?falta JWT_REFRESH_SECRET}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      # Ajustes de IA: vacios = los valores por defecto del backend (una cadena vacia nunca los pisa).
+      # OPENROUTER_MODEL: ponlo SIEMPRE en produccion (el modelo por defecto puede estar retirado; el backend avisa al arrancar).
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-}
+      OPENROUTER_JSON_SCHEMA: ${OPENROUTER_JSON_SCHEMA:-}
+      AI_RATE_PER_MINUTE: ${AI_RATE_PER_MINUTE:-}
+      AI_GENERATION_RETENTION_DAYS: ${AI_GENERATION_RETENTION_DAYS:-}
+      AI_SPEC_TEMPERATURE: ${AI_SPEC_TEMPERATURE:-}
       CORS_ORIGIN: ${CORS_ORIGIN:?falta CORS_ORIGIN (origen publico del frontend, p. ej. https://app.midominio.com)}
       APP_URL: ${APP_URL:?falta APP_URL (URL publica de la aplicacion)}
       # Correo transaccional (verificacion de email y recuperar contrasena). Sin SMTP_URL no se envia nada.

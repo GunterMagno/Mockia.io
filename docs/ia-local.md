@@ -123,11 +123,13 @@ Prerrequisitos: Docker con Compose v2, el `.env` de producción rellenado (ver `
 
 ## 6. Evaluación y regla de decisión
 
+> **Windows.** Los comandos `VAR=valor comando` y los scripts `.sh` de esta guía son de bash: ejecútalos en Linux, macOS o **Git Bash** (o WSL). En PowerShell fija antes cada variable (`$env:AI_LOCAL_BASE_URL = 'http://127.0.0.1:11434'`) y escribe el comando en una sola línea, sin la `\` final; `scripts/pull-model.sh` necesita Git Bash o WSL.
+
 El banco (`packages/backend/evals/`, ver su `README.md`) ejecuta 36 casos con el prompt y el validador reales de producción y devuelve `schemaValid`, F1 de método+ruta, cobertura de campos y latencias.
 
-1. **Línea base de OpenRouter (paso manual del titular, una vez, con tu clave).** Todavía **no existe** `evals/baseline.json`:
+1. **Línea base de OpenRouter (paso manual del titular, una vez, con tu clave).** Todavía **no existe** `evals/baseline.json`. **Fija `OPENROUTER_MODEL` al modelo que usa producción** (sin ella se mide el modelo por defecto del código, que puede estar retirado y no es el de producción):
    ```bash
-   AI_PROVIDERS=openrouter OPENROUTER_API_KEY=... npm run eval -w @mockia/backend -- --provider=openrouter --no-fail
+   AI_PROVIDERS=openrouter OPENROUTER_API_KEY=... OPENROUTER_MODEL=<modelo-de-produccion> npm run eval -w @mockia/backend -- --provider=openrouter --no-fail
    cp packages/backend/evals/results/<fichero-generado>.json packages/backend/evals/baseline.json
    ```
 2. **Haz accesible el modelo local desde donde ejecutas el banco.** El servicio no publica puertos; para medir, añade temporalmente `docker-compose.ai.eval.yml` (publica solo en `127.0.0.1`) o usa un túnel SSH:

@@ -34,6 +34,18 @@ services:
         value: https://mockia-frontend.onrender.com
       - key: OPENROUTER_API_KEY
         sync: false
+      # AI settings (all optional: empty keeps the backend default). Set OPENROUTER_MODEL explicitly: the built-in default
+      # may be retired by OpenRouter (the backend warns at startup) and the eval baseline must use this same model.
+      - key: OPENROUTER_MODEL
+        sync: false
+      - key: OPENROUTER_JSON_SCHEMA
+        sync: false
+      - key: AI_RATE_PER_MINUTE
+        sync: false
+      - key: AI_GENERATION_RETENTION_DAYS
+        sync: false
+      - key: AI_SPEC_TEMPERATURE
+        sync: false
       # Transactional email (verification and password reset links). Without SMTP_URL nobody receives them and
       # unverified users cannot use AI generation or billing. Resend or Brevo (free plan); see docs/08_despliegue.md.
       - key: SMTP_URL

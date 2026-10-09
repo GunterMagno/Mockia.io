@@ -30,8 +30,8 @@ npm run eval -w @mockia/backend -- --provider=fake-perfect
 # Respuestas degradadas de forma determinista (las métricas bajan y exit 1)
 npm run eval -w @mockia/backend -- --provider=fake-noisy
 
-# Línea base: el modelo actual de producción en OpenRouter
-AI_PROVIDERS=openrouter OPENROUTER_API_KEY=sk-or-... OPENROUTER_MODEL=google/gemini-flash-1.5 \
+# Línea base: el modelo actual de producción en OpenRouter (OPENROUTER_MODEL = el MISMO que tiene producción)
+AI_PROVIDERS=openrouter OPENROUTER_API_KEY=sk-or-... OPENROUTER_MODEL=<modelo-de-produccion> \
   npm run eval -w @mockia/backend -- --provider=openrouter
 
 # Modelo local con Ollama (el servidor sin /v1)
@@ -42,6 +42,17 @@ AI_LOCAL_BASE_URL=http://localhost:11434 \
 AI_LOCAL_BASE_URL=http://gpu-box:8000 AI_LOCAL_API_KEY=... \
   npm run eval -w @mockia/backend -- --provider=local --model=Qwen/Qwen2.5-Coder-7B-Instruct
 ```
+
+> **Windows / PowerShell.** Los ejemplos usan la sintaxis de bash `VAR=valor comando` (Linux, macOS o **Git Bash** en Windows). En PowerShell cada variable se fija antes, en la misma sesión:
+>
+> ```powershell
+> $env:AI_PROVIDERS = 'openrouter'; $env:OPENROUTER_API_KEY = 'sk-or-...'; $env:OPENROUTER_MODEL = '<modelo-de-produccion>'
+> npm run eval -w @mockia/backend -- --provider=openrouter --no-fail
+> $env:AI_LOCAL_BASE_URL = 'http://localhost:11434'
+> npm run eval -w @mockia/backend -- --provider=local --model=qwen2.5-coder:7b-instruct
+> ```
+>
+> (`Remove-Item Env:AI_LOCAL_BASE_URL` la quita). La barra invertida `\` de fin de línea de bash no existe en PowerShell: escribe el comando en una sola línea.
 
 `--provider=local` y `--provider=openrouter` fuerzan `AI_PROVIDERS` a ese único nombre durante la ejecución, así que un fallo del modelo local se ve como fila con error y no se tapa con OpenRouter.
 
@@ -74,10 +85,12 @@ La temperatura y el máximo de tokens usados se imprimen en el resumen y se guar
 
 ## Guardar la línea base
 
-La línea base es el resultado del modelo que hoy usa producción. Se genera una vez con una clave real y se versiona:
+La línea base es el resultado del modelo que hoy usa producción. Se genera una vez con una clave real y se versiona.
+
+**`OPENROUTER_MODEL` debe fijarse explícitamente al modelo que tiene configurado producción.** Sin ella el banco (como el backend) usa el modelo por defecto del código (`google/gemini-flash-1.5`), que OpenRouter puede haber retirado y que no tiene por qué ser el de producción: la línea base no serviría para comparar. En producción el backend avisa al arrancar si `OPENROUTER_MODEL` no está definida.
 
 ```bash
-AI_PROVIDERS=openrouter OPENROUTER_API_KEY=... npm run eval -w @mockia/backend -- --provider=openrouter --no-fail
+AI_PROVIDERS=openrouter OPENROUTER_API_KEY=... OPENROUTER_MODEL=<modelo-de-produccion> npm run eval -w @mockia/backend -- --provider=openrouter --no-fail
 cp packages/backend/evals/results/<fichero-generado>.json packages/backend/evals/baseline.json
 git add packages/backend/evals/baseline.json
 ```

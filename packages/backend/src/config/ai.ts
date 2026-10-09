@@ -6,9 +6,17 @@
 /**
  * OpenRouter API configuration
  */
+/** Model used when OPENROUTER_MODEL is unset or empty. It may be retired by OpenRouter: production should set it. */
+export const DEFAULT_OPENROUTER_MODEL = 'google/gemini-flash-1.5';
+
+/** OPENROUTER_MODEL, or the default when it is unset, empty or blank (compose forwards unset variables as ""). */
+export function openRouterModelFrom(env: NodeJS.ProcessEnv = process.env): string {
+  return (env.OPENROUTER_MODEL ?? '').trim() || DEFAULT_OPENROUTER_MODEL;
+}
+
 export const openRouterConfig = {
   apiKey: process.env.OPENROUTER_API_KEY || '',
-  model: process.env.OPENROUTER_MODEL || 'google/gemini-flash-1.5',
+  model: openRouterModelFrom(),
   baseUrl: process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1',
 };
 
@@ -146,4 +154,19 @@ export function getSpecGenerationSampling(env: NodeJS.ProcessEnv = process.env):
   const value = raw === '' ? Number.NaN : Number(raw);
   const temperature = Number.isFinite(value) && value >= 0 && value <= 2 ? value : SPEC_GENERATION_DEFAULTS.temperature;
   return { temperature, maxTokens: SPEC_GENERATION_DEFAULTS.maxTokens };
+}
+
+/**
+ * Startup warning (production only, and only when OpenRouter is in the chain) when OPENROUTER_MODEL is not set: the
+ * built-in default may have been retired by OpenRouter, and the evaluation baseline must be measured against the model
+ * production really uses. The default is deliberately NOT changed silently. Returns null when there is nothing to say.
+ */
+export function openRouterModelWarning(env: NodeJS.ProcessEnv = process.env): string | null {
+  if (env.NODE_ENV !== 'production') return null;
+  if (!parseAiProviders(env.AI_PROVIDERS).providers.includes('openrouter')) return null;
+  if ((env.OPENROUTER_MODEL ?? '').trim() !== '') return null;
+  return (
+    `[AI] OPENROUTER_MODEL is not set: using the built-in default "${DEFAULT_OPENROUTER_MODEL}", which OpenRouter may have ` +
+    'retired. Set OPENROUTER_MODEL explicitly (and run the evaluation baseline with that same model).'
+  );
 }
