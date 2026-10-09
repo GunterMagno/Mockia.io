@@ -28,6 +28,13 @@ export interface LlmRequest {
    * An invalid answer gets one repair retry on the same provider; a second invalid answer is a provider failure.
    */
   validate?: (text: string) => string | null;
+  /**
+   * Called (possibly several times) as soon as a provider has PRODUCED an answer, usable or not: a completion came back,
+   * or the provider reported one that was cut by max_tokens / empty / rejected by `validate`. It is never called for a
+   * transport failure (refused connection, timeout, HTTP error, a body that is not a chat completion), so a caller that
+   * pays per model call can tell "the model never answered" (safe to refund) from "the model answered" (cost incurred).
+   */
+  onModelAnswer?: () => void;
 }
 
 export interface LlmCompletion {

@@ -129,6 +129,18 @@ export function getAiTotalTimeoutMs(env: NodeJS.ProcessEnv = process.env): numbe
   return positiveInt(env.AI_TOTAL_TIMEOUT_MS, DEFAULT_AI_TOTAL_TIMEOUT_MS);
 }
 
+/**
+ * Provider list of the public demo (AI_DEMO_PROVIDERS, same syntax as AI_PROVIDERS), or undefined to use AI_PROVIDERS.
+ * It lets the owner point the free demo at a cheaper or local model while the registered users keep theirs.
+ */
+export function getDemoAiProviders(env: NodeJS.ProcessEnv = process.env): string | undefined {
+  const raw = (env.AI_DEMO_PROVIDERS ?? '').trim();
+  return raw === '' ? undefined : raw;
+}
+
+/** Output budget of one demo generation: at most 5 small endpoints, so a fraction of the 5000 of a project generation. */
+export const DEMO_MAX_TOKENS = 1500;
+
 const DEFAULT_AI_GENERATION_RETENTION_DAYS = 180;
 const MAX_AI_GENERATION_RETENTION_DAYS = 3650;
 

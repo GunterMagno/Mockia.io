@@ -147,11 +147,13 @@ function repairMessage(reason: string) {
  */
 async function completeValidated(provider: LlmProvider, req: LlmRequest): Promise<LlmCompletion> {
   const first = await provider.complete(req);
+  req.onModelAnswer?.();
   if (!req.validate) return first;
   const reason = req.validate(first.text);
   if (reason === null) return first;
   console.warn(`[AI] Provider "${provider.name}" returned an invalid answer (invalid_output); asking it once to repair it`);
   const second = await provider.complete({ ...req, messages: [...req.messages, repairMessage(reason)] });
+  req.onModelAnswer?.();
   if (req.validate(second.text) !== null) throw new LlmResponseError('invalid_output');
   return second;
 }
@@ -185,6 +187,8 @@ export function createFallbackLlm(entries: FallbackEntry[], options: FallbackOpt
           breaker?.onSuccess();
           return result;
         } catch (err) {
+          // The provider did answer, just not with something usable (cut by max_tokens, empty): the cost was incurred
+          if (err instanceof LlmResponseError && err.kind !== 'invalid_envelope') req.onModelAnswer?.();
           if (req.signal?.aborted) {
             breaker?.onAbandoned();
             throw err;
@@ -221,7 +225,13 @@ function buildProvider(name: AiProviderName, env: NodeJS.ProcessEnv): FallbackEn
   return { provider: createOpenRouterProvider() };
 }
 
-let cached: { key: string; llm: LlmProvider } | null = null;
+/**
+ * Chains by configuration. More than one can be alive (the demo may use its own AI_DEMO_PROVIDERS list while the
+ * registered users use AI_PROVIDERS): a single slot would rebuild, and so reset the circuit breakers of, both chains
+ * on every alternate request. Bounded, so changing the settings many times (tests) cannot grow it without limit.
+ */
+const MAX_CACHED_CHAINS = 8;
+const cached = new Map<string, LlmProvider>();
 
 /**
  * The configured provider chain. Cached (the circuit breaker's state must outlive a request) and rebuilt only when the
@@ -231,7 +241,8 @@ export function getLlm(env: NodeJS.ProcessEnv = process.env): LlmProvider {
   const local = getLocalAiConfig(env);
   const totalTimeoutMs = getAiTotalTimeoutMs(env);
   const key = JSON.stringify([env.AI_PROVIDERS ?? '', local, totalTimeoutMs]);
-  if (cached?.key === key) return cached.llm;
+  const hit = cached.get(key);
+  if (hit) return hit;
 
   const { providers, ignored } = parseAiProviders(env.AI_PROVIDERS);
   if (ignored.length > 0) {
@@ -247,11 +258,12 @@ export function getLlm(env: NodeJS.ProcessEnv = process.env): LlmProvider {
     providers.map((name) => buildProvider(name, env)),
     { totalTimeoutMs }
   );
-  cached = { key, llm };
+  if (cached.size >= MAX_CACHED_CHAINS) cached.delete(cached.keys().next().value as string);
+  cached.set(key, llm);
   return llm;
 }
 
 /** Forgets the cached chain and its circuit breakers (tests). */
 export function resetLlm(): void {
-  cached = null;
+  cached.clear();
 }
