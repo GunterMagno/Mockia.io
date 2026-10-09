@@ -66,12 +66,12 @@ export function isStrictAuthPath(path: string): boolean {
 /**
  * True for requests under /api that the global limiter (1000 / 15 min per IP) must not count. `path` is relative to the
  * /api mount.
- * - Public mock traffic (own monthly quota), the Stripe webhook (/billing) and health probes.
+ * - Public mock traffic (own monthly quota), public demo mock traffic (own per-mock and per-visitor limits), the Stripe webhook (/billing) and health probes.
  * - GET /notifications: every open tab polls it; counting the polls would let a few tabs exhaust the bucket that
  *   real API calls share (and behind one NAT, other users'). It is a cheap authenticated read.
  */
 export function skipsGlobalLimiter(method: string, path: string): boolean {
-  if (/^\/(mock|billing|health)(\/|$)/.test(path)) return true;
+  if (/^\/(mock|demo-mock|billing|health)(\/|$)/.test(path)) return true;
   const isRead = method === 'GET' || method === 'HEAD';
   return isRead && /^\/notifications\/?$/i.test(path);
 }

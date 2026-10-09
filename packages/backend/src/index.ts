@@ -22,6 +22,7 @@ import swaggerUi from 'swagger-ui-express';
 import { specs } from './config/swagger.js';
 import { billingRouter } from './modules/billing/routes.js';
 import { mockQuotaGate } from './middlewares/planGate.js';
+import { demoMockRouter } from './modules/demo/mockRouter.js';
 import { MOCK_CORS_OPTIONS } from './modules/mock/mockAuth.js';
 import { migrateLegacyApiKeys } from './modules/projects/apiKeyMigration.js';
 import { flushUsage } from './modules/billing/usage.js';
@@ -70,7 +71,7 @@ const corsMiddleware = cors({
 app.use((req, res, next) => {
   // Bypasses the restrictive global CORS domain check for public/mock endpoints,
   // allowing them to handle their own open CORS rules (origin: '*') in their respective routers.
-  if (req.path.startsWith('/api/mock') || req.path.startsWith('/mock')) {
+  if (req.path.startsWith('/api/mock') || req.path.startsWith('/mock') || req.path.startsWith('/api/demo-mock/')) {
     return next();
   }
   corsMiddleware(req, res, next);
@@ -104,6 +105,10 @@ if (process.env.NODE_ENV !== 'test') {
 // Billing: MUST stay before express.json (Stripe webhook needs the raw body). Mock quota gate self-scopes to /mock and /api/mock.
 app.use('/api/billing', billingRouter);
 app.use(mockQuotaGate);
+
+// Public demo mocks (anonymous, ephemeral). Before the body parsers (it never reads a body) and with no
+// authenticateToken: its own per-mock and per-visitor limits apply, not the general limiter (skipsGlobalLimiter).
+app.use('/api/demo-mock', demoMockRouter);
 
 // Body size limit (1mb: enough for OpenAPI/spec payloads, cuts memory-exhaustion DoS)
 app.use(express.json({ limit: '1mb' }));
