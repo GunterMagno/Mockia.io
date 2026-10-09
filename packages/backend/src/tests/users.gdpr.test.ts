@@ -17,6 +17,9 @@ import { AiGenerationModel } from '../models/AiGeneration.js';
 import { AiFeedbackModel } from '../models/AiFeedback.js';
 import { RefreshSessionModel } from '../models/RefreshSession.js';
 import { AuthTokenModel } from '../models/AuthToken.js';
+import { DemoBudgetModel } from '../models/DemoBudget.js';
+import { DemoMockModel } from '../models/DemoMock.js';
+import { DemoSpentChallengeModel } from '../models/DemoSpentChallenge.js';
 
 // RGPD: derecho de acceso/portabilidad (GET /users/me/export) y de supresion (DELETE /users/me).
 const PASSWORD = 'gdpr-test-password-1';
@@ -154,6 +157,24 @@ describe('RGPD - exportar y borrar la cuenta', () => {
     global.fetch = realFetch;
     if (realStripeKey === undefined) delete process.env.STRIPE_SECRET_KEY;
     else process.env.STRIPE_SECRET_KEY = realStripeKey;
+  });
+
+  it('the demo schemas stay unlinked from accounts (the reason they are outside erase/export)', () => {
+    // If one of these ever points at a User or Project (e.g. a "keep my demo" feature), it must join the erase/export
+    // lists instead of staying excluded: this test makes that change fail loudly.
+    const offenders: string[] = [];
+    const walk = (schema: mongoose.Schema, prefix: string) => {
+      schema.eachPath((path, type) => {
+        const full = `${prefix}${path}`;
+        const opts = (type as any).options ?? {};
+        const ref = opts.ref ?? opts.type?.[0]?.ref;
+        if (ref === 'User' || ref === 'Project' || /^(user|owner|project)(Id)?$/i.test(path)) offenders.push(full);
+        const sub = (type as any).schema as mongoose.Schema | undefined;
+        if (sub) walk(sub, `${full}.`);
+      });
+    };
+    for (const model of [DemoBudgetModel, DemoMockModel, DemoSpentChallengeModel]) walk(model.schema, `${model.modelName}.`);
+    expect(offenders).toEqual([]);
   });
 
   it('the list of covered models matches every registered mongoose model', () => {
