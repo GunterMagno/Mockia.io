@@ -72,9 +72,10 @@ describe('effectivePlan', () => {
     expect(effectivePlan(null)).toBe('free');
   });
   it('matches the tiers of the monetization plan (shared catalog)', () => {
-    expect(PLAN_LIMITS.free).toEqual({ maxActiveProjects: 5, maxMonthlyRequests: 10_000 });
-    expect(PLAN_LIMITS.pro).toEqual({ maxActiveProjects: 50, maxMonthlyRequests: 1_000_000 });
-    expect(PLAN_LIMITS.team).toEqual({ maxActiveProjects: Infinity, maxMonthlyRequests: 10_000_000 });
+    expect(PLAN_LIMITS.free).toEqual({ maxActiveProjects: 5, maxMonthlyRequests: 10_000, maxMonthlyAiGenerations: 5 });
+    expect(PLAN_LIMITS.pro).toEqual({ maxActiveProjects: 50, maxMonthlyRequests: 1_000_000, maxMonthlyAiGenerations: 300 });
+    expect(PLAN_LIMITS.team).toEqual({ maxActiveProjects: Infinity, maxMonthlyRequests: 10_000_000, maxMonthlyAiGenerations: 1500 });
+    expect(PLAN_LIMITS.starter).toEqual({ maxActiveProjects: 15, maxMonthlyRequests: 100_000, maxMonthlyAiGenerations: 40 });
   });
 });
 

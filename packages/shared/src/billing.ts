@@ -1,10 +1,10 @@
 /**
  * Catalogo de planes: fuente unica para backend (limites que se aplican) y frontend (lo que se anuncia).
  * Cambiar un precio aqui NO cambia lo que cobra Stripe: el importe real vive en los Price de Stripe
- * (STRIPE_PRICE_PRO / STRIPE_PRICE_TEAM y sus variantes *_YEARLY). Mantener ambos alineados.
+ * (STRIPE_PRICE_STARTER_MONTHLY / STRIPE_PRICE_PRO / STRIPE_PRICE_TEAM y sus variantes anuales). Mantener ambos alineados.
  */
 
-export type Plan = 'free' | 'pro' | 'team';
+export type Plan = 'free' | 'starter' | 'pro' | 'team';
 export type PaidPlan = Exclude<Plan, 'free'>;
 export type BillingStatus = 'active' | 'past_due' | 'canceled';
 
@@ -13,14 +13,18 @@ export interface PlanLimits {
   maxActiveProjects: number;
   /** Peticiones a los mocks publicos por mes natural (UTC). Infinity = ilimitado. */
   maxMonthlyRequests: number;
+  /** Generaciones de IA por mes natural (UTC). Lo aplica el servidor antes de llamar al LLM. */
+  maxMonthlyAiGenerations: number;
 }
 
-export const PLANS: readonly Plan[] = ['free', 'pro', 'team'];
+/** De menor a mayor: el orden en que se anuncian y se comparan los planes. */
+export const PLANS: readonly Plan[] = ['free', 'starter', 'pro', 'team'];
 
 export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
-  free: { maxActiveProjects: 5, maxMonthlyRequests: 10_000 },
-  pro: { maxActiveProjects: 50, maxMonthlyRequests: 1_000_000 },
-  team: { maxActiveProjects: Infinity, maxMonthlyRequests: 10_000_000 },
+  free: { maxActiveProjects: 5, maxMonthlyRequests: 10_000, maxMonthlyAiGenerations: 5 },
+  starter: { maxActiveProjects: 15, maxMonthlyRequests: 100_000, maxMonthlyAiGenerations: 40 },
+  pro: { maxActiveProjects: 50, maxMonthlyRequests: 1_000_000, maxMonthlyAiGenerations: 300 },
+  team: { maxActiveProjects: Infinity, maxMonthlyRequests: 10_000_000, maxMonthlyAiGenerations: 1500 },
 };
 
 /**
@@ -50,6 +54,7 @@ const priceOf = (monthly: number): PlanPrice => ({ monthly, annual: monthly * AN
 /** Precios anunciados en USD (sin impuestos). Free no tiene precio. */
 export const PLAN_PRICE_USD: Record<Plan, PlanPrice> = {
   free: { monthly: 0, annual: 0 },
+  starter: priceOf(5),
   pro: priceOf(29),
   team: priceOf(99),
 };
@@ -67,18 +72,20 @@ export const annualDiscountPercent = (plan: Plan): number => {
   return monthly > 0 ? Math.round((1 - annual / (monthly * 12)) * 100) : 0;
 };
 
-/** Descuento anual que se anuncia (igual para Pro y Team, porque ambos son 10 meses). */
+/** Descuento anual que se anuncia (igual para Starter, Pro y Team, porque todos son 10 meses). */
 export const ANNUAL_DISCOUNT_PERCENT = annualDiscountPercent('pro');
 
 /** Limites serializables a JSON: null = ilimitado (JSON no admite Infinity). */
 export interface PlanLimitsDTO {
   maxActiveProjects: number | null;
   maxMonthlyRequests: number | null;
+  maxMonthlyAiGenerations: number | null;
 }
 
 export const toLimitsDTO = (limits: PlanLimits): PlanLimitsDTO => ({
   maxActiveProjects: Number.isFinite(limits.maxActiveProjects) ? limits.maxActiveProjects : null,
   maxMonthlyRequests: Number.isFinite(limits.maxMonthlyRequests) ? limits.maxMonthlyRequests : null,
+  maxMonthlyAiGenerations: Number.isFinite(limits.maxMonthlyAiGenerations) ? limits.maxMonthlyAiGenerations : null,
 });
 
 /** Respuesta de GET /api/billing/me */

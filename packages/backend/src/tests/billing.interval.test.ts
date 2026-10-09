@@ -241,7 +241,8 @@ describe('GET /api/billing/me: intervalo y disponibilidad anual', () => {
     delete process.env.STRIPE_PRICE_TEAM_YEARLY;
     userIs({ plan: 'free', billingStatus: 'active' });
     const { data } = (await request(app).get('/api/billing/me')).body;
-    expect(data.checkoutAvailable).toEqual({ pro: true, team: true });
-    expect(data.yearlyCheckoutAvailable).toEqual({ pro: true, team: false });
+    // Starter no esta configurado en este test: no se ofrece, ni mensual ni anual
+    expect(data.checkoutAvailable).toEqual({ starter: false, pro: true, team: true });
+    expect(data.yearlyCheckoutAvailable).toEqual({ starter: false, pro: true, team: false });
   });
 });

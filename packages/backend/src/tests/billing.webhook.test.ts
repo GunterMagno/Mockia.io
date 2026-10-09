@@ -354,7 +354,7 @@ describe('invoice.payment_failed: past_due with grace period and notices', () =>
     const [filter, update, options] = findOneAndUpdate.mock.calls[0];
     expect(filter).toMatchObject({
       stripeCustomerId: 'cus_1',
-      plan: { $in: ['pro', 'team'] },
+      plan: { $in: ['starter', 'pro', 'team'] },
       stripeLastEventId: { $ne: 'evt_f1' },
     });
     expect(options).toEqual({ new: true });

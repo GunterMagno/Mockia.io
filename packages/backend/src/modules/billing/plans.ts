@@ -9,7 +9,7 @@ export { PLAN_LIMITS };
 export type { BillingStatus, PaidPlan, Plan };
 
 export function asPaidPlan(value: unknown): PaidPlan | undefined {
-  return value === 'pro' || value === 'team' ? value : undefined;
+  return value === 'starter' || value === 'pro' || value === 'team' ? value : undefined;
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;

@@ -10,7 +10,7 @@ interface UserDocument extends Document {
   username: string;
   passwordHash: string;
   /** Subscription tier. Effective tier also depends on billingStatus (see modules/billing/plans.ts). */
-  plan: 'free' | 'pro' | 'team';
+  plan: 'free' | 'starter' | 'pro' | 'team';
   /**
    * Mirrors Stripe subscription state. 'canceled' is free at once; 'past_due' keeps the paid plan during the grace period
    * (PAST_DUE_GRACE_DAYS from pastDueSince) and is free afterwards.
@@ -83,7 +83,7 @@ const userSchema = new Schema<UserDocument>(
     },
     plan: {
       type: String,
-      enum: ['free', 'pro', 'team'],
+      enum: ['free', 'starter', 'pro', 'team'],
       default: 'free',
     },
     billingStatus: {

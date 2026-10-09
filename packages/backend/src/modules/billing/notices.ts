@@ -33,7 +33,7 @@ function formatMoney(amountMinor: number, currency: string, locale: MailLocale):
   return fmt.format(amountMinor / 10 ** digits);
 }
 
-const planLabel = (plan?: string | null) => (plan === 'team' ? 'Team' : plan === 'pro' ? 'Pro' : 'Mockia');
+const planLabel = (plan?: string | null) => (plan === 'team' ? 'Team' : plan === 'pro' ? 'Pro' : plan === 'starter' ? 'Starter' : 'Mockia');
 
 const TEXT = {
   paymentFailed: {

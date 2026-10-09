@@ -45,7 +45,7 @@ type UserHit = NoticeUser & { pastDueSince?: Date | null };
 /** The payment-failure sequence is over (billing healthy again, or the subscription is gone). */
 const SEQUENCE_OVER = { pastDueSince: null, lastPaymentFailedInvoiceId: null };
 
-const PAID_PLANS = ['pro', 'team'];
+const PAID_PLANS = ['starter', 'pro', 'team'];
 
 /** Events younger than this may still be racing checkout.session.completed, which is what links a Stripe customer to a user. */
 const LINK_RACE_WINDOW_MS = 60 * 60 * 1000;
@@ -118,7 +118,7 @@ function priceIdOf(sub: Record<string, any>): unknown {
   return sub.items?.data?.[0]?.price?.id ?? sub.plan?.id;
 }
 
-/** Plan and billing interval of a subscription, from its price id. Only the four configured prices count; anything else is undefined. */
+/** Plan and billing interval of a subscription, from its price id. Only the six configured prices count; anything else is undefined. */
 export function subscriptionPrice(sub: Record<string, any>) {
   return planAndIntervalOfPrice(priceIdOf(sub));
 }
@@ -393,7 +393,7 @@ export function hasOpenSubscription(user: { plan?: string | null; billingStatus?
 /**
  * Creates a Stripe customer portal session (update card, invoices, switch plan, cancel).
  * The portal must be configured once in the Stripe dashboard (Settings > Billing > Customer portal),
- * including the Pro and Team prices if plan switching should be offered.
+ * including the Starter, Pro and Team prices if plan switching should be offered.
  */
 export async function createPortalSession(input: { customerId: string; secretKey: string }): Promise<{ url: string }> {
   const params = new URLSearchParams({
@@ -536,7 +536,11 @@ export async function getBillingOverview(userId: string, now = new Date()): Prom
     limits: toLimitsDTO(PLAN_LIMITS[plan]),
     usage: { activeProjects, monthlyRequests, periodResetAt: nextPeriodStart(now).toISOString() },
     canManageBilling: stripeReady && Boolean(user.stripeCustomerId),
-    checkoutAvailable: { pro: Boolean(checkoutConfig('pro')), team: Boolean(checkoutConfig('team')) },
-    yearlyCheckoutAvailable: { pro: Boolean(checkoutConfig('pro', 'year')), team: Boolean(checkoutConfig('team', 'year')) },
+    checkoutAvailable: { starter: Boolean(checkoutConfig('starter')), pro: Boolean(checkoutConfig('pro')), team: Boolean(checkoutConfig('team')) },
+    yearlyCheckoutAvailable: {
+      starter: Boolean(checkoutConfig('starter', 'year')),
+      pro: Boolean(checkoutConfig('pro', 'year')),
+      team: Boolean(checkoutConfig('team', 'year')),
+    },
   };
 }

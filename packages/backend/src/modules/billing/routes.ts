@@ -26,7 +26,7 @@ import {
  * bytes for signature verification (express.raw here), and once a body parser has run the raw body is gone.
  * Body parsers skip requests already parsed, so /checkout carries its own express.json().
  *
- * Env: STRIPE_WEBHOOK_SECRET, STRIPE_SECRET_KEY, STRIPE_PRICE_PRO, STRIPE_PRICE_TEAM, STRIPE_PRICE_PRO_YEARLY, STRIPE_PRICE_TEAM_YEARLY,
+ * Env: STRIPE_WEBHOOK_SECRET, STRIPE_SECRET_KEY, STRIPE_PRICE_STARTER_MONTHLY, STRIPE_PRICE_PRO, STRIPE_PRICE_TEAM, STRIPE_PRICE_STARTER_YEARLY, STRIPE_PRICE_PRO_YEARLY, STRIPE_PRICE_TEAM_YEARLY,
  *      optional FRONTEND_URL / STRIPE_SUCCESS_URL / STRIPE_CANCEL_URL / STRIPE_PORTAL_RETURN_URL.
  * The global /api limiter skips /api/billing (the webhook must never be throttled), so the
  * user-facing Stripe calls get their own per-user limiter here.
@@ -103,7 +103,7 @@ billingRouter.get(
 );
 
 /**
- * POST /api/billing/checkout  body: { plan: 'pro' | 'team', interval?: 'month' | 'year' }  (interval defaults to 'month')
+ * POST /api/billing/checkout  body: { plan: 'starter' | 'pro' | 'team', interval?: 'month' | 'year' }  (interval defaults to 'month')
  * 200 { url } (redirect the browser there), 400 invalid plan or interval, 401, 403 EMAIL_NOT_VERIFIED (when email verification is required), 409 already subscribed (use the portal),
  * 501 Stripe not configured for that plan and interval (the message names the missing env var), 502 Stripe error.
  */

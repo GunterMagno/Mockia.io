@@ -1,16 +1,17 @@
 import type { BillingInterval, PaidPlan } from '@mockia/shared';
 
 /**
- * Los cuatro Price de Stripe (Pro/Team x mensual/anual) viven en variables de entorno. Este modulo es el unico que las conoce:
+ * Los seis Price de Stripe (Starter/Pro/Team x mensual/anual) viven en variables de entorno. Este modulo es el unico que las conoce:
  * de plan + intervalo saca el price id (checkout) y del price id saca plan + intervalo (webhook).
  */
 
 const PRICE_ENV: Record<PaidPlan, Record<BillingInterval, string>> = {
+  starter: { month: 'STRIPE_PRICE_STARTER_MONTHLY', year: 'STRIPE_PRICE_STARTER_YEARLY' },
   pro: { month: 'STRIPE_PRICE_PRO', year: 'STRIPE_PRICE_PRO_YEARLY' },
   team: { month: 'STRIPE_PRICE_TEAM', year: 'STRIPE_PRICE_TEAM_YEARLY' },
 };
 
-const PAID_PLANS: readonly PaidPlan[] = ['pro', 'team'];
+const PAID_PLANS: readonly PaidPlan[] = ['starter', 'pro', 'team'];
 const INTERVALS: readonly BillingInterval[] = ['month', 'year'];
 
 /** Nombre de la variable de entorno con el price id de ese plan e intervalo. */
