@@ -158,7 +158,10 @@ describe('RGPD - exportar y borrar la cuenta', () => {
 
   it('the list of covered models matches every registered mongoose model', () => {
     const covered = ALL_MODELS.map((m) => m.modelName).sort();
-    expect(mongoose.modelNames().sort()).toEqual(covered);
+    // The public demo's collections (anonymous visitors) hold no account data: only daily IP pseudonyms with a TTL of
+    // at most 48 h and ephemeral mocks, none of them linked to a user. They are deliberately outside erase/export.
+    const demoOnly = ['DemoBudget', 'DemoMock', 'DemoSpentChallenge'];
+    expect(mongoose.modelNames().filter((n) => !demoOnly.includes(n)).sort()).toEqual(covered);
   });
 
   describe('GET /api/users/me/export', () => {
