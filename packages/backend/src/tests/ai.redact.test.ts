@@ -303,3 +303,18 @@ describe('redactTarget (synthetic mock data survives, real-looking secrets do no
     expect(redactSecrets(MONGO)).not.toContain('s3cr3tP4ss');
   });
 });
+
+// Quadratic regex guard (C4): crafted 100 KB inputs must finish fast
+describe('redactSecrets on adversarial 100 KB input', () => {
+  const timed = (input: string) => {
+    const t0 = Date.now();
+    redactSecrets(input);
+    return Date.now() - t0;
+  };
+  it('"eyJeyJeyJ..." (JWT prefix everywhere, no dots): < 200 ms', () => {
+    expect(timed('eyJ'.repeat(34000))).toBeLessThan(200);
+  });
+  it('"eyJxxxxx.eyJxxxxx." chains without a third segment: < 200 ms', () => {
+    expect(timed('eyJabcdef.'.repeat(10000))).toBeLessThan(200);
+  });
+});

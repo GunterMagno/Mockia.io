@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import styles from './Header.module.scss';
 import { useAuth } from '../../../contexts/AuthContext';
 import userIcon from '../../../assets/user.svg';
@@ -34,6 +34,17 @@ const Header: React.FC = () => {
   useEffect(() => {
     setIsMenuOpen(false);
   }, [path]);
+
+  // ?profile=data opens Profile -> My data (e.g. the AI consent link under an AI result); the parameter is then dropped
+  const navigate = useNavigate();
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (!params.has('profile') || isLoading || !isAuthenticated) return;
+    setIsProfileOpen(true);
+    params.delete('profile');
+    const search = params.toString();
+    navigate({ pathname: location.pathname, search: search ? `?${search}` : '' }, { replace: true });
+  }, [location.search, location.pathname, isLoading, isAuthenticated, navigate]);
 
   // Listen for project name updates
   useEffect(() => {

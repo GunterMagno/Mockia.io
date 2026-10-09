@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { sendAiFeedback, type AiVerdict } from '../../../services/aiService'
+import { getProfile } from '../../../services/userService'
 import { useI18n } from '../../../i18n/I18nProvider'
 import styles from './AiFeedback.module.scss'
 
@@ -8,17 +9,46 @@ type Props = {
   generationId?: string
 }
 
+/** Link that opens Profile -> My data (where the AI consent switch lives): the header opens it on ?profile=data. */
+export const CONSENT_SETTING_HREF = '/dashboard?profile=data'
+
 /**
  * "Was this useful?" thumbs up / down under an AI result. The vote is sent at once; the user can change it (the server
  * keeps the latest one per generation). No correction UI: the API accepts one, this control does not offer it.
+ * Only offered to users who consented to the use of their generations: without consent the server keeps no vote (R14),
+ * so instead of buttons that would do nothing the result says so and links to the consent setting.
  */
 const AiFeedback: React.FC<Props> = ({ generationId }) => {
   const { t } = useI18n()
   const [voted, setVoted] = useState<AiVerdict | null>(null)
   const [sending, setSending] = useState(false)
   const [failed, setFailed] = useState(false)
+  // null = still asking the server; the rating only appears once the consent is known
+  const [consented, setConsented] = useState<boolean | null>(null)
 
-  if (!generationId) return null
+  useEffect(() => {
+    if (!generationId) return
+    let active = true
+    getProfile()
+      .then((profile) => active && setConsented(profile.aiTrainingConsent?.granted === true))
+      .catch(() => active && setConsented(false))
+    return () => {
+      active = false
+    }
+  }, [generationId])
+
+  if (!generationId || consented === null) return null
+
+  if (!consented) {
+    return (
+      <p className={styles.consentNote} data-ai-feedback-consent>
+        {t('aiFeedback.consentNeeded')}{' '}
+        <a href={CONSENT_SETTING_HREF} target="_blank" rel="noopener">
+          {t('aiFeedback.consentLink')}
+        </a>
+      </p>
+    )
+  }
 
   const vote = async (verdict: AiVerdict) => {
     if (sending || verdict === voted) return

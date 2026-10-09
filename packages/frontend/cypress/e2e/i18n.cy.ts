@@ -262,3 +262,26 @@ describe('Estetica morada del heroe', () => {
       .and('have.css', 'color', 'rgb(255, 255, 255)');
   });
 });
+
+// The "how it works" iframe is lazy: a language change made before it loads used to be posted to an empty frame and lost,
+// leaving the animation in the first language. The page re-sends the language when the iframe finishes loading.
+describe('i18n: la animacion "como funciona" sigue el idioma aunque se cambie antes de que cargue', () => {
+  it('cambiar a espanol antes de que cargue el iframe lo deja en espanol', () => {
+    // The animation document arrives late (a slow network, or the lazy iframe not loaded yet)
+    cy.intercept({ method: 'GET', pathname: '/como-funciona/index.html' }, (req) => {
+      req.on('response', (res) => {
+        res.setDelay(2500);
+      });
+    });
+    cy.visit('/', { onBeforeLoad: (win) => win.localStorage.setItem('mockia_locale', 'en') });
+    cy.contains('h1', 'Stop waiting').should('be.visible');
+    languageSelect().select('es');
+    cy.contains('h1', 'Deja de esperar').should('be.visible');
+    cy.get('#how-title').scrollIntoView();
+    cy.get('section[aria-labelledby="how-title"] iframe', { timeout: 15000 }).should(($frame) => {
+      const doc = ($frame[0] as HTMLIFrameElement).contentDocument!;
+      expect(doc.URL, 'the animation document has loaded').to.include('/como-funciona/index.html');
+      expect(doc.documentElement.lang).to.eq('es');
+    });
+  });
+});

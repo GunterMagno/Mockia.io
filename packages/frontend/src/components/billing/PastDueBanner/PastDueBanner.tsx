@@ -36,7 +36,7 @@ const PastDueBanner: React.FC<{ overview: BillingOverview }> = ({ overview }) =>
   }
 
   return (
-    <div className={`${styles.banner} ${inGrace ? styles.grace : styles.expired}`} role="alert" data-testid="past-due-banner">
+    <div className={`${styles.banner} ${inGrace ? styles.grace : styles.expired}`} role="status" data-testid="past-due-banner">
       <p className={styles.message}>{message}</p>
       {overview.canManageBilling && (
         <button type="button" className={styles.action} onClick={() => void openPortal()} disabled={busy}>

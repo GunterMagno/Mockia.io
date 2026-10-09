@@ -21,8 +21,15 @@ const HowItWorks: React.FC = () => {
     return () => window.removeEventListener('message', onMessage)
   }, [])
 
+  // The iframe is lazy: a message posted before its document loads goes to the empty initial frame and is lost (e.g. the
+  // account's saved language applied at boot). It is posted on every change AND again when the document loads.
+  const localeRef = useRef(locale)
+  localeRef.current = locale
+  const sendLocale = () =>
+    frame.current?.contentWindow?.postMessage({ type: 'mockia-explainer-lang', lang: localeRef.current }, window.location.origin)
+
   useEffect(() => {
-    frame.current?.contentWindow?.postMessage({ type: 'mockia-explainer-lang', lang: locale }, window.location.origin)
+    sendLocale()
   }, [locale])
 
   return (
@@ -39,6 +46,7 @@ const HowItWorks: React.FC = () => {
           title={t('landing.how.frameTitle')}
           src={`/como-funciona/index.html?embed=1&lang=${firstLocale.current}`}
           loading="lazy"
+          onLoad={sendLocale}
         />
       </div>
     </section>

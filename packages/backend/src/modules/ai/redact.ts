@@ -21,6 +21,12 @@ export const REDACTED_EMAIL = '[REDACTED_EMAIL]';
 // but `desk-lamp-...` style prose does not start a "key".
 const NB = '(?<![A-Za-z0-9])';
 
+/**
+ * JWT. Only where a token can start (not inside a longer base64url run) and with bounded segments: the unanchored form
+ * was quadratic on "eyJeyJeyJ..." (7.9 s on 100 KB).
+ */
+const JWT_PATTERN = /(?<![A-Za-z0-9_-])eyJ[A-Za-z0-9_-]{5,8192}\.[A-Za-z0-9_-]{5,8192}\.[A-Za-z0-9_-]{0,8192}/g;
+
 /** PEM blocks with their END marker, then any BEGIN ... KEY left over (a truncated prompt): up to the end of the text. */
 const PEM_BLOCK = /-----BEGIN ([A-Z0-9 ]{0,40}KEY)-----[\s\S]*?-----END \1-----/g;
 const PEM_UNTERMINATED = /-----BEGIN [A-Z0-9 ]{0,40}KEY-----[\s\S]*$/;
@@ -37,7 +43,7 @@ const TOKEN_PATTERNS: RegExp[] = [
   new RegExp(`${NB}(?:AKIA|ASIA)[0-9A-Z]{16}(?![0-9A-Z])`, 'g'), // AWS access key id
   new RegExp(`${NB}AIza[0-9A-Za-z_-]{30,}`, 'g'), // Google API key
   new RegExp(`${NB}xox[baprs]-[A-Za-z0-9-]{10,}`, 'g'), // Slack
-  /eyJ[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{0,}/g, // JWT
+  JWT_PATTERN,
 ];
 
 /** `Bearer <token>`: only values that look like one (they contain a digit), so "Bearer authentication" stays prose. */
@@ -169,7 +175,7 @@ function redactTargetString(text: string): string {
   let out = text.replace(PEM_BLOCK, REDACTED_KEY).replace(PEM_UNTERMINATED, REDACTED_KEY);
   for (const pattern of TOKEN_PATTERNS) {
     out = out.replace(pattern, (match) => {
-      if (pattern.source.startsWith('eyJ')) return isRealLookingJwt(match) ? REDACTED_KEY : match;
+      if (pattern === JWT_PATTERN) return isRealLookingJwt(match) ? REDACTED_KEY : match;
       return /EXAMPLE/.test(match) ? match : REDACTED_KEY; // the AWS documentation key AKIAIOSFODNN7EXAMPLE is mock data
     });
   }

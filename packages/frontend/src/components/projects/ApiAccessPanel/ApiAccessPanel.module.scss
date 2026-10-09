@@ -95,7 +95,7 @@
 }
 
 .needKey {
-  color: var(--color-warn-text, #fbbf24);
+  color: var(--color-warn);
   font-weight: 600;
 }
 
@@ -127,7 +127,7 @@
 }
 
 .panel .warning {
-  color: var(--color-warn-text, #fbbf24);
+  color: var(--color-warn);
   font-weight: 600;
 
   span {
@@ -260,8 +260,8 @@
 }
 
 .panel .noteWarn {
-  color: var(--color-warn-text, #fbbf24);
-  border-color: var(--color-warn-text, #fbbf24);
+  color: var(--color-warn);
+  border-color: var(--color-warn);
 }
 
 .panel .noteError {

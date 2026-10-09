@@ -140,3 +140,31 @@ describe('anonymizePromptIdentifiers: repository URLs anywhere in the text', () 
     expect(Date.now() - t0).toBeLessThan(2000);
   });
 });
+
+// Superlinear regex guard (C4): crafted 100 KB inputs must finish fast
+describe('anonymizePromptIdentifiers on adversarial 100 KB input', () => {
+  const timed = (input: string) => {
+    const t0 = Date.now();
+    anonymizePromptIdentifiers(input);
+    return Date.now() - t0;
+  };
+  it('many unterminated "Project Name (" sentences: < 200 ms', () => {
+    expect(timed('Project Name ("x") and Description ("'.repeat(2800))).toBeLessThan(200);
+  });
+  it('many "Project Name (" openings without a closing: < 200 ms', () => {
+    expect(timed('Project Name ("'.repeat(7000))).toBeLessThan(200);
+  });
+  it('many "## Project:" blocks without the closing line: < 200 ms', () => {
+    expect(timed('## Project: x\nDescription: y\n'.repeat(3500))).toBeLessThan(200);
+  });
+  it('a long description (over 600 characters) is still anonymised', () => {
+    const long = 'd'.repeat(5000);
+    const out = anonymizePromptIdentifiers(`Project Name ("Gym") and Description ("${long}"), generate a beautiful API`);
+    expect(out).not.toContain(long);
+  });
+  it('a real sentence is still anonymised', () => {
+    const out = anonymizePromptIdentifiers('Project Name ("Gym") and Description ("A gym API"), generate a beautiful API');
+    expect(out).not.toContain('Gym');
+    expect(out).not.toContain('A gym API');
+  });
+});

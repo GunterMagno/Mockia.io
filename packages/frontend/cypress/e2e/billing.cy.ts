@@ -304,11 +304,11 @@ describe('Billing: planes, limites y facturacion', () => {
 
       cy.visit('/billing');
       cy.wait('@overview');
-      cy.get('[role="alert"]')
+      cy.get('[data-testid="past-due-banner"][role="status"]')
         .should('contain.text', 'We couldn’t charge your card')
         .and('contain.text', `Your Pro features stay active until ${graceEndText}`)
         .and('contain.text', 'Update your payment method');
-      cy.contains('[role="alert"] button', 'Update payment method').click();
+      cy.contains('[data-testid="past-due-banner"][role="status"] button', 'Update payment method').click();
       cy.wait('@portal');
       cy.location('search').should('eq', '?portal=returned');
     });
@@ -319,9 +319,9 @@ describe('Billing: planes, limites y facturacion', () => {
 
       cy.visit('/dashboard');
       cy.wait('@overview');
-      cy.get('[role="alert"]').should('contain.text', `Your Pro features stay active until ${graceEndText}`);
+      cy.get('[data-testid="past-due-banner"][role="status"]').should('contain.text', `Your Pro features stay active until ${graceEndText}`);
       cy.contains('a', 'Pro plan').should('contain.text', 'Payment failed');
-      cy.contains('[role="alert"] button', 'Update payment method').click();
+      cy.contains('[data-testid="past-due-banner"][role="status"] button', 'Update payment method').click();
       cy.wait('@portal');
       cy.location('pathname').should('eq', '/billing');
     });
@@ -334,8 +334,8 @@ describe('Billing: planes, limites y facturacion', () => {
       })).as('overview');
       cy.visit('/billing');
       cy.wait('@overview');
-      cy.get('[role="alert"]').should('contain.text', 'limited to the Free plan').and('not.contain.text', 'stay active until');
-      cy.contains('[role="alert"] button', 'Update payment method').should('be.visible');
+      cy.get('[data-testid="past-due-banner"][role="status"]').should('contain.text', 'limited to the Free plan').and('not.contain.text', 'stay active until');
+      cy.contains('[data-testid="past-due-banner"][role="status"] button', 'Update payment method').should('be.visible');
     });
 
     // The counter restarts at 00:00 UTC of the 1st and Stripe periods end at UTC instants: the dates are shown in UTC,

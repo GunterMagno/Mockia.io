@@ -26,8 +26,31 @@ const REPO_BLOCK = /^## Repository: .*\nURL: .*\nOwner: .*(?:\nBranch: .*)?/gm;
 // No repository: `## Project: <title>\nDescription: <description, may span lines>\nNo GitHub context available yet.`
 const PROJECT_BLOCK = /^## Project: .*\nDescription: [\s\S]*?\n(No GitHub context available yet\.)/gm;
 
-// The task part without repository: `Project Name ("<title>") and Description ("<description>"), generate a beautiful`
-const PROJECT_SENTENCE = /Project Name \("[\s\S]*?"\) and Description \("[\s\S]*?"\), generate a beautiful/g;
+// The task part without repository: `Project Name ("<title>") and Description ("<description>"), generate a beautiful`.
+// Matched with indexOf, not a regex: two lazy [\s\S]*? groups were superlinear on crafted input (32 s on 100 KB), and
+// bounding them would leave long descriptions un-anonymised.
+const SENTENCE_OPEN = 'Project Name ("';
+const SENTENCE_MID = '") and Description ("';
+const SENTENCE_END = '"), generate a beautiful';
+
+/** Same result as the former lazy regex, in linear time. */
+function replaceProjectSentences(text: string): string {
+  let out = '';
+  let pos = 0;
+  for (;;) {
+    const open = text.indexOf(SENTENCE_OPEN, pos);
+    if (open < 0) break;
+    const mid = text.indexOf(SENTENCE_MID, open + SENTENCE_OPEN.length);
+    if (mid < 0) break; // no later opening can complete either
+    const end = text.indexOf(SENTENCE_END, mid + SENTENCE_MID.length);
+    if (end < 0) break;
+    out +=
+      text.slice(pos, open) +
+      `Project Name ("${REDACTED_PROJECT}") and Description ("${REDACTED_DESCRIPTION}"), generate a beautiful`;
+    pos = end + SENTENCE_END.length;
+  }
+  return out + text.slice(pos);
+}
 
 // A repository or profile URL on a well known code host (scheme, `www.` and `.git` optional; also scp-style `git@host:o/r`)
 const REPO_URL =
@@ -43,7 +66,7 @@ export function anonymizePromptIdentifiers(text: string): string {
       (/\nBranch: /.test(block) ? `\nBranch: ${REDACTED_BRANCH}` : '')
   );
   out = out.replace(PROJECT_BLOCK, (_m, tail: string) => `## Project: ${REDACTED_PROJECT}\nDescription: ${REDACTED_DESCRIPTION}\n${tail}`);
-  out = out.replace(PROJECT_SENTENCE, `Project Name ("${REDACTED_PROJECT}") and Description ("${REDACTED_DESCRIPTION}"), generate a beautiful`);
+  out = replaceProjectSentences(out);
   out = out.replace(REPO_URL, REDACTED_REPO);
   return out;
 }

@@ -12,6 +12,17 @@ const KNOWN: ReadonlyArray<readonly [RegExp, MessageKey]> = [
   [/^Invalid email or password$/i, 'errors.invalidCredentials'],
   [/is already registered$/i, 'errors.emailTaken'],
   [/^Too many requests/i, 'errors.tooManyRequests'],
+  // AI generation (per-user limit, overall deadline, provider down, unusable answer, upstream failure)
+  [/^Too many AI generation requests/i, 'errors.aiRateLimit'],
+  [/^The AI request took too long/i, 'errors.aiTimeout'],
+  [/^(AI service|OpenRouter API) temporarily unavailable/i, 'errors.aiUnavailable'],
+  [/^OpenRouter API rate limited/i, 'errors.aiUnavailable'],
+  [/^(The AI returned an invalid answer|Failed to parse AI output|Invalid JSON response from AI|AI output too large)/i, 'errors.aiInvalidAnswer'],
+  [/^OpenRouter API (error|authentication failed)/i, 'errors.aiUpstream'],
+  // Request shape (non-JSON credential bodies, oversized bodies or descriptions)
+  [/^Content-Type must be application\/json$/i, 'errors.unsupportedMediaType'],
+  [/^request entity too large$/i, 'errors.tooLarge'],
+  [/^requirement is too long/i, 'errors.tooLarge'],
   [/^Project not found$/i, 'errors.projectNotFound'],
   [/^Endpoint not found$/i, 'errors.endpointNotFound'],
   [/^User not found$/i, 'errors.userNotFound'],
@@ -118,6 +129,7 @@ export function getBackendErrorMessage(err: any, t: Translate): string {
     if (status === 401) return t('errors.unauthorized')
     if (status === 403) return t('errors.forbidden')
     if (status === 404) return t('errors.notFound')
+    if (status === 413) return t('errors.tooLarge')
     if (status === 429) return t('errors.tooManyRequests')
     if (status >= 400 && status < 500) return t('errors.request', { status })
     if (status >= 500) return t('errors.server', { status })

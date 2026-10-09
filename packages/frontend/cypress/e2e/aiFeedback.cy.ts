@@ -47,12 +47,10 @@ describe('AI feedback: thumbs up / down under a result', () => {
   before(() => {
     cy.request('POST', '/api/auth/register', { email, password: PASSWORD, username: 'fbuser', locale: 'en' }).then(() => {
       cy.request('POST', '/api/auth/login', { email, password: PASSWORD }).then((res) => {
-        cy.request({
-          method: 'POST',
-          url: '/api/projects',
-          headers: { Authorization: `Bearer ${res.body.data.tokens.accessToken}` },
-          body: { title, description: 'x' },
-        });
+        const headers = { Authorization: `Bearer ${res.body.data.tokens.accessToken}` };
+        cy.request({ method: 'POST', url: '/api/projects', headers, body: { title, description: 'x' } });
+        // The rating is only offered to users who allowed their generations to be used (R14 drops other votes)
+        cy.request({ method: 'PUT', url: '/api/users/me/ai-consent', headers, body: { granted: true } });
       });
     });
     cy.clearCookies();
@@ -141,6 +139,50 @@ describe('AI feedback: thumbs up / down under a result', () => {
     cy.contains('button', 'Go to editor').should('be.visible');
     cy.get('[data-ai-feedback-good]').click();
     cy.wait('@feedback').its('request.body').should('deep.equal', { generationId: GENERATION_ID, verdict: 'good' });
+  });
+});
+
+// Without consent a vote is never stored (R14): instead of buttons that would silently do nothing, the result says so
+// and links to the consent switch (Profile -> My data).
+describe('AI feedback without consent', () => {
+  const email = uniqueEmail('nofb');
+  const title = `No consent project ${Date.now()}`;
+
+  before(() => {
+    cy.request('POST', '/api/auth/register', { email, password: PASSWORD, username: 'nofbuser', locale: 'en' }).then(() => {
+      cy.request('POST', '/api/auth/login', { email, password: PASSWORD }).then((res) => {
+        cy.request({
+          method: 'POST',
+          url: '/api/projects',
+          headers: { Authorization: `Bearer ${res.body.data.tokens.accessToken}` },
+          body: { title, description: 'x' },
+        });
+      });
+    });
+    cy.clearCookies();
+  });
+
+  it('shows no thumbs but a link to the consent setting, which opens Profile -> My data', () => {
+    cy.clearCookies();
+    cy.intercept('POST', '/api/ai/generate-and-save', { statusCode: 200, body: fakeGeneration }).as('generate');
+    cy.intercept('POST', '/api/ai/feedback').as('feedback');
+    loginViaUi(email);
+    cy.contains(title).click();
+    cy.contains('button', 'Generate more with AI').click();
+    cy.get('textarea').type('A gym API with members');
+    cy.contains('button', /^Generate$/).click();
+    cy.wait('@generate');
+    cy.contains('[role="dialog"] h3', 'Endpoints generated').should('be.visible');
+    cy.get('[data-ai-feedback-good]').should('not.exist');
+    cy.get('[data-ai-feedback-consent]')
+      .should('contain.text', 'improve the AI')
+      .find('a')
+      .should('have.attr', 'href', '/dashboard?profile=data')
+      .then(($a) => cy.visit($a.attr('href')!));
+    cy.get('[role="dialog"]').should('be.visible');
+    cy.get('[data-ai-consent-switch]').scrollIntoView().should('be.visible').and('have.attr', 'aria-checked', 'false');
+    cy.location('search').should('eq', '');
+    cy.get('@feedback.all').should('have.length', 0);
   });
 });
 
