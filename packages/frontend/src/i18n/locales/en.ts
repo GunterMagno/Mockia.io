@@ -148,6 +148,7 @@ const en = {
     },
     plans: {
       free: { name: 'Free', tagline: 'For side projects and trying Mockia out.' },
+      starter: { name: 'Starter', tagline: 'For solo developers who have outgrown the free plan.' },
       pro: { name: 'Pro', tagline: 'For developers shipping frontends every week.' },
       team: { name: 'Team', tagline: 'For teams sharing mocks across many projects.' },
     },

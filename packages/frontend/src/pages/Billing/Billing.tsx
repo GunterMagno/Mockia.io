@@ -16,7 +16,7 @@ const POLL_TRIES = 15
 type Activation = 'waiting' | 'done' | 'timeout' | null
 type Busy = Plan | 'portal' | null
 
-const asPaidPlan = (v: string | null): PaidPlan | null => (v === 'pro' || v === 'team' ? v : null)
+const asPaidPlan = (v: string | null): PaidPlan | null => (v === 'starter' || v === 'pro' || v === 'team' ? v : null)
 
 /** Barra de uso accesible: el valor va en aria-valuenow/valuetext, el color no es la unica pista (texto al lado). */
 const UsageMeter: React.FC<{ label: string; used: number; limit: number | null; format: (n: number) => string }> = ({

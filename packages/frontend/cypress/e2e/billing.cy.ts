@@ -113,12 +113,12 @@ describe('Billing: planes, limites y facturacion', () => {
       });
     });
 
-    it('las cuatro tarjetas caben sin desbordar en 375, 768 y 1440 px', () => {
+    it('las cinco tarjetas (Free, Starter, Pro, Team y Enterprise) caben sin desbordar en 375, 768 y 1440 px', () => {
       for (const [width, height] of [[375, 812], [768, 1024], [1440, 900]]) {
         cy.viewport(width, height);
         cy.visit('/');
         cy.get('#pricing-title').scrollIntoView();
-        cy.get('ul[class*="grid"] > li').should('have.length', 4);
+        cy.get('ul[class*="grid"] > li').should('have.length', 5);
         cy.document().then((doc) => {
           expect(doc.documentElement.scrollWidth, `ancho ${width}`).to.be.at.most(width);
         });

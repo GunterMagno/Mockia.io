@@ -141,6 +141,7 @@ const zh: Messages = {
     },
     plans: {
       free: { name: 'Free', tagline: '适合个人项目和初次体验 Mockia。' },
+      starter: { name: 'Starter', tagline: '适合已经不满足于免费套餐的个人开发者。' },
       pro: { name: 'Pro', tagline: '适合每周都在交付前端的开发者。' },
       team: { name: 'Team', tagline: '适合在多个项目间共享模拟接口的团队。' },
     },

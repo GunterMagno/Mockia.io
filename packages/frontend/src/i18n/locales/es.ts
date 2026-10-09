@@ -143,6 +143,7 @@ const es: Messages = {
     },
     plans: {
       free: { name: 'Free', tagline: 'Para proyectos personales y para probar Mockia.' },
+      starter: { name: 'Starter', tagline: 'Para quien ya se queda corto con el plan gratuito.' },
       pro: { name: 'Pro', tagline: 'Para quien entrega frontends cada semana.' },
       team: { name: 'Team', tagline: 'Para equipos que comparten mocks entre muchos proyectos.' },
     },

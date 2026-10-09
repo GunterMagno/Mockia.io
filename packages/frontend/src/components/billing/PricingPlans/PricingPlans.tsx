@@ -91,6 +91,7 @@ export const PricingPlans: React.FC<Props> = ({ mode, overview, highlight, initi
   const features: Record<Plan, string[]> = {
     // No support line on Free: the Terms make no support commitment for it (ruling R15)
     free: [projects('free'), requests('free'), t('pricing.features.aiAndGithub')],
+    starter: [t('pricing.features.everythingFree'), projects('starter'), requests('starter'), t('pricing.features.cancelAnytime')],
     pro: [t('pricing.features.everythingFree'), projects('pro'), requests('pro'), t('pricing.features.cancelAnytime')],
     team: [t('pricing.features.everythingPro'), projects('team'), requests('team'), t('pricing.features.prioritySupport')],
   }
