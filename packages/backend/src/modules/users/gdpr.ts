@@ -176,7 +176,7 @@ export async function exportUserData(userId: string): Promise<Record<string, unk
       projectId: n.projectId?.toString() ?? null,
       createdAt: iso(n.createdAt),
     })),
-    usage: usage.map((u) => ({ period: u.period, requests: u.requests })),
+    usage: usage.map((u) => ({ period: u.period, requests: u.requests, aiGenerations: u.aiGenerations ?? 0 })),
     // What the user contributed to improving the AI (only exists with their consent): prompts as sent, model output, thumbs and corrections
     aiGenerations: aiGenerations.map((g) => ({
       generationId: g.generationId,

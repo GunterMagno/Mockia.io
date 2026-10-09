@@ -104,7 +104,7 @@ async function seedProject(ownerId: Types.ObjectId, slug: string, extra: Record<
 
 /** Everything that belongs to a user besides projects: session, token, usage, notification without project. */
 async function seedUserData(userId: Types.ObjectId) {
-  await UsageModel.create({ ownerId: userId, period: '2026-10', requests: 7 });
+  await UsageModel.create({ ownerId: userId, period: '2026-10', requests: 7, aiGenerations: 3 });
   await AiRateWindowModel.create({ userId, windowStart: new Date(), count: 3, expireAt: new Date(Date.now() + 180_000) });
   // Data contributed to improving the AI (exists only with consent): a generation and a feedback row with a correction
   const generationId = `gen-${userId.toString()}`;
@@ -215,7 +215,7 @@ describe('RGPD - exportar y borrar la cuenta', () => {
 
       // Notifications (own, incl. the project one), usage, sessions
       expect(data.notifications.map((n: any) => n.title).sort()).toEqual([`loose-${alice._id.toString()}`, 'n-alice-proj'].sort());
-      expect(data.usage).toEqual([expect.objectContaining({ period: '2026-10', requests: 7 })]);
+      expect(data.usage).toEqual([expect.objectContaining({ period: '2026-10', requests: 7, aiGenerations: 3 })]);
       expect(data.sessions.length).toBeGreaterThanOrEqual(1);
       expect(Object.keys(data.sessions[0]).sort()).toEqual(['createdAt', 'expiresAt', 'status', 'ip', 'ua'].sort());
 

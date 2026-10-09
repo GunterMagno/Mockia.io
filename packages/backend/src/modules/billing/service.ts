@@ -4,7 +4,7 @@ import { AppError } from '../../middlewares/errorHandler.js';
 import { ErrorCode, isBillingInterval, toLimitsDTO, type BillingInterval, type BillingOverview } from '@mockia/shared';
 import { PLAN_LIMITS, asPaidPlan, effectivePlan, graceEndsAt, invalidatePlanCache, type BillingStatus, type PaidPlan } from './plans.js';
 import { notifyPaymentFailed, notifyRefund, notifyTrialWillEnd, type NoticeUser } from './notices.js';
-import { getMonthlyUsage, nextPeriodStart } from './usage.js';
+import { getMonthlyUsageDetail, nextPeriodStart } from './usage.js';
 import { stripeCheckoutLocale, termsAcceptanceMessage } from './checkoutText.js';
 import { appBaseUrl } from '../auth/passwordReset.js';
 import { planAndIntervalOfPrice, priceEnvName, priceIdFor } from './prices.js';
@@ -517,9 +517,9 @@ export async function getBillingOverview(userId: string, now = new Date()): Prom
   if (!user) throw new AppError('User not found', ErrorCode.NOT_FOUND, 404);
 
   const plan = effectivePlan(user, now.getTime());
-  const [activeProjects, monthlyRequests] = await Promise.all([
+  const [activeProjects, monthly] = await Promise.all([
     ProjectModel.countDocuments({ ownerId: userId, isArchived: { $ne: true } }),
-    getMonthlyUsage(userId, now),
+    getMonthlyUsageDetail(userId, now),
   ]);
   const stripeReady = Boolean(process.env.STRIPE_SECRET_KEY);
   // A canceled (or never paid) account keeps no interval, even if an old value is left over
@@ -534,7 +534,7 @@ export async function getBillingOverview(userId: string, now = new Date()): Prom
     currentPeriodEnd: user.currentPeriodEnd ? new Date(user.currentPeriodEnd).toISOString() : null,
     pastDueUntil: graceEndsAt(user)?.toISOString() ?? null,
     limits: toLimitsDTO(PLAN_LIMITS[plan]),
-    usage: { activeProjects, monthlyRequests, periodResetAt: nextPeriodStart(now).toISOString() },
+    usage: { activeProjects, monthlyRequests: monthly.requests, aiGenerations: monthly.aiGenerations, periodResetAt: nextPeriodStart(now).toISOString() },
     canManageBilling: stripeReady && Boolean(user.stripeCustomerId),
     checkoutAvailable: { starter: Boolean(checkoutConfig('starter')), pro: Boolean(checkoutConfig('pro')), team: Boolean(checkoutConfig('team')) },
     yearlyCheckoutAvailable: {

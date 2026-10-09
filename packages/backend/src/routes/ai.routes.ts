@@ -22,6 +22,8 @@ import { feedbackSchema, generationBodySchema } from '../modules/ai/feedbackVali
  * is built or any model is called: building the prompt pulls the project's GitHub context, and generate-and-save writes
  * endpoints into it. Unknown project -> 404, not a member / insufficient role -> 403, no project reference -> 400.
  * The body is validated first (generationBodySchema): requirement at most 4000 characters, client sampling stripped.
+ * Then the handler applies the per-minute limiter and the monthly plan quota (one reserved generation, given back if the
+ * generation fails), both before any model is called.
  */
 const bodyProjectRef = (req: { body?: { projectId?: unknown } }) => req.body?.projectId;
 
@@ -75,6 +77,8 @@ const feedbackLimiter = rateLimit({
  *     responses:
  *       200:
  *         description: Success
+ *       429:
+ *         description: Per-minute limit (RATE_LIMIT_ERROR) or the plan's monthly AI generation quota (AI_QUOTA_EXCEEDED; the body carries used, limit and resetsAt, Retry-After is the seconds to the next UTC month)
  */
 // Read only (nothing is saved): any member, viewers included
 router.post(
@@ -112,6 +116,8 @@ router.post(
  *     responses:
  *       200:
  *         description: Success
+ *       429:
+ *         description: Per-minute limit (RATE_LIMIT_ERROR) or the plan's monthly AI generation quota (AI_QUOTA_EXCEEDED; the body carries used, limit and resetsAt, Retry-After is the seconds to the next UTC month)
  */
 // Writes endpoints into the project: owner or editor
 router.post(

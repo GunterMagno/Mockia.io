@@ -279,7 +279,7 @@ describe('AI training consent, generation storage and feedback', () => {
     });
 
     it('AI_GENERATION_RETENTION_DAYS changes the retention; nonsense falls back to 180', async () => {
-      const a = await makeActor('alice');
+      const a = await makeActor('alice', { plan: 'pro', billingStatus: 'active' }) // 6 generations: more than the Free monthly AI cap;
       await consent(a, true);
       process.env.AI_GENERATION_RETENTION_DAYS = '30';
       const r1 = await generate(a);

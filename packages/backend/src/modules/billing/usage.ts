@@ -176,6 +176,66 @@ export async function forgetOwnerUsage(ownerId: string): Promise<void> {
   drop();
 }
 
+// ---------------------------------------------------------------------------
+// AI generations of the month. Unlike mock requests these are few and expensive, so they never go through the
+// in-memory batch: every reservation is one atomic, durable findOneAndUpdate on the same monthly document.
+// ---------------------------------------------------------------------------
+
+const DUPLICATE_KEY = 11000;
+/** Attempts of the reservation. An E11000 means "at the limit" (the answer is read back) or "the document was just
+ *  created by a concurrent call" (the next attempt matches it), so two or three are enough; 5 leaves headroom. */
+const RESERVE_ATTEMPTS = 5;
+
+export type AiSlot = { ok: true; period: string; used: number } | { ok: false; used: number };
+
+/**
+ * Takes one AI generation of the month for `ownerId` if fewer than `limit` have been taken, in a single operation:
+ * `$inc` guarded by `aiGenerations < limit` (a missing field, as in documents that only counted requests, counts as 0).
+ * When the document does not exist yet the upsert creates it; when it exists but is at the limit the same upsert
+ * collides with the unique (ownerId, period) index (E11000), which is how the rejection is detected atomically.
+ * Rejections never change the counter. `limit` must be finite.
+ */
+export async function reserveAiGenerationSlot(ownerId: string, limit: number, now = new Date()): Promise<AiSlot> {
+  const period = periodOf(now);
+  if (!(limit > 0)) return { ok: false, used: 0 };
+  // The unique index must exist, or the "at the limit" collision would insert a second document instead
+  await UsageModel.init();
+  const filter = { ownerId, period, aiGenerations: { $not: { $gte: limit } } };
+  for (let attempt = 1; ; attempt++) {
+    try {
+      const doc = await UsageModel.findOneAndUpdate(
+        filter,
+        { $inc: { aiGenerations: 1 } },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      )
+        .select('aiGenerations')
+        .lean();
+      return { ok: true, period, used: doc?.aiGenerations ?? 1 };
+    } catch (err) {
+      if ((err as { code?: number }).code !== DUPLICATE_KEY) throw err;
+      const doc = await UsageModel.findOne({ ownerId, period }).select('aiGenerations').lean();
+      const used = doc?.aiGenerations ?? 0;
+      if (used >= limit || attempt >= RESERVE_ATTEMPTS) return { ok: false, used };
+    }
+  }
+}
+
+/** Gives back one reserved generation of `period` (the generation failed). Never goes below zero, never creates a document. */
+export async function releaseAiGenerationSlot(ownerId: string, period: string): Promise<void> {
+  await UsageModel.updateOne({ ownerId, period, aiGenerations: { $gt: 0 } }, { $inc: { aiGenerations: -1 } });
+}
+
+/** Mock requests and AI generations of the month for `ownerId`, as persisted (plus the requests this process has not written yet). */
+export async function getMonthlyUsageDetail(
+  ownerId: string,
+  now = new Date()
+): Promise<{ requests: number; aiGenerations: number }> {
+  const period = periodOf(now);
+  const doc = await UsageModel.findOne({ ownerId, period }).select('requests aiGenerations').lean();
+  const local = entries.get(keyOf(ownerId, period));
+  return { requests: (doc?.requests ?? 0) + (local ? local.pending : 0), aiGenerations: doc?.aiGenerations ?? 0 };
+}
+
 /** Test helper: forget local state and stop the flush timer. */
 export function resetUsage(): void {
   entries.clear();

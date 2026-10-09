@@ -7,6 +7,7 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/authenticateToken.js';
 import { asyncHandler } from '../middlewares/errorHandler.js';
 import { consumeAiQuota } from '../modules/ai/aiRateLimit.js';
+import { aiQuotaClock, reserveAiGeneration } from '../modules/billing/aiQuota.js';
 import { parseAiProviders, getSpecGenerationSampling } from '../config/ai.js';
 import { describeError } from '../utils/safeErrorLog.js';
 import { getLlm, type LlmCompletion, type LlmRequest } from '../modules/ai/providers/index.js';
@@ -36,6 +37,32 @@ async function enforceAiRateLimit(userId: string, res: Response): Promise<void> 
     ErrorCode.RATE_LIMIT_ERROR,
     429
   );
+}
+
+/**
+ * Monthly AI generation quota of the user's plan (modules/billing/aiQuota.ts). Reserves ONE generation before any model
+ * is called. Spent: answers 429 AI_QUOTA_EXCEEDED itself (used, limit, resetsAt in the body, Retry-After = seconds to
+ * the next UTC month) and returns null, so the caller stops without touching the LLM. Otherwise returns the `release`
+ * function, which the caller invokes on EVERY failure path and never after a successful answer.
+ */
+async function reserveOrReject(userId: string, res: Response): Promise<(() => Promise<void>) | null> {
+  const now = aiQuotaClock.now();
+  const reservation = await reserveAiGeneration(userId, now);
+  if (reservation.ok) return reservation.release;
+  const retryAfter = Math.max(1, Math.ceil((reservation.resetsAt.getTime() - now.getTime()) / 1000));
+  res.set('Retry-After', String(retryAfter));
+  res.status(429).json({
+    success: false,
+    error: {
+      code: ErrorCode.AI_QUOTA_EXCEEDED,
+      message: `Monthly AI generation quota reached (${reservation.used} of ${reservation.limit}). It resets on ${reservation.resetsAt.toISOString()}.`,
+      used: reservation.used,
+      limit: reservation.limit,
+      resetsAt: reservation.resetsAt.toISOString(),
+    },
+    timestamp: now.toISOString(),
+  });
+  return null;
 }
 
 /**
@@ -145,44 +172,55 @@ export const generateMockAPISpecHandler = asyncHandler(
       );
     }
 
-    // Build prompt from project context and user requirement
-    const messages = await buildPrompt(projectId, requirement);
+    // One generation of the monthly plan quota, reserved BEFORE any prompt or model work; 429 when it is spent
+    const release = await reserveOrReject(userId, res);
+    if (!release) return;
 
-    // Call the LLM provider chain with structured messages
-    // Sampling is the server's (the validate middleware strips any client temperature / maxTokens)
-    const completion = await complete('generate-mock-api-spec', {
-      messages,
-      ...getSpecGenerationSampling(),
-      jsonSchema: MOCK_SPEC_JSON_SCHEMA,
-      validate: specRouteValidator,
-    });
-    const responseContent = completion.text;
+    try {
+      // Build prompt from project context and user requirement
+      const messages = await buildPrompt(projectId, requirement);
 
-    // Validate and extract the mock API specification
-    const mockAPISpec = extractMockAPIFromResponse(responseContent);
+      // Call the LLM provider chain with structured messages
+      // Sampling is the server's (the validate middleware strips any client temperature / maxTokens)
+      const completion = await complete('generate-mock-api-spec', {
+        messages,
+        ...getSpecGenerationSampling(),
+        jsonSchema: MOCK_SPEC_JSON_SCHEMA,
+        validate: specRouteValidator,
+      });
+      const responseContent = completion.text;
 
-    // The id always goes back to the client (so it can rate the result); the content is stored only with consent
-    const generationId = newGenerationId();
-    await persistGeneration({
-      generationId,
-      userId,
-      messages,
-      output: responseContent,
-      parsedOk: true,
-      provider: completion.provider,
-      model: completion.model,
-    });
+      // Validate and extract the mock API specification
+      const mockAPISpec = extractMockAPIFromResponse(responseContent);
 
-    // Return the generated specification
-    res.status(200).json({
-      success: true,
-      data: {
-        specification: mockAPISpec,
-        usage: usageOf(completion),
+      // The id always goes back to the client (so it can rate the result); the content is stored only with consent
+      const generationId = newGenerationId();
+      await persistGeneration({
         generationId,
-      },
-      timestamp: new Date().toISOString(),
-    });
+        userId,
+        messages,
+        output: responseContent,
+        parsedOk: true,
+        provider: completion.provider,
+        model: completion.model,
+      });
+
+      // Return the generated specification. The reservation is kept: if the client has already disconnected, the model
+      // did answer and the generation was paid for, so nothing is given back.
+      res.status(200).json({
+        success: true,
+        data: {
+          specification: mockAPISpec,
+          usage: usageOf(completion),
+          generationId,
+        },
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      // Model error, invalid output after the repair retry, deadline (504), provider 502, anything: the user gets no result, so no charge
+      await release();
+      throw error;
+    }
   }
 );
 
@@ -232,6 +270,10 @@ export const generateAndSaveHandler = asyncHandler(
         400
       );
     }
+
+    // One generation of the monthly plan quota, reserved BEFORE any prompt or model work; 429 when it is spent
+    const release = await reserveOrReject(userId, res);
+    if (!release) return;
 
     try {
       // 1. Build prompt from project context
@@ -294,6 +336,8 @@ export const generateAndSaveHandler = asyncHandler(
       });
     } catch (error) {
       console.error(`[AI] Error during generation (${describeError(error)})`);
+      // Same rule as the spec route: any failure gives the reserved generation back (success keeps it)
+      await release();
       throw error;
     }
   }
