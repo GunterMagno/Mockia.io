@@ -81,6 +81,14 @@ export function assertProdConfig(env: NodeJS.ProcessEnv = process.env): void {
     }
   }
 
+  // The public demo signs its proof-of-work challenges and pseudonymizes visitor IPs with DEMO_HMAC_SECRET
+  if (/^(true|1|yes|on)$/i.test(env.DEMO_ENABLED?.trim() ?? '')) {
+    const secret = env.DEMO_HMAC_SECRET ?? '';
+    if (secret.length < MIN_SECRET_LENGTH || KNOWN_DEFAULT_SECRETS.has(secret) || PLACEHOLDER_SECRET.test(secret)) {
+      problems.push(`DEMO_HMAC_SECRET must be set to a random secret of at least ${MIN_SECRET_LENGTH} characters when DEMO_ENABLED is true`);
+    }
+  }
+
   // Missing JWT_ACCESS_SECRET / JWT_REFRESH_SECRET is reported by assertJwtConfig(); here we reject weak values that are set.
   for (const name of JWT_VARS) {
     const value = env[name];
