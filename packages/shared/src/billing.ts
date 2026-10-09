@@ -110,7 +110,9 @@ export interface BillingOverview {
   usage: {
     activeProjects: number;
     monthlyRequests: number;
-    /** Primer instante (ISO, UTC) del proximo mes: cuando se reinicia el contador de peticiones. */
+    /** Generaciones de IA consumidas este mes natural (UTC); el tope es limits.maxMonthlyAiGenerations. */
+    aiGenerations: number;
+    /** Primer instante (ISO, UTC) del proximo mes: cuando se reinician los contadores de peticiones y de IA. */
     periodResetAt: string;
   };
   /** Hay cliente de Stripe y el portal esta disponible (gestionar pago, cambiar de plan, cancelar). */

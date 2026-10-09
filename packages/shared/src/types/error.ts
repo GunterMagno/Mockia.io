@@ -16,4 +16,6 @@ export enum ErrorCode {
   EMAIL_NOT_VERIFIED = 'EMAIL_NOT_VERIFIED',
   /** 409: the project cannot require an API key (visibility 'key') because none has been issued yet. */
   API_KEY_REQUIRED = 'API_KEY_REQUIRED',
+  /** 429: the plan's monthly AI generation quota is spent (the body carries used, limit and resetsAt). */
+  AI_QUOTA_EXCEEDED = 'AI_QUOTA_EXCEEDED',
 }
