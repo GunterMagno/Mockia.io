@@ -175,9 +175,10 @@ export async function cloneRepository(
   repo: string,
   branch?: string
 ): Promise<string> {
+  // Created before the try so a failed clone can always remove what it left behind (Privacy: the copy is deleted)
+  const tempDir = path.join(process.cwd(), '.tmp-repos', `${owner}-${repo}-${Date.now()}`);
   try {
     // Create temporary directory for cloning
-    const tempDir = path.join(process.cwd(), '.tmp-repos', `${owner}-${repo}-${Date.now()}`);
     await fs.mkdir(tempDir, { recursive: true });
 
     // Build repository URL
@@ -193,6 +194,9 @@ export async function cloneRepository(
 
     return tempDir;
   } catch (error) {
+    // A partial clone must not stay on disk
+    await fs.rm(tempDir, { recursive: true, force: true }).catch(() => undefined);
+
     // If it's already an AppError, re-throw it
     if (error instanceof AppError) {
       throw error;

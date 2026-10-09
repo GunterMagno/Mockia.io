@@ -225,7 +225,7 @@ const en: LegalContent = {
           heading: "Artificial intelligence",
           blocks: [
             {
-              p: "To generate endpoints we send an AI model provider (currently OpenRouter, which routes the request to a third-party model) the structured summary of the repository, the main documentation it contains and the instructions you write. We do not send your email, your password or your billing details. The provider applies its own data-use terms; see its privacy policy.",
+              p: "To generate endpoints we send an AI model provider (currently OpenRouter, which routes the request to a third-party model) the structured summary of the repository, the main documentation it contains, the instructions you write, the title and description of the project, and the repository URL and its owner (the GitHub account or organisation name). We do not send your email, your password or your billing details. The provider applies its own data-use terms; see its privacy policy.",
             },
             {
               p: "In the future we may also offer a model hosted on our own infrastructure, in which case that data would not leave it; we will update this policy when that happens.",
@@ -278,7 +278,7 @@ const en: LegalContent = {
                   [
                     "**AI provider** (currently OpenRouter and the models it routes to)",
                     "Generating endpoints and sample data.",
-                    "Structured summary of the public repository, main documentation and the instructions you write. Never your email, password or payment details.",
+                    "Structured summary of the public repository, main documentation, the instructions you write, the title and description of the project, and the repository URL and its owner. Never your email, password or payment details.",
                   ],
                   [
                     "**Transactional email provider** (the SMTP service we contract)",

@@ -214,7 +214,7 @@ const Index: React.FC = () => {
             </div>
             <ul className={styles.securityChecklist}>
               <li>{t('landing.bento.unlimitedProjects')}</li>
-              <li>{t('landing.bento.realtimeSync')}</li>
+              <li>{t('landing.bento.autoSync')}</li>
               <li>{t('landing.bento.rbac')}</li>
             </ul>
           </article>

@@ -139,7 +139,8 @@ const Billing: React.FC = () => {
   const planName = (plan: Plan) => t(`pricing.plans.${plan}.name`)
   // Tras cancelar, el usuario esta en Free y Free esta activo: "Cancelado" junto a Free confundia
   const shownStatus = overview?.billingStatus === 'canceled' ? 'active' : overview?.billingStatus ?? 'active'
-  const date = (iso: string) => formatDate(iso, { dateStyle: 'long' })
+  // UTC: the counter restarts at 00:00 UTC on the 1st and Stripe periods end at UTC instants (same as the emails)
+  const date = (iso: string) => formatDate(iso, { dateStyle: 'long', timeZone: 'UTC' })
   const count = (n: number) => formatNumber(n)
 
   return (

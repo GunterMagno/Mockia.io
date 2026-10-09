@@ -85,7 +85,11 @@ async function deliver(label: string, tasks: Array<Promise<unknown>>): Promise<v
   const results = await Promise.allSettled(tasks);
   for (const r of results) {
     if (r.status === 'rejected') {
-      console.error(`[Billing] ${label} notice failed:`, r.reason instanceof Error ? r.reason.message : 'unknown error');
+      // Only the class and code: an SMTP message usually quotes the recipient's address (personal data)
+      const reason = r.reason as { name?: unknown; code?: unknown } | undefined;
+      const kind = r.reason instanceof Error ? r.reason.name : 'unknown error';
+      const code = typeof reason?.code === 'string' || typeof reason?.code === 'number' ? ` (${reason.code})` : '';
+      console.error(`[Billing] ${label} notice failed: ${kind}${code}`);
     }
   }
 }

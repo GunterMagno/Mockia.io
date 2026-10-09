@@ -226,7 +226,7 @@ const es: LegalContent = {
           heading: 'Inteligencia artificial',
           blocks: [
             {
-              p: 'Para generar los endpoints, enviamos a un proveedor de modelos de IA (actualmente OpenRouter, que encamina la petición a un modelo de terceros) el resumen estructurado del repositorio, la documentación principal que contiene y las instrucciones que escribes. No enviamos tu email, tu contraseña ni tus datos de facturación. El proveedor aplica sus propias condiciones de uso de los datos; consulta su política de privacidad.',
+              p: 'Para generar los endpoints, enviamos a un proveedor de modelos de IA (actualmente OpenRouter, que encamina la petición a un modelo de terceros) el resumen estructurado del repositorio, la documentación principal que contiene, las instrucciones que escribes, el título y la descripción del proyecto, y la URL del repositorio y su propietario (el nombre de la cuenta u organización de GitHub). No enviamos tu email, tu contraseña ni tus datos de facturación. El proveedor aplica sus propias condiciones de uso de los datos; consulta su política de privacidad.',
             },
             {
               p: 'En el futuro podremos ofrecer también un modelo alojado en nuestra propia infraestructura, en cuyo caso esos datos no saldrían de ella; actualizaremos esta política cuando ocurra.',
@@ -279,7 +279,7 @@ const es: LegalContent = {
                   [
                     '**Proveedor de IA** (actualmente OpenRouter y los modelos a los que encamina)',
                     'Generar los endpoints y datos de ejemplo.',
-                    'Resumen estructurado del repositorio público, documentación principal e instrucciones que escribes. Nunca tu email, contraseña ni datos de pago.',
+                    'Resumen estructurado del repositorio público, documentación principal, instrucciones que escribes, título y descripción del proyecto, y URL del repositorio y su propietario. Nunca tu email, contraseña ni datos de pago.',
                   ],
                   [
                     '**Proveedor de correo transaccional** (servicio SMTP contratado)',

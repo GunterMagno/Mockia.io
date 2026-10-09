@@ -125,3 +125,31 @@ describe('Legal: la web no carga recursos de terceros que los textos no mencione
     }
   });
 });
+
+describe('Legal: lo que promete la web coincide con los Terminos y la Privacidad', () => {
+  it('Privacidad dice que al proveedor de IA tambien van el titulo y la descripcion del proyecto y la URL y el propietario del repositorio', () => {
+    const expected: Record<Lang, RegExp[]> = {
+      en: [/title and description of the project/i, /repository URL and its owner/i],
+      es: [/título y la descripción del proyecto/i, /URL del repositorio y su propietario/i],
+      zh: [/项目的标题和描述/, /仓库的 URL 及其所有者/],
+    };
+    for (const lang of ['es', 'en', 'zh'] as Lang[]) {
+      visitIn('/privacy', lang);
+      for (const re of expected[lang]) cy.get('article').invoke('text').should('match', re);
+    }
+  });
+
+  // Los Terminos no comprometen soporte para Free (ruling R15) y la sincronizacion es por sondeo, no en tiempo real
+  it('la tarjeta Free no promete soporte por correo y la portada no habla de tiempo real', () => {
+    const copy: Record<Lang, { support: RegExp; realtime: RegExp; sync: string }> = {
+      en: { support: /Email support/, realtime: /Real-time sync/i, sync: 'Changes sync automatically' },
+      es: { support: /Soporte por correo/, realtime: /tiempo real/i, sync: 'Los cambios se sincronizan solos' },
+      zh: { support: /邮件支持/, realtime: /实时同步/, sync: '更改会自动同步' },
+    };
+    for (const lang of ['es', 'en', 'zh'] as Lang[]) {
+      visitIn('/', lang);
+      cy.get('body').invoke('text').should('not.match', copy[lang].support).and('not.match', copy[lang].realtime);
+      cy.contains(copy[lang].sync).should('exist');
+    }
+  });
+});

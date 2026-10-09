@@ -4,7 +4,7 @@ import { readLegalEntity, missingLegalFields, type LegalEntity } from '@mockia/s
 export const LEGAL_ENTITY: LegalEntity = readLegalEntity(import.meta.env as Record<string, string | undefined>)
 
 /** Fecha de la ultima revision de los cuatro documentos (ISO, UTC). Cambiarla al editar cualquier texto. */
-export const LEGAL_LAST_UPDATED = '2026-10-08'
+export const LEGAL_LAST_UPDATED = '2026-10-09'
 
 /**
  * Los textos son un BORRADOR hasta que los revise un abogado: se avisa en cualquier build que no sea de produccion

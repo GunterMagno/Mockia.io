@@ -338,6 +338,21 @@ describe('Billing: planes, limites y facturacion', () => {
       cy.contains('[role="alert"] button', 'Update payment method').should('be.visible');
     });
 
+    // The counter restarts at 00:00 UTC of the 1st and Stripe periods end at UTC instants: the dates are shown in UTC,
+    // not in the browser's zone (in UTC+2, 23:30 UTC on the 31st would read as the 1st of the next month)
+    it('las fechas de renovacion y de reinicio del contador se muestran en UTC', () => {
+      cy.intercept('GET', '**/api/billing/me', overview({
+        billingStatus: 'active',
+        pastDueUntil: null,
+        currentPeriodEnd: '2026-11-30T23:30:00.000Z',
+        usage: { activeProjects: 2, monthlyRequests: 120, periodResetAt: '2026-10-31T23:30:00.000Z' },
+      })).as('overview');
+      cy.visit('/billing');
+      cy.wait('@overview');
+      cy.contains('The request counter resets on October 31, 2026.').should('be.visible');
+      cy.contains('Renews on November 30, 2026').should('be.visible');
+    });
+
     it('con el cobro al dia no hay aviso', () => {
       cy.intercept('GET', '**/api/billing/me', overview({ billingStatus: 'active', pastDueUntil: null })).as('overview');
       cy.visit('/billing');
