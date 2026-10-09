@@ -9,7 +9,8 @@ import { ProjectModel } from '../models/Project.js';
 import { UsageModel } from '../models/Usage.js';
 import { AiGenerationModel } from '../models/AiGeneration.js';
 import { createDemoMock, DemoMockError, type DemoEndpoint } from '../modules/demo/mockStore.js';
-import { demoClock } from '../modules/demo/mockRouter.js';
+import { demoClock, resetDemoFlood } from '../modules/demo/mockRouter.js';
+import { createFloodLimiter } from '../modules/demo/floodLimit.js';
 import { pseudonymizeIp } from '../modules/demo/ipHash.js';
 import { skipsGlobalLimiter } from '../middlewares/rateLimit.js';
 
@@ -59,6 +60,7 @@ beforeEach(async () => {
   process.env.DEMO_ENABLED = 'true';
   IP_HASH = pseudonymizeIp(TEST_IP, T0);
   demoClock.now = () => T0;
+  resetDemoFlood();
   await Promise.all([DemoMockModel.deleteMany({}), DemoBudgetModel.deleteMany({})]);
 });
 afterEach(() => {
@@ -120,7 +122,11 @@ describe('serving a demo mock', () => {
     await request(app).options(url).expect(204);
     expect((await DemoMockModel.findOne({ demoId }).lean())!.requestCount).toBe(0);
 
+    // The flood limiter (120 requests/minute/IP) is independent of the 150-request cap: spread the 150 over windows
+    let clock = T0.getTime();
+    demoClock.now = () => new Date(clock);
     for (let i = 0; i < 150; i++) {
+      if (i % 100 === 0) clock += 61_000;
       const res = await request(app).get(url);
       if (res.status !== 200) throw new Error(`request ${i + 1} answered ${res.status}`);
     }
@@ -373,6 +379,96 @@ describe('isolation from accounts, plans and generation quota', () => {
     await request(app).get(`/api/demo-mock/${demoId}/users`).expect(404);
 
     expect(await Promise.all(USERS_CHARGED.map(countCollection))).toEqual(before);
+  });
+});
+
+describe('flood protection (traffic that is not served is limited too)', () => {
+  const randomId = () => [...Array(32)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
+
+  it('(I1) a burst of random well-formed ids from one IP ends in 429 with bounded Mongo lookups; another IP is unaffected', async () => {
+    const findOne = jest.spyOn(DemoMockModel, 'findOne');
+    const trustProxy = app.get('trust proxy');
+    try {
+      const statuses: number[] = [];
+      for (let i = 0; i < 300; i++) statuses.push((await request(app).get(`/api/demo-mock/${randomId()}/users`)).status);
+      expect(statuses.slice(0, 120).every((s) => s === 404)).toBe(true);
+      expect(statuses.slice(120).every((s) => s === 429)).toBe(true);
+      // The lookups stopped growing once the limiter kicked in
+      expect(findOne.mock.calls.length).toBeLessThanOrEqual(120);
+
+      // Everything is limited from then on: OPTIONS, malformed ids, even a live mock
+      const { demoId } = await makeDemo();
+      const calls = findOne.mock.calls.length;
+      const blocked = [
+        await request(app).options(`/api/demo-mock/${randomId()}/users`),
+        await request(app).get('/api/demo-mock/not-an-id/users'),
+        await request(app).get(`/api/demo-mock/${demoId}/users`),
+      ];
+      for (const res of blocked) {
+        expect(res.status).toBe(429);
+        expect(res.body.error.code).toBe('DEMO_RATE_LIMIT');
+        expect(Number(res.headers['retry-after'])).toBeGreaterThan(0);
+        expect(Number(res.headers['retry-after'])).toBeLessThanOrEqual(60);
+        expect(res.headers['x-mockia-demo']).toBe('true');
+        expect(res.headers['access-control-allow-origin']).toBe('*');
+      }
+      expect(findOne.mock.calls.length).toBe(calls);
+      // ...and they did not consume the demo's own allowance
+      expect((await DemoMockModel.findOne({ demoId }).lean())!.requestCount).toBe(0);
+
+      // Another visitor (distinct address behind a trusted proxy) is not affected
+      app.set('trust proxy', 1);
+      const other = await request(app).get(`/api/demo-mock/${demoId}/users`).set('X-Forwarded-For', '203.0.113.9');
+      expect(other.status).toBe(200);
+
+      // The window slides: a minute later the first visitor is served again
+      app.set('trust proxy', trustProxy);
+      demoClock.now = () => new Date(T0.getTime() + 61_000);
+      await request(app).get(`/api/demo-mock/${demoId}/users`).expect(200);
+    } finally {
+      app.set('trust proxy', trustProxy);
+      findOne.mockRestore();
+    }
+  }, 60_000);
+
+  it('(I1) the limiter keeps a bounded number of keys and forgets expired ones', () => {
+    let t = 0;
+    const limiter = createFloodLimiter({ windowMs: 1000, max: 3, maxKeys: 100, now: () => t });
+    for (let i = 0; i < 1000; i++) limiter.hit(`ip-${i}`);
+    expect(limiter.size()).toBeLessThanOrEqual(100);
+
+    expect([1, 2, 3].map(() => limiter.hit('same').ok)).toEqual([true, true, true]);
+    const refused = limiter.hit('same');
+    expect(refused.ok).toBe(false);
+    expect(refused.retryAfterSeconds).toBe(1);
+    t = 1001;
+    expect(limiter.hit('same').ok).toBe(true);
+    t = 5000;
+    for (let i = 0; i < 100; i++) limiter.hit(`late-${i}`);
+    expect(limiter.size()).toBeLessThanOrEqual(100);
+  });
+});
+
+describe('percent-encoded paths', () => {
+  it('(I2) createDemoMock refuses "%" in a path (Express decodes it, so such a route could never be served)', async () => {
+    await expect(makeDemo([{ method: 'GET', path: '/a%20b', statusCode: 200, body: {} }])).rejects.toBeInstanceOf(DemoMockError);
+    await expect(makeDemo([{ method: 'GET', path: '/files/100%', statusCode: 200, body: {} }])).rejects.toBeInstanceOf(DemoMockError);
+  });
+
+  it('(I2) a malformed percent escape in a public request answers the demo 404, never a 500', async () => {
+    const { demoId } = await makeDemo();
+    const malformed = await request(app).get(`/api/demo-mock/${demoId}/%E0%A4%A`);
+    const inId = await request(app).get('/api/demo-mock/%E0%A4%A/users');
+    for (const res of [malformed, inId]) {
+      expect(res.status).toBe(404);
+      expect(res.body).toMatchObject({ success: false, error: { code: 'NOT_FOUND' } });
+      expect(res.headers['x-mockia-demo']).toBe('true');
+      expect(res.headers['access-control-allow-origin']).toBe('*');
+    }
+    // A well-formed escape just does not match any stored route
+    expect((await request(app).get(`/api/demo-mock/${demoId}/users%20x`)).status).toBe(404);
+    // and nothing counted
+    expect((await DemoMockModel.findOne({ demoId }).lean())!.requestCount).toBe(0);
   });
 });
 

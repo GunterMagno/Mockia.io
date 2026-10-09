@@ -2,6 +2,7 @@ import { Router, type NextFunction, type Request, type Response } from 'express'
 import { getDemoConfig } from './config.js';
 import { pseudonymizeIp } from './ipHash.js';
 import { tryConsumeDemoBudget } from './budget.js';
+import { createFloodLimiter } from './floodLimit.js';
 import { DEMO_METHODS, findLiveDemoMock, matchDemoEndpoint, releaseDemoRequest, reserveDemoRequest } from './mockStore.js';
 
 /**
@@ -16,11 +17,22 @@ import { DEMO_METHODS, findLiveDemoMock, matchDemoEndpoint, releaseDemoRequest, 
  *  - `mockMaxRequests` served requests per demo mock (atomic counter on the mock);
  *  - `ipMockRequestsPerDay` per visitor, shared by every demo mock of that visitor (DemoBudget, keyed on the daily
  *    pseudonym of req.ip: the address itself is never stored or logged here).
+ * Before any of that, a light in-memory flood limiter (FLOOD_MAX requests per FLOOD_WINDOW_MS per visitor) counts EVERY
+ * request that reaches the router - OPTIONS, unknown or malformed ids, exhausted mocks - and answers 429 before any
+ * Mongo query, so unserved traffic is not free. It is separate from the two limits above and does not consume them.
  * Only requests that are actually served count: unknown demo/route/method, refused requests and OPTIONS do not.
  */
 
 /** Clock of the router (UTC day and expiry). Tests replace `now` to cross an expiry or a day without waiting. */
 export const demoClock = { now: (): Date => new Date() };
+
+/** Flood guard (all requests, served or not): per visitor pseudonym, per process. */
+export const FLOOD_WINDOW_MS = 60 * 1000;
+export const FLOOD_MAX = 120;
+const FLOOD_MAX_KEYS = 10_000;
+const flood = createFloodLimiter({ windowMs: FLOOD_WINDOW_MS, max: FLOOD_MAX, maxKeys: FLOOD_MAX_KEYS, now: () => demoClock.now().getTime() });
+/** Forgets every counter (tests). */
+export const resetDemoFlood = (): void => flood.clear();
 
 const ALLOWED_METHODS = [...DEMO_METHODS, 'OPTIONS'].join(', ');
 const EXPOSED_HEADERS = 'X-Mockia-Demo, Retry-After, X-Total-Count, X-Page, X-Per-Page, X-Next-Cursor, X-Request-Id';
@@ -116,7 +128,28 @@ async function handleDemoMock(req: Request, res: Response): Promise<void> {
 
 export const demoMockRouter = Router();
 
+// First thing, for every path under the mount: no Mongo, no body, just a counter.
+demoMockRouter.use((req: Request, res: Response, next: NextFunction) => {
+  const verdict = flood.hit(pseudonymizeIp(req.ip || 'unknown', demoClock.now()));
+  if (verdict.ok) return next();
+  applyDemoHeaders(res);
+  res.setHeader('Retry-After', String(verdict.retryAfterSeconds));
+  res.status(429).json(errorBody('DEMO_RATE_LIMIT', 'Too many requests. Try again in a moment.'));
+});
+
 // Express 4 does not catch rejections of async handlers: forward them or a DB failure would kill the process.
 demoMockRouter.all(['/:demoId', '/:demoId/*'], (req: Request, res: Response, next: NextFunction) => {
   handleDemoMock(req, res).catch(next);
+});
+
+// Express decodes the path parameters before the handler runs, and a malformed escape (/%E0%A4%A) makes it fail with a
+// 400 that the app's error handler would turn into a 500 on a public route. Anything that is not a valid demo URL is
+// simply a demo 404; other errors keep their normal path.
+demoMockRouter.use((err: Error & { status?: number; statusCode?: number }, req: Request, res: Response, next: NextFunction) => {
+  if ((err.status ?? err.statusCode) === 400 && /decode param/i.test(err.message)) {
+    applyDemoHeaders(res);
+    notFound(res, 'Route not found');
+    return;
+  }
+  next(err);
 });
