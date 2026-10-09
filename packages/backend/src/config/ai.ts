@@ -138,8 +138,17 @@ export function getDemoAiProviders(env: NodeJS.ProcessEnv = process.env): string
   return raw === '' ? undefined : raw;
 }
 
-/** Output budget of one demo generation: at most 5 small endpoints, so a fraction of the 5000 of a project generation. */
-export const DEMO_MAX_TOKENS = 1500;
+/** Output budget of one demo generation: at most 5 small endpoints (measure the truncation rate with `npm run eval` before enabling the demo). */
+export const DEMO_MAX_TOKENS = 2000;
+
+/**
+ * Overall deadline of one demo generation across its provider chain (AI_DEMO_TIMEOUT_MS, default 45000): much shorter
+ * than the 240 s of a project generation, because the demo's output is small and an anonymous request must not occupy a
+ * concurrency slot, or a paid provider, for minutes.
+ */
+export function getDemoAiTimeoutMs(env: NodeJS.ProcessEnv = process.env): number {
+  return positiveInt(env.AI_DEMO_TIMEOUT_MS, 45_000);
+}
 
 const DEFAULT_AI_GENERATION_RETENTION_DAYS = 180;
 const MAX_AI_GENERATION_RETENTION_DAYS = 3650;

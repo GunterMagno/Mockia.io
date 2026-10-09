@@ -29,12 +29,13 @@ export interface LlmRequest {
    */
   validate?: (text: string) => string | null;
   /**
-   * Called (possibly several times) as soon as a provider has PRODUCED an answer, usable or not: a completion came back,
-   * or the provider reported one that was cut by max_tokens / empty / rejected by `validate`. It is never called for a
-   * transport failure (refused connection, timeout, HTTP error, a body that is not a chat completion), so a caller that
-   * pays per model call can tell "the model never answered" (safe to refund) from "the model answered" (cost incurred).
+   * Called each time a request is about to LEAVE for a provider (the first try and a repair retry alike; a provider's own
+   * internal retries are part of that one call), after its circuit breaker let it through and before any I/O. It is not
+   * called for a provider skipped by an open circuit. A caller that pays per model call uses it to tell "nothing was
+   * ever sent" (safe to refund) from "a request was started" (the provider may bill what it generated, whatever the
+   * outcome: answer, invalid output, HTTP error, timeout or deadline).
    */
-  onModelAnswer?: () => void;
+  onProviderCall?: () => void;
 }
 
 export interface LlmCompletion {

@@ -146,14 +146,14 @@ function repairMessage(reason: string) {
  * provider (same deadline signal); a second invalid text throws LlmResponseError('invalid_output').
  */
 async function completeValidated(provider: LlmProvider, req: LlmRequest): Promise<LlmCompletion> {
+  req.onProviderCall?.();
   const first = await provider.complete(req);
-  req.onModelAnswer?.();
   if (!req.validate) return first;
   const reason = req.validate(first.text);
   if (reason === null) return first;
   console.warn(`[AI] Provider "${provider.name}" returned an invalid answer (invalid_output); asking it once to repair it`);
+  req.onProviderCall?.();
   const second = await provider.complete({ ...req, messages: [...req.messages, repairMessage(reason)] });
-  req.onModelAnswer?.();
   if (req.validate(second.text) !== null) throw new LlmResponseError('invalid_output');
   return second;
 }
@@ -187,8 +187,6 @@ export function createFallbackLlm(entries: FallbackEntry[], options: FallbackOpt
           breaker?.onSuccess();
           return result;
         } catch (err) {
-          // The provider did answer, just not with something usable (cut by max_tokens, empty): the cost was incurred
-          if (err instanceof LlmResponseError && err.kind !== 'invalid_envelope') req.onModelAnswer?.();
           if (req.signal?.aborted) {
             breaker?.onAbandoned();
             throw err;
@@ -234,13 +232,20 @@ const MAX_CACHED_CHAINS = 8;
 const cached = new Map<string, LlmProvider>();
 
 /**
+ * Who a chain serves. The scope is part of the cache key, so the public demo ALWAYS has its own chain, with its own
+ * circuit breakers, even when it uses the same providers as the registered users: whatever anonymous visitors do
+ * (garbage outputs, timeouts) can never open the breaker the users' requests go through.
+ */
+export type LlmScope = 'users' | 'demo';
+
+/**
  * The configured provider chain. Cached (the circuit breaker's state must outlive a request) and rebuilt only when the
  * AI_* settings change. Throws if AI_PROVIDERS lists no valid provider.
  */
-export function getLlm(env: NodeJS.ProcessEnv = process.env): LlmProvider {
+export function getLlm(env: NodeJS.ProcessEnv = process.env, scope: LlmScope = 'users'): LlmProvider {
   const local = getLocalAiConfig(env);
   const totalTimeoutMs = getAiTotalTimeoutMs(env);
-  const key = JSON.stringify([env.AI_PROVIDERS ?? '', local, totalTimeoutMs]);
+  const key = JSON.stringify([scope, env.AI_PROVIDERS ?? '', local, totalTimeoutMs]);
   const hit = cached.get(key);
   if (hit) return hit;
 
