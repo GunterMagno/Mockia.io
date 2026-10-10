@@ -1,4 +1,4 @@
-import { solvePow, type PowResult } from './pow'
+import { POW_MAX_MS, hasSubtleCrypto, solvePow, type PowResult } from './pow'
 import type { PowWorkerRequest } from './powWorker'
 
 export interface PowRun {
@@ -7,12 +7,19 @@ export interface PowRun {
   cancel: () => void
 }
 
+/** Margen sobre el tope del propio worker: si ni asi contesta, el hilo principal lo corta. */
+const GUARD_EXTRA_MS = 5_000
+
 /**
  * Resuelve la prueba de trabajo en un Web Worker. La URL del worker tiene que escribirse asi, literal, para que Vite
- * lo empaquete como un fichero aparte. Solo si el navegador no puede crear el worker se calcula en el hilo principal
- * (mas lento para la pagina, pero la demo sigue funcionando y el plazo de 60 s y la cancelacion se mantienen).
+ * lo empaquete como un fichero aparte. La promesa SIEMPRE se resuelve (nunca deja la barra girando):
+ *  - sin `crypto.subtle` (contexto no seguro) se contesta `unsupported` sin crear nada;
+ *  - un temporizador de guarda en el hilo principal aplica el tope de 60 s aunque el worker no conteste;
+ *  - si el navegador no puede crear el worker (o este falla al arrancar) se calcula en el hilo principal.
  */
 export function runPow(challenge: string, bits: number): PowRun {
+  if (!hasSubtleCrypto()) return { promise: Promise.resolve({ error: 'unsupported' }), cancel: () => undefined }
+
   const request: PowWorkerRequest = { challenge, bits }
   let worker: Worker | null = null
   try {
@@ -24,26 +31,32 @@ export function runPow(challenge: string, bits: number): PowRun {
   if (!worker) {
     const controller = new AbortController()
     return {
-      promise: solvePow(challenge, bits, { signal: controller.signal }),
+      promise: solvePow(challenge, bits, { signal: controller.signal }).catch((): PowResult => ({ error: 'failed' })),
       cancel: () => controller.abort(),
     }
   }
 
   const running = worker
   let fallback: AbortController | null = null
+  let guard: ReturnType<typeof setTimeout> | undefined
   let settle: (result: PowResult) => void = () => undefined
   const promise = new Promise<PowResult>((resolve) => {
     settle = (result) => {
+      clearTimeout(guard)
       running.terminate()
       resolve(result)
     }
   })
-  running.onmessage = (event: MessageEvent<PowResult>) => settle(event.data)
+  guard = setTimeout(() => settle({ error: 'timeout' }), POW_MAX_MS + GUARD_EXTRA_MS)
+  running.onmessage = (event: MessageEvent<PowResult>) => settle(event.data ?? { error: 'failed' })
+  running.onmessageerror = () => settle({ error: 'failed' })
   // Un worker que no arranca (CSP, fichero no servido...) no debe dejar la barra girando para siempre
   running.onerror = () => {
     running.terminate()
     fallback = new AbortController()
-    void solvePow(challenge, bits, { signal: fallback.signal }).then(settle)
+    solvePow(challenge, bits, { signal: fallback.signal })
+      .catch((): PowResult => ({ error: 'failed' }))
+      .then(settle)
   }
   running.postMessage(request)
   return {

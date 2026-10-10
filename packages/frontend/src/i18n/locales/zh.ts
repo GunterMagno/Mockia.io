@@ -260,6 +260,8 @@ const zh: Messages = {
       sending: '正在用 AI 生成你的 API，最多可能需要一分钟…',
     },
     powTimeout: '完成验证耗时超过一分钟，已停止。没有消耗次数，请重试。',
+    powUnsupported: '你的浏览器无法在此运行验证。它需要安全连接（https）和较新的浏览器。请换一个浏览器，或免费创建账号。',
+    powFailed: '验证未能在你的浏览器中完成。没有发送任何内容，也没有消耗次数。请重试，或换一个浏览器。',
     result: {
       title: '你的模拟 API',
       baseUrl: '基础 URL',

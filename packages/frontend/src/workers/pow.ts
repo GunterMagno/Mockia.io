@@ -12,7 +12,8 @@ export const POW_MAX_MS = 60_000
 /** Cuantos hashes se lanzan a la vez: `crypto.subtle.digest` es asincrono y asi se amortiza su coste por llamada. */
 const BATCH = 256
 
-export type PowResult = { nonce: string } | { error: 'timeout' | 'aborted' }
+/** `unsupported`: no hay `crypto.subtle` (contexto no seguro: http fuera de localhost); `failed`: el calculo fallo por otra causa. */
+export type PowResult = { nonce: string } | { error: 'timeout' | 'aborted' | 'unsupported' | 'failed' }
 
 export interface PowOptions {
   /** Plazo maximo en ms (60 000 por defecto). */
@@ -38,6 +39,24 @@ export function leadingZeroBits(digest: Uint8Array): number {
 
 export async function solvePow(challenge: string, bits: number, options: PowOptions = {}): Promise<PowResult> {
   const { maxMs = POW_MAX_MS, signal, onProgress } = options
+  if (!hasSubtleCrypto()) return { error: 'unsupported' }
+  try {
+    return await search(challenge, bits, maxMs, signal, onProgress)
+  } catch {
+    return { error: 'failed' }
+  }
+}
+
+/** `crypto.subtle` solo existe en contextos seguros (https o localhost). */
+export const hasSubtleCrypto = (): boolean => typeof globalThis.crypto?.subtle?.digest === 'function'
+
+async function search(
+  challenge: string,
+  bits: number,
+  maxMs: number,
+  signal: AbortSignal | undefined,
+  onProgress: ((tries: number) => void) | undefined,
+): Promise<PowResult> {
   const encoder = new TextEncoder()
   const started = performance.now()
   let next = 0

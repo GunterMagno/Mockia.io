@@ -84,6 +84,22 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
       });
     });
 
+    it('sin crypto.subtle da unsupported y si el hash falla da failed (nunca rechaza ni se cuelga)', () => {
+      cy.wrap(null).then(async () => {
+        const digest = cy.stub(crypto.subtle, 'digest').rejects(new Error('boom'));
+        expect(await solvePow('payload.signature', 8)).to.deep.equal({ error: 'failed' });
+        digest.restore();
+        const original = Object.getOwnPropertyDescriptor(Crypto.prototype, 'subtle')!;
+        Object.defineProperty(crypto, 'subtle', { value: undefined, configurable: true });
+        try {
+          expect(await solvePow('payload.signature', 8)).to.deep.equal({ error: 'unsupported' });
+        } finally {
+          delete (crypto as unknown as Record<string, unknown>).subtle;
+          expect(Object.getOwnPropertyDescriptor(Crypto.prototype, 'subtle')).to.deep.equal(original);
+        }
+      });
+    });
+
     it('se detiene con timeout cuando no hay solucion a tiempo y con aborted si se cancela', () => {
       cy.wrap(null).then(async () => {
         expect(await solvePow('payload.signature', 60, { maxMs: 150 })).to.deep.equal({ error: 'timeout' });
@@ -215,6 +231,11 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
             super(...args);
             (win as unknown as { __workers: number }).__workers += 1;
           }
+          terminate() {
+            const w = win as unknown as { __terminated?: number };
+            w.__terminated = (w.__terminated ?? 0) + 1;
+            super.terminate();
+          }
         };
       },
     });
@@ -224,6 +245,7 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
     cy.window().its('__workers').should('eq', 1);
     // Mientras el worker trabaja, el hilo principal sigue vivo: el boton de cancelar atiende el clic enseguida
     cy.contains('button', 'Cancel').should('be.enabled').click();
+    cy.window().its('__terminated').should('eq', 1); // Cancelar termina el worker de verdad
     cy.get('[role="progressbar"]').should('not.exist');
     generateButton().should('be.enabled');
     cy.contains('Cancelled').should('be.visible');
@@ -257,6 +279,97 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
     cy.contains('[role="alert"]', 'not available right now').should('be.visible');
     generateButton().should('be.disabled');
     cy.contains('a', 'Create your free account').should('have.attr', 'href', '/signup');
+  });
+
+  describe('prueba de trabajo que falla: nunca una barra infinita', () => {
+    type Mode = 'silent' | 'fail' | 'throw';
+    // Worker falso: 'silent' no contesta nunca, 'fail' contesta {error:'failed'}, 'throw' no se puede construir
+    const installFakeWorker = (win: Window, mode: Mode) => {
+      const w = win as unknown as { __created: number; __terminated: number };
+      w.__created = 0;
+      w.__terminated = 0;
+      class FakeWorker {
+        onmessage: ((e: { data: unknown }) => void) | null = null;
+        onerror: (() => void) | null = null;
+        constructor() {
+          if (mode === 'throw') throw new Error('blocked');
+          w.__created += 1;
+        }
+        postMessage() {
+          if (mode === 'fail') setTimeout(() => this.onmessage?.({ data: { error: 'failed' } }), 10);
+        }
+        terminate() {
+          w.__terminated += 1;
+        }
+      }
+      win.Worker = FakeWorker as unknown as typeof Worker;
+    };
+    const notice = () => cy.get('[data-testid="demo-notice"]');
+
+    it('(I1a) sin crypto.subtle (contexto no seguro) avisa al momento, sin worker ni barra, y el boton sigue usable', () => {
+      stubStatus();
+      stubChallenge(4);
+      stubGenerate();
+      cy.visit('/demo', {
+        onBeforeLoad(win) {
+          installFakeWorker(win, 'silent');
+          Object.defineProperty(win.crypto, 'subtle', { value: undefined, configurable: true });
+        },
+      });
+      generateButton().click();
+      notice().should('be.visible').and('contain.text', 'secure');
+      cy.get('[role="progressbar"]').should('not.exist');
+      cy.window().its('__created').should('eq', 0);
+      generateButton().should('be.enabled');
+      cy.get('@generate.all').should('have.length', 0);
+    });
+
+    it('(I1b) un worker que falla de forma asincrona da un mensaje y deja reintentar', () => {
+      stubStatus();
+      stubChallenge(4);
+      stubGenerate();
+      cy.visit('/demo', { onBeforeLoad: (win) => installFakeWorker(win, 'fail') });
+      generateButton().click();
+      notice().should('contain.text', 'could not complete');
+      cy.get('[role="progressbar"]').should('not.exist');
+      generateButton().should('be.enabled').click();
+      cy.get('@challenge.all').should('have.length', 2);
+      notice().should('contain.text', 'could not complete');
+      cy.window().its('__terminated').should('eq', 2);
+      cy.get('@generate.all').should('have.length', 0);
+    });
+
+    it('(I1c) un worker que no contesta se corta a los 60 s desde el hilo principal', () => {
+      stubStatus();
+      stubChallenge(4);
+      stubGenerate();
+      cy.clock(Date.now(), ['setTimeout', 'clearTimeout']);
+      cy.visit('/demo', { onBeforeLoad: (win) => installFakeWorker(win, 'silent') });
+      generateButton().click();
+      cy.get('[role="progressbar"]').should('be.visible');
+      cy.window().its('__created').should('eq', 1);
+      cy.tick(40_000);
+      cy.get('[role="progressbar"]').should('be.visible'); // aun dentro del plazo
+      cy.tick(30_000);
+      notice().should('contain.text', 'more than a minute');
+      cy.get('[role="progressbar"]').should('not.exist');
+      cy.window().its('__terminated').should('eq', 1);
+      generateButton().should('be.enabled');
+      cy.get('@generate.all').should('have.length', 0);
+    });
+
+    it('(m) al salir de la pagina a mitad de calculo el worker se termina y no se envia nada', () => {
+      stubStatus();
+      stubChallenge(4);
+      stubGenerate();
+      cy.visit('/demo', { onBeforeLoad: (win) => installFakeWorker(win, 'silent') });
+      generateButton().click();
+      cy.window().its('__created').should('eq', 1);
+      cy.get('header a[aria-label="Mockia home"]').click();
+      cy.location('pathname').should('eq', '/');
+      cy.window().its('__terminated').should('eq', 1);
+      cy.get('@generate.all').should('have.length', 0);
+    });
   });
 
   it('(e) 429 DEMO_LIMIT_REACHED: muestra a que hora vuelve el cupo (Retry-After); DEMO_RATE_LIMIT es otro aviso', () => {

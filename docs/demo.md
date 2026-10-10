@@ -26,7 +26,7 @@ Todas se leen del entorno en cada petición (no hace falta recompilar para cambi
 
 | Variable | Defecto | Qué hace |
 |---|---|---|
-| `DEMO_ENABLED` | `false` | Interruptor general. Acepta `true`, `1`, `yes` u `on`. Apagada, toda la demo responde 503 (incluidas las API simuladas ya creadas). |
+| `DEMO_ENABLED` | `false` | Interruptor general. Acepta `true`, `1`, `yes` u `on`. Apagada, `generate`, `challenge` y las API simuladas ya creadas responden 503; `GET /api/demo/status` responde 200 con `available: false`. |
 | `DEMO_HMAC_SECRET` | (sin valor) | Secreto raíz: firma los retos de prueba de trabajo y pseudonimiza las IP. Obligatorio, de al menos 32 caracteres, si la demo está activada en producción: el backend **no arranca** sin él. |
 | `DEMO_DAILY_GENERATIONS` | `150` | Generaciones de toda la demo por día UTC. Es el techo de gasto (ver "Coste"). |
 | `DEMO_PER_IP_GENERATIONS` | `2` | Generaciones por visitante (IP pseudonimizada, IPv6 agrupada por /64) y día UTC. |
@@ -43,7 +43,12 @@ Variables de IA de la demo (no son `DEMO_*`: viven en `config/ai.ts` y se leen a
 
 ## Estado del despliegue (pendiente de la tarea B7)
 
-`render.yaml` y `docker-compose.prod.yml` hoy **NO reenvían** ninguna variable `DEMO_*` ni `AI_DEMO_*` al backend. Mientras no lo hagan, la demo no se puede activar en esos despliegues (solo con un `.env` en local). La tarea B7 las añade; cuando lo haga, **hay que editar esta sección** (el test `demo.docs.test.ts` falla a propósito en ese momento hasta que el documento deje de decir que no se reenvían).
+Estado de cada fichero (una línea por fichero; el test las comprueba por separado y solo cuenta variables reales, no comentarios):
+
+- `render.yaml`: **NO reenvía** ninguna variable `DEMO_*` ni `AI_DEMO_*` al backend.
+- `docker-compose.prod.yml`: **NO reenvía** ninguna variable `DEMO_*` ni `AI_DEMO_*` al backend.
+
+Mientras no lo hagan, la demo no se puede activar en esos despliegues (solo con un `.env` en local). La tarea B7 las añade; cuando lo haga, **hay que editar la línea del fichero afectado** (el test `demo.docs.test.ts` falla a propósito en ese momento hasta que esa línea diga que sí reenvía; un reenvío parcial solo obliga a corregir el fichero que cambió).
 
 ## Activar la demo
 
@@ -58,7 +63,7 @@ Hazlo en este orden; no actives nada hasta el paso 5.
 
 ## Apagar la demo
 
-Pon `DEMO_ENABLED=false` y reinicia o redesplega el backend. Efecto inmediato: `/api/demo/*` y `/api/demo-mock/*` responden 503, incluidas las API simuladas que aún no habían caducado; los usuarios registrados, su IA y sus cuotas no se ven afectados (la demo tiene su propio presupuesto y su propia cadena de IA). No hace falta el secreto para apagarla. Los datos de la demo se borran solos (ver "Qué se guarda").
+Pon `DEMO_ENABLED=false` y reinicia o redesplega el backend. Efecto inmediato: `generate` y `challenge` de `/api/demo/*` y todo `/api/demo-mock/*` (incluidas las API simuladas que aún no habían caducado) responden 503, y `GET /api/demo/status` responde 200 con `available: false` (la página lo usa para avisar); los usuarios registrados, su IA y sus cuotas no se ven afectados (la demo tiene su propio presupuesto y su propia cadena de IA). No hace falta el secreto para apagarla. Los datos de la demo se borran solos (ver "Qué se guarda").
 
 Es el primer recurso ante abuso o gasto inesperado: apagar es barato, reactivar es una variable.
 
@@ -88,6 +93,13 @@ No hay cifras de coste en este repositorio. Mide el **coste por generación** co
 
 Con los valores por defecto, 75 visitantes con 2 generaciones cada uno (`DEMO_DAILY_GENERATIONS` ÷ `DEMO_PER_IP_GENERATIONS`) bastan para **agotar el presupuesto global del día**; con IP distintas (una red móvil, una botnet pequeña) es algo que un grupo reducido puede hacer a propósito. Es una decisión consciente: el tope global es lo que acota el gasto, y el precio es que la demo puede quedarse sin cupo ese día para el resto. La prueba de trabajo sube el coste de hacerlo, no lo impide. Si te preocupa: sube `DEMO_POW_BITS`, baja `DEMO_PER_IP_GENERATIONS` a 1, baja `DEMO_DAILY_GENERATIONS`, o apaga la demo.
 
+## Apagado suave: límites a 0
+
+Los dos límites diarios aceptan 0 (el mínimo válido). Sirve para cerrar la demo sin apagarla, pero los mensajes difieren:
+
+- `DEMO_DAILY_GENERATIONS=0`: ningún visitante puede generar. `generate` responde 503 ("sin cupo hoy") y `GET /api/demo/status` responde 200 con `available: false`. Es el equivalente a "presupuesto agotado".
+- `DEMO_PER_IP_GENERATIONS=0`: el límite por visitante está ya agotado para todos. `generate` responde 429 con "vuelve mañana" aunque el presupuesto global esté intacto, y `status` sigue diciendo `available: true` con 0 generaciones restantes para el visitante. Puede confundir a quien lo pruebe: para cerrar la demo de verdad usa `DEMO_ENABLED=false` o `DEMO_DAILY_GENERATIONS=0`.
+
 ## Varias instancias
 
 Los contadores diarios (por visitante y global) y los cupos de cada API simulada viven en MongoDB y son exactos con cualquier número de instancias. **Lo que está en memoria es por proceso**, así que con N instancias el límite efectivo es hasta N veces el configurado:
@@ -114,7 +126,7 @@ Resumen operativo de lo que los textos legales declaran; si algo de esto cambia,
 | Dato | Dónde | Plazo |
 |---|---|---|
 | Texto pegado por el visitante | en ningún sitio (solo se envía al proveedor de IA) | no se guarda |
-| IP del visitante | solo como HMAC-SHA256 con sal que cambia cada día UTC (IPv6 por /64), nunca en claro en la base de datos | ver contadores |
+| IP del visitante | solo como HMAC-SHA256 con sal que cambia cada día UTC (IPv6 por /64), nunca en claro en la base de datos. El seudónimo por sí solo no permite seguir a un visitante de un día a otro, pero quien tenga el secreto puede recalcular el de una IP conocida, y los logs de acceso (última fila) sí contienen la IP en claro y enlazan días | ver contadores |
 | Contadores diarios (visitante y global) | colección `demobudgets` | caducan por TTL: 48 h después de acabar el día que cuentan, más hasta ~1 min de retraso de MongoDB |
 | API simulada y su contenido | colección `demomocks` (guarda también el seudónimo de la IP) | `DEMO_MOCK_TTL_MINUTES` minutos (30), más hasta ~1 min de retraso de MongoDB |
 | Retos de prueba de trabajo ya usados | colección `demospentchallenges` (id aleatorio) | 10 minutos |

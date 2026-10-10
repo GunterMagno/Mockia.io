@@ -19,6 +19,12 @@ const scope = self as unknown as {
 
 scope.onmessage = async (event) => {
   const { challenge, bits } = event.data
-  const result: PowWorkerResponse = await solvePow(challenge, bits)
+  // Una promesa rechazada dentro de onmessage NO llega a `worker.onerror` de la pagina: se contesta siempre
+  let result: PowWorkerResponse
+  try {
+    result = await solvePow(challenge, bits)
+  } catch {
+    result = { error: 'failed' }
+  }
   scope.postMessage(result)
 }

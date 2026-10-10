@@ -28,7 +28,7 @@ import styles from './Demo.module.scss'
 
 type SourceChoice = DemoTemplateId | 'text'
 type Phase = 'idle' | 'solving' | 'sending'
-type Notice = 'cancelled' | 'powTimeout' | null
+type Notice = 'cancelled' | 'powTimeout' | 'powUnsupported' | 'powFailed' | null
 /** Lo que se le cuenta al visitante cuando algo no sale. `until` solo existe para el cupo diario. */
 type Problem = { kind: 'unavailable' | 'limit' | 'rateLimit' | 'badOutput' | 'timeout' | 'network' | 'other'; until?: Date }
 
@@ -158,7 +158,7 @@ const Demo: React.FC = () => {
       powRef.current = null
       if ('error' in solved) {
         if (solved.error === 'aborted' || cancelledRef.current) throw new DOMException('cancelled', 'AbortError')
-        setNotice('powTimeout')
+        setNotice(solved.error === 'timeout' ? 'powTimeout' : solved.error === 'unsupported' ? 'powUnsupported' : 'powFailed')
         setPhase('idle')
         return
       }
@@ -330,7 +330,11 @@ const Demo: React.FC = () => {
             </div>
           )}
           {notice === 'cancelled' && <p role="status" className={styles.hint}>{t('demo.cancelled')}</p>}
-          {notice === 'powTimeout' && <p role="alert" className={styles.problem}>{t('demo.powTimeout')}</p>}
+          {notice && notice !== 'cancelled' && (
+            <p role="alert" className={styles.problem} data-testid="demo-notice">
+              {t(`demo.${notice}`)}
+            </p>
+          )}
           {problemBox}
         </section>
 
