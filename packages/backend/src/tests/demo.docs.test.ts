@@ -65,6 +65,14 @@ describe('docs/demo.md', () => {
       expect(inBackendEnvExample).toEqual(inConfig);
     });
 
+    it('M3 (revision final): los dos .env.example avisan de que rotar DEMO_HMAC_SECRET tambien reinicia los cupos del dia', () => {
+      for (const file of ['.env.example', 'packages/backend/.env.example']) {
+        const text = read(file);
+        expect(text).toMatch(/rotating it invalidates pending challenges AND resets\s+#?\s*everybody's daily quotas/);
+        expect(text).not.toMatch(/rotating it only invalidates/);
+      }
+    });
+
     it('no confunde las variables de IA de la demo con DEMO_*: se citan aparte y existen en el codigo y en los .env.example', () => {
       const aiInDoc = unique(DOC.match(AI_DEMO_VAR));
       expect(aiInDoc).toEqual(['AI_DEMO_PROVIDERS', 'AI_DEMO_TIMEOUT_MS']);
