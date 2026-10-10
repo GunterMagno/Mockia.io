@@ -154,7 +154,6 @@ const zh: Messages = {
       requests: '每月 {n} 次模拟接口请求',
       aiGenerations: { one: '每月 {n} 次 AI 生成', other: '每月 {n} 次 AI 生成' },
       githubImport: 'GitHub 导入',
-      communitySupport: '社区支持',
       everythingFree: '包含 Free 的全部功能',
       everythingPro: '包含 Pro 的全部功能',
       prioritySupport: '优先支持',

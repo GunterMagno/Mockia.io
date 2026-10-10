@@ -161,7 +161,6 @@ const en = {
       requests: '{n} mock requests per month',
       aiGenerations: { one: '{n} AI generation per month', other: '{n} AI generations per month' },
       githubImport: 'GitHub import',
-      communitySupport: 'Community support',
       everythingFree: 'Everything in Free',
       everythingPro: 'Everything in Pro',
       prioritySupport: 'Priority support',

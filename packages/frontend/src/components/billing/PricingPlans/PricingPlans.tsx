@@ -107,9 +107,9 @@ export const PricingPlans: React.FC<Props> = ({ mode, overview, highlight, initi
 
   const features: Record<Plan, string[]> = {
     // Solo lo que existe. Sin linea de soporte en Free: los Terminos no prometen soporte para ese plan (ruling R15);
-    // Starter solo promete el soporte de la comunidad (ni correo ni prioritario)
+    // Starter no lista ninguna linea de soporte: no existe canal de comunidad, y ni correo ni soporte prioritario se prometen (regla de la copia honesta)
     free: [projects('free'), requests('free'), aiGenerations('free'), t('pricing.features.githubImport')],
-    starter: [t('pricing.features.everythingFree'), projects('starter'), requests('starter'), aiGenerations('starter'), t('pricing.features.communitySupport'), t('pricing.features.cancelAnytime')],
+    starter: [t('pricing.features.everythingFree'), projects('starter'), requests('starter'), aiGenerations('starter'), t('pricing.features.cancelAnytime')],
     pro: [t('pricing.features.everythingFree'), projects('pro'), requests('pro'), aiGenerations('pro'), t('pricing.features.cancelAnytime')],
     team: [t('pricing.features.everythingPro'), projects('team'), requests('team'), aiGenerations('team'), t('pricing.features.prioritySupport')],
   }

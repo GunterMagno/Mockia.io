@@ -156,7 +156,6 @@ const es: Messages = {
       requests: '{n} peticiones a tus mocks al mes',
       aiGenerations: { one: '{n} generación con IA al mes', other: '{n} generaciones con IA al mes' },
       githubImport: 'Importación desde GitHub',
-      communitySupport: 'Soporte de la comunidad',
       everythingFree: 'Todo lo de Free',
       everythingPro: 'Todo lo de Pro',
       prioritySupport: 'Soporte prioritario',

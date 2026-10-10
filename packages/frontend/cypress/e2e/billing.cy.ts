@@ -300,9 +300,9 @@ describe('Billing: planes, limites y facturacion', () => {
         cy.contains('li', `${PLAN_LIMITS.starter.maxActiveProjects} active projects`).should('exist');
         cy.contains('li', `${compact(PLAN_LIMITS.starter.maxMonthlyRequests)} mock requests per month`).should('exist');
         cy.contains('li', aiLine('starter')).should('exist');
-        cy.contains('li', 'Community support').should('exist');
-        // Nada que no exista: ni correo ni soporte prioritario
-        cy.get('li').filter(':contains("Email support"), :contains("Priority support")').should('not.exist');
+        // Nada que no exista: ni canal de comunidad (no hay foro ni chat en el producto), ni correo, ni soporte prioritario
+        cy.get('li').filter(':contains("upport"), :contains("ommunity")').should('not.exist');
+        cy.contains('li', 'Cancel anytime').should('exist');
         cy.contains('Most affordable').should('be.visible');
       });
       for (const other of ['free', 'pro', 'team', 'enterprise']) card(other).contains('Most affordable').should('not.exist');
