@@ -372,6 +372,33 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
     });
   });
 
+  it('(d3) un 503 o un 504 del servicio de IA no se presenta como "demo no disponible": avisa de que el intento puede contar', () => {
+    stubStatus();
+    stubChallenge(4);
+    // 503 con el codigo del proveedor (EXTERNAL_SERVICE_ERROR): la peticion salio al modelo
+    stubGenerate({ statusCode: 503, body: failure('EXTERNAL_SERVICE_ERROR', 'AI service temporarily unavailable') });
+    cy.visit('/demo');
+    generateButton().click();
+    cy.wait('@generate');
+    cy.get('[data-testid="demo-problem"]').within(() => {
+      cy.contains('AI service').should('be.visible');
+      cy.contains('may have counted').should('be.visible');
+      cy.contains('not available right now').should('not.exist');
+      cy.contains('a', 'Create your free account').should('not.exist');
+    });
+    generateButton().should('be.enabled');
+    // 504 (plazo del modelo): otro texto, tambien cuenta
+    stubGenerate({ statusCode: 504, body: failure('EXTERNAL_SERVICE_ERROR', 'The AI request took too long') });
+    generateButton().click();
+    cy.wait('@generate');
+    cy.get('[data-testid="demo-problem"]').should('contain.text', 'took too long').and('contain.text', 'counted');
+    // 503 DEMO_UNAVAILABLE sigue siendo "no disponible" (test d)
+    stubGenerate({ statusCode: 503, body: failure('DEMO_UNAVAILABLE', 'busy') });
+    generateButton().click();
+    cy.wait('@generate');
+    cy.get('[data-testid="demo-problem"]').should('contain.text', 'not available right now');
+  });
+
   it('(e) 429 DEMO_LIMIT_REACHED: muestra a que hora vuelve el cupo (Retry-After); DEMO_RATE_LIMIT es otro aviso', () => {
     const now = Date.UTC(2026, 9, 9, 10, 0, 0);
     cy.clock(now, ['Date']);

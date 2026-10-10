@@ -30,7 +30,7 @@ type SourceChoice = DemoTemplateId | 'text'
 type Phase = 'idle' | 'solving' | 'sending'
 type Notice = 'cancelled' | 'powTimeout' | 'powUnsupported' | 'powFailed' | null
 /** Lo que se le cuenta al visitante cuando algo no sale. `until` solo existe para el cupo diario. */
-type Problem = { kind: 'unavailable' | 'limit' | 'rateLimit' | 'badOutput' | 'timeout' | 'network' | 'other'; until?: Date }
+type Problem = { kind: 'unavailable' | 'limit' | 'rateLimit' | 'badOutput' | 'timeout' | 'providerDown' | 'network' | 'other'; until?: Date }
 
 const TEMPLATE_KEYS: Record<DemoTemplateId, { label: MessageKey; hint: MessageKey }> = {
   shop: { label: 'demo.source.shop', hint: 'demo.source.shopHint' },
@@ -42,6 +42,7 @@ const PROBLEM_TEXT: Record<Exclude<Problem['kind'], 'unavailable' | 'limit'>, Me
   rateLimit: 'demo.errors.rateLimit',
   badOutput: 'demo.errors.badOutput',
   timeout: 'demo.errors.timeout',
+  providerDown: 'demo.errors.providerDown',
   network: 'demo.errors.network',
   other: 'demo.errors.other',
 }
@@ -222,7 +223,7 @@ const Demo: React.FC = () => {
   const clockFormat = (date: Date) => formatDate(date, { hour: 'numeric', minute: '2-digit' })
 
   const problemBox = view && (
-    <div className={styles.problem} role="alert">
+    <div className={styles.problem} role="alert" data-testid="demo-problem">
       {view.kind === 'unavailable' ? (
         <>
           <strong>{t('demo.errors.unavailableTitle')}</strong>

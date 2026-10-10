@@ -297,6 +297,7 @@ const es: Messages = {
       rateLimit: 'Demasiadas peticiones. Espera un minuto e inténtalo de nuevo.',
       badOutput: 'La IA devolvió algo que no pudimos usar. Este intento ha contado en el límite de hoy. Vuelve a intentarlo o elige una plantilla.',
       timeout: 'La IA tardó demasiado en responder. Este intento ha contado en el límite de hoy. Inténtalo de nuevo en un momento.',
+      providerDown: 'El servicio de IA no responde ahora mismo. Este intento puede haber contado en el límite de hoy (mira el contador de arriba). Inténtalo de nuevo en un momento.',
       network: 'No pudimos conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.',
       other: 'Algo ha salido mal. Inténtalo de nuevo.',
     },

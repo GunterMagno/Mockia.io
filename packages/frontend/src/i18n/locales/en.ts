@@ -302,6 +302,7 @@ const en = {
       rateLimit: 'Too many requests. Wait a minute and try again.',
       badOutput: "The AI returned something we could not use. This attempt counted toward today's limit. Try again or pick a template.",
       timeout: "The AI took too long to answer. This attempt counted toward today's limit. Try again in a moment.",
+      providerDown: "The AI service is not responding right now. This attempt may have counted toward today's limit (see the counter above). Try again in a moment.",
       network: 'We could not reach the server. Check your connection and try again.',
       other: 'Something went wrong. Please try again.',
     },

@@ -58,6 +58,7 @@ export type DemoErrorKind =
   | 'challenge' // 400 DEMO_CHALLENGE_INVALID
   | 'badOutput' // 502: la IA devolvio algo inutilizable (el intento cuenta)
   | 'timeout' // 504: la IA tardo demasiado (el intento cuenta)
+  | 'providerDown' // 503 que NO es DEMO_UNAVAILABLE (el proveedor de IA fallo): la peticion salio, el intento puede contar
   | 'network' // sin respuesta
   | 'other'
 
@@ -85,7 +86,8 @@ function toDemoError(err: unknown): DemoApiError {
     const code = (data as { error?: { code?: string } } | undefined)?.error?.code
     const retry = retryAfterOf(headers)
     if (status === 429) return new DemoApiError(code === ErrorCode.DEMO_LIMIT_REACHED ? 'limit' : 'rateLimit', status, retry)
-    if (status === 503) return new DemoApiError('unavailable', status, retry)
+    // 503 de la demo (apagada, presupuesto, ocupada) vs 503 del proveedor de IA (EXTERNAL_SERVICE_ERROR): este ultimo ya gasto el intento
+    if (status === 503) return new DemoApiError(code && code !== ErrorCode.DEMO_UNAVAILABLE ? 'providerDown' : 'unavailable', status, retry)
     if (status === 400 && code === ErrorCode.DEMO_CHALLENGE_INVALID) return new DemoApiError('challenge', status, retry)
     if (status === 502) return new DemoApiError('badOutput', status, retry)
     if (status === 504) return new DemoApiError('timeout', status, retry)
