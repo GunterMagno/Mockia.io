@@ -90,7 +90,8 @@ describe('docs/demo.md', () => {
         DEMO_MOCK_TTL_MINUTES: String(cfg.mockTtlMinutes),
       };
       for (const [name, value] of Object.entries(defaults)) {
-        const row = DOC.split(/\r?\n/).find((l) => l.trim().startsWith('|') && l.includes(`\`${name}\``));
+        // la fila de la tabla de variables: la variable es la primera celda (otras tablas la citan en otras columnas)
+        const row = DOC.split(/\r?\n/).find((l) => l.trim().startsWith('|') && l.split('|')[1]?.trim() === `\`${name}\``);
         expect(row).toBeDefined();
         const cells = row!.split('|').map((c) => c.trim());
         expect(cells[2]).toBe(`\`${value}\``);
