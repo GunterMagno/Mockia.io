@@ -53,6 +53,7 @@ describe('docs/demo.md', () => {
           'DEMO_MAX_CONCURRENT',
           'DEMO_MOCK_TTL_MINUTES',
           'DEMO_PER_IP_GENERATIONS',
+          'DEMO_PER_NET_GENERATIONS',
           'DEMO_POW_BITS',
         ].sort(),
       );
@@ -93,6 +94,7 @@ describe('docs/demo.md', () => {
         // la fila de la tabla de variables: la variable es la primera celda (otras tablas la citan en otras columnas)
         const row = DOC.split(/\r?\n/).find((l) => l.trim().startsWith('|') && l.split('|')[1]?.trim() === `\`${name}\``);
         expect(row).toBeDefined();
+        DEMO_PER_NET_GENERATIONS: String(cfg.perNetGenerationsPerDay),
         const cells = row!.split('|').map((c) => c.trim());
         expect(cells[2]).toBe(`\`${value}\``);
       }
@@ -229,6 +231,34 @@ describe('textos legales de la demo', () => {
         const full = path.join(dir, entry.name);
         if (entry.isDirectory()) walk(full);
         else if (/\.(ts|tsx)$/.test(entry.name) && /sessionStorage\s*\.\s*(get|set|remove)Item/.test(fs.readFileSync(full, 'utf8'))) {
+  it('M2 (revision final): el id pendiente se borra al reclamarlo o al cerrar la pestana, y NUNCA se promete borrarlo al caducar la demo porque el codigo no lo hace', () => {
+    const deleted: Record<string, RegExp> = {
+      es: /se borra al reclamarlo o al cerrar la pestaña/,
+      en: /is deleted when you claim it or when you close the tab/,
+      zh: /并会在认领或关闭标签页时删除/,
+    };
+    const promisesExpiry: Record<string, RegExp> = {
+      es: /reclamarlo, al caducar la demo/,
+      en: /claim it, when the demo expires/,
+      zh: /认领、演示过期/,
+    };
+    for (const l of LANGS) {
+      const [privacy, , cookies] = demoSections(l);
+      for (const section of [privacy, cookies]) {
+        expect(section).toMatch(deleted[l]);
+        expect(section).not.toMatch(promisesExpiry[l]);
+      }
+    }
+    // y el codigo es lo que el texto dice: el modulo del id pendiente no mira ninguna caducidad
+    const pending = read('packages/frontend/src/services/demoPending.ts');
+    expect(pending).not.toMatch(/expiresAt|expires|Date\.now|new Date/);
+  });
+
+  it('I2 (revision final): Privacidad declara el segundo seudonimo del prefijo /48 (IPv6) en los tres idiomas', () => {
+    const phrase: Record<string, RegExp> = { es: /prefijo \/48/, en: /\/48 prefix/, zh: /\/48 前缀/ };
+    for (const l of LANGS) expect(demoSections(l)[0]).toMatch(phrase[l]);
+  });
+
           hits.push(path.relative(root, full).split(path.sep).join('/'));
         }
       }

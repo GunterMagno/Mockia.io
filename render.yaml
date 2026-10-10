@@ -64,6 +64,8 @@ services:
         sync: false
       - key: DEMO_PER_IP_GENERATIONS
         sync: false
+      - key: DEMO_PER_NET_GENERATIONS
+        sync: false
       - key: DEMO_MAX_CONCURRENT
         sync: false
       - key: DEMO_POW_BITS

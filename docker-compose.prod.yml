@@ -66,6 +66,7 @@ services:
       DEMO_MAX_CONCURRENT: ${DEMO_MAX_CONCURRENT:-}
       DEMO_POW_BITS: ${DEMO_POW_BITS:-}
       DEMO_MOCK_TTL_MINUTES: ${DEMO_MOCK_TTL_MINUTES:-}
+      DEMO_PER_NET_GENERATIONS: ${DEMO_PER_NET_GENERATIONS:-}
       AI_DEMO_PROVIDERS: ${AI_DEMO_PROVIDERS:-}
       AI_DEMO_TIMEOUT_MS: ${AI_DEMO_TIMEOUT_MS:-}
       # Correo transaccional (verificacion de email y recuperar contrasena). Sin SMTP_URL no se envia nada.

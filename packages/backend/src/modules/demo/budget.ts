@@ -18,10 +18,10 @@ const RETENTION_MS = 48 * 60 * 60 * 1000;
 const MAX_RETRIES = 5;
 
 export type BudgetKind = 'generation' | 'mockRequest';
-export type BudgetResult = { ok: true } | { ok: false; scope: 'ip' | 'global' };
+export type BudgetResult = { ok: true } | { ok: false; scope: 'ip' | 'net' | 'global' };
 
 /** Adds 1 to a counter unless it is already at `limit`. Returns whether it was added. */
-async function increment(day: string, scope: 'ip' | 'global', key: string, kind: BudgetKind, limit: number): Promise<boolean> {
+async function increment(day: string, scope: 'ip' | 'net' | 'global', key: string, kind: BudgetKind, limit: number): Promise<boolean> {
   if (limit <= 0) return false;
   const identity = { day, scope, key, kind };
   const expiresAt = new Date(Date.parse(`${day}T00:00:00Z`) + RETENTION_MS + 24 * 60 * 60 * 1000);
@@ -44,7 +44,7 @@ async function increment(day: string, scope: 'ip' | 'global', key: string, kind:
 }
 
 /** Takes one unit back from a counter, never below zero (a single conditional $inc: atomic). */
-async function decrement(day: string, scope: 'ip' | 'global', key: string, kind: BudgetKind): Promise<void> {
+async function decrement(day: string, scope: 'ip' | 'net' | 'global', key: string, kind: BudgetKind): Promise<void> {
   await DemoBudgetModel.updateOne({ day, scope, key, kind, count: { $gt: 0 } }, { $inc: { count: -1 } }).catch(() => undefined);
 }
 
@@ -52,24 +52,41 @@ async function decrement(day: string, scope: 'ip' | 'global', key: string, kind:
 const refund = (day: string, key: string, kind: BudgetKind): Promise<void> => decrement(day, 'ip', key, kind);
 
 /**
- * Spends one unit of the visitor's daily allowance and, for generations, of the demo's global one. The visitor's own
- * limit is checked first so a single address cannot drain the global budget; if the global one is exhausted the
- * visitor's unit is given back.
+ * Spends one unit of the visitor's daily allowance and, for generations, of their network's (an IPv6 /48; `netHash` is
+ * null for IPv4, which has no such counter) and of the demo's global one. Order: the visitor's own limit first, then the
+ * network's, then the demo's, so one address cannot drain a wider counter; whenever a later counter refuses, the units
+ * already taken from the earlier ones are given back.
  */
-export async function tryConsumeDemoBudget(ipHash: string, kind: BudgetKind, now: Date = new Date()): Promise<BudgetResult> {
+export async function tryConsumeDemoBudget(
+  ipHash: string,
+  kind: BudgetKind,
+  now: Date = new Date(),
+  netHash: string | null = null,
+): Promise<BudgetResult> {
   const cfg = getDemoConfig();
   const day = utcDay(now);
   const perIp = kind === 'generation' ? cfg.perIpGenerationsPerDay : cfg.ipMockRequestsPerDay;
+  const net = kind === 'generation' ? netHash : null;
 
   // Once the demo-wide budget is spent, a plain read answers every later generation: no counter row is created or touched for
   // a visitor that is going to be refused anyway (an attacker who invents addresses would otherwise add a row per request)
   // (reads only; the visitor who was already over their own limit is still told that, as before)
   if (kind === 'generation' && (await peekGlobalDemoBudget(now)) <= 0) {
     const own = perIp <= 0 ? null : await DemoBudgetModel.findOne({ day, scope: 'ip', key: ipHash, kind }).lean();
-    return { ok: false, scope: perIp <= 0 || (own?.count ?? 0) >= perIp ? 'ip' : 'global' };
+    if (perIp <= 0 || (own?.count ?? 0) >= perIp) return { ok: false, scope: 'ip' };
+    if (net) {
+      const wider = cfg.perNetGenerationsPerDay <= 0 ? null : await DemoBudgetModel.findOne({ day, scope: 'net', key: net, kind }).lean();
+      if (cfg.perNetGenerationsPerDay <= 0 || (wider?.count ?? 0) >= cfg.perNetGenerationsPerDay) return { ok: false, scope: 'net' };
+    }
+    return { ok: false, scope: 'global' };
   }
   if (!(await increment(day, 'ip', ipHash, kind, perIp))) return { ok: false, scope: 'ip' };
+  if (net && !(await increment(day, 'net', net, kind, cfg.perNetGenerationsPerDay))) {
+    await refund(day, ipHash, kind);
+    return { ok: false, scope: 'net' };
+  }
   if (kind === 'generation' && !(await increment(day, 'global', 'global', kind, cfg.dailyGenerations))) {
+    if (net) await decrement(day, 'net', net, kind);
     await refund(day, ipHash, kind);
     return { ok: false, scope: 'global' };
   }
@@ -83,9 +100,10 @@ export async function tryConsumeDemoBudget(ipHash: string, kind: BudgetKind, now
  *
  * Only for work that never reached the model: a refund after the model answered would turn failures into free calls.
  */
-export async function refundDemoBudget(ipHash: string, kind: BudgetKind, now: Date = new Date()): Promise<void> {
+export async function refundDemoBudget(ipHash: string, kind: BudgetKind, now: Date = new Date(), netHash: string | null = null): Promise<void> {
   const day = utcDay(now);
   await decrement(day, 'ip', ipHash, kind);
+  if (kind === 'generation' && netHash) await decrement(day, 'net', netHash, kind);
   if (kind === 'generation') await decrement(day, 'global', 'global', kind);
 }
 
@@ -93,15 +111,22 @@ export async function refundDemoBudget(ipHash: string, kind: BudgetKind, now: Da
  * Generations left today (the visitor's and the demo's), read-only. Callers decide what to reveal: the status route
  * only ever tells a visitor their own number and whether the demo has anything left, never the global counters.
  */
-export async function peekDemoBudget(ipHash: string, now: Date = new Date()): Promise<{ ipLeft: number; globalLeft: number }> {
+export async function peekDemoBudget(
+  ipHash: string,
+  now: Date = new Date(),
+  netHash: string | null = null,
+): Promise<{ ipLeft: number; globalLeft: number }> {
   const cfg = getDemoConfig();
   const day = utcDay(now);
-  const [ip, global] = await Promise.all([
+  const [ip, global, net] = await Promise.all([
     DemoBudgetModel.findOne({ day, scope: 'ip', key: ipHash, kind: 'generation' }).lean(),
     DemoBudgetModel.findOne({ day, scope: 'global', key: 'global', kind: 'generation' }).lean(),
+    netHash ? DemoBudgetModel.findOne({ day, scope: 'net', key: netHash, kind: 'generation' }).lean() : null,
   ]);
+  const ownLeft = Math.max(0, cfg.perIpGenerationsPerDay - (ip?.count ?? 0));
   return {
-    ipLeft: Math.max(0, cfg.perIpGenerationsPerDay - (ip?.count ?? 0)),
+    // what the visitor can really still do: the tighter of their own allowance and their network's
+    ipLeft: netHash ? Math.min(ownLeft, Math.max(0, cfg.perNetGenerationsPerDay - (net?.count ?? 0))) : ownLeft,
     globalLeft: Math.max(0, cfg.dailyGenerations - (global?.count ?? 0)),
   };
 }

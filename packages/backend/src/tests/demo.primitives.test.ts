@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import { connectDB, disconnectDB } from '../config/connection.js';
 import { assertProdConfig } from '../config/assertProdConfig.js';
 import { getDemoConfig } from '../modules/demo/config.js';
-import { pseudonymizeIp } from '../modules/demo/ipHash.js';
+import { pseudonymizeIp, pseudonymizeNet } from '../modules/demo/ipHash.js';
 import { checkProof, isChallengeSpent, issueChallenge, spendChallenge, verifyProof } from '../modules/demo/pow.js';
 import { tryConsumeDemoBudget, acquireGenerationSlot, refundDemoBudget, peekDemoBudget } from '../modules/demo/budget.js';
 import { DemoBudgetModel } from '../models/DemoBudget.js';
@@ -21,6 +21,7 @@ const ENV_KEYS = [
   'DEMO_ENABLED',
   'DEMO_DAILY_GENERATIONS',
   'DEMO_PER_IP_GENERATIONS',
+  'DEMO_PER_NET_GENERATIONS',
   'DEMO_MAX_CONCURRENT',
   'DEMO_POW_BITS',
   'DEMO_MOCK_TTL_MINUTES',
@@ -85,6 +86,7 @@ describe('getDemoConfig', () => {
       enabled: false,
       dailyGenerations: 150,
       perIpGenerationsPerDay: 2,
+      perNetGenerationsPerDay: 20,
       maxConcurrent: 4,
       maxConcurrentPerIp: 1,
       powBits: 18,
@@ -100,11 +102,12 @@ describe('getDemoConfig', () => {
       DEMO_ENABLED: 'true',
       DEMO_DAILY_GENERATIONS: '40',
       DEMO_PER_IP_GENERATIONS: '1',
+      DEMO_PER_NET_GENERATIONS: '7',
       DEMO_MAX_CONCURRENT: '2',
       DEMO_POW_BITS: '20',
       DEMO_MOCK_TTL_MINUTES: '10',
     });
-    expect(cfg).toMatchObject({ enabled: true, dailyGenerations: 40, perIpGenerationsPerDay: 1, maxConcurrent: 2, powBits: 20, mockTtlMinutes: 10 });
+    expect(cfg).toMatchObject({ enabled: true, dailyGenerations: 40, perIpGenerationsPerDay: 1, perNetGenerationsPerDay: 7, maxConcurrent: 2, powBits: 20, mockTtlMinutes: 10 });
     const bad = getDemoConfig({ DEMO_ENABLED: 'maybe', DEMO_DAILY_GENERATIONS: 'abc', DEMO_POW_BITS: '-3', DEMO_MAX_CONCURRENT: '1e9' });
     expect(bad.enabled).toBe(false);
     expect(bad.dailyGenerations).toBe(150);
@@ -154,6 +157,33 @@ describe('pseudonymizeIp', () => {
     const a = pseudonymizeIp('203.0.113.7', T0);
     process.env.DEMO_HMAC_SECRET = 'another-secret-with-more-than-32-characters!!';
     expect(pseudonymizeIp('203.0.113.7', T0)).not.toBe(a);
+  });
+});
+
+describe('pseudonymizeNet (the /48 of an IPv6 address)', () => {
+  it('is the same for every /64 inside one /48 and different for another /48', () => {
+    const a = pseudonymizeNet('2001:db8:abcd:0001::1', T0);
+    expect(a).toMatch(/^[0-9a-f]{64}$/);
+    expect(pseudonymizeNet('2001:db8:abcd:ffff:1111:2222:3333:4444', T0)).toBe(a);
+    expect(pseudonymizeNet('2001:0DB8:abcd::9', T0)).toBe(a);
+    expect(pseudonymizeNet('2001:db8:abce:0001::1', T0)).not.toBe(a);
+  });
+
+  it('has none for IPv4, an IPv4-mapped IPv6 address or something that is not an address (IPv4 is untouched)', () => {
+    expect(pseudonymizeNet('203.0.113.7', T0)).toBeNull();
+    expect(pseudonymizeNet('::ffff:1.2.3.4', T0)).toBeNull();
+    expect(pseudonymizeNet('not-an-ip', T0)).toBeNull();
+  });
+
+  it('changes every UTC day, depends on the secret, never contains the address and is not the /64 pseudonym', () => {
+    const ip = '2001:db8:abcd:12::1';
+    const a = pseudonymizeNet(ip, T0);
+    expect(pseudonymizeNet(ip, new Date(T0.getTime() + DAY))).not.toBe(a);
+    expect(a).not.toBe(pseudonymizeIp(ip, T0));
+    expect(a).not.toContain('2001');
+    expect(a).not.toContain('abcd');
+    process.env.DEMO_HMAC_SECRET = 'another-secret-with-more-than-32-characters!!';
+    expect(pseudonymizeNet(ip, T0)).not.toBe(a);
   });
 });
 
@@ -376,6 +406,121 @@ describe('tryConsumeDemoBudget', () => {
     expect(rows.length).toBeGreaterThan(0);
     expect(JSON.stringify(rows)).not.toContain('203.0.113.7');
     for (const row of rows) expect(row.expiresAt.getTime()).toBeGreaterThanOrEqual(T0.getTime() + 47 * 3600_000);
+  });
+});
+
+describe('the per-network (/48) daily counter (final review I2)', () => {
+  const v6 = (net: number, sub: number) => `2001:db8:${net.toString(16)}:${sub.toString(16)}::1`;
+  const consume = (ip: string, now = T0) => tryConsumeDemoBudget(pseudonymizeIp(ip, now), 'generation', now, pseudonymizeNet(ip, now));
+  const netRows = () => DemoBudgetModel.find({ scope: 'net' }).lean();
+
+  beforeEach(() => {
+    process.env.DEMO_DAILY_GENERATIONS = '1000';
+  });
+
+  it('200 different /64 inside one /48 get at most DEMO_PER_NET_GENERATIONS generations in all', async () => {
+    process.env.DEMO_PER_NET_GENERATIONS = '20';
+    const results = [];
+    for (let sub = 0; sub < 200; sub++) results.push(await consume(v6(1, sub)));
+    expect(results.filter((r) => r.ok)).toHaveLength(20);
+    expect(results.filter((r) => !r.ok && r.scope === 'net')).toHaveLength(180);
+    expect((await netRows())[0].count).toBe(20);
+  });
+
+  it('the refused /64 gets its own unit back (a later counter that refuses releases the earlier ones)', async () => {
+    process.env.DEMO_PER_NET_GENERATIONS = '2';
+    expect((await consume(v6(1, 1))).ok).toBe(true);
+    expect((await consume(v6(1, 2))).ok).toBe(true);
+    const refused = await consume(v6(1, 3));
+    expect(refused).toEqual({ ok: false, scope: 'net' });
+    const row = await DemoBudgetModel.findOne({ scope: 'ip', key: pseudonymizeIp(v6(1, 3), T0), kind: 'generation' }).lean();
+    expect(row?.count ?? 0).toBe(0);
+    expect((await netRows())[0].count).toBe(2);
+  });
+
+  it('two different /48 do not affect each other', async () => {
+    process.env.DEMO_PER_NET_GENERATIONS = '3';
+    for (let sub = 0; sub < 3; sub++) expect((await consume(v6(1, sub))).ok).toBe(true);
+    expect(await consume(v6(1, 9))).toEqual({ ok: false, scope: 'net' });
+    for (let sub = 0; sub < 3; sub++) expect((await consume(v6(2, sub))).ok).toBe(true);
+  });
+
+  it('IPv4 does not use the counter at all', async () => {
+    process.env.DEMO_PER_NET_GENERATIONS = '1';
+    for (let host = 1; host <= 10; host++) expect((await consume(`203.0.113.${host}`)).ok).toBe(true);
+    expect(await netRows()).toHaveLength(0);
+  });
+
+  it('a /64 over its own limit is still told so (the order is /64 -> /48 -> global)', async () => {
+    process.env.DEMO_PER_IP_GENERATIONS = '1';
+    process.env.DEMO_PER_NET_GENERATIONS = '5';
+    expect((await consume(v6(1, 1))).ok).toBe(true);
+    expect(await consume(v6(1, 1))).toEqual({ ok: false, scope: 'ip' });
+    // a different /64 of the same network is not over ITS limit: it is the network's turn to answer
+    expect((await consume(v6(1, 2))).ok).toBe(true);
+    expect((await netRows())[0].count).toBe(2);
+  });
+
+  it('when the global budget refuses, the /64 and the /48 units both go back', async () => {
+    process.env.DEMO_DAILY_GENERATIONS = '1';
+    process.env.DEMO_PER_NET_GENERATIONS = '10';
+    expect((await consume(v6(1, 1))).ok).toBe(true);
+    // The global budget is now spent: a plain read refuses, writing nothing
+    expect(await consume(v6(1, 2))).toEqual({ ok: false, scope: 'global' });
+    expect((await netRows())[0].count).toBe(1);
+    expect(await DemoBudgetModel.countDocuments({ scope: 'ip' })).toBe(1);
+  });
+
+  it('with the global slot taken in between, the later refusal gives both counters back', async () => {
+    // Race: the pre-check passes (budget left), the atomic global increment loses to someone else
+    process.env.DEMO_DAILY_GENERATIONS = '5';
+    process.env.DEMO_PER_NET_GENERATIONS = '1000';
+    const results = await Promise.all(Array.from({ length: 40 }, (_, i) => consume(v6(3, i))));
+    expect(results.filter((r) => r.ok)).toHaveLength(5);
+    expect(results.every((r) => r.ok || r.scope === 'global')).toBe(true);
+    expect((await netRows())[0].count).toBe(5);
+    const ipSum = (await DemoBudgetModel.find({ scope: 'ip' }).lean()).reduce((n, r) => n + r.count, 0);
+    expect(ipSum).toBe(5);
+  });
+
+  it('refundDemoBudget gives the /48 unit back too, and peekDemoBudget shows the tighter of the two', async () => {
+    process.env.DEMO_PER_IP_GENERATIONS = '5';
+    process.env.DEMO_PER_NET_GENERATIONS = '3';
+    const ip = v6(1, 1);
+    const ipHash = pseudonymizeIp(ip, T0);
+    const netHash = pseudonymizeNet(ip, T0);
+    await tryConsumeDemoBudget(ipHash, 'generation', T0, netHash);
+    await tryConsumeDemoBudget(ipHash, 'generation', T0, netHash);
+    await expect(peekDemoBudget(ipHash, T0, netHash)).resolves.toEqual({ ipLeft: 1, globalLeft: 1000 - 2 });
+    await refundDemoBudget(ipHash, 'generation', T0, netHash);
+    await expect(peekDemoBudget(ipHash, T0, netHash)).resolves.toEqual({ ipLeft: 2, globalLeft: 1000 - 1 });
+    expect((await netRows())[0].count).toBe(1);
+    // another /64 of the same /48 has used the rest of the network's allowance: the visitor sees what is really left
+    const other = v6(1, 2);
+    await tryConsumeDemoBudget(pseudonymizeIp(other, T0), 'generation', T0, netHash);
+    await tryConsumeDemoBudget(pseudonymizeIp(other, T0), 'generation', T0, netHash);
+    await expect(peekDemoBudget(ipHash, T0, netHash)).resolves.toMatchObject({ ipLeft: 0 });
+  });
+
+  it('starts again on the next UTC day', async () => {
+    process.env.DEMO_PER_NET_GENERATIONS = '1';
+    expect((await consume(v6(1, 1))).ok).toBe(true);
+    expect((await consume(v6(1, 2))).ok).toBe(false);
+    const next = new Date(T0.getTime() + DAY);
+    expect((await consume(v6(1, 2), next)).ok).toBe(true);
+  });
+
+  it('stores only a pseudonym, with the same 48 h expiry as the other counters', async () => {
+    await consume(v6(1, 1));
+    const [row] = await netRows();
+    expect(JSON.stringify(row)).not.toContain('2001');
+    expect(row.expiresAt.getTime()).toBeGreaterThanOrEqual(T0.getTime() + 47 * 3600_000);
+  });
+
+  it('a limit of 0 refuses every IPv6 generation by network and leaves IPv4 alone', async () => {
+    process.env.DEMO_PER_NET_GENERATIONS = '0';
+    expect(await consume(v6(1, 1))).toEqual({ ok: false, scope: 'net' });
+    expect((await consume('203.0.113.9')).ok).toBe(true);
   });
 });
 

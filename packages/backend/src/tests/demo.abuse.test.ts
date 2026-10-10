@@ -45,6 +45,7 @@ const ENV_KEYS = [
   'DEMO_HMAC_SECRET',
   'DEMO_DAILY_GENERATIONS',
   'DEMO_PER_IP_GENERATIONS',
+  'DEMO_PER_NET_GENERATIONS',
   'DEMO_MAX_CONCURRENT',
   'DEMO_POW_BITS',
   'DEMO_MOCK_TTL_MINUTES',
@@ -332,6 +333,46 @@ describe('demo publica: escenarios de abuso de extremo a extremo', () => {
       const third = await generateAs('2001:db8:abcd:12:1::1');
       const neighbour = await generateAs('2001:db8:abcd:13::1');
       expect([first.status, second.status, third.status, neighbour.status]).toEqual([201, 201, 429, 201]);
+    });
+  });
+
+  describe('(a2) un atacante con un /48 entero (65 536 /64: un tunel IPv6 gratuito)', () => {
+    const inNet = (net: number, sub: number) => `2001:db8:${net.toString(16)}:${sub.toString(16)}::1`;
+
+    it('200 /64 distintos dentro de un mismo /48: como mucho 20 generaciones (DEMO_PER_NET_GENERATIONS), mismo codigo 429, y el modelo recibe 20 llamadas', async () => {
+      app.set('trust proxy', 1);
+      process.env.DEMO_DAILY_GENERATIONS = '500';
+      const results: Array<{ status: number; code?: string }> = [];
+      for (let sub = 0; sub < 200; sub++) {
+        const res = await generateAs(inNet(1, sub));
+        results.push({ status: res.status, code: res.body?.error?.code });
+      }
+      expect(tally(results.map((r) => r.status))).toEqual({ 201: 20, 429: 180 });
+      for (const r of results.filter((x) => x.status === 429)) expect(r.code).toBe('DEMO_LIMIT_REACHED');
+      expect(fake.hits).toBe(20);
+      expect(await globalCount()).toBe(20);
+    });
+
+    it('otro /48 no se ve afectado, el limite es configurable y /status muestra lo que de verdad queda', async () => {
+      app.set('trust proxy', 1);
+      process.env.DEMO_DAILY_GENERATIONS = '500';
+      process.env.DEMO_PER_NET_GENERATIONS = '3';
+      for (let sub = 0; sub < 3; sub++) expect((await generateAs(inNet(1, sub))).status).toBe(201);
+      expect((await generateAs(inNet(1, 99))).status).toBe(429);
+      const stuck = await request(app).get('/api/demo/status').set('X-Forwarded-For', inNet(1, 98));
+      expect(stuck.body.data.remainingToday).toBe(0);
+      const other = await request(app).get('/api/demo/status').set('X-Forwarded-For', inNet(2, 1));
+      expect(other.body.data.remainingToday).toBe(2);
+      expect((await generateAs(inNet(2, 1))).status).toBe(201);
+      expect(fake.hits).toBe(4);
+    });
+
+    it('IPv4 no cambia: tres direcciones de la misma /24 reciben dos generaciones cada una', async () => {
+      app.set('trust proxy', 1);
+      process.env.DEMO_PER_NET_GENERATIONS = '1';
+      const statuses: number[] = [];
+      for (const host of [1, 2, 3]) for (let i = 0; i < 3; i++) statuses.push((await generateAs(`198.51.100.${host}`)).status);
+      expect(tally(statuses)).toEqual({ 201: 6, 429: 3 });
     });
   });
 

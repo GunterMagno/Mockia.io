@@ -6,7 +6,7 @@ import { getLlm, type ChatMessage } from '../ai/providers/index.js';
 import { extractJsonFromLLMOutput, validateGeneratedApi, MOCK_SPEC_JSON_SCHEMA } from '../ai/index.js';
 import { acquireGenerationSlot, peekDemoBudget, peekGlobalDemoBudget, refundDemoBudget, tryConsumeDemoBudget } from './budget.js';
 import { getDemoConfig } from './config.js';
-import { pseudonymizeIp } from './ipHash.js';
+import { pseudonymizeIp, pseudonymizeNet } from './ipHash.js';
 import { checkProof, isChallengeSpent, spendChallenge } from './pow.js';
 import { createDemoMock, DemoMockError, prepareDemoEndpoints, type DemoEndpoint, type DemoMethod } from './mockStore.js';
 import { DEMO_TEMPLATES, type DemoTemplateId } from './templates.js';
@@ -212,7 +212,8 @@ export async function getDemoStatus(ip: string): Promise<DemoStatus> {
   const cfg = getDemoConfig();
   const base = { maxEndpoints: cfg.maxEndpoints, ttlMinutes: cfg.mockTtlMinutes };
   if (!cfg.enabled) return { available: false, remainingToday: null, ...base };
-  const left = await peekDemoBudget(pseudonymizeIp(ip, demoClock.now()), demoClock.now());
+  const now = demoClock.now();
+  const left = await peekDemoBudget(pseudonymizeIp(ip, now), now, pseudonymizeNet(ip, now));
   return { available: left.globalLeft > 0, remainingToday: left.ipLeft, ...base };
 }
 
@@ -264,6 +265,8 @@ export async function generateDemoMock(input: GenerateInput): Promise<GenerateRe
   const cfg = getDemoConfig();
   const now = demoClock.now();
   const ipHash = pseudonymizeIp(input.ip || 'unknown', now);
+  // IPv6 only: the pseudonym of the /48, so a whole routed prefix is one more counter and not 65 536 visitors
+  const netHash = pseudonymizeNet(input.ip || 'unknown', now);
 
   // 1. The proof of work, checked WITHOUT touching the database (shape, signature, expiry, the work itself, and a read of the
   //    spent list). Before the budget on purpose: a request without a real, unspent solution can then neither write a
@@ -275,11 +278,14 @@ export async function generateDemoMock(input: GenerateInput): Promise<GenerateRe
   if (!checked.ok || (await isChallengeSpent(checked.id))) throw invalidProof();
 
   // 2. Budget of the visitor, then of the whole demo (the visitor's first, so one address cannot drain the global one)
-  const budget = await tryConsumeDemoBudget(ipHash, 'generation', now);
+  const budget = await tryConsumeDemoBudget(ipHash, 'generation', now, netHash);
   if (!budget.ok) {
-    if (budget.scope === 'ip') {
+    if (budget.scope === 'ip' || budget.scope === 'net') {
+      // Same code and status for both: to the visitor it is "no more demo generations today from here"
       throw new DemoRefusal(
-        'You have used all your demo generations for today. Create a free account to keep going, or come back tomorrow.',
+        budget.scope === 'ip'
+          ? 'You have used all your demo generations for today. Create a free account to keep going, or come back tomorrow.'
+          : "The demo generations for today have been used up from your network. Create a free account to keep going, or come back tomorrow.",
         ErrorCode.DEMO_LIMIT_REACHED,
         429,
         secondsToNextUtcMidnight(now),
@@ -329,7 +335,7 @@ export async function generateDemoMock(input: GenerateInput): Promise<GenerateRe
     }
 
     // The mock exists and its unit is spent: a failed counter read must not turn this into an error the visitor cannot recover from
-    const left = await peekDemoBudget(ipHash, now).catch(() => null);
+    const left = await peekDemoBudget(ipHash, now, netHash).catch(() => null);
     return {
       demoId: created.demoId,
       endpoints: created.endpoints,
@@ -337,7 +343,7 @@ export async function generateDemoMock(input: GenerateInput): Promise<GenerateRe
       remainingToday: left ? left.ipLeft : null,
     };
   } catch (err) {
-    if (!requestSent) await refundDemoBudget(ipHash, 'generation', now).catch(() => undefined);
+    if (!requestSent) await refundDemoBudget(ipHash, 'generation', now, netHash).catch(() => undefined);
     if (err instanceof AppError) throw err;
     // Never forward an unknown error: its message can quote the text it choked on
     console.error(`[Demo] generation failed (${describeError(err)})`);

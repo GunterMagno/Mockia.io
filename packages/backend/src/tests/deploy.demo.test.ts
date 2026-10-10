@@ -37,7 +37,7 @@ const composeEnv = compose.services.backend.environment ?? {};
 describe('the list of demo variables is what we think it is', () => {
   it('reads the 7 DEMO_* and the 2 AI_DEMO_* variables', () => {
     expect(DEMO_VARS).toEqual(
-      ['DEMO_DAILY_GENERATIONS', 'DEMO_ENABLED', 'DEMO_HMAC_SECRET', 'DEMO_MAX_CONCURRENT', 'DEMO_MOCK_TTL_MINUTES', 'DEMO_PER_IP_GENERATIONS', 'DEMO_POW_BITS'].sort(),
+      ['DEMO_DAILY_GENERATIONS', 'DEMO_ENABLED', 'DEMO_HMAC_SECRET', 'DEMO_MAX_CONCURRENT', 'DEMO_MOCK_TTL_MINUTES', 'DEMO_PER_IP_GENERATIONS', 'DEMO_PER_NET_GENERATIONS', 'DEMO_POW_BITS'].sort(),
     );
     expect(AI_DEMO_VARS).toEqual(['AI_DEMO_PROVIDERS', 'AI_DEMO_TIMEOUT_MS']);
   });

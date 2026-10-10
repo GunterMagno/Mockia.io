@@ -43,3 +43,16 @@ export const utcDay = (d: Date): string => d.toISOString().slice(0, 10);
 export function pseudonymizeIp(ip: string, now: Date = new Date()): string {
   return crypto.createHmac('sha256', demoKey('demo-ip')).update(`${utcDay(now)}|${normalizeIp(ip)}`).digest('hex');
 }
+
+/**
+ * Pseudonym of the /48 an IPv6 address belongs to, with the same daily salt and secret as pseudonymizeIp (and a different
+ * input, so the two never coincide), or null when the address has none: IPv4, an IPv4-mapped IPv6 address, or text that
+ * is not an address. A /64 is what one household or interface gets, but a free tunnel broker hands one person a whole /48
+ * (65 536 of them), so the per-/64 allowance alone would give that person thousands of "visitors" at no cost.
+ */
+export function pseudonymizeNet(ip: string, now: Date = new Date()): string | null {
+  const normalized = normalizeIp(ip);
+  if (!normalized.startsWith('v6:')) return null;
+  const net48 = normalized.slice(3).split(':').slice(0, 3).join(':');
+  return crypto.createHmac('sha256', demoKey('demo-ip')).update(`${utcDay(now)}|net48|${net48}`).digest('hex');
+}

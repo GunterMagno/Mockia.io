@@ -11,6 +11,8 @@ export interface DemoConfig {
   /** AI generations the whole demo may spend per UTC day (the demo's own budget, apart from every user's quota). */
   dailyGenerations: number;
   perIpGenerationsPerDay: number;
+  /** Generations per UTC day for a whole IPv6 /48 (65 536 /64 of one person with a free tunnel); IPv4 is not counted. */
+  perNetGenerationsPerDay: number;
   /** Generations running at the same time in this process; per-process, so N instances allow N times this. */
   maxConcurrent: number;
   maxConcurrentPerIp: number;
@@ -39,6 +41,7 @@ export function getDemoConfig(env: NodeJS.ProcessEnv = process.env): DemoConfig 
     enabled: TRUE.test(env.DEMO_ENABLED?.trim() ?? ''),
     dailyGenerations: int(env.DEMO_DAILY_GENERATIONS, 150, 0, 100_000),
     perIpGenerationsPerDay: int(env.DEMO_PER_IP_GENERATIONS, 2, 0, 1000),
+    perNetGenerationsPerDay: int(env.DEMO_PER_NET_GENERATIONS, 20, 0, 100_000),
     maxConcurrent: int(env.DEMO_MAX_CONCURRENT, 4, 1, 100),
     maxConcurrentPerIp: 1,
     powBits: int(env.DEMO_POW_BITS, 18, 1, MAX_POW_BITS),
