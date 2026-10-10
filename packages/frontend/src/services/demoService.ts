@@ -164,3 +164,17 @@ export async function callDemoMock(
   })
   return { status: res.status, headers, text }
 }
+
+/**
+ * "Hay demo que ofrecer?": lo pregunta el sitio entero (cabecera y landing), asi que usa el endpoint anonimo y barato
+ * `/demo/availability`, no `/status` (que cuenta contra el limitador de rafagas del visitante). Cualquier cosa que no
+ * sea exactamente `available: true` (error, 429, red, cuerpo raro, plazo agotado) es "no": fail closed.
+ */
+export async function fetchDemoAvailability(): Promise<boolean> {
+  try {
+    const res = await http.get<Envelope<{ available?: unknown }>>('/demo/availability', { timeout: 8_000 })
+    return res.data?.data?.available === true
+  } catch {
+    return false
+  }
+}

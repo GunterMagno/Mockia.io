@@ -559,16 +559,88 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
     cy.contains(/\d+:\d{2} 后过期/).should('be.visible');
   });
 
-  it('(i) el enlace "Probar gratis" de la cabecera y el boton de la landing llevan a /demo', () => {
-    stubStatus();
-    cy.visit('/');
-    cy.get('header').contains('a', 'Try for free').should('have.attr', 'href', '/demo').click();
-    cy.location('pathname').should('eq', '/demo');
-
-    cy.visit('/');
-    cy.get('#hero-title').parents('section').first().within(() => {
-      cy.contains('a', 'Try without signing up').should('have.attr', 'href', '/demo').click();
+  describe('(i) los enlaces a la demo solo se ofrecen si la demo esta disponible (fail closed)', () => {
+    // La respuesta real de /availability es cacheable 60 s: una entrada de la cache HTTP del navegador (de otra visita
+    // anterior) no pasaria por cy.intercept. Se vacia antes de cada prueba.
+    beforeEach(() => {
+      cy.wrap(Cypress.automation('remote:debugger:protocol', { command: 'Network.clearBrowserCache' }));
     });
-    cy.location('pathname').should('eq', '/demo');
+    const availability = (response: Record<string, unknown>, delay = 0) =>
+      cy.intercept('GET', '**/api/demo/availability', delay ? { delay, ...response } : response).as('availability');
+    const heroSection = () => cy.get('#hero-title').parents('section').first();
+    const headerLink = () => cy.get('#site-nav a[href="/demo"]');
+
+    it('available:true -> el enlace de la cabecera y el boton de la landing llevan a /demo, con UNA sola peticion', () => {
+      stubStatus();
+      availability({ body: envelope({ available: true }) });
+      cy.visit('/');
+      headerLink().should('have.length', 1).and('contain.text', 'Try for free');
+      heroSection().contains('a', 'Try without signing up').should('have.attr', 'href', '/demo');
+      cy.get('@availability.all').should('have.length', 1);
+      heroSection().contains('a', 'Try without signing up').click();
+      cy.location('pathname').should('eq', '/demo');
+      // Navegar dentro de la app no repite la peticion (la comparten Header y Landing durante toda la carga)
+      cy.get('header a[aria-label="Mockia home"]').click();
+      cy.location('pathname').should('eq', '/');
+      headerLink().should('contain.text', 'Try for free');
+      heroSection().contains('a', 'Try without signing up').should('be.visible');
+      cy.get('@availability.all').should('have.length', 1);
+      headerLink().click();
+      cy.location('pathname').should('eq', '/demo');
+    });
+
+    it('available:false, error 500 o fallo de red -> no aparece ningun enlace', () => {
+      const cases: Array<[string, Record<string, unknown>]> = [
+        ['available:false', { body: envelope({ available: false }) }],
+        ['500', { statusCode: 500, body: failure('INTERNAL_SERVER_ERROR', 'boom') }],
+        ['429', { statusCode: 429, body: failure('DEMO_RATE_LIMIT', 'slow down') }],
+        ['red', { forceNetworkError: true }],
+        ['cuerpo raro', { body: { nonsense: true } }],
+      ];
+      for (const [label, response] of cases) {
+        availability(response);
+        cy.visit('/');
+        cy.wait('@availability');
+        cy.get('#hero-title').should('be.visible');
+        heroSection().contains('button', 'Start for free').should('exist');
+        cy.get('header').contains('a', 'Log in').should('be.visible'); // la cabecera ya termino de cargar
+        cy.get('#site-nav a[href="/demo"]', { timeout: 500 }).should('not.exist');
+        heroSection().contains('a', 'Try without signing up').should('not.exist');
+        cy.log(`sin enlaces con ${label}`);
+      }
+    });
+
+    it('la landing no se mueve cuando llega la respuesta (375 px, con y sin boton)', () => {
+      // Sin sesion y con la respuesta lenta: la figura de debajo del hero no se desplaza cuando aparece (o no) el boton
+      cy.viewport(375, 812);
+      for (const available of [true, false]) {
+        availability({ body: envelope({ available }) }, 1500);
+        cy.visit('/');
+        cy.get('#hero-title').should('be.visible');
+        cy.wait(700); // pasa la animacion de entrada de la ruta
+        let before = 0;
+        cy.get('#hero-title')
+          .parents('section')
+          .first()
+          .find('figure')
+          .first()
+          .then(($f) => {
+            before = $f[0].getBoundingClientRect().top + ($f[0].ownerDocument.defaultView?.scrollY ?? 0);
+          });
+        cy.wait('@availability');
+        if (available) heroSection().contains('a', 'Try without signing up').should('be.visible');
+        cy.wait(300);
+        cy.get('#hero-title')
+          .parents('section')
+          .first()
+          .find('figure')
+          .first()
+          .then(($f) => {
+            const after = $f[0].getBoundingClientRect().top + ($f[0].ownerDocument.defaultView?.scrollY ?? 0);
+            expect(Math.abs(after - before), `desplazamiento con available=${available}`).to.be.at.most(1);
+          });
+        cy.document().then((doc) => expect(doc.documentElement.scrollWidth).to.be.at.most(375));
+      }
+    });
   });
 });

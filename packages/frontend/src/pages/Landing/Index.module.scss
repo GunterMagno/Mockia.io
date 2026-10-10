@@ -156,7 +156,9 @@
   margin-bottom: calc(var(--space-gap) * 1.5);
 }
 
+/* Movil: el boton secundario pasa a una segunda linea; su hueco se reserva (con o sin boton) para que aparezca sin desplazar nada */
 .heroActions { display: flex; flex-wrap: wrap; gap: var(--spacing-4); }
+.reserveDemo { @media (max-width: 40rem) { min-height: 7.5rem; align-content: flex-start; } }
 
 .secondaryBtn {
   display: inline-flex;

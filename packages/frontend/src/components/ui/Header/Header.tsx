@@ -12,11 +12,13 @@ import Icon from '../Icon/Icon';
 import { PATHS, isKnownPath, isAuthPath } from '../../../routes/paths';
 import { useI18n } from '../../../i18n/I18nProvider';
 import LanguageSwitcher from '../LanguageSwitcher/LanguageSwitcher';
+import { useDemoAvailable } from '../../../hooks/useDemoAvailable';
 
 const Header: React.FC = () => {
   const location = useLocation();
   const { isAuthenticated, isLoading } = useAuth();
   const { t } = useI18n();
+  const demoAvailable = useDemoAvailable() === true;
   const path = location.pathname;
   
   // Determine variant based on path
@@ -214,7 +216,7 @@ const Header: React.FC = () => {
               <ProfileAndBellDesktop />
             ) : !isLoading && (
               <nav className={styles.authButtons}>
-                <Link to={PATHS.demo} className={styles.demoLink}>{t('nav.tryFree')}</Link>
+                {demoAvailable && <Link to={PATHS.demo} className={styles.demoLink}>{t('nav.tryFree')}</Link>}
                 <Link to={PATHS.login} className={styles.loginBtn}>{t('nav.logIn')}</Link>
                 <Link to={PATHS.signup} className={styles.signupBtn}>{t('nav.signUp')}</Link>
               </nav>

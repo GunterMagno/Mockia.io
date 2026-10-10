@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { PATHS } from '../../routes/paths'
 import { useAuth } from '../../contexts/AuthContext'
 import { useRevealFallback } from '../../hooks/useRevealFallback'
+import { useDemoAvailable } from '../../hooks/useDemoAvailable'
 import { useI18n, type MessageKey } from '../../i18n/I18nProvider'
 import BuilderPreview from './BuilderPreview'
 import HowItWorks from './HowItWorks'
@@ -59,8 +60,9 @@ const FEATURES = [
 
 const Index: React.FC = () => {
   const navigate = useNavigate()
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, isLoading } = useAuth()
   const { t, rich } = useI18n()
+  const demoAvailable = useDemoAvailable() === true
   const rootRef = useRef<HTMLElement>(null)
   const sceneOn = useHeroScene()
   useRevealFallback(rootRef)
@@ -84,13 +86,14 @@ const Index: React.FC = () => {
               {rich('landing.hero.title', { em: (chunk) => <em className={styles.gradientText}>{chunk}</em> })}
             </h1>
             <p className={styles.heroDescription}>{t('landing.hero.description')}</p>
-            <nav className={styles.heroActions} aria-label={t('landing.hero.actions')}>
+            {/* Anonimos (o aun sin saberlo): se reserva el hueco del boton secundario para que su llegada no mueva la pagina */}
+            <nav className={`${styles.heroActions} ${!isAuthenticated || isLoading ? styles.reserveDemo : ''}`} aria-label={t('landing.hero.actions')}>
               <button className={styles.primaryBtn} onClick={() => navigate(isAuthenticated ? PATHS.dashboard : PATHS.signup)}>
                 <span>{isAuthenticated ? t('landing.hero.ctaDashboard') : t('landing.hero.ctaStart')}</span>
                 <img src={arrowRight} alt="" />
               </button>
-              {/* Para visitantes anonimos: la propia /demo explica si esta apagada o sin cupo (viene apagada por defecto) */}
-              {!isAuthenticated && (
+              {/* Solo para visitantes anonimos y si el servidor dice que la demo esta disponible (fail closed) */}
+              {!isAuthenticated && demoAvailable && (
                 <Link className={styles.secondaryBtn} to={PATHS.demo}>
                   {t('landing.hero.ctaDemo')}
                 </Link>
