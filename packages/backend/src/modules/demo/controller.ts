@@ -7,7 +7,7 @@ import { issueChallenge } from './pow.js';
 import { demoClock } from './mockRouter.js';
 import { DEMO_TEMPLATE_IDS } from './templates.js';
 import { createFloodLimiter } from './floodLimit.js';
-import { DemoRefusal, generateDemoMock, getDemoStatus, type GenerateInput } from './service.js';
+import { DemoRefusal, generateDemoMock, getDemoAvailability, getDemoStatus, type GenerateInput } from './service.js';
 
 /** Longest text a visitor may paste (README, types, notes). */
 export const MAX_DEMO_TEXT_CHARS = 6000;
@@ -57,6 +57,13 @@ function baseUrlOf(req: Request, demoId: string): string {
 /** GET /api/demo/status */
 export async function statusHandler(req: Request, res: Response): Promise<void> {
   res.json(envelope(await getDemoStatus(req.ip || 'unknown')));
+}
+
+/** GET /api/demo/availability: { available } only, publicly cacheable for a minute. */
+export async function availabilityHandler(_req: Request, res: Response): Promise<void> {
+  const available = await getDemoAvailability();
+  res.setHeader('Cache-Control', 'public, max-age=60');
+  res.json(envelope({ available }));
 }
 
 /** POST /api/demo/challenge */

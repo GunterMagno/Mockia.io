@@ -4,7 +4,7 @@ import { DEMO_MAX_TOKENS, getDemoAiProviders, getDemoAiTimeoutMs, getSpecGenerat
 import { describeError } from '../../utils/safeErrorLog.js';
 import { getLlm, type ChatMessage } from '../ai/providers/index.js';
 import { extractJsonFromLLMOutput, validateGeneratedApi, MOCK_SPEC_JSON_SCHEMA } from '../ai/index.js';
-import { acquireGenerationSlot, peekDemoBudget, refundDemoBudget, tryConsumeDemoBudget } from './budget.js';
+import { acquireGenerationSlot, peekDemoBudget, peekGlobalDemoBudget, refundDemoBudget, tryConsumeDemoBudget } from './budget.js';
 import { getDemoConfig } from './config.js';
 import { pseudonymizeIp } from './ipHash.js';
 import { verifyProof } from './pow.js';
@@ -214,6 +214,27 @@ export async function getDemoStatus(ip: string): Promise<DemoStatus> {
   if (!cfg.enabled) return { available: false, remainingToday: null, ...base };
   const left = await peekDemoBudget(pseudonymizeIp(ip, demoClock.now()), demoClock.now());
   return { available: left.globalLeft > 0, remainingToday: left.ipLeft, ...base };
+}
+
+/**
+ * "Is the demo worth advertising right now?" - the only thing the site header and the landing page ask, on every page
+ * load, from everybody. Anonymous by construction: no address, no per-visitor number, no write. Remembered in memory for
+ * 30 s so a burst of page loads is one read, not a thousand (the HTTP answer is also cacheable for a minute).
+ */
+const AVAILABILITY_TTL_MS = 30 * 1000;
+let availabilityCache: { until: number; value: boolean } | null = null;
+
+export const resetDemoAvailabilityCache = (): void => {
+  availabilityCache = null;
+};
+
+export async function getDemoAvailability(): Promise<boolean> {
+  if (!getDemoConfig().enabled) return false;
+  const now = demoClock.now();
+  if (availabilityCache && availabilityCache.until > now.getTime()) return availabilityCache.value;
+  const value = (await peekGlobalDemoBudget(now)) > 0;
+  availabilityCache = { until: now.getTime() + AVAILABILITY_TTL_MS, value };
+  return value;
 }
 
 /* ------------------------------------------------------------------------------------------------------- generate */

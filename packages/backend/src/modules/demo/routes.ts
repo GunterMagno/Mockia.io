@@ -3,11 +3,11 @@ import { ErrorCode } from '@mockia/shared';
 import { AppError } from '../../middlewares/errorHandler.js';
 import { requireJsonBody } from '../auth/cookie.js';
 import { describeError } from '../../utils/safeErrorLog.js';
-import { challengeHandler, generateHandler, isDemoEnabled, resetChallengeLimiter, statusHandler } from './controller.js';
+import { availabilityHandler, challengeHandler, generateHandler, isDemoEnabled, resetChallengeLimiter, statusHandler } from './controller.js';
 import { createFloodLimiter } from './floodLimit.js';
 import { pseudonymizeIp } from './ipHash.js';
 import { demoClock } from './mockRouter.js';
-import { DemoRefusal } from './service.js';
+import { DemoRefusal, resetDemoAvailabilityCache } from './service.js';
 
 /**
  * /api/demo: the anonymous entry points of the public demo (status, challenge, generate). Mounted BEFORE the global body
@@ -31,6 +31,7 @@ const flood = createFloodLimiter({ windowMs: FLOOD_WINDOW_MS, max: DEMO_API_FLOO
 export const resetDemoApiLimits = (): void => {
   flood.clear();
   resetChallengeLimiter();
+  resetDemoAvailabilityCache();
 };
 
 const errorBody = (code: ErrorCode, message: string) => ({ success: false, error: { code, message }, timestamp: new Date().toISOString() });
@@ -43,6 +44,10 @@ const guarded =
   };
 
 export const demoRouter = Router();
+
+// Before the flood guard on purpose: every page of the site asks this, and behind a shared NAT those asks must not use
+// up the per-address allowance of people who really use the demo. It reads one global counter and keeps no address.
+demoRouter.get('/availability', guarded(availabilityHandler));
 
 demoRouter.use((req: Request, res: Response, next: NextFunction) => {
   // Off: nothing below needs the visitor's pseudonym (which in production cannot exist without DEMO_HMAC_SECRET)

@@ -99,6 +99,12 @@ export async function peekDemoBudget(ipHash: string, now: Date = new Date()): Pr
   };
 }
 
+/** Whether the demo as a whole still has generations left today (global counter only, read-only, no visitor involved). */
+export async function peekGlobalDemoBudget(now: Date = new Date()): Promise<number> {
+  const global = await DemoBudgetModel.findOne({ day: utcDay(now), scope: 'global', key: 'global', kind: 'generation' }).lean();
+  return Math.max(0, getDemoConfig().dailyGenerations - (global?.count ?? 0));
+}
+
 const running = new Map<string, number>();
 let runningTotal = 0;
 
