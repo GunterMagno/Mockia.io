@@ -270,6 +270,10 @@ const en = {
     powTimeout: 'Solving the challenge took more than a minute, so it was stopped. No attempt was used. Try again.',
     powUnsupported: 'Your browser cannot run the check here. It needs a secure (https) connection and a recent browser. Try another browser or create a free account.',
     powFailed: 'The check could not complete in your browser. Nothing was sent and no attempt was used. Try again, or try another browser.',
+    announce: {
+      ready: { one: 'Your mock API is ready: {count} endpoint. It expires in {minutes} minutes.', other: 'Your mock API is ready: {count} endpoints. It expires in {minutes} minutes.' },
+      response: 'Response received: status {status}.',
+    },
     result: {
       title: 'Your mock API',
       baseUrl: 'Base URL',

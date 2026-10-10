@@ -213,7 +213,7 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
     cy.intercept('POST', '**/api/demo/generate', { statusCode: 400, body: failure('DEMO_CHALLENGE_INVALID', 'The challenge is not valid') }).as('generate');
     cy.visit('/demo');
     generateButton().click();
-    cy.contains('[role="alert"]', 'Something went wrong').should('be.visible');
+    cy.contains('[data-testid="demo-problem"]', 'Something went wrong').should('be.visible');
     cy.get('@generate.all').should('have.length', 2);
     generateButton().should('be.enabled');
   });
@@ -264,7 +264,7 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
     });
     generateButton().click();
     cy.wait('@generate');
-    cy.get('[role="alert"]').within(() => {
+    cy.get('[data-testid="demo-problem"]').within(() => {
       cy.contains('not available right now').should('be.visible');
       cy.contains('a', 'Create your free account').should('have.attr', 'href', '/signup');
     });
@@ -276,7 +276,7 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
     stubStatus({ available: false, remainingToday: null });
     cy.visit('/demo');
     cy.wait('@status');
-    cy.contains('[role="alert"]', 'not available right now').should('be.visible');
+    cy.contains('[data-testid="demo-problem"]', 'not available right now').should('be.visible');
     generateButton().should('be.disabled');
     cy.contains('a', 'Create your free account').should('have.attr', 'href', '/signup');
   });
@@ -399,6 +399,25 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
     cy.get('[data-testid="demo-problem"]').should('contain.text', 'not available right now');
   });
 
+  it('(I3) una region de estado siempre montada anuncia progreso, resultado, errores y la respuesta de Probar', () => {
+    stubAll();
+    cy.visit('/demo');
+    // Montada y vacia desde el principio (una region viva que aparece ya con texto suele no anunciarse)
+    cy.get('[data-testid="demo-live"]').should('have.attr', 'role', 'status').and('have.attr', 'aria-live', 'polite').and('have.text', '');
+    cy.get('[data-testid="demo-live"]').then(($live) => {
+      generateButton().click();
+      cy.get('[data-testid="demo-live"]').should('contain.text', 'Your mock API is ready').and('contain.text', '3 endpoints');
+      cy.get('[data-testid="demo-endpoint-list"] li').should('have.length', 3);
+      cy.wrap($live).should(($el) => expect(Cypress.dom.isAttached($el)).to.eq(true)); // el mismo nodo: no se desmonto
+    });
+    cy.contains('button', 'Send request').click();
+    cy.get('[data-testid="demo-live"]').should('contain.text', 'Response received').and('contain.text', '200').and('not.contain.text', 'Ceramic');
+    // Error: el texto breve del problema tambien se anuncia
+    stubGenerate({ statusCode: 503, body: failure('DEMO_UNAVAILABLE', 'busy') });
+    generateButton().click();
+    cy.get('[data-testid="demo-live"]').should('contain.text', 'not available right now');
+  });
+
   it('(e) 429 DEMO_LIMIT_REACHED: muestra a que hora vuelve el cupo (Retry-After); DEMO_RATE_LIMIT es otro aviso', () => {
     const now = Date.UTC(2026, 9, 9, 10, 0, 0);
     cy.clock(now, ['Date']);
@@ -409,15 +428,15 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
     generateButton().click();
     cy.wait('@generate');
     const back = new Intl.DateTimeFormat('en', { hour: 'numeric', minute: '2-digit' }).format(new Date(now + 7200 * 1000));
-    cy.contains('[role="alert"]', "today's attempts").should('contain.text', back);
-    cy.contains('[role="alert"] a', 'Create your free account').should('have.attr', 'href', '/signup');
+    cy.contains('[data-testid="demo-problem"]', "today's attempts").should('contain.text', back);
+    cy.contains('[data-testid="demo-problem"] a', 'Create your free account').should('have.attr', 'href', '/signup');
     generateButton().should('be.disabled');
 
     // Demasiadas peticiones: esperar un momento, no es el cupo diario
     cy.intercept('POST', '**/api/demo/challenge', { statusCode: 429, headers: { 'retry-after': '120' }, body: failure('DEMO_RATE_LIMIT', 'Too many') });
     cy.visit('/demo');
     generateButton().click();
-    cy.contains('[role="alert"]', 'Too many requests').should('be.visible').and('not.contain.text', "today's attempts");
+    cy.contains('[data-testid="demo-problem"]', 'Too many requests').should('be.visible').and('not.contain.text', "today's attempts");
     generateButton().should('be.enabled');
   });
 
@@ -433,7 +452,7 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
     stubGenerate({ statusCode: 502, body: failure('EXTERNAL_SERVICE_ERROR', 'The AI returned something unusable') });
     cy.visit('/demo');
     generateButton().click();
-    cy.contains('[role="alert"]', 'counted').should('be.visible');
+    cy.contains('[data-testid="demo-problem"]', 'counted').should('be.visible');
   });
 
   it('(f) un texto de mas de 6000 caracteres bloquea el envio con un mensaje accesible', () => {

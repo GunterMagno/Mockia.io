@@ -69,6 +69,8 @@ const Demo: React.FC = () => {
   const [problem, setProblem] = useState<Problem | null>(null)
   const [result, setResult] = useState<DemoResult | null>(null)
   const [now, setNow] = useState(() => Date.now())
+  // Texto de la region viva (siempre montada): lo que se anuncia a lectores de pantalla
+  const [announcement, setAnnouncement] = useState('')
 
   const [selected, setSelected] = useState(0)
   const [params, setParams] = useState<Record<string, string>>({})
@@ -130,17 +132,31 @@ const Demo: React.FC = () => {
 
   const source = (): DemoSource => (choice === 'text' ? { type: 'text', text } : { type: 'template', id: choice })
 
+  const clockFormat = (date: Date) => formatDate(date, { hour: 'numeric', minute: '2-digit' })
+
+  const problemText = (p: Problem): string =>
+    p.kind === 'unavailable'
+      ? `${t('demo.errors.unavailableTitle')}. ${t('demo.errors.unavailable')}`
+      : p.kind === 'limit'
+        ? t('demo.errors.limit', { time: clockFormat(p.until ?? nextUtcMidnight()) })
+        : t(PROBLEM_TEXT[p.kind])
+
+  const showProblem = (p: Problem) => {
+    setProblem(p)
+    setAnnouncement(problemText(p))
+  }
+
   const fail = (err: unknown) => {
     if (cancelledRef.current) return
     const kind = err instanceof DemoApiError ? err.kind : 'other'
     if (kind === 'limit') {
       const seconds = err instanceof DemoApiError ? err.retryAfterSeconds : null
       setRemaining(0)
-      setProblem({ kind: 'limit', until: seconds ? new Date(Date.now() + seconds * 1000) : nextUtcMidnight() })
+      showProblem({ kind: 'limit', until: seconds ? new Date(Date.now() + seconds * 1000) : nextUtcMidnight() })
     } else if (kind === 'challenge') {
-      setProblem({ kind: 'other' })
+      showProblem({ kind: 'other' })
     } else {
-      setProblem({ kind })
+      showProblem({ kind })
     }
     // El servidor sabe cuantos intentos quedan (un 502 o un 504 tambien cuentan); con el cupo agotado ya lo sabemos
     if (kind !== 'limit') void refreshStatus()
@@ -151,6 +167,7 @@ const Demo: React.FC = () => {
     const controller = new AbortController()
     abortRef.current = controller
     setPhase('solving')
+    setAnnouncement(t('demo.progress.solving'))
     try {
       const challenge = await requestDemoChallenge(controller.signal)
       const pow = runPow(challenge.challenge, challenge.bits)
@@ -159,14 +176,18 @@ const Demo: React.FC = () => {
       powRef.current = null
       if ('error' in solved) {
         if (solved.error === 'aborted' || cancelledRef.current) throw new DOMException('cancelled', 'AbortError')
-        setNotice(solved.error === 'timeout' ? 'powTimeout' : solved.error === 'unsupported' ? 'powUnsupported' : 'powFailed')
+        const reason = solved.error === 'timeout' ? 'powTimeout' : solved.error === 'unsupported' ? 'powUnsupported' : 'powFailed'
+        setNotice(reason)
+        setAnnouncement(t(`demo.${reason}`))
         setPhase('idle')
         return
       }
       setPhase('sending')
+      setAnnouncement(t('demo.progress.sending'))
       const created = await generateDemo({ challenge: challenge.challenge, nonce: solved.nonce, source: source() }, controller.signal)
       if (!mounted.current) return
       setResult(created)
+      setAnnouncement(t('demo.announce.ready', { count: created.endpoints.length, minutes: status?.ttlMinutes ?? 30 }))
       setRemaining(created.remainingToday)
       setSelected(0)
       setParams({})
@@ -178,6 +199,7 @@ const Demo: React.FC = () => {
       if (!mounted.current) return
       if (cancelledRef.current) {
         setNotice('cancelled')
+        setAnnouncement(t('demo.cancelled'))
         setPhase('idle')
         return
       }
@@ -192,6 +214,7 @@ const Demo: React.FC = () => {
     cancelledRef.current = false
     setNotice(null)
     setProblem(null)
+    setAnnouncement('')
     void run(1)
   }
 
@@ -211,28 +234,28 @@ const Demo: React.FC = () => {
     setSending(true)
     setMockFailed(false)
     try {
-      setMockResponse(await callDemoMock(result.demoId, endpoint.method, fillPath(endpoint.path, values)))
+      const response = await callDemoMock(result.demoId, endpoint.method, fillPath(endpoint.path, values))
+      setMockResponse(response)
+      // Solo el estado: el JSON entero no se lee en voz alta (esta en el panel, enfocable)
+      setAnnouncement(t('demo.announce.response', { status: response.status }))
     } catch {
       setMockResponse(null)
       setMockFailed(true)
+      setAnnouncement(t('demo.try.failed'))
     } finally {
       if (mounted.current) setSending(false)
     }
   }
 
-  const clockFormat = (date: Date) => formatDate(date, { hour: 'numeric', minute: '2-digit' })
-
   const problemBox = view && (
-    <div className={styles.problem} role="alert" data-testid="demo-problem">
+    <div className={styles.problem} data-testid="demo-problem">
       {view.kind === 'unavailable' ? (
         <>
           <strong>{t('demo.errors.unavailableTitle')}</strong>
           <p>{t('demo.errors.unavailable')}</p>
         </>
-      ) : view.kind === 'limit' ? (
-        <p>{t('demo.errors.limit', { time: clockFormat(view.until ?? nextUtcMidnight()) })}</p>
       ) : (
-        <p>{t(PROBLEM_TEXT[view.kind])}</p>
+        <p>{problemText(view)}</p>
       )}
       {(view.kind === 'unavailable' || view.kind === 'limit') && (
         <Link className={styles.linkBtn} to={PATHS.signup}>
@@ -245,6 +268,10 @@ const Demo: React.FC = () => {
   return (
     <div className={styles.page} data-testid="demo-page">
       <div className={styles.container}>
+        {/* Region viva SIEMPRE montada (vacia en reposo): anuncia progreso, resultado, errores y la respuesta de Probar */}
+        <div className="sr-only" role="status" aria-live="polite" aria-atomic="true" data-testid="demo-live">
+          {announcement}
+        </div>
         <header className={styles.head}>
           <span className={styles.badge}>{t('demo.badge')}</span>
           <h1>{t('demo.title')}</h1>
@@ -293,19 +320,20 @@ const Demo: React.FC = () => {
                 placeholder={t('demo.text.placeholder')}
                 disabled={busy}
                 aria-invalid={tooLong}
-                aria-describedby="demo-text-counter demo-text-help"
+                aria-describedby={`demo-text-counter demo-text-help${tooLong ? ' demo-text-error' : ''}`}
                 spellCheck={false}
               />
               <p className={`${styles.counter} ${tooLong ? styles.over : ''}`} id="demo-text-counter">
                 {t('demo.text.counter', { used: formatNumber(textLength), max: formatNumber(MAX_DEMO_TEXT_CHARS) })}
               </p>
-              <p id="demo-text-help" className={tooLong ? styles.fieldError : styles.hint} role={tooLong ? 'alert' : undefined}>
-                {tooLong
-                  ? t('demo.text.tooLong', { used: formatNumber(textLength), max: formatNumber(MAX_DEMO_TEXT_CHARS) })
-                  : textBlank
-                    ? t('demo.text.emptyHint')
-                    : ''}
+              <p id="demo-text-help" className={styles.hint}>
+                {!tooLong && textBlank ? t('demo.text.emptyHint') : ''}
               </p>
+              {tooLong && (
+                <p id="demo-text-error" className={styles.fieldError} role="alert">
+                  {t('demo.text.tooLong', { used: formatNumber(textLength), max: formatNumber(MAX_DEMO_TEXT_CHARS) })}
+                </p>
+              )}
             </div>
           )}
 
@@ -322,7 +350,7 @@ const Demo: React.FC = () => {
 
           {busy && (
             <div className={styles.progress}>
-              <p role="status" aria-live="polite">
+              <p>
                 {phase === 'solving' ? t('demo.progress.solving') : t('demo.progress.sending')}
               </p>
               <div className={styles.bar} role="progressbar" aria-label={t('demo.progress.label')}>
@@ -330,9 +358,9 @@ const Demo: React.FC = () => {
               </div>
             </div>
           )}
-          {notice === 'cancelled' && <p role="status" className={styles.hint}>{t('demo.cancelled')}</p>}
+          {notice === 'cancelled' && <p className={styles.hint} data-testid="demo-notice">{t('demo.cancelled')}</p>}
           {notice && notice !== 'cancelled' && (
-            <p role="alert" className={styles.problem} data-testid="demo-notice">
+            <p className={styles.problem} data-testid="demo-notice">
               {t(`demo.${notice}`)}
             </p>
           )}
@@ -396,7 +424,7 @@ const Demo: React.FC = () => {
                       {sending ? t('demo.try.sending') : t('demo.try.send')}
                     </button>
                     {expired && <p className={styles.hint}>{t('demo.try.expired')}</p>}
-                    {mockFailed && <p role="alert" className={styles.fieldError}>{t('demo.try.failed')}</p>}
+                    {mockFailed && <p className={styles.fieldError}>{t('demo.try.failed')}</p>}
                   </>
                 )}
 

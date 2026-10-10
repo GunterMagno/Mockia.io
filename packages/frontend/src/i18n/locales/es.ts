@@ -265,6 +265,10 @@ const es: Messages = {
     powTimeout: 'Resolver el reto tardó más de un minuto, así que se detuvo. No se gastó ningún intento. Vuelve a intentarlo.',
     powUnsupported: 'Tu navegador no puede ejecutar la comprobación aquí. Necesita una conexión segura (https) y un navegador reciente. Prueba con otro navegador o crea una cuenta gratis.',
     powFailed: 'La comprobación no pudo completarse en tu navegador. No se envió nada y no se gastó ningún intento. Inténtalo de nuevo o prueba con otro navegador.',
+    announce: {
+      ready: { one: 'Tu API mock está lista: {count} endpoint. Caduca en {minutes} minutos.', other: 'Tu API mock está lista: {count} endpoints. Caduca en {minutes} minutos.' },
+      response: 'Respuesta recibida: estado {status}.',
+    },
     result: {
       title: 'Tu API mock',
       baseUrl: 'URL base',
