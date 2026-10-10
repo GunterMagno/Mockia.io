@@ -80,9 +80,23 @@ Hazlo en este orden; no actives nada hasta el paso 5.
 
 ## Apagar la demo
 
-Pon `DEMO_ENABLED=false` y reinicia o redesplega el backend. Efecto inmediato: `generate` y `challenge` de `/api/demo/*` y todo `/api/demo-mock/*` (incluidas las API simuladas que aún no habían caducado) responden 503, y `GET /api/demo/status` responde 200 con `available: false` (la página lo usa para avisar); los usuarios registrados, su IA y sus cuotas no se ven afectados (la demo tiene su propio presupuesto y su propia cadena de IA). No hace falta el secreto para apagarla. Los datos de la demo se borran solos (ver "Qué se guarda").
+Pon `DEMO_ENABLED=false` y reinicia o redesplega el backend. Efecto: `generate` y `challenge` de `/api/demo/*` y todo `/api/demo-mock/*` (incluidas las API simuladas que aún no habían caducado) responden 503, y `GET /api/demo/status` responde 200 con `available: false` (la página lo usa para avisar); los usuarios registrados, su IA y sus cuotas no se ven afectados (la demo tiene su propio presupuesto y su propia cadena de IA). No hace falta el secreto para apagarla. Los datos de la demo se borran solos (ver "Qué se guarda").
 
 Es el primer recurso ante abuso o gasto inesperado: apagar es barato, reactivar es una variable.
+
+### Apagado de emergencia
+
+No existe un interruptor en caliente: las variables se leen del entorno **del proceso**, así que el cambio se ve cuando el backend se reinicia. Por orden, de lo más fino a lo más drástico:
+
+1. **Apagar la demo** (no toca a los usuarios registrados):
+   - Render: panel de Render, servicio `mockia-backend`, *Environment*, `DEMO_ENABLED=false` (o bórrala), *Save*. Render redespliega solo; cuenta con varios minutos (en el plan gratuito el servicio además tarda en arrancar). Como `DEMO_ENABLED` es `sync: false` en `render.yaml`, un push posterior **no** la vuelve a encender.
+   - Docker Compose: `DEMO_ENABLED=false` en el `.env` y `docker compose -f docker-compose.prod.yml up -d backend` (recrea solo el backend; segundos).
+   - Comprueba que ha surtido efecto: `curl -s https://<frontend>/api/demo/status` debe decir `"available":false` y `curl -s -X POST -H 'Content-Type: application/json' -d '{}' https://<frontend>/api/demo/challenge` debe responder 503. La cabecera y la portada tardan hasta unos 90 segundos en dejar de anunciarla (caché de `availability`).
+2. **Cortar el gasto sin esperar al redespliegue**: baja a cero el límite de crédito de la clave de IA en el panel del proveedor (o revócala). Es un corte bruto: **también para la IA de los usuarios registrados** hasta que la repongas. Con un modelo propio, `docker compose ... stop llm`. Por eso el límite de gasto del proveedor debe estar fijado de antemano (ver la lista de comprobaciones): es el tope que no depende de este código.
+3. **Cerrar el acceso en el borde**: bloquear `/api/demo` y `/api/demo-mock` en el proxy (nginx del compose o reglas de la plataforma) responde antes de llegar al backend.
+4. **Estrechar sin apagar**: `DEMO_DAILY_GENERATIONS=0` y `DEMO_PER_IP_GENERATIONS=0` (ver "Apagado suave"); también requiere reinicio.
+
+Tras una emergencia, mira el contador global del día (sección "Qué mirar si hay abuso") para saber cuánto se gastó antes del corte.
 
 ## Calibrar `DEMO_POW_BITS`
 
@@ -134,7 +148,13 @@ Los cupos por visitante dependen de que `req.ip` sea la IP real. Con un número 
 
 1. Haz una petición a `GET /api/demo/status` desde dos redes distintas y mira en los logs del backend la primera columna (la IP): deben salir dos IP públicas distintas.
 2. Repite con `curl -H "X-Forwarded-For: 203.0.113.7" https://<backend>/api/demo/status`. En el log no debe aparecer `203.0.113.7` como IP del cliente.
-3. Ojo con la topología: `render.yaml` fija `TRUST_PROXY=2` porque el navegador llega a la API a través de la reescritura `/api/*` del frontend más el balanceador de Render (dos saltos). Una llamada **directa** al backend atraviesa un solo salto, así que con ese valor un cliente que llame directamente a la URL pública del backend podría falsificar su IP. Si el paso 2 la deja pasar contra el backend directo, los cupos por visitante se pueden esquivar rotando esa cabecera: en ese caso la defensa que queda es el tope global diario, y conviene restringir el acceso directo al backend o acotar la demo con valores más estrictos.
+3. Ojo con la topología: `render.yaml` fija `TRUST_PROXY=2` porque el navegador llega a la API a través de la reescritura `/api/*` del frontend más el balanceador de Render (dos saltos). Una llamada **directa** a la URL pública del backend atraviesa un salto menos de los que `TRUST_PROXY=2` da por supuestos: la cabecera que llega es `<lo que escribió el cliente>, <su IP real>` y la entrada de la izquierda, que el cliente elige, pasa a ser `req.ip`. Si el paso 2 la deja pasar contra el backend directo, el cliente puede cambiar de "visitante" en cada petición.
+
+   **Qué se anula** (todo lo que se indexa por IP): el cupo diario por visitante (`DEMO_PER_IP_GENERATIONS`), el límite de una generación a la vez por visitante, el límite de 30 retos por hora, los limitadores de ráfaga de `/api/demo` (60 por minuto) y de `/api/demo-mock` (120 por minuto), el tope de 300 peticiones por día y visitante a las API simuladas, y también el limitador global de la API (1 000 cada 15 minutos por IP). **Qué sigue acotando** (nada de eso depende de la IP): el tope global diario `DEMO_DAILY_GENERATIONS` (contador exacto en MongoDB: con IP inventadas, 20 intentos contra un tope de 5 dieron exactamente 5 llamadas al modelo), el tope de generaciones simultáneas del proceso `DEMO_MAX_CONCURRENT`, el coste de la prueba de trabajo (`2^DEMO_POW_BITS` hashes por generación, y un reto no se reutiliza), las 150 peticiones de cada API simulada, que lo que ya salió hacia el proveedor no se devuelve, y los límites de tamaño. El gasto máximo diario sigue siendo `DEMO_DAILY_GENERATIONS × coste por generación`.
+
+   **Qué se puede hacer con ello**: agotar el presupuesto global del día con unas decenas o cientos de peticiones y unos segundos de CPU (cada generación cuesta resolver la prueba de trabajo), es decir, negar la demo al resto ese día. Lo que **no** puede es gastar más de lo configurado, ni llenar la base (con pruebas falsas o con el tope agotado no se escribe nada: ver "Resultado de las pruebas de abuso"), ni alcanzar datos de usuarios. En `docker-compose.prod.yml` no aplica: el backend no publica puertos y todo pasa por nginx (un salto, `TRUST_PROXY` por defecto 1).
+
+   Si la comprobación confirma que en Render el acceso directo funciona, las opciones son: aceptar el riesgo con un `DEMO_DAILY_GENERATIONS` pequeño y el límite de gasto del proveedor; subir `DEMO_POW_BITS`; o cambiar la topología para que el backend no sea accesible directamente (no hay forma de lograrlo con la reescritura del sitio estático de Render y el plan gratuito; exigiría un proxy propio delante, p. ej. el nginx del compose, con el backend sin URL pública).
 
 ## Qué se guarda (y cuánto)
 
@@ -163,4 +183,59 @@ Resumen operativo de lo que los textos legales declaran; si algo de esto cambia,
 
 ## Resultado de las pruebas de abuso
 
-Pendiente (tarea B7): `demo.abuse.test.ts` y la lista de comprobaciones manuales que no se pueden hacer en local (IP real tras el proxy de Render, varias instancias, dificultad de la prueba de trabajo en móviles reales).
+Tarea B7. `packages/backend/src/tests/demo.abuse.test.ts` ataca la aplicación real (Express, MongoDB real y un servidor HTTP falso en lugar del modelo) y `deploy.demo.test.ts` fija el despliegue. Para repetirlas: `MONGODB_URI=mongodb://localhost:27017/mockia-test-b7 npx jest demo.abuse deploy.demo --runInBand --forceExit`.
+
+### Qué se probó, y qué pasó
+
+| Escenario | Resultado |
+|---|---|
+| 200 direcciones IPv6 dentro de un mismo /64 (el atacante coge los retos desde otras redes) | un solo cupo: 2 generaciones, 198 respuestas 429, 2 llamadas al modelo y un solo seudónimo en la base; el /64 de al lado sí es otro visitante |
+| Rotar `User-Agent`, cookies, `Authorization` y `X-Forwarded-For` falsos con `TRUST_PROXY=2` por el camino normal (frontend + balanceador), con `TRUST_PROXY=1` detrás de nginx y con `TRUST_PROXY=0` | la IP efectiva no cambia: un cupo de 2; las cabeceras absurdas (vacía, basura, 7 000 caracteres, IPv4 inválida) nunca dan 500 |
+| Llamada directa al backend con `TRUST_PROXY=2` (limitación conocida, ver "Comprobación de `TRUST_PROXY`") | el cupo por visitante se anula; el tope global lo acota: con tope 5, 20 intentos, exactamente 5 llamadas al modelo |
+| 1 000 retos sin resolver | desde una IP: 30 y el resto 429 con `Retry-After`; desde 1 000 IP inventadas: 1 000 retos y **cero** documentos en ninguna colección (el reto no se guarda; caduca a los 5 minutos y el índice TTL de los gastados existe) |
+| Un reto resuelto enviado 20 veces en paralelo (desde 20 direcciones y desde una) | una sola generación y una sola llamada al modelo; las demás 400 de reto inválido y el presupuesto vuelve |
+| Cuerpos de 2 MB (con `Content-Length` y en *chunked*), de 10 000 claves y anidados 20 000 niveles | 413 o 400 por tamaño antes de procesar: sin presupuesto, sin reto gastado, sin llamada al modelo; el POST de 2 MB a una API simulada no se lee |
+| 500 intentos mezclados (retos válidos desde direcciones nuevas, firma falsa, reutilización, nonce erróneo, mismo /64, basura, claves de más, texto que intenta tomar el control del prompt, cuerpos grandes y una ráfaga de 50 a la vez) con `DEMO_DAILY_GENERATIONS=10` | con un modelo que contesta bien: exactamente 10 llamadas al modelo y 10 unidades gastadas, ningún 500. Con un modelo que falla, devuelve basura, se queda cortado o no contesta: cada unidad gastada envió al menos una petición (lo que sale hacia el proveedor no se devuelve), ninguna envió más de dos (intento y reparación) y el cortacircuitos de la demo se abre y deja de llamar al modelo |
+| Alcance a datos de usuarios y proyectos | el catálogo de rutas de `/api/demo` es el esperado y solo el reclamo pide sesión; un recorrido anónimo completo solo toca `demomocks`, `demobudgets` y `demospentchallenges`; 14 rutas de escape contra una API simulada (`..%2f`, `%2e%2e`, rutas de la API real y de los mocks reales, mayúsculas, id truncado) dan 404 sin ningún dato de nadie; una salida del modelo con rutas hacia la API real no crea nada fuera de la demo |
+| `GET /api/demo/availability` bajo ráfagas | 300 llamadas simultáneas desde 300 direcciones: todas 200, cacheables y **una** lectura de la base; 900 seguidas desde una IP: nunca 429 y sin gastar el cupo de `/status` de esa IP; con `/status` inundado (429), `availability` sigue respondiendo; apagada la demo no toca la base |
+| Despliegue (`deploy.demo.test.ts`) | las 9 variables se reenvían solo al backend en ambos ficheros; apagada por defecto; sin secreto en el repositorio; un valor vacío conserva los defectos; en producción `DEMO_ENABLED=true` sin secreto de 32 caracteres impide arrancar |
+
+### Hallazgos de la revisión y su arreglo
+
+Tres hallazgos, todos con rojo antes de tocar el código (`demo.abuse.test.ts`) y verde después, más pruebas unitarias en `demo.primitives.test.ts`. Los tres se aprovechan sobre todo cuando se puede inventar la IP (llamada directa con `TRUST_PROXY=2`), pero ninguno lo necesita:
+
+1. **Una prueba de trabajo falsa, vencida o repetida escribía 4 veces en MongoDB y retenía una unidad del presupuesto global** (el presupuesto se consumía antes de verificar la prueba), sin coste para el atacante y sin que ningún cupo por IP lo frenase si inventaba la dirección. Ahora la comprobación pura de la prueba (`checkProof`: forma, firma, vencimiento y el trabajo en sí, sin E/S) y una lectura de los retos gastados van antes del presupuesto; el gasto atómico del reto va después, de modo que un rechazo por presupuesto sigue sin quemar un reto resuelto. Escribir una sola fila cuesta trabajo real (`2^DEMO_POW_BITS` hashes). (Deriva del *minor* 2 de la revisión de B3.)
+2. **Con el tope global agotado, cada IP inventada creaba una fila de contador** (se creaba, no pasaba el tope global y se devolvía, pero la fila quedaba). Ahora una lectura responde antes de escribir; quien ya estaba por encima de su cupo sigue recibiendo el 429 de siempre, no el 503.
+3. **`GET /api/demo/availability` hacía una lectura por petición concurrente con la caché fría** (300 simultáneas, 300 lecturas). Ahora comparten una sola.
+
+### Límites conocidos y aceptados
+
+- Llamada directa al backend de Render con `TRUST_PROXY=2` (arriba): se anula el cupo por visitante y queda el tope global.
+- La demo es barata de agotar (sección "Coste"); con IP inventadas, todavía más.
+- Una unidad puede producir hasta 2 llamadas al modelo por proveedor de la cadena (intento y reparación); el coste por generación debe incluirlo. No se salta al siguiente proveedor tras una salida inválida (pendiente de decidir si merece la pena).
+- Dentro del presupuesto, la demo se puede usar como un modelo de lenguaje gratuito de uso general (el contenido arbitrario cabe en cuerpos JSON de hasta 8 KB por endpoint). El presupuesto y el límite de gasto del proveedor lo acotan; es un riesgo residual aceptado.
+- Los limitadores en memoria son por proceso (ver "Varias instancias").
+- Los registros de acceso del servidor guardan la IP en claro (ver "Qué se guarda").
+- El texto de los avisos legales sigue siendo un borrador con marcadores `[[REVISAR]]` pendientes del titular y de su abogado; el build no se bloquea por ello (decisión del plan, ruling B7-R1: un fallo de build lo escondería detrás de otro problema; por eso está en la lista de abajo).
+
+### Qué NO se pudo probar aquí: comprobaciones manuales del titular
+
+Nada de lo siguiente es verificable en local (no hay Render, ni móviles reales, ni modelo real, ni varias instancias). Hazlo en este orden y marca cada punto; no actives la demo para el público hasta completar el bloque "Antes de activar".
+
+**Antes de activar** (con `DEMO_ENABLED` aún sin definir):
+
+- [ ] **Límite de gasto fijado en el proveedor de IA** (crédito máximo o presupuesto mensual de la clave): es el tope que no depende de este código y el que corta de verdad si algo falla. Apunta aquí el valor: ______.
+- [ ] **Coste real por generación medido** con tu modelo, siguiendo "Cómo medir el coste por generación" de `docs/economia-planes.md` (percentil alto, con reparación y los reintentos). Fija `DEMO_DAILY_GENERATIONS` para que `DEMO_DAILY_GENERATIONS × coste por generación` sea un gasto diario que aceptas. Valor elegido: ______.
+- [ ] **Truncado del prompt de la demo con el modelo real**: `npm run eval -w @mockia/backend -- --provider=openrouter --max-tokens=2000` (o `--provider=local`), con el mismo modelo que usará la demo. El banco usa el prompt estándar (5 a 10 endpoints), más largo que el de la demo, así que es una cota pesimista. Si el truncado es alto, cambia de modelo o no actives la demo. Resultado: ______.
+- [ ] **IP real tras el proxy de Render**: el procedimiento de "Comprobación de `TRUST_PROXY`" contra el frontend (dos redes distintas dan dos IP distintas en el log; un `X-Forwarded-For: 203.0.113.7` falso **no** aparece como IP del cliente) **y** contra la URL pública del backend. Anota si el acceso directo permite elegir la IP: ______. Si lo permite, decide con "Si la comprobación confirma..." (arriba).
+- [ ] **Dificultad de la prueba de trabajo en móviles reales**: abre `/demo` en un móvil de gama baja con datos móviles y en uno actual; mide cuánto tarda en estar lista la prueba con `DEMO_POW_BITS=18` (por defecto). Objetivo: unos pocos segundos en el peor móvil; si tarda más, baja los bits; si un portátil la resuelve al instante, el bot también. Comprueba también un navegador sin `crypto.subtle` (página servida por `http`), que debe mostrar el aviso y no quedarse girando. Tiempos: ______.
+- [ ] **Varias instancias** (solo si vas a escalar a más de una): confirma que el tope global diario sigue exacto (contador en MongoDB) y asume que el tope de simultáneas y los limitadores de ráfaga se multiplican por el número de instancias.
+- [ ] **Textos legales**: resuelve los `[[REVISAR: ...]]` (`grep -rn "REVISAR" packages/frontend/src/pages/Legal/legalContent`), en particular la retención de los registros del hosting, y haz que un abogado revise los textos de la demo (interés legítimo, art. 11 del RGPD, oposición).
+- [ ] **Arranque en Render**: tras el despliegue con `DEMO_ENABLED` sin definir, el backend arranca, `GET /api/demo/status` responde 200 con `available: false` y `DEMO_HMAC_SECRET` aparece generado (no lo copies a ningún sitio).
+
+**Al activar y los primeros días**:
+
+- [ ] Pon `DEMO_ENABLED=true` y comprueba `GET /api/demo/status` (disponible). Haz una generación real desde un móvil y comprueba que el mock responde y caduca.
+- [ ] **Ensaya el apagado de emergencia**: ponla en `false`, cronometra cuánto tarda en responder 503 y en desaparecer el enlace de la cabecera (cuenta con unos 90 s de caché), y vuelve a encenderla. Tiempo hasta el 503: ______.
+- [ ] Revisa el contador global (`db.demobudgets.find({ day: "AAAA-MM-DD", scope: "global" })`) a mitad del primer día y al final: ¿se agota pronto?, ¿encaja con el gasto del proveedor? Si no encaja, apaga y revisa.
+- [ ] Primera semana: busca en los logs de acceso rangos de red o `User-Agent` repetidos contra `/api/demo/generate` y valora subir `DEMO_POW_BITS` o bajar `DEMO_PER_IP_GENERATIONS`.
