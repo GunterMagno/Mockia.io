@@ -122,9 +122,15 @@ server {
 
     location / {
         proxy_pass http://frontend:80;
+        # Imprescindibles: sin ellos el nginx del compose solo ve la IP de este proxy
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
 ```
+
+**Este bloque añade un salto de proxy** delante del nginx del `docker-compose.prod.yml`, y el número de saltos decide la IP del cliente (límites de peticiones, cupos de la demo). El nginx del compose añade a `X-Forwarded-For` la dirección que le llega, que con este bloque es la de este proxy, no la del visitante; por eso este bloque debe enviar `X-Forwarded-For` (arriba) y el backend debe contar dos saltos: pon `TRUST_PROXY=2` en el `.env` (el compose lo reenvía; por defecto es 1). Con `TRUST_PROXY=1` detrás de este bloque, `req.ip` sería la IP del proxy TLS para todo el mundo: **todos los visitantes comparten un mismo cupo** (el segundo visitante del día recibe «has usado los intentos», 20 logins cada 15 minutos para toda la web). Y sin `X-Forwarded-Proto` las URL absolutas que genera el backend salen con `http://`. Tras montarlo, haz la comprobación de dos redes de la sección 8.2 («Comprobación tras el despliegue») y la de `docs/demo.md`.
 *(En plataformas PaaS modernas como Render o Vercel, la terminación SSL se gestiona automáticamente en el borde/Edge CDN, por lo que la configuración simple en HTTP expuesta en `docker-compose.prod.yml` es ideal para acoplarse directamente).*
 
 ---

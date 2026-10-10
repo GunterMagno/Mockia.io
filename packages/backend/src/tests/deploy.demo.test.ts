@@ -35,7 +35,7 @@ const compose = yaml.load(read('docker-compose.prod.yml')) as { services: Record
 const composeEnv = compose.services.backend.environment ?? {};
 
 describe('the list of demo variables is what we think it is', () => {
-  it('reads the 7 DEMO_* and the 2 AI_DEMO_* variables', () => {
+  it('reads the 8 DEMO_* and the 2 AI_DEMO_* variables', () => {
     expect(DEMO_VARS).toEqual(
       ['DEMO_DAILY_GENERATIONS', 'DEMO_ENABLED', 'DEMO_HMAC_SECRET', 'DEMO_MAX_CONCURRENT', 'DEMO_MOCK_TTL_MINUTES', 'DEMO_PER_IP_GENERATIONS', 'DEMO_PER_NET_GENERATIONS', 'DEMO_POW_BITS'].sort(),
     );
@@ -143,5 +143,45 @@ describe('what the deployments hand to the backend when the owner sets nothing',
       expect(String(err)).not.toContain('short-secret');
     }
     expect(() => assertProdConfig({ ...production, ...emptyDemo, DEMO_ENABLED: 'true', DEMO_HMAC_SECRET: 'z'.repeat(44) })).not.toThrow();
+  });
+});
+
+/**
+ * Final review I3: the IP of the visitor depends on how many proxies stand in front of the backend. The TLS server block
+ * of docs/08_despliegue.md 8.4 puts one more in front of the compose nginx, so the docs may not claim that the compose
+ * deployment needs no TRUST_PROXY check, and the example must pass the client address along.
+ */
+describe('how many proxies stand in front of the backend (documented and forwarded)', () => {
+  const deploy = read('docs/08_despliegue.md');
+  const demoDoc = read('docs/demo.md');
+  const tlsBlock = deploy.slice(deploy.indexOf('### Seguridad e Habilitación de HTTPS'), deploy.indexOf('## 8.5'));
+
+  it('the TLS example hands the client address and scheme to the next proxy', () => {
+    expect(tlsBlock).toContain('listen 443 ssl');
+    expect(tlsBlock).toMatch(/proxy_set_header\s+X-Forwarded-For\s+\$proxy_add_x_forwarded_for;/);
+    expect(tlsBlock).toMatch(/proxy_set_header\s+X-Forwarded-Proto\s+\$scheme;/);
+    expect(tlsBlock).toMatch(/proxy_set_header\s+Host\s+\$host;/);
+  });
+
+  it('and says it adds a hop, so TRUST_PROXY must be 2 there (with one, every visitor would share the TLS proxy address)', () => {
+    expect(tlsBlock).toContain('TRUST_PROXY=2');
+    expect(tlsBlock).toMatch(/salto/);
+    expect(tlsBlock).toMatch(/comparten|comparte/);
+  });
+
+  it('the inner nginx really appends the address it sees (what the count relies on)', () => {
+    expect(read('nginx.conf')).toMatch(/proxy_set_header\s+X-Forwarded-For\s+\$proxy_add_x_forwarded_for;/);
+  });
+
+  it('docker-compose.prod.yml lets the owner set TRUST_PROXY, defaulting to the 1 hop of its own nginx', () => {
+    expect(composeEnv.TRUST_PROXY).toBe('${TRUST_PROXY:-1}');
+  });
+
+  it('docs/demo.md no longer says the TRUST_PROXY check does not apply to the compose deployment', () => {
+    expect(demoDoc).not.toMatch(/no aplica/i);
+    expect(demoDoc).toMatch(/cualquier topolog/i);
+    expect(demoDoc).toMatch(/proxy TLS/);
+    expect(demoDoc).toContain('TRUST_PROXY=2');
+    expect(demoDoc).toContain('docs/08_despliegue.md');
   });
 });
