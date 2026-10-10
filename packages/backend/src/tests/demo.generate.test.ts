@@ -659,12 +659,21 @@ describe('demo publica: reto y generacion con IA', () => {
       process.env.AI_TOTAL_TIMEOUT_MS = '240000'; // the users' deadline is not the demo's
       process.env.AI_LOCAL_TIMEOUT_MS = '5000';
       resetLlm();
-      fake.setHandler(() => undefined); // never answers
+      // Never answers; records that the demo's deadline closed the connection. No wall-clock bound: with the users' 240 s
+      // or the local 5 s timeout instead of the demo's own deadline the answer would not be a 504 (the local timeout is
+      // a 503), so the status already tells which deadline applied, and a slow CI machine cannot make this fail.
+      let abortedByClient = false;
+      fake.setHandler((res) => {
+        res.on('close', () => {
+          abortedByClient = true;
+        });
+      });
       const ip = newIp();
-      const started = Date.now();
       const res = await generate(ip);
       expect(res.status).toBe(504);
-      expect(Date.now() - started).toBeLessThan(3000);
+      // the socket close reaches the fake a moment after the answer: wait for the event, not for a duration
+      for (let i = 0; i < 200 && !abortedByClient; i++) await new Promise((r) => setTimeout(r, 25));
+      expect(abortedByClient).toBe(true);
       expect(typeof res.body.error.message).toBe('string');
       expect(await ipCount(ip)).toBe(1);
       expect(await globalCount()).toBe(1);
