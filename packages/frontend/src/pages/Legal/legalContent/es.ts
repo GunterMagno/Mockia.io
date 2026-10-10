@@ -160,6 +160,11 @@ const es: LegalContent = {
                     'Tú, con tu consentimiento, y el Servicio.',
                   ],
                   [
+                    '**Demo pública (sin cuenta)**',
+                    'El texto que pegas o la plantilla que eliges (se envía al proveedor de IA y no se guarda), un seudónimo de tu dirección IP (HMAC-SHA256 con una sal que cambia cada día; nunca la dirección en sí), contadores diarios de uso y la API simulada que se genera, que dura 30 minutos. Además, los registros de acceso del servidor (véase «Demo pública sin registro»).',
+                    'Tú y tu navegador.',
+                  ],
+                  [
                     '**Comunicaciones**',
                     'Los mensajes que nos envíes y los correos transaccionales que te enviamos (verificación, recuperación de contraseña, avisos de pago).',
                     'Tú y el Servicio.',
@@ -200,6 +205,10 @@ const es: LegalContent = {
                     'Consentimiento (art. 6.1.a), opcional y revocable en cualquier momento.',
                   ],
                   [
+                    'Ofrecer una demo sin registro y evitar abusos de la demo (límites diarios por visitante y totales, tope de generaciones simultáneas), véase «Demo pública sin registro».',
+                    'Interés legítimo (art. 6.1.f): ofrecer la demo y proteger el Servicio y su presupuesto frente al abuso, limitándose a datos seudonimizados y de vida corta.',
+                  ],
+                  [
                     'Atender tus consultas y el ejercicio de tus derechos, y defender reclamaciones.',
                     'Obligación legal (art. 6.1.c) e interés legítimo (art. 6.1.f).',
                   ],
@@ -232,6 +241,9 @@ const es: LegalContent = {
               p: 'En el futuro podremos ofrecer también un modelo alojado en nuestra propia infraestructura, en cuyo caso esos datos no saldrían de ella; actualizaremos esta política cuando ocurra.',
             },
             {
+              p: 'En la demo pública sin registro solo enviamos el texto que pegas (o una plantilla propia) y nuestras instrucciones fijas; véase «Demo pública sin registro».',
+            },
+            {
               p: 'No tomamos decisiones basadas únicamente en tratamientos automatizados, incluida la elaboración de perfiles, que produzcan efectos jurídicos sobre ti o te afecten significativamente de modo similar (art. 22 RGPD). La IA se usa para generar borradores de APIs simuladas, no para evaluarte. La aplicación automática de los límites de tu plan, o el paso al plan gratuito por un pago fallido, es una consecuencia contractual objetiva que puedes impugnar escribiéndonos.',
             },
           ],
@@ -262,6 +274,26 @@ const es: LegalContent = {
           ],
         },
         {
+          id: 'demo',
+          heading: 'Demo pública sin registro',
+          blocks: [
+            {
+              p: 'La demo pública permite probar el generador de IA sin crear una cuenta. **Finalidad:** ofrecer una demo sin registro y evitar abusos (la demo consume un modelo de IA de pago, por eso tiene límites). **Base jurídica:** interés legítimo (art. 6.1.f) del RGPD en ofrecer la demo y protegerla frente al abuso, que no prevalece sobre tus derechos porque solo se tratan datos seudonimizados, sin cuenta y de vida corta. Esto es todo lo que ocurre con tus datos en la demo:',
+            },
+            {
+              ul: [
+                '**Lo que envías:** el texto que pegas (hasta 6 000 caracteres) o la plantilla que eliges. No guardamos ese texto: ni en la base de datos ni en los registros de la aplicación. Sí se envía al proveedor de IA configurado para la demo, que lo recibe para generar el resultado: OpenRouter (que lo encamina a un modelo de terceros) o, si así lo hemos configurado, un modelo alojado en nuestra propia infraestructura, en cuyo caso el texto no sale de ella. El proveedor recibe además nuestras instrucciones fijas, pero nunca tu dirección IP (la petición sale de nuestro servidor). Por favor, no pegues datos personales de terceros ni secretos.',
+                '**Tu dirección IP, seudonimizada:** para aplicar los límites diarios, la base de datos de la demo nunca guarda tu dirección IP en claro: guarda solo un seudónimo calculado con HMAC-SHA256, con una clave secreta y una sal que cambia cada día UTC (en IPv6 la dirección se reduce antes a su prefijo /64). Sin la clave no se puede revertir y es distinto cada día, así que no permite seguirte de un día a otro. El seudónimo se guarda en los contadores diarios y en el registro de la API simulada que generas.',
+                '**Contadores:** los contadores diarios (por seudónimo y global) caducan automáticamente: cada uno se borra, como mínimo, 48 horas después de terminar el día al que corresponde (la base de datos puede tardar hasta un minuto más en borrarlo). Los identificadores de los retos anti-bots ya usados son aleatorios, no tienen relación contigo y se borran a los 10 minutos. Los límites de ráfaga viven solo en la memoria del servidor y no se guardan en la base de datos.',
+                '**Lo que obtienes:** la API simulada que se genera (endpoints y respuestas de ejemplo) dura 30 minutos y después se borra automáticamente (la limpieza de la base de datos puede tardar hasta aproximadamente un minuto más). Mientras dura, cualquiera que tenga su dirección web, que es larga y aleatoria, puede llamarla.',
+                '**Registros de acceso del servidor:** como en el resto del Servicio, el servidor registra en sus registros de acceso la dirección IP en claro, la fecha, la dirección solicitada (que, en la API simulada, incluye su identificador aleatorio), el código de respuesta y el navegador. Estos registros no incluyen el texto que pegas ni la respuesta del modelo, y no forman parte de la base de datos de la demo. El proxy inverso o la plataforma de alojamiento pueden llevar además sus propios registros. Su plazo de conservación depende del proveedor de alojamiento: [[REVISAR: retención de logs del hosting]].',
+                '**Sin cookies ni almacenamiento local:** la demo no usa cookies ni almacenamiento local ni de sesión de tu navegador (véase la [Política de Cookies](/cookies)). La comprobación anti-bot se calcula en tu navegador y no se guarda, y no cargamos ningún servicio de terceros para ello.',
+                '**Tus derechos:** puedes ejercerlos escribiendo a [{entity.email}](mailto:{entity.email}), en especial el derecho de oposición (art. 21 RGPD) a este tratamiento. Como solo guardamos un seudónimo que cambia cada día y no sabemos quién hay detrás, para localizar tus datos tendrías que indicarnos la dirección IP que usaste y el día, y calcularíamos el seudónimo (art. 11 RGPD); en cualquier caso los datos desaparecen solos en los plazos indicados.',
+              ],
+            },
+          ],
+        },
+        {
           heading: 'Quién más recibe tus datos',
           blocks: [
             {
@@ -279,7 +311,7 @@ const es: LegalContent = {
                   [
                     '**Proveedor de IA** (actualmente OpenRouter y los modelos a los que encamina)',
                     'Generar los endpoints y datos de ejemplo.',
-                    'Resumen estructurado del repositorio público, documentación principal, instrucciones que escribes, título y descripción del proyecto, y URL del repositorio y su propietario. Nunca tu email, contraseña ni datos de pago.',
+                    'Resumen estructurado del repositorio público, documentación principal, instrucciones que escribes, título y descripción del proyecto, y URL del repositorio y su propietario. En la demo pública: solo el texto que pegas (o una plantilla) y nuestras instrucciones fijas. Nunca tu email, contraseña ni datos de pago.',
                   ],
                   [
                     '**Proveedor de correo transaccional** (servicio SMTP contratado)',
@@ -340,8 +372,20 @@ const es: LegalContent = {
                     'Durante los plazos legales aplicables (obligaciones mercantiles y tributarias), debidamente bloqueados.',
                   ],
                   [
-                    'Registros de acceso del servidor',
-                    'Durante el periodo limitado que aplique el proveedor de alojamiento y el necesario para la seguridad.',
+                    'Demo pública: el texto que pegas',
+                    'No se guarda; solo se envía al proveedor de IA para generar el resultado.',
+                  ],
+                  [
+                    'Demo pública: contadores diarios con el seudónimo de la IP',
+                    'Se borran automáticamente, como mínimo, 48 horas después de terminar el día al que corresponden.',
+                  ],
+                  [
+                    'Demo pública: la API simulada generada y su contenido',
+                    '30 minutos; después se borra automáticamente.',
+                  ],
+                  [
+                    'Registros de acceso del servidor (incluyen la dirección IP en claro)',
+                    'Durante el periodo limitado que aplique el proveedor de alojamiento y el necesario para la seguridad. [[REVISAR: retención de logs del hosting]]',
                   ],
                   [
                     'Consultas y comunicaciones contigo',
@@ -496,6 +540,25 @@ const es: LegalContent = {
           ],
         },
         {
+          id: 'demo',
+          heading: 'Demo pública sin registro',
+          blocks: [
+            {
+              p: 'La demo pública permite probar el generador sin crear una cuenta. Se ofrece gratis y «tal cual», y además de las demás cláusulas de estos Términos se aplican estas condiciones:',
+            },
+            {
+              ul: [
+                '**Uso aceptable:** úsala tú, a mano y sin automatizar (nada de bots, scripts ni rastreadores). Está prohibido el abuso: esquivar sus límites o la comprobación anti-bot (por ejemplo, cambiando de dirección), sobrecargarla, usarla como asistente de IA de propósito general o para obtener contenido ajeno a las APIs simuladas.',
+                '**Sin datos personales reales ni secretos:** no pegues datos personales reales de terceros, contraseñas, claves ni otros secretos o información confidencial, ni material que no tengas derecho a compartir: el texto se envía a un proveedor de IA de terceros (véase la [Política de Privacidad](/privacy#demo)).',
+                '**Límites:** cada visitante dispone de un número pequeño de generaciones al día y toda la demo de un tope diario; cada API simulada tiene como máximo 5 endpoints con respuestas pequeñas y un número máximo de peticiones. Una generación cuenta desde que la petición sale hacia el proveedor de IA, aunque el modelo falle o devuelva algo inutilizable: no se devuelve. Si se alcanza el tope, la demo lo avisa y volverá a estar disponible el siguiente día UTC.',
+                '**Efímera y no privada:** la API simulada dura 30 minutos y después desaparece. Mientras dura, cualquiera que conozca su dirección (larga y aleatoria) puede llamarla, así que no la trates como privada. No se puede exportar ni proteger con claves de API; para conservar una API, crea una cuenta.',
+                '**Sin ninguna garantía:** la demo se ofrece sin ninguna garantía de disponibilidad, exactitud ni idoneidad; la IA puede fallar o generar resultados absurdos. Lo generado es ficticio, sirve para probar y no debe usarse para tomar decisiones.',
+                '**El titular puede apagarla:** podemos limitar, modificar, suspender o apagar la demo en cualquier momento y sin previo aviso, y bloquear el uso que incumpla estas condiciones.',
+              ],
+            },
+          ],
+        },
+        {
           heading: 'Tu contenido y los resultados generados',
           blocks: [
             {
@@ -625,6 +688,15 @@ const es: LegalContent = {
             },
             {
               p: 'El token de acceso de corta duración se mantiene solo en la memoria de la página: no se guarda ni en cookies ni en el almacenamiento del navegador.',
+            },
+          ],
+        },
+        {
+          id: 'demo',
+          heading: 'Demo pública sin registro',
+          blocks: [
+            {
+              p: 'La demo pública no usa cookies ni almacenamiento local ni de sesión en tu navegador, y no añade ninguna entrada a la tabla anterior. La comprobación anti-bot se calcula en la memoria de la página y no se guarda, y no cargamos ningún servicio de terceros. Tu dirección IP se trata como se explica en la [Política de Privacidad](/privacy#demo).',
             },
           ],
         },
