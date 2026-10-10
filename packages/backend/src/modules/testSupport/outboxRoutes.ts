@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getTestOutbox, clearTestOutbox, isOutboxEnabled } from '../../services/mailer.js';
+import { createDemoMock, type DemoEndpoint } from '../demo/mockStore.js';
 
 /**
  * Test-only access to the in-memory mail outbox, mounted at /api/__test__ (see index.ts).
@@ -27,4 +28,25 @@ testOutboxRouter.get('/outbox', (_req, res) => {
 testOutboxRouter.delete('/outbox', (_req, res) => {
   clearTestOutbox();
   res.status(204).send();
+});
+
+/** What the e2e suite's demo mock answers (a tiny shop: enough to check it survives the claim). */
+const E2E_DEMO_ENDPOINTS: DemoEndpoint[] = [
+  { method: 'GET', path: '/products', statusCode: 200, body: [{ id: 1, name: 'E2E mug' }] },
+  { method: 'GET', path: '/products/:id', statusCode: 200, body: { id: 1, name: 'E2E mug' } },
+  { method: 'POST', path: '/orders', statusCode: 201, body: { id: 77, status: 'created' } },
+];
+
+/**
+ * POST /api/__test__/demo-mock -> 201 { success, data: { demoId } }
+ * Creates a real ephemeral demo mock WITHOUT going through the AI (the e2e suite has no model), so the spec can walk the
+ * whole "build a demo, sign up, keep it" path against the real claim endpoint. Same mount condition as the outbox.
+ */
+testOutboxRouter.post('/demo-mock', async (_req, res, next) => {
+  try {
+    const { demoId } = await createDemoMock('e2e-visitor', E2E_DEMO_ENDPOINTS);
+    res.status(201).json({ success: true, data: { demoId }, timestamp: new Date().toISOString() });
+  } catch (err) {
+    next(err);
+  }
 });

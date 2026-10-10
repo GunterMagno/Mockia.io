@@ -7,6 +7,8 @@ import { issueChallenge } from './pow.js';
 import { demoClock } from './mockRouter.js';
 import { DEMO_TEMPLATE_IDS } from './templates.js';
 import { createFloodLimiter } from './floodLimit.js';
+import type { AuthenticatedRequest } from '../../middlewares/authenticateToken.js';
+import { claimDemoMock } from './claim.js';
 import { DemoRefusal, generateDemoMock, getDemoAvailability, getDemoStatus, type GenerateInput } from './service.js';
 
 /** Longest text a visitor may paste (README, types, notes). */
@@ -106,3 +108,11 @@ export async function generateHandler(req: Request, res: Response): Promise<void
 }
 
 export const isDemoEnabled = (): boolean => getDemoConfig().enabled;
+
+/** POST /api/demo/:demoId/claim: the signed-in, verified user keeps the demo as a project of their account. */
+export async function claimHandler(req: Request, res: Response): Promise<void> {
+  const userId = (req as AuthenticatedRequest).user?.id;
+  if (!userId) throw new DemoRefusal('Missing authorization header', ErrorCode.UNAUTHORIZED, 401);
+  const project = await claimDemoMock(userId, String(req.params.demoId ?? ''), demoClock.now());
+  res.status(201).json(envelope(project));
+}

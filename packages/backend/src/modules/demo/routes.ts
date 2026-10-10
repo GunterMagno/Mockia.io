@@ -3,7 +3,10 @@ import { ErrorCode } from '@mockia/shared';
 import { AppError } from '../../middlewares/errorHandler.js';
 import { requireJsonBody } from '../auth/cookie.js';
 import { describeError } from '../../utils/safeErrorLog.js';
-import { availabilityHandler, challengeHandler, generateHandler, isDemoEnabled, resetChallengeLimiter, statusHandler } from './controller.js';
+import { authenticateToken, type AuthenticatedRequest } from '../../middlewares/authenticateToken.js';
+import { requireVerifiedEmail } from '../../middlewares/requireVerifiedEmail.js';
+import { enforceProjectLimit } from '../../middlewares/planGate.js';
+import { availabilityHandler, challengeHandler, claimHandler, generateHandler, isDemoEnabled, resetChallengeLimiter, statusHandler } from './controller.js';
 import { createFloodLimiter } from './floodLimit.js';
 import { pseudonymizeIp } from './ipHash.js';
 import { demoClock } from './mockRouter.js';
@@ -27,9 +30,15 @@ export const DEMO_API_FLOOD_MAX = 60;
 const FLOOD_WINDOW_MS = 60 * 1000;
 const flood = createFloodLimiter({ windowMs: FLOOD_WINDOW_MS, max: DEMO_API_FLOOD_MAX, maxKeys: 10_000, now: () => demoClock.now().getTime() });
 
+/** Claims per account and window. Every attempt counts, found or not: a stolen token cannot guess ids for free. */
+export const CLAIMS_PER_WINDOW = 10;
+const CLAIM_WINDOW_MS = 15 * 60 * 1000;
+const claimLimiter = createFloodLimiter({ windowMs: CLAIM_WINDOW_MS, max: CLAIMS_PER_WINDOW, maxKeys: 10_000, now: () => demoClock.now().getTime() });
+
 /** Forgets every in-memory counter of the demo API (tests). */
 export const resetDemoApiLimits = (): void => {
   flood.clear();
+  claimLimiter.clear();
   resetChallengeLimiter();
   resetDemoAvailabilityCache();
 };
@@ -45,9 +54,33 @@ const guarded =
 
 export const demoRouter = Router();
 
+const guardedMiddleware = (mw: (req: AuthenticatedRequest, res: Response, next: NextFunction) => Promise<void>): RequestHandler =>
+  (req, res, next) => {
+    mw(req as AuthenticatedRequest, res, next).catch(next);
+  };
+
 // Before the flood guard on purpose: every page of the site asks this, and behind a shared NAT those asks must not use
 // up the per-address allowance of people who really use the demo. It reads one global counter and keeps no address.
 demoRouter.get('/availability', guarded(availabilityHandler));
+
+// Signed-in users only (their own limiter, keyed by account, not by address), so it sits before the anonymous flood guard
+// too. Order: session -> verified email -> per-account limiter -> plan project limit (402, the demo is untouched) -> claim.
+// It does not depend on DEMO_ENABLED: copying a mock that already exists costs no AI and no demo budget.
+const perAccountClaimLimit: RequestHandler = (req, _res, next) => {
+  const userId = (req as AuthenticatedRequest).user?.id ?? 'unknown';
+  const verdict = claimLimiter.hit(userId);
+  if (verdict.ok) return next();
+  next(new DemoRefusal('Too many attempts. Try again in a few minutes.', ErrorCode.RATE_LIMIT_ERROR, 429, verdict.retryAfterSeconds));
+};
+
+demoRouter.post(
+  '/:demoId/claim',
+  authenticateToken,
+  guardedMiddleware(requireVerifiedEmail),
+  perAccountClaimLimit,
+  enforceProjectLimit,
+  guarded(claimHandler),
+);
 
 demoRouter.use((req: Request, res: Response, next: NextFunction) => {
   // Off: nothing below needs the visitor's pseudonym (which in production cannot exist without DEMO_HMAC_SECRET)
