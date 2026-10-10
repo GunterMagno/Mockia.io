@@ -19,6 +19,7 @@ import Terms from './pages/Legal/Terms'
 import Privacy from './pages/Legal/Privacy'
 import LegalNotice from './pages/Legal/LegalNotice'
 import Cookies from './pages/Legal/Cookies'
+import Demo from './pages/Demo/Demo'
 import NotFound from './pages/NotFound/NotFound'
 import AmbientBackground from './components/ui/AmbientBackground/AmbientBackground'
 import { AccountDeletedNotice } from './components/ui/AccountData/AccountData'
@@ -54,6 +55,7 @@ const AppShell: React.FC = () => {
           <Route path={PATHS.privacy} element={<Privacy />} />
           <Route path={PATHS.legal} element={<LegalNotice />} />
           <Route path={PATHS.cookies} element={<Cookies />} />
+          <Route path={PATHS.demo} element={<Demo />} />
           <Route element={<ProtectedRoute />}>
             <Route path={PATHS.dashboard} element={<Dashboard />} />
             <Route path={PATHS.billing} element={<Billing />} />

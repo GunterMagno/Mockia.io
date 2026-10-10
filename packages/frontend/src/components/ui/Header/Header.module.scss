@@ -230,6 +230,27 @@
   }
 }
 
+.demoLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--tap);
+  padding: 0 var(--spacing-3);
+  color: var(--color-accent-text);
+  font-size: var(--text-base);
+  font-weight: var(--weight-bold);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+
+  &:hover {
+    color: var(--color-text);
+    text-decoration: underline;
+    text-underline-offset: 0.35em;
+  }
+
+  &:focus-visible { outline: 2px solid var(--color-accent-text); outline-offset: 2px; border-radius: var(--radius-md); }
+}
+
 .loginBtn,
 .signupBtn {
   display: inline-flex;

@@ -12,6 +12,7 @@ export const PATHS = {
   terms: '/terms',
   privacy: '/privacy',
   cookies: '/cookies',
+  demo: '/demo',
   dashboard: '/dashboard',
   billing: '/billing',
   editorPattern: '/editor/:id',
@@ -30,6 +31,7 @@ const PUBLIC = [
   PATHS.terms,
   PATHS.privacy,
   PATHS.cookies,
+  PATHS.demo,
 ]
 /** Requieren cuenta: solo estas piden login. */
 const PROTECTED = [PATHS.dashboard, PATHS.billing, PATHS.editorPattern]

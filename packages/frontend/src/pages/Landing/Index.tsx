@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { PATHS } from '../../routes/paths'
 import { useAuth } from '../../contexts/AuthContext'
 import { useRevealFallback } from '../../hooks/useRevealFallback'
@@ -89,6 +89,12 @@ const Index: React.FC = () => {
                 <span>{isAuthenticated ? t('landing.hero.ctaDashboard') : t('landing.hero.ctaStart')}</span>
                 <img src={arrowRight} alt="" />
               </button>
+              {/* Para visitantes anonimos: la propia /demo explica si esta apagada o sin cupo (viene apagada por defecto) */}
+              {!isAuthenticated && (
+                <Link className={styles.secondaryBtn} to={PATHS.demo}>
+                  {t('landing.hero.ctaDemo')}
+                </Link>
+              )}
             </nav>
           </header>
 

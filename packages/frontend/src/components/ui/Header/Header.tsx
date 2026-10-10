@@ -214,6 +214,7 @@ const Header: React.FC = () => {
               <ProfileAndBellDesktop />
             ) : !isLoading && (
               <nav className={styles.authButtons}>
+                <Link to={PATHS.demo} className={styles.demoLink}>{t('nav.tryFree')}</Link>
                 <Link to={PATHS.login} className={styles.loginBtn}>{t('nav.logIn')}</Link>
                 <Link to={PATHS.signup} className={styles.signupBtn}>{t('nav.signUp')}</Link>
               </nav>
