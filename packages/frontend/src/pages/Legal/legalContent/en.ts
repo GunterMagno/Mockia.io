@@ -159,6 +159,11 @@ const en: LegalContent = {
                     "You, with your consent, and the Service.",
                   ],
                   [
+                    "**Public demo (no account)**",
+                    "The text you paste or the template you choose (sent to the AI provider, not stored), a pseudonym of your IP address (HMAC-SHA256 with a salt that changes every day; never the address itself), daily usage counters and the mock API that is generated, which lasts 30 minutes. Also the server access logs (see \"Public demo without registration\").",
+                    "You and your browser.",
+                  ],
+                  [
                     "**Communications**",
                     "Messages you send us and the transactional emails we send you (verification, password recovery, payment notices).",
                     "You and the Service.",
@@ -199,6 +204,10 @@ const en: LegalContent = {
                     "Consent (art. 6.1.a), optional and revocable at any time.",
                   ],
                   [
+                    "Offering a demo without registration and preventing abuse of the demo (daily limits per visitor and overall, cap on simultaneous generations), see \"Public demo without registration\".",
+                    "Legitimate interest (art. 6.1.f): offering the demo and protecting the Service and its budget against abuse, limited to pseudonymized, short-lived data.",
+                  ],
+                  [
                     "Handling your enquiries and the exercise of your rights, and defending claims.",
                     "Legal obligation (art. 6.1.c) and legitimate interest (art. 6.1.f).",
                   ],
@@ -231,6 +240,9 @@ const en: LegalContent = {
               p: "In the future we may also offer a model hosted on our own infrastructure, in which case that data would not leave it; we will update this policy when that happens.",
             },
             {
+              p: "In the public demo without registration we send only the text you paste (or one of our own templates) and our fixed instructions; see \"Public demo without registration\".",
+            },
+            {
               p: "We do not make decisions based solely on automated processing, including profiling, that produce legal effects concerning you or similarly significantly affect you (GDPR art. 22). AI is used to generate drafts of mock APIs, not to assess you. The automatic application of your plan limits, or the move to the free plan after a failed payment, is an objective contractual consequence that you can contest by writing to us.",
             },
           ],
@@ -261,6 +273,26 @@ const en: LegalContent = {
           ],
         },
         {
+          id: "demo",
+          heading: "Public demo without registration",
+          blocks: [
+            {
+              p: "The public demo lets you try the AI generator without creating an account. **Purpose:** to offer a demo without registration and to prevent abuse (the demo uses a paid AI model, which is why it has limits). **Legal basis:** legitimate interest (art. 6.1.f) of the GDPR in offering the demo and protecting it against abuse, which does not override your rights because only pseudonymized, account-free, short-lived data is processed. This is everything that happens to your data in the demo:",
+            },
+            {
+              ul: [
+                "**What you send:** the text you paste (up to 6,000 characters) or the template you choose. We do not store that text: neither in the database nor in the application logs. It is sent to the AI provider configured for the demo, which receives it to generate the result: OpenRouter (which routes it to a third-party model) or, if we have set it up that way, a model hosted on our own infrastructure, in which case the text does not leave it. The provider also receives our fixed instructions, but never your IP address (the request leaves from our server). Please do not paste third parties' personal data or secrets.",
+                "**Your IP address, pseudonymized:** to apply the daily limits, the demo's database never stores your IP address in clear text: it stores only a pseudonym computed with HMAC-SHA256, using a secret key and a salt that changes every UTC day (for IPv6 the address is first reduced to its /64 prefix). Without the key it cannot be reversed and it is different every day, so it does not let us follow you from one day to the next. The pseudonym is stored in the daily counters and in the record of the mock API you generate.",
+                "**Counters:** the daily counters (per pseudonym and overall) expire automatically: each one is deleted at least 48 hours after the end of the day it counts (the database may take up to a minute longer to remove it). The identifiers of anti-bot challenges that have already been used are random, unrelated to you, and are deleted after 10 minutes. Burst limits live only in the server's memory and are not stored in the database.",
+                "**What you get:** the mock API that is generated (endpoints and sample responses) lasts 30 minutes and is then deleted automatically (the database cleanup may take up to about a minute longer). While it lasts, anyone who has its web address, which is long and random, can call it.",
+                "**Server access logs:** as with the rest of the Service, the server records in its access logs the IP address in clear text, the date, the requested address (which, for the mock API, includes its random identifier), the response code and the browser. These logs do not include the text you paste or the model's answer, and they are not part of the demo's database. The reverse proxy or the hosting platform may also keep their own logs. How long they are kept depends on the hosting provider: [[REVISAR: retención de logs del hosting]].",
+                "**No cookies or local storage:** the demo does not use cookies, nor your browser's local or session storage (see the [Cookie Policy](/cookies)). The anti-bot check is computed in your browser and is not stored, and we load no third-party service for it.",
+                "**Your rights:** you can exercise them by writing to [{entity.email}](mailto:{entity.email}), in particular the right to object (art. 21 GDPR) to this processing. Since we only store a pseudonym that changes every day and do not know who is behind it, to locate your data you would have to tell us the IP address you used and the day, and we would compute the pseudonym (art. 11 GDPR); in any case the data disappears on its own within the periods stated.",
+              ],
+            },
+          ],
+        },
+        {
           heading: "Who else receives your data",
           blocks: [
             {
@@ -278,7 +310,7 @@ const en: LegalContent = {
                   [
                     "**AI provider** (currently OpenRouter and the models it routes to)",
                     "Generating endpoints and sample data.",
-                    "Structured summary of the public repository, main documentation, the instructions you write, the title and description of the project, and the repository URL and its owner. Never your email, password or payment details.",
+                    "Structured summary of the public repository, main documentation, the instructions you write, the title and description of the project, and the repository URL and its owner. In the public demo: only the text you paste (or a template) and our fixed instructions. Never your email, password or payment details.",
                   ],
                   [
                     "**Transactional email provider** (the SMTP service we contract)",
@@ -336,8 +368,20 @@ const en: LegalContent = {
                     "For the applicable legal periods (commercial and tax obligations), duly blocked.",
                   ],
                   [
-                    "Server access logs",
-                    "For the limited period applied by the hosting provider and as needed for security.",
+                    "Public demo: the text you paste",
+                    "Not stored; it is only sent to the AI provider to generate the result.",
+                  ],
+                  [
+                    "Public demo: daily counters with the IP pseudonym",
+                    "Deleted automatically at least 48 hours after the end of the day they count.",
+                  ],
+                  [
+                    "Public demo: the generated mock API and its content",
+                    "30 minutes; then deleted automatically.",
+                  ],
+                  [
+                    "Server access logs (they include the IP address in clear text)",
+                    "For the limited period applied by the hosting provider and as needed for security. [[REVISAR: retención de logs del hosting]]",
                   ],
                   [
                     "Enquiries and communications with you",
@@ -492,6 +536,25 @@ const en: LegalContent = {
           ],
         },
         {
+          id: "demo",
+          heading: "Public demo without registration",
+          blocks: [
+            {
+              p: "The public demo lets you try the generator without creating an account. It is offered free of charge and \"as is\", and these conditions apply in addition to the rest of these Terms:",
+            },
+            {
+              ul: [
+                "**Acceptable use:** use it yourself, by hand: do not automate it (no bots, scripts or crawlers). Abuse is prohibited: circumventing its limits or the anti-bot check (for example by changing address), overloading it, or using it as a general-purpose AI assistant or to obtain content unrelated to mock APIs.",
+                "**No real personal data or secrets:** do not paste real personal data of third parties, passwords, keys or other secrets or confidential information, or material you have no right to share: the text is sent to a third-party AI provider (see the [Privacy Policy](/privacy#demo)).",
+                "**Limits:** each visitor has a small number of generations per day and the whole demo has a daily cap; each mock API has at most 5 endpoints with small responses and a maximum number of requests. A generation counts from the moment the request is sent to the AI provider, even if the model fails or returns something unusable: it is not given back. If the cap is reached, the demo says so and will be available again on the next UTC day.",
+                "**Ephemeral and not private:** the mock API lasts 30 minutes and then disappears. While it lasts, anyone who knows its address (long and random) can call it, so do not treat it as private. It cannot be exported or protected with API keys; to keep an API, create an account.",
+                "**Without any warranty:** the demo is offered without any warranty of availability, accuracy or fitness; the AI may fail or produce nonsensical results. What is generated is fictitious, is meant for trying things out and must not be used to make decisions.",
+                "**The owner can switch it off:** we may limit, change, suspend or switch off the demo at any time and without notice, and block use that breaches these conditions.",
+              ],
+            },
+          ],
+        },
+        {
           heading: "Your content and generated output",
           blocks: [
             {
@@ -621,6 +684,15 @@ const en: LegalContent = {
             },
             {
               p: "The short-lived access token is kept only in the page's memory: it is stored neither in cookies nor in browser storage.",
+            },
+          ],
+        },
+        {
+          id: "demo",
+          heading: "Public demo without registration",
+          blocks: [
+            {
+              p: "The public demo does not use cookies, nor local or session storage in your browser, and it adds no entry to the table above. The anti-bot check is computed in the page's memory and is not stored, and we load no third-party service. Your IP address is handled as explained in the [Privacy Policy](/privacy#demo).",
             },
           ],
         },

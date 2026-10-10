@@ -205,7 +205,7 @@ const DEMO_PRIVACY: Record<Lang, DemoPrivacyCopy> = {
   },
   zh: {
     purpose: /提供无需注册的演示并防止滥用/,
-    basis: /合法利益（第 6\.1\.f 条）/,
+    basis: /正当利益（第 6\.1\.f 条）/,
     hmac: [/HMAC-SHA256/, /每个 UTC 日更换的盐值/, /\/64 前缀/],
     noStoredText: /我们不会保存该文本/,
     sentToProvider: [/发送给 AI 模型提供商/, /OpenRouter/, /托管在自有基础设施上的模型/],
