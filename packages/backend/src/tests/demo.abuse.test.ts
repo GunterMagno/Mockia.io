@@ -38,6 +38,7 @@ import { openRouterConfig } from '../config/ai.js';
 const SECRET = 'demo-abuse-test-secret-with-more-than-32-chars';
 const REAL_CLIENT = '198.51.100.23';
 const REWRITE_PROXY = '10.0.0.1';
+const ATTACKER = '192.0.2.99';
 
 const ENV_KEYS = [
   'DEMO_ENABLED',
@@ -273,11 +274,15 @@ describe('demo publica: escenarios de abuso de extremo a extremo', () => {
     resetLlm();
   });
 
-  /** Addresses an attacker can invent when `req.ip` is whatever its own header says (direct call, TRUST_PROXY=2). */
+  /**
+   * What a client that calls the backend's public URL DIRECTLY sends: its own invented `X-Forwarded-For` entry, to which
+   * Render's balancer appends the attacker's real address. With TRUST_PROXY=2 the balancer and that last entry are the
+   * two trusted hops, so the invented entry (the left-most) becomes `req.ip`.
+   */
   let spoofCounter = 0;
   const freshAddress = (): string => {
     const n = ++spoofCounter;
-    return `203.${(n >> 16) & 255}.${(n >> 8) & 255}.${n & 255}`;
+    return `203.${(n >> 16) & 255}.${(n >> 8) & 255}.${n & 255}, ${ATTACKER}`;
   };
 
   /** Records which Mongo collections are touched while `work` runs. */
@@ -383,7 +388,7 @@ describe('demo publica: escenarios de abuso de extremo a extremo', () => {
     it('LIMITACION CONOCIDA: con TRUST_PROXY=2 y una llamada DIRECTA al backend, la cabecera propia elige la IP: el cupo por visitante se anula y el tope global sigue acotando el modelo', async () => {
       process.env.DEMO_DAILY_GENERATIONS = '5';
       const statuses: number[] = [];
-      for (let i = 0; i < 20; i++) statuses.push((await generateAs(freshAddress())).status); // a header with ONE entry, as a direct caller sends
+      for (let i = 0; i < 20; i++) statuses.push((await generateAs(freshAddress())).status); // the header a direct caller sends: its own entry plus the one the balancer appends
       // Per-visitor allowance (2) is useless: five different "visitors" got one each; the global budget stopped it at 5
       expect(tally(statuses)).toEqual({ 201: 5, 503: 15 });
       expect(fake.hits).toBe(5);

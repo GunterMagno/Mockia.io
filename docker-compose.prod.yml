@@ -54,6 +54,20 @@ services:
       AI_SPEC_TEMPERATURE: ${AI_SPEC_TEMPERATURE:-}
       CORS_ORIGIN: ${CORS_ORIGIN:?falta CORS_ORIGIN (origen publico del frontend, p. ej. https://app.midominio.com)}
       APP_URL: ${APP_URL:?falta APP_URL (URL publica de la aplicacion)}
+      # Demo publica sin registro (docs/demo.md). VIENE APAGADA: DEMO_ENABLED=false salvo que lo pongas a true en .env.
+      # Para encenderla hace falta ademas DEMO_HMAC_SECRET (>= 32 caracteres aleatorios, `openssl rand -hex 32`): con la demo
+      # encendida y sin secreto el backend se niega a arrancar. Vacio = el valor por defecto del backend. Apagado de
+      # emergencia: DEMO_ENABLED=false en .env y `docker compose -f docker-compose.prod.yml up -d backend`.
+      # La IP del visitante sale de TRUST_PROXY (por defecto 1 en produccion = el salto de nginx); no hay que tocarlo aqui.
+      DEMO_ENABLED: ${DEMO_ENABLED:-false}
+      DEMO_HMAC_SECRET: ${DEMO_HMAC_SECRET:-}
+      DEMO_DAILY_GENERATIONS: ${DEMO_DAILY_GENERATIONS:-}
+      DEMO_PER_IP_GENERATIONS: ${DEMO_PER_IP_GENERATIONS:-}
+      DEMO_MAX_CONCURRENT: ${DEMO_MAX_CONCURRENT:-}
+      DEMO_POW_BITS: ${DEMO_POW_BITS:-}
+      DEMO_MOCK_TTL_MINUTES: ${DEMO_MOCK_TTL_MINUTES:-}
+      AI_DEMO_PROVIDERS: ${AI_DEMO_PROVIDERS:-}
+      AI_DEMO_TIMEOUT_MS: ${AI_DEMO_TIMEOUT_MS:-}
       # Correo transaccional (verificacion de email y recuperar contrasena). Sin SMTP_URL no se envia nada.
       SMTP_URL: ${SMTP_URL:-}
       MAIL_FROM: ${MAIL_FROM:-}

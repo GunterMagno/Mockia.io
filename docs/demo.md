@@ -56,14 +56,16 @@ Variables de IA de la demo (no son `DEMO_*`: viven en `config/ai.ts` y se leen a
 | `AI_DEMO_PROVIDERS` | vacío (= `AI_PROVIDERS`) | Lista de proveedores solo para la demo, con la misma sintaxis que `AI_PROVIDERS` (`local`, `openrouter`). Permite apuntar la demo a un modelo más barato o propio mientras los usuarios registrados conservan el suyo. La demo tiene siempre su propia cadena y su propio cortacircuitos: una demo que falla nunca corta la IA de los usuarios. |
 | `AI_DEMO_TIMEOUT_MS` | `45000` | Plazo total de una generación de la demo. Una petición que ya salió hacia el proveedor cuenta como gastada aunque venza el plazo. |
 
-## Estado del despliegue (pendiente de la tarea B7)
+## Estado del despliegue
 
-Estado de cada fichero (una línea por fichero; el test las comprueba por separado y solo cuenta variables reales, no comentarios):
+Estado de cada fichero (una línea por fichero; el test `demo.docs.test.ts` las comprueba por separado y solo cuenta variables reales, no comentarios):
 
-- `render.yaml`: **NO reenvía** ninguna variable `DEMO_*` ni `AI_DEMO_*` al backend.
-- `docker-compose.prod.yml`: **NO reenvía** ninguna variable `DEMO_*` ni `AI_DEMO_*` al backend.
+- `render.yaml`: **SÍ reenvía** las siete `DEMO_*` y las dos `AI_DEMO_*` al backend, todas apagadas o vacías por defecto. `DEMO_ENABLED` es `sync: false` y no tiene valor en el fichero: lo decide el panel de Render y un push de `render.yaml` nunca la enciende (ni la vuelve a encender tras un apagado de emergencia). `DEMO_HMAC_SECRET` es `generateValue: true`: Render genera un secreto aleatorio de 256 bits y no está en el repositorio. El resto son `sync: false` (vacío = el valor por defecto del código).
+- `docker-compose.prod.yml`: **SÍ reenvía** las mismas nueve variables al contenedor del backend: `DEMO_ENABLED: ${DEMO_ENABLED:-false}` y las demás como `${VAR:-}` (vacío = el valor por defecto del código). Ninguna es obligatoria: un despliegue sin demo arranca igual que antes. Se rellenan en el `.env` (ver `.env.example`).
 
-Mientras no lo hagan, la demo no se puede activar en esos despliegues (solo con un `.env` en local). La tarea B7 las añade; cuando lo haga, **hay que editar la línea del fichero afectado** (el test `demo.docs.test.ts` falla a propósito en ese momento hasta que esa línea diga que sí reenvía; un reenvío parcial solo obliga a corregir el fichero que cambió).
+Qué fija `deploy.demo.test.ts` (lee ambos ficheros como YAML y las variables que de verdad lee el código, así que una variable nueva que se olvide aquí lo rompe): que todas se reenvían y solo al backend; que la demo viene apagada; que el secreto no tiene valor en el repositorio; que el valor vacío (lo que `docker compose` pasa para una variable sin definir) conserva todos los defectos; y que en producción `DEMO_ENABLED=true` sin un secreto de al menos 32 caracteres impide arrancar al backend (sin repetir el valor). `docker compose -f docker-compose.prod.yml config` lo valida también el CI (job `compose-ai-config`) y aquí se comprobó a mano que resuelve las nueve variables.
+
+La IP del visitante sale de `TRUST_PROXY`: `render.yaml` lo fija a 2 y `docker-compose.prod.yml` no lo toca (el valor por defecto en producción es 1, el salto de nginx, y el backend no publica puertos). Lee "Comprobación de `TRUST_PROXY`" antes de activar la demo en Render.
 
 ## Activar la demo
 

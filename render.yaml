@@ -46,6 +46,34 @@ services:
         sync: false
       - key: AI_SPEC_TEMPERATURE
         sync: false
+      # Demo publica sin registro (docs/demo.md). VIENE APAGADA: sin DEMO_ENABLED (o con cualquier valor que no sea
+      # true/1/yes/on) no se abre nada. DEMO_ENABLED es sync: false a proposito: lo decide el panel de Render y un
+      # push de este fichero nunca la enciende ni la vuelve a encender. Para apagarla de emergencia: panel > mockia-backend >
+      # Environment > DEMO_ENABLED=false (Render redespliega solo; ver "Apagado de emergencia" en docs/demo.md).
+      # Antes de encenderla: medir el truncado con `npm run eval`, fijar un limite de gasto en el proveedor de IA,
+      # resolver los marcadores [[REVISAR]] de los textos legales y repetir la comprobacion de TRUST_PROXY contra la URL
+      # publica del backend (docs/demo.md, "Antes de activar la demo").
+      - key: DEMO_ENABLED
+        sync: false
+      # Secreto raiz de la demo (firma los retos de prueba de trabajo y pseudonimiza las IP): lo genera Render (256 bits
+      # aleatorios, mas que los 32 caracteres que exige assertProdConfig) y no esta en el repositorio. Rotarlo reinicia los cupos del dia.
+      - key: DEMO_HMAC_SECRET
+        generateValue: true
+      # Limites y ajustes de IA de la demo (todos opcionales: vacio = el valor por defecto del codigo, ver docs/demo.md).
+      - key: DEMO_DAILY_GENERATIONS
+        sync: false
+      - key: DEMO_PER_IP_GENERATIONS
+        sync: false
+      - key: DEMO_MAX_CONCURRENT
+        sync: false
+      - key: DEMO_POW_BITS
+        sync: false
+      - key: DEMO_MOCK_TTL_MINUTES
+        sync: false
+      - key: AI_DEMO_PROVIDERS
+        sync: false
+      - key: AI_DEMO_TIMEOUT_MS
+        sync: false
       # Transactional email (verification and password reset links). Without SMTP_URL nobody receives them and
       # unverified users cannot use AI generation or billing. Resend or Brevo (free plan); see docs/08_despliegue.md.
       - key: SMTP_URL
