@@ -192,30 +192,35 @@ interface Round2Copy {
   /** Primera celda de las filas de plazos de la demo. */
   counterRow: RegExp;
   mockRow: RegExp;
+  /** Primera celda de la fila de finalidades de la demo. */
+  purposeRow: RegExp;
 }
 
 const ROUND2: Record<Lang, Round2Copy> = {
   es: {
     weighing: [/la base de datos de la demo solo guarda datos seudonimizados/, /registros de acceso generales del servidor/, /sin perfilado ni cookies/],
     falseClaims: [/solo se tratan datos seudonimizados/, /limitándose a datos seudonimizados/],
-    reproduces: /puede reproducir fragmentos de lo que pegas/,
+    reproduces: /[Pp]uede reproducir fragmentos de lo que pegas/,
     alone: /el seudónimo por sí solo no permite/,
+    purposeRow: /Ofrecer una demo sin registro y evitar abusos de la demo/,
     counterRow: /Demo pública: contadores diarios/,
     mockRow: /Demo pública: la API simulada generada/,
   },
   en: {
-    weighing: [/the demo's database only holds pseudonymized data/, /general server access logs/, /no profiling or cookies/],
+    weighing: [/the demo's database only holds pseudonymized/, /general server access logs/, /no profiling or cookies/],
     falseClaims: [/only pseudonymized[^.]{0,40}data is processed/, /limited to pseudonymized, short-lived data/],
     reproduces: /may reproduce fragments of what you paste/,
     alone: /the pseudonym alone does not/,
+    purposeRow: /Offering a demo without registration/,
     counterRow: /Public demo: daily counters/,
     mockRow: /Public demo: the generated mock API/,
   },
   zh: {
-    weighing: [/演示的数据库只保存假名化数据/, /服务器的一般访问日志/, /没有用户画像和 Cookie/],
+    weighing: [/演示的数据库只保存假名化数据/, /一般访问日志/, /没有用户画像和 Cookie/],
     falseClaims: [/只处理假名化/, /仅限于假名化的短期数据/],
     reproduces: /可能复述你粘贴内容中的片段/,
     alone: /仅凭该假名无法/,
+    purposeRow: /提供无需注册的演示并防止滥用（每位访客/,
     counterRow: /公开演示：带有 IP 假名的每日计数器/,
     mockRow: /公开演示：生成的模拟 API 及其内容/,
   },
@@ -404,7 +409,7 @@ describe('Legal: ronda de arreglos de la demo (ponderacion, API generada, seudon
         for (const re of r.weighing) expect(text, String(re)).to.match(re);
       });
       // y la fila de finalidades de la tabla dice lo mismo
-      cy.contains('tr', DEMO_PRIVACY[lang].purpose).invoke('text').then((text) => {
+      cy.contains('tr', r.purposeRow).invoke('text').then((text) => {
         for (const re of r.weighing) expect(text, String(re)).to.match(re);
       });
       cy.get('article').invoke('text').then((text) => {
