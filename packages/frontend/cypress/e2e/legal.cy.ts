@@ -173,6 +173,8 @@ interface DemoPrivacyCopy {
   logsDeclared: RegExp[];
   ttl: RegExp[];
   noClientStorage: RegExp[];
+  /** B6: SOLO si el visitante pulsa el boton de guardar, el id de la demo va al almacenamiento de sesion de la pestana. */
+  sessionClaim: RegExp[];
   objection: RegExp;
   /** Afirmaciones que serian falsas: la IP en claro como dato que se guarda en la base de la demo. */
   forbidden: RegExp[];
@@ -236,6 +238,7 @@ const DEMO_PRIVACY: Record<Lang, DemoPrivacyCopy> = {
     logsDeclared: [/registros de acceso del servidor/i, /dirección IP en claro/i, /no incluyen el texto que pegas/i],
     ttl: [/48 horas/, /30 minutos/],
     noClientStorage: [/no usa cookies/i, /almacenamiento local/i],
+    sessionClaim: [/Solo si decides guardar el proyecto/, /almacenamiento de sesión de esta pestaña/, /hasta que lo reclames o la cierres/, /estrictamente necesario/],
     objection: /derecho de oposición/i,
     forbidden: [/se guarda la dirección IP en claro/i, /guardamos tu dirección IP en claro/i],
   },
@@ -248,6 +251,7 @@ const DEMO_PRIVACY: Record<Lang, DemoPrivacyCopy> = {
     logsDeclared: [/server access logs/i, /IP address in clear text/i, /do not include the text you paste/i],
     ttl: [/48 hours/, /30 minutes/],
     noClientStorage: [/does not use cookies/i, /local storage/i],
+    sessionClaim: [/Only if you decide to save the project/, /session storage of this tab/, /until you claim it or close the tab/, /strictly necessary/],
     objection: /right to object/i,
     forbidden: [/IP address is stored in clear/i, /we store your IP address in clear/i],
   },
@@ -260,6 +264,7 @@ const DEMO_PRIVACY: Record<Lang, DemoPrivacyCopy> = {
     logsDeclared: [/服务器访问日志/, /明文的 IP 地址/, /不包含你粘贴的文本/],
     ttl: [/48 小时/, /30 分钟/],
     noClientStorage: [/不使用 Cookie/, /本地存储/],
+    sessionClaim: [/只有当你决定保存该项目时/, /此标签页的会话存储/, /直到你认领它或关闭该标签页/, /严格必要/],
     objection: /反对权/,
     forbidden: [/以明文保存 IP 地址/, /明文保存你的 IP/],
   },
@@ -319,6 +324,13 @@ describe('Legal: la demo publica sin registro (Privacidad)', () => {
         for (const re of copy.noClientStorage) expect(text, String(re)).to.match(re);
       });
     });
+
+    it(`Privacidad (${lang}): el id de la demo solo va al almacenamiento de sesion si el visitante decide guardar el proyecto`, () => {
+      visitIn('/privacy', lang);
+      cy.get('section#demo').invoke('text').then((text) => {
+        for (const re of copy.sessionClaim) expect(text, String(re)).to.match(re);
+      });
+    });
   }
 });
 
@@ -359,13 +371,13 @@ describe('Legal: la demo publica sin registro (Terminos)', () => {
 
 describe('Legal: la demo publica sin registro (Cookies)', () => {
   const COOKIE_DEMO: Record<Lang, RegExp[]> = {
-    es: [/La demo pública no usa cookies/, /ni almacenamiento local ni de sesión/],
-    en: [/The public demo does not use cookies/, /nor local or session storage/],
-    zh: [/公开演示不使用 Cookie/, /也不使用本地存储或会话存储/],
+    es: [/La demo pública no usa cookies ni almacenamiento local/, /Solo si decides guardar el proyecto/, /almacenamiento de sesión de esta pestaña/, /hasta que lo reclames o la cierres/, /estrictamente necesario/],
+    en: [/The public demo does not use cookies or local storage/, /Only if you decide to save the project/, /session storage of this tab/, /until you claim it or close the tab/, /strictly necessary/],
+    zh: [/公开演示不使用 Cookie，也不使用本地存储/, /只有当你决定保存该项目时/, /此标签页的会话存储/, /直到你认领它或关闭该标签页/, /严格必要/],
   };
 
   for (const lang of ['es', 'en', 'zh'] as Lang[]) {
-    it(`Cookies (${lang}): la demo declara que no usa cookies ni almacenamiento local`, () => {
+    it(`Cookies (${lang}): la demo declara que no usa cookies ni almacenamiento local, salvo el id de sesion al guardar el proyecto`, () => {
       visitIn('/cookies', lang);
       cy.get('section#demo').should('exist').invoke('text').then((text) => {
         for (const re of COOKIE_DEMO[lang]) expect(text, String(re)).to.match(re);

@@ -205,4 +205,39 @@ describe('textos legales de la demo', () => {
   it('declaran que la IP se guarda con HMAC-SHA256 y sal diaria en los tres idiomas', () => {
     for (const l of LANGS) expect(legal(l)).toContain('HMAC-SHA256');
   });
+
+  it('B6: Privacidad y Cookies declaran el id de la demo en el almacenamiento de sesion SOLO al decidir guardar el proyecto, en los tres idiomas', () => {
+    const phrases: Record<string, RegExp[]> = {
+      es: [/Solo si decides guardar el proyecto/, /almacenamiento de sesión de esta pestaña/, /hasta que lo reclames o la cierres/, /estrictamente necesario/],
+      en: [/Only if you decide to save the project/, /session storage of this tab/, /until you claim it or close the tab/, /strictly necessary/],
+      zh: [/只有当你决定保存该项目时/, /此标签页的会话存储/, /直到你认领它或关闭该标签页/, /严格必要/],
+    };
+    for (const l of LANGS) {
+      const [privacy, , cookies] = demoSections(l);
+      for (const re of phrases[l]) {
+        expect(`${l} privacidad: ${privacy}`).toMatch(re);
+        expect(`${l} cookies: ${cookies}`).toMatch(re);
+      }
+    }
+  });
+
+  it('B6: el frontend solo toca sessionStorage en el modulo del id pendiente de la demo (y en el aviso de verificacion de siempre)', () => {
+    const root = path.join(ROOT, 'packages/frontend/src');
+    const hits: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) walk(full);
+        else if (/\.(ts|tsx)$/.test(entry.name) && /sessionStorage\s*\.\s*(get|set|remove)Item/.test(fs.readFileSync(full, 'utf8'))) {
+          hits.push(path.relative(root, full).split(path.sep).join('/'));
+        }
+      }
+    };
+    walk(root);
+    expect(hits.sort()).toEqual(['components/ui/EmailVerificationBanner/EmailVerificationBanner.tsx', 'services/demoPending.ts']);
+    // y el modulo solo escribe cuando se le pide guardar: la pagina de la demo lo llama unicamente desde el boton de guardar
+    const demoPage = read('packages/frontend/src/pages/Demo/Demo.tsx');
+    const writes = demoPage.match(/rememberPendingDemo\(/g) ?? [];
+    expect(writes).toHaveLength(1);
+  });
 });

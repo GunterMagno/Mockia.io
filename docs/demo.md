@@ -18,7 +18,18 @@ Un test (`packages/backend/src/tests/demo.docs.test.ts`) ata este documento al c
 | Vida de la API simulada | `DEMO_MOCK_TTL_MINUTES` minutos | índice TTL de MongoDB (puede tardar hasta ~1 minuto más en borrar) |
 | Peticiones que sirve cada API simulada | 150, y 300 por visitante y día | MongoDB |
 
-Lo que **no** hay en la demo: claves de API, exportación, visibilidad privada, retardos simulados largos. Para conservar una API hay que registrarse.
+Lo que **no** hay en la demo: claves de API, exportación, visibilidad privada, retardos simulados largos. Para conservar una API hay que registrarse (ver la sección siguiente).
+
+## Conservar la demo al registrarse: `POST /api/demo/:demoId/claim`
+
+El visitante que pulsa el botón de guardar el proyecto, se registra (o inicia sesión) y llega al panel, ve su demo convertida en un proyecto real. Cómo funciona y qué hay que saber al operarlo:
+
+- **Quién puede reclamar**: una cuenta con sesión y el correo verificado (si `REQUIRE_EMAIL_VERIFICATION` lo exige, por defecto en producción), con un límite de 10 intentos cada 15 minutos por cuenta. El `demoId` son 128 bits aleatorios: quien lo tiene puede reclamar, y no existe ningún listado de demos.
+- **Qué hace**: copia los endpoints del mock (método, ruta, estado, cuerpo y las cabeceras permitidas) a un proyecto nuevo de la cuenta (`Demo - <primer recurso>`, público y sin clave, como cualquier proyecto nuevo) y borra la demo. **No consume cuota de IA ni presupuesto de la demo**, y funciona aunque `DEMO_ENABLED` esté en `false` (copiar algo que ya existe no cuesta nada ni abre la demo a nadie).
+- **Es atómico**: la demo se toma con un único `findOneAndDelete`, así que dos reclamos simultáneos producen como máximo un proyecto. `404` es la respuesta única para «no existe», «venció» y «ya reclamada».
+- **Si la cuenta ya está en su límite de proyectos** responde `402 PLAN_LIMIT_REACHED` y la demo **sigue disponible** (se comprueba antes de tomarla). Si la copia falla a medias se borra el proyecto a medias y la demo se restaura con su caducidad original; solo un corte del proceso entre tomar la demo y terminar la copia la perdería (el visitante genera otra).
+- **En el navegador**: el id se guarda en `sessionStorage` (`mockia_demo_pending`) únicamente cuando el visitante pulsa el botón de guardar (nunca al generar), nunca va en la URL, y se borra al reclamar, al comprobar que ya no existe y al cerrar la pestaña. Los textos legales (Privacidad y Cookies, sección «demo») lo declaran; un test (`demo.docs.test.ts`) ata esa declaración al código.
+- **Pruebas e2e**: con el buzón de pruebas montado (`E2E_EXPOSE_MAIL_OUTBOX=true`, nunca en producción) existe `POST /api/__test__/demo-mock`, que crea una demo real sin pasar por la IA.
 
 ## Qué pregunta el resto del sitio: `GET /api/demo/availability`
 
@@ -135,6 +146,7 @@ Resumen operativo de lo que los textos legales declaran; si algo de esto cambia,
 | API simulada y su contenido | colección `demomocks` (guarda también el seudónimo de la IP) | `DEMO_MOCK_TTL_MINUTES` minutos (30), más hasta ~1 min de retraso de MongoDB |
 | Retos de prueba de trabajo ya usados | colección `demospentchallenges` (id aleatorio) | 10 minutos |
 | Límites de ráfaga | memoria del proceso | se pierden al reiniciar |
+| Id de la demo que el visitante quiere conservar | `sessionStorage` de su pestaña (`mockia_demo_pending`), **solo** si pulsa el botón de guardar el proyecto | hasta que la reclama, se comprueba que ya no existe o cierra la pestaña |
 | **Logs de acceso del servidor (morgan)** | salida estándar del backend; la plataforma de alojamiento los retiene | **no verificable desde el código**: `[[REVISAR: retención de logs del hosting]]` |
 
 **Los logs de acceso guardan la IP en claro y la URL completa** (formato `combined` de morgan; también del proxy inverso o de la plataforma). Incluyen el identificador aleatorio de cada API simulada, pero no el texto del visitante ni la respuesta del modelo. La Política de Privacidad lo declara y deja la retención como pendiente: averigua cuánto conserva tu proveedor (en Render depende del plan; con `docker-compose.prod.yml` son los logs de Docker y de nginx, que no rotan por defecto) y sustituye el marcador por el dato real, o reduce la retención si es excesiva.
