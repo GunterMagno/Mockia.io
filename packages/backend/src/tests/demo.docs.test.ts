@@ -94,6 +94,7 @@ describe('docs/demo.md', () => {
         DEMO_ENABLED: String(cfg.enabled),
         DEMO_DAILY_GENERATIONS: String(cfg.dailyGenerations),
         DEMO_PER_IP_GENERATIONS: String(cfg.perIpGenerationsPerDay),
+        DEMO_PER_NET_GENERATIONS: String(cfg.perNetGenerationsPerDay),
         DEMO_MAX_CONCURRENT: String(cfg.maxConcurrent),
         DEMO_POW_BITS: String(cfg.powBits),
         DEMO_MOCK_TTL_MINUTES: String(cfg.mockTtlMinutes),
@@ -102,7 +103,6 @@ describe('docs/demo.md', () => {
         // la fila de la tabla de variables: la variable es la primera celda (otras tablas la citan en otras columnas)
         const row = DOC.split(/\r?\n/).find((l) => l.trim().startsWith('|') && l.split('|')[1]?.trim() === `\`${name}\``);
         expect(row).toBeDefined();
-        DEMO_PER_NET_GENERATIONS: String(cfg.perNetGenerationsPerDay),
         const cells = row!.split('|').map((c) => c.trim());
         expect(cells[2]).toBe(`\`${value}\``);
       }
@@ -231,14 +231,6 @@ describe('textos legales de la demo', () => {
     }
   });
 
-  it('B6: el frontend solo toca sessionStorage en el modulo del id pendiente de la demo (y en el aviso de verificacion de siempre)', () => {
-    const root = path.join(ROOT, 'packages/frontend/src');
-    const hits: string[] = [];
-    const walk = (dir: string) => {
-      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-        const full = path.join(dir, entry.name);
-        if (entry.isDirectory()) walk(full);
-        else if (/\.(ts|tsx)$/.test(entry.name) && /sessionStorage\s*\.\s*(get|set|remove)Item/.test(fs.readFileSync(full, 'utf8'))) {
   it('M2 (revision final): el id pendiente se borra al reclamarlo o al cerrar la pestana, y NUNCA se promete borrarlo al caducar la demo porque el codigo no lo hace', () => {
     const deleted: Record<string, RegExp> = {
       es: /se borra al reclamarlo o al cerrar la pestaña/,
@@ -267,6 +259,14 @@ describe('textos legales de la demo', () => {
     for (const l of LANGS) expect(demoSections(l)[0]).toMatch(phrase[l]);
   });
 
+  it('B6: el frontend solo toca sessionStorage en el modulo del id pendiente de la demo (y en el aviso de verificacion de siempre)', () => {
+    const root = path.join(ROOT, 'packages/frontend/src');
+    const hits: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) walk(full);
+        else if (/\.(ts|tsx)$/.test(entry.name) && /sessionStorage\s*\.\s*(get|set|remove)Item/.test(fs.readFileSync(full, 'utf8'))) {
           hits.push(path.relative(root, full).split(path.sep).join('/'));
         }
       }
