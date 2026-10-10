@@ -115,6 +115,7 @@ describe('docs/demo.md', () => {
       ['el intento no se devuelve tras salir la peticion al proveedor', /no se devuelve/i],
       ['que mirar si hay abuso', /abuso/i],
       ['los logs del servidor guardan la IP en claro', /logs/i],
+      ['GET /api/demo/availability: anonimo, cacheable y fuera de los limitadores', /\/api\/demo\/availability[\s\S]*cach/],
       ['/status responde 200 con available false cuando la demo esta apagada', /available:\s*false/],
       ['limite a 0 de generaciones diarias', /DEMO_DAILY_GENERATIONS=0/],
       ['limite a 0 de generaciones por visitante', /DEMO_PER_IP_GENERATIONS=0/],

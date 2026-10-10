@@ -20,6 +20,10 @@ Un test (`packages/backend/src/tests/demo.docs.test.ts`) ata este documento al c
 
 Lo que **no** hay en la demo: claves de API, exportación, visibilidad privada, retardos simulados largos. Para conservar una API hay que registrarse.
 
+## Qué pregunta el resto del sitio: `GET /api/demo/availability`
+
+La cabecera y la portada preguntan en cada carga de página (a todo el mundo) si merece la pena anunciar la demo. Para eso existe `GET /api/demo/availability`: devuelve solo `{ available }` (verdadero si la demo está activada y queda presupuesto global), es **anónimo** (no usa la IP del visitante ni escribe nada) y **cacheable**: el servidor lo recuerda 30 segundos en memoria de cada proceso y la respuesta lleva `Cache-Control: public, max-age=60`. Está **fuera de los limitadores** de ráfaga (para que un NAT compartido no gaste el cupo de quien de verdad usa la demo). Consecuencia operativa: tras activar, apagar o agotar la demo, la portada puede tardar hasta unos 90 segundos en reflejarlo (caché del servidor más la del navegador o de un CDN); `generate` y `status` no pasan por esa caché. Como el resto de la API, la petición aparece en los logs de acceso con la IP en claro.
+
 ## Variables
 
 Todas se leen del entorno en cada petición (no hace falta recompilar para cambiar un límite; sí reiniciar o redesplegar el servicio para que el proceso vea la variable nueva).
