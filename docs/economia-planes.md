@@ -56,7 +56,19 @@ margen del peor caso = p − (p × f + k) − (g × c) − h  ≥ 0
 g máximo = suelo( (p × (1 − f) − k − h) / c )
 ```
 
+**Qué cuenta como una generación gastada.** La unidad se reserva antes de llamar al modelo y solo se devuelve si **ninguna petición pudo facturarse**: no llegó a salir ninguna petición al proveedor, o todas las que salieron terminaron con un error HTTP explícito del proveedor (un 500, un 401, un 429) o con un servidor inalcanzable (conexión rechazada, DNS). **No se devuelve** si algún proveedor llegó a producir una respuesta, aunque no sirva (salida cortada por longitud, JSON inválido tras el reintento de reparación, un 502 final), ni si hubo un tiempo de espera agotado, el plazo global (504) o una cancelación: el proveedor puede haber estado generando y factura lo generado aunque nosotros la descartemos. Es lo que hace que el "peor caso" de esta tabla sea de verdad el peor: un usuario no puede provocar fallos (por ejemplo una petición que obliga al modelo a agotar sus 5 000 tokens de salida) para gastar IA de pago sin gastar su cupo. El coste del peor caso incluye, por tanto, los intentos fallidos y la reparación: usa el coste por generación del percentil alto, con su reintento. Un usuario al que el proveedor falla de forma explícita no pierde la unidad; si el proveedor tarda más de lo permitido, sí.
+
 `g` es el valor de `maxMonthlyAiGenerations` de ese plan. Si el `g` que sale es menor que el valor actual (40 en Starter), hay que bajarlo (o subir el precio) antes de vender el plan. Aplica la misma fórmula a Pro y Team con su precio: suelen tener más margen porque el precio crece más deprisa que el cupo, pero comprobarlo cuesta un minuto. En Free no hay precio: elige `g` de modo que `g × c` sea el gasto por usuario gratuito que estás dispuesto a asumir.
+
+## Gasto fijo de la demo pública
+
+La demo sin registro (`docs/demo.md`) no consume la cuota de nadie, pero tiene un **gasto fijo diario máximo**:
+
+```
+gasto diario máximo de la demo = DEMO_DAILY_GENERATIONS × coste por generación
+```
+
+Es un coste que no depende de cuántos clientes de pago haya, y que la fórmula del margen no recoge en "hosting prorrateado": suma `DEMO_DAILY_GENERATIONS × 30 × c` al mes y repártelo entre los clientes de pago para ver cuánto pesa, y redúcelo bajando `DEMO_DAILY_GENERATIONS` si no lo compensa. El documento de la demo (sección "Coste") explica cómo se acota y qué ocurre con las unidades que no se devuelven. No se dan cifras aquí: dependen del coste por generación que midas.
 
 ## Cómo reajustar un valor
 

@@ -14,6 +14,7 @@ import type {
 import { AppError } from '../middlewares/errorHandler.js';
 import { ErrorCode } from '@mockia/shared';
 import { describeError } from '../utils/safeErrorLog.js';
+import { providerOutcomeOf, withProviderOutcome } from '../modules/ai/providers/outcome.js';
 
 /**
  * Sleep utility for delays between retries
@@ -105,6 +106,8 @@ export async function callOpenRouterWithRetry(
   };
 
   let lastError: AxiosError | null = null;
+  // An attempt that timed out (or ended in a way we cannot classify) may have been billed, whatever the later attempts say
+  let mayHaveBeenBilled = false;
 
   for (let attempt = 0; attempt < retryConfig.maxRetries; attempt++) {
     try {
@@ -131,6 +134,7 @@ export async function callOpenRouterWithRetry(
       return response.data;
     } catch (error) {
       lastError = error as AxiosError;
+      if (providerOutcomeOf(error) === 'uncertain') mayHaveBeenBilled = true;
 
       // The caller gave up: no retries and no error translation, whoever cancelled wants out.
       if (signal?.aborted) throw error;
@@ -159,13 +163,13 @@ export async function callOpenRouterWithRetry(
         // Non-retryable error, throw immediately
         // Only the status/code: the raw AxiosError holds the prompt (config.data), the API key and the response body
         console.error(`[OpenRouter] ✗ Non-retryable error (${describeError(error)})`);
-        throw transformOpenRouterError(error);
+        throw withProviderOutcome(transformOpenRouterError(error), mayHaveBeenBilled ? 'uncertain' : 'refused');
       }
 
       // Retryable error, but check if it's the last attempt
       if (attempt === retryConfig.maxRetries - 1) {
         console.error('[OpenRouter] ✗ Max retries exceeded');
-        throw transformOpenRouterError(error);
+        throw withProviderOutcome(transformOpenRouterError(error), mayHaveBeenBilled ? 'uncertain' : 'refused');
       }
 
       // Calculate backoff delay and retry
@@ -187,10 +191,9 @@ export async function callOpenRouterWithRetry(
   }
 
   // This should not be reached due to the throw in the loop, but for type safety
-  throw new AppError(
-    'OpenRouter API call failed after all retries',
-    ErrorCode.EXTERNAL_SERVICE_ERROR,
-    503
+  throw withProviderOutcome(
+    new AppError('OpenRouter API call failed after all retries', ErrorCode.EXTERNAL_SERVICE_ERROR, 503),
+    'uncertain'
   );
 }
 

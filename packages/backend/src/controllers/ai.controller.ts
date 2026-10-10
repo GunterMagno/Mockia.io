@@ -10,7 +10,7 @@ import { consumeAiQuota } from '../modules/ai/aiRateLimit.js';
 import { aiQuotaClock, reserveAiGeneration } from '../modules/billing/aiQuota.js';
 import { parseAiProviders, getSpecGenerationSampling } from '../config/ai.js';
 import { describeError } from '../utils/safeErrorLog.js';
-import { getLlm, type LlmCompletion, type LlmRequest } from '../modules/ai/providers/index.js';
+import { getLlm, type LlmCompletion, type LlmRequest, type ProviderOutcome } from '../modules/ai/providers/index.js';
 import { newGenerationId, persistGeneration } from '../modules/ai/generationStore.js';
 import { recordFeedback } from '../modules/ai/feedback.js';
 import { AppError } from '../middlewares/errorHandler.js';
@@ -43,7 +43,7 @@ async function enforceAiRateLimit(userId: string, res: Response): Promise<void> 
  * Monthly AI generation quota of the user's plan (modules/billing/aiQuota.ts). Reserves ONE generation before any model
  * is called. Spent: answers 429 AI_QUOTA_EXCEEDED itself (used, limit, resetsAt in the body, Retry-After = seconds to
  * the next UTC month) and returns null, so the caller stops without touching the LLM. Otherwise returns the `release`
- * function, which the caller invokes on EVERY failure path and never after a successful answer.
+ * function, which the caller invokes on a failure path only when createRefundTracker allows it, and never after a successful answer.
  */
 async function reserveOrReject(userId: string, res: Response): Promise<(() => Promise<void>) | null> {
   const now = aiQuotaClock.now();
@@ -63,6 +63,34 @@ async function reserveOrReject(userId: string, res: Response): Promise<(() => Pr
     timestamp: now.toISOString(),
   });
   return null;
+}
+
+/**
+ * Follows the requests of ONE generation to the providers, to decide whether the reserved unit may be given back when
+ * it fails (ruling B3-R3). A paid provider bills what it generated even when we throw its answer away, and a user who
+ * could get the unit back by provoking failures (a 5000-token answer cut by length) would run unmetered paid calls.
+ * So the unit comes back only if no request ever left for a provider, or every request that left ended with an explicit
+ * HTTP error or an unreachable server (nothing generated, nothing billed). It stays spent if any provider produced a
+ * completion (usable or not: truncated, invalid, even if the final answer is a 502) or a request timed out, hit the
+ * deadline or was aborted (the provider may have been generating).
+ */
+export function createRefundTracker() {
+  let sent = 0;
+  let finished = 0;
+  let billable = false;
+  return {
+    hooks: {
+      onProviderCall: () => {
+        sent += 1;
+      },
+      onProviderResult: (outcome: ProviderOutcome) => {
+        finished += 1;
+        if (outcome !== 'refused') billable = true;
+      },
+    },
+    /** A request that left and has not reported back counts as billable. */
+    mayRefund: (): boolean => sent === 0 || (finished >= sent && !billable),
+  };
 }
 
 /**
@@ -175,6 +203,7 @@ export const generateMockAPISpecHandler = asyncHandler(
     // One generation of the monthly plan quota, reserved BEFORE any prompt or model work; 429 when it is spent
     const release = await reserveOrReject(userId, res);
     if (!release) return;
+    const refunds = createRefundTracker();
 
     try {
       // Build prompt from project context and user requirement
@@ -187,6 +216,7 @@ export const generateMockAPISpecHandler = asyncHandler(
         ...getSpecGenerationSampling(),
         jsonSchema: MOCK_SPEC_JSON_SCHEMA,
         validate: specRouteValidator,
+        ...refunds.hooks,
       });
       const responseContent = completion.text;
 
@@ -217,8 +247,8 @@ export const generateMockAPISpecHandler = asyncHandler(
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      // Model error, invalid output after the repair retry, deadline (504), provider 502, anything: the user gets no result, so no charge
-      await release();
+      // The user gets no result, but the unit comes back only if no provider can have billed it (see createRefundTracker)
+      if (refunds.mayRefund()) await release();
       throw error;
     }
   }
@@ -274,6 +304,7 @@ export const generateAndSaveHandler = asyncHandler(
     // One generation of the monthly plan quota, reserved BEFORE any prompt or model work; 429 when it is spent
     const release = await reserveOrReject(userId, res);
     if (!release) return;
+    const refunds = createRefundTracker();
 
     try {
       // 1. Build prompt from project context
@@ -287,6 +318,7 @@ export const generateAndSaveHandler = asyncHandler(
         ...getSpecGenerationSampling(),
         jsonSchema: MOCK_SPEC_JSON_SCHEMA,
         validate: saveRouteValidator,
+        ...refunds.hooks,
       });
 
       // 3. Get response content (the provider already rejects empty answers)
@@ -336,8 +368,8 @@ export const generateAndSaveHandler = asyncHandler(
       });
     } catch (error) {
       console.error(`[AI] Error during generation (${describeError(error)})`);
-      // Same rule as the spec route: any failure gives the reserved generation back (success keeps it)
-      await release();
+      // Same rule as the spec route: the reserved generation comes back only when no provider can have billed it
+      if (refunds.mayRefund()) await release();
       throw error;
     }
   }

@@ -36,6 +36,14 @@ export interface LlmRequest {
    * outcome: answer, invalid output, HTTP error, timeout or deadline).
    */
   onProviderCall?: () => void;
+  /**
+   * Called when a request reported by `onProviderCall` ends, with what it amounted to: 'answered' (the provider produced a
+   * completion, usable or not), 'refused' (an explicit HTTP error or an unreachable server: nothing generated) or
+   * 'uncertain' (timeout, abort, deadline, anything else: it may have been generating and billed). Together with
+   * `onProviderCall` it tells a caller that pays per model call whether a failed request can be refunded: only when no
+   * request left, or every one that left was 'refused'.
+   */
+  onProviderResult?: (outcome: 'answered' | 'refused' | 'uncertain') => void;
 }
 
 export interface LlmCompletion {

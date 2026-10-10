@@ -90,6 +90,23 @@ describe('docs/economia-planes.md', () => {
     expect(doc).toMatch(/verifica en tu pa[ií]s/i);
   });
 
+  it('explica cuando se devuelve y cuando NO se devuelve una generacion gastada (ruling B3-R3: un usuario no puede provocar fallos para gastar IA gratis)', () => {
+    expect(doc).toMatch(/Qué cuenta como una generación gastada/);
+    expect(doc).toMatch(/No se devuelve/);
+    expect(doc).toMatch(/salida cortada por longitud/);
+    expect(doc).toMatch(/tiempo de espera/);
+    expect(doc).toMatch(/error HTTP explícito/);
+    expect(doc).toMatch(/intentos fallidos/);
+  });
+
+  it('recoge el gasto fijo diario de la demo (DEMO_DAILY_GENERATIONS × coste por generación), sin cifras', () => {
+    expect(doc).toMatch(/DEMO_DAILY_GENERATIONS\s*×\s*coste por generación/);
+    expect(doc).toContain('docs/demo.md');
+    const section = doc.slice(doc.indexOf('## Gasto fijo de la demo pública'), doc.indexOf('## Cómo reajustar un valor'));
+    expect(section.length).toBeGreaterThan(200);
+    expect(section).not.toMatch(/\d+(?:[.,]\d+)?\s*(?:\$|€|USD|EUR)/);
+  });
+
   it('el procedimiento de reajuste nombra la constante del catalogo y los Price de Stripe', () => {
     expect(doc).toContain('maxMonthlyAiGenerations');
     expect(doc).toContain('packages/shared/src/billing.ts');

@@ -51,6 +51,14 @@ const answer = (content: string) => (res: http.ServerResponse) => {
   res.end(JSON.stringify(completion(content)));
 };
 
+/** A reply cut by max_tokens: a complete HTTP answer, but an unusable (and billed) document. */
+const truncated = () => (res: http.ServerResponse) => {
+  const body = completion('{"apiVersion":"1.0.0","title":"cut off');
+  body.choices[0].finish_reason = 'length';
+  res.setHeader('Content-Type', 'application/json');
+  res.end(JSON.stringify(body));
+};
+
 async function startFake(initial: (res: http.ServerResponse) => void): Promise<FakeServer> {
   let handler = initial;
   const sockets = new Set<import('net').Socket>();
@@ -346,7 +354,7 @@ describe('cuota mensual de generaciones de IA', () => {
       expect(await usedNow(u.idStr)).toBe(2);
     });
 
-    it('un LLM que falla (500) no consume cuota', async () => {
+    it('un LLM que falla con un 500 explicito no consume cuota: no hubo completion que facturar', async () => {
       const u = await createUser('g2@example.com');
       const p = await projectOf(u.id, 'g2-p');
       fake.setHandler((res) => {
@@ -361,15 +369,85 @@ describe('cuota mensual de generaciones de IA', () => {
       expect(fake.hits).toBeGreaterThan(0);
     });
 
-    it('un JSON invalido tras reparar (la cadena agota el reintento) no consume cuota', async () => {
+    // B3-R3 (cambio deliberado respecto al texto de A2, que devolvia la unidad en cualquier fallo): si el proveedor llego a
+    // devolver una completion, aunque su salida no sirva, pudo facturarla; devolver la unidad permitia provocar fallos
+    // (salida truncada de 5000 tokens) para gastar IA de pago sin limite mensual.
+    it('un JSON invalido tras reparar (la cadena agota el reintento) SI consume cuota: el proveedor contesto dos veces', async () => {
       const u = await createUser('g3@example.com');
       const p = await projectOf(u.id, 'g3-p');
       fake.setHandler(answer('this is not json at all'));
+      let expected = 0;
       for (const route of ['generate-mock-api-spec', 'generate-and-save']) {
         const res = await request(app).post(`/api/ai/${route}`).set(u.auth).send(body(p._id.toString()));
-        expect(res.status).not.toBe(200);
+        expect(res.status).toBe(502);
+        expected += 1;
+        expect(await usedNow(u.idStr)).toBe(expected);
+      }
+    });
+
+    it('una salida cortada por longitud (finish_reason length) es un 502 y la cuota queda gastada', async () => {
+      const u = await createUser('g3b@example.com');
+      const p = await projectOf(u.id, 'g3b-p');
+      fake.setHandler(truncated());
+      for (const [i, route] of ['generate-mock-api-spec', 'generate-and-save'].entries()) {
+        const res = await request(app).post(`/api/ai/${route}`).set(u.auth).send(body(p._id.toString()));
+        expect(res.status).toBe(502);
+        expect(await usedNow(u.idStr)).toBe(i + 1);
+      }
+    });
+
+    it('5 intentos de un usuario Free con salida truncada agotan su cupo y el 6.o da 429 sin llamar al modelo', async () => {
+      const u = await createUser('g3c@example.com');
+      const p = await projectOf(u.id, 'g3c-p');
+      // With OpenRouter (no circuit breaker): the local model's breaker would open after 3 failures and stop calling it
+      process.env.AI_PROVIDERS = 'openrouter';
+      openRouterConfig.baseUrl = fake.url;
+      openRouterConfig.apiKey = 'sk-or-test-key';
+      resetLlm();
+      fake.setHandler(truncated());
+      for (let i = 0; i < 5; i++) {
+        const res = await request(app).post('/api/ai/generate-mock-api-spec').set(u.auth).send(body(p._id.toString()));
+        expect(res.status).toBe(502);
+      }
+      const hitsBefore = fake.hits;
+      expect(hitsBefore).toBeGreaterThanOrEqual(5);
+      const sixth = await request(app).post('/api/ai/generate-mock-api-spec').set(u.auth).send(body(p._id.toString()));
+      expect(sixth.status).toBe(429);
+      expect(sixth.body.error.code).toBe(ErrorCode.AI_QUOTA_EXCEEDED);
+      expect(fake.hits).toBe(hitsBefore);
+      expect(await usedNow(u.idStr)).toBe(5);
+    });
+
+    it('un servidor que no contesta a tiempo (timeout del proveedor) no devuelve la unidad: pudo facturarse', async () => {
+      const u = await createUser('g3d@example.com');
+      const p = await projectOf(u.id, 'g3d-p');
+      fake.setHandler(() => undefined); // never answers
+      process.env.AI_LOCAL_TIMEOUT_MS = '300';
+      resetLlm();
+      const res = await request(app).post('/api/ai/generate-mock-api-spec').set(u.auth).send(body(p._id.toString()));
+      expect(res.status).toBeGreaterThanOrEqual(500);
+      expect(fake.hits).toBe(1);
+      expect(await usedNow(u.idStr)).toBe(1);
+    });
+
+    it('una conexion rechazada (nada escucha) devuelve la unidad: no hubo proveedor que facturara', async () => {
+      const u = await createUser('g3e@example.com');
+      const p = await projectOf(u.id, 'g3e-p');
+      await fake.close();
+      for (const route of ['generate-mock-api-spec', 'generate-and-save']) {
+        const res = await request(app).post(`/api/ai/${route}`).set(u.auth).send(body(p._id.toString()));
+        expect(res.status).toBe(503);
         expect(await usedNow(u.idStr)).toBe(0);
       }
+      fake = await startFake(answer(SPEC)); // afterEach closes it
+    });
+
+    it('un fallo anterior a la llamada al modelo (proyecto inexistente) devuelve la unidad', async () => {
+      const u = await createUser('g3f@example.com');
+      const res = await request(app).post('/api/ai/generate-mock-api-spec').set(u.auth).send(body(new Types.ObjectId().toString()));
+      expect(res.status).toBeGreaterThanOrEqual(400);
+      expect(fake.hits).toBe(0);
+      expect(await usedNow(u.idStr)).toBe(0);
     });
 
     it('un reintento de reparacion dentro de la cadena NO es una segunda generacion', async () => {
@@ -383,7 +461,7 @@ describe('cuota mensual de generaciones de IA', () => {
       expect(await usedNow(u.idStr)).toBe(1);
     });
 
-    it('el deadline global (504) no consume cuota', async () => {
+    it('el deadline global (504) SI consume cuota: la peticion salio y el proveedor pudo facturarla (cambio deliberado, B3-R3)', async () => {
       const u = await createUser('g5@example.com');
       const p = await projectOf(u.id, 'g5-p');
       fake.setHandler(() => undefined); // never answers
@@ -392,7 +470,7 @@ describe('cuota mensual de generaciones de IA', () => {
       resetLlm();
       const res = await request(app).post('/api/ai/generate-mock-api-spec').set(u.auth).send(body(p._id.toString()));
       expect(res.status).toBe(504);
-      expect(await usedNow(u.idStr)).toBe(0);
+      expect(await usedNow(u.idStr)).toBe(1);
     });
 
     it('sin cuota: 429 AI_QUOTA_EXCEEDED con used/limit/resetsAt y Retry-After, y el LLM falso NO se llama', async () => {

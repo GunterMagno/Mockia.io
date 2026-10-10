@@ -20,6 +20,9 @@ import {
 } from '../../../config/ai.js';
 import { createOpenAiCompatibleProvider, createOpenRouterProvider } from './openaiCompatible.js';
 import { LlmResponseError, type LlmCompletion, type LlmProvider, type LlmRequest } from './types.js';
+import { providerOutcomeOf } from './outcome.js';
+
+export { providerOutcomeOf, type ProviderOutcome } from './outcome.js';
 
 export type { ChatMessage, LlmCompletion, LlmProvider, LlmRequest } from './types.js';
 
@@ -146,16 +149,27 @@ function repairMessage(reason: string) {
  * provider (same deadline signal); a second invalid text throws LlmResponseError('invalid_output').
  */
 async function completeValidated(provider: LlmProvider, req: LlmRequest): Promise<LlmCompletion> {
-  req.onProviderCall?.();
-  const first = await provider.complete(req);
+  const first = await callProvider(provider, req);
   if (!req.validate) return first;
   const reason = req.validate(first.text);
   if (reason === null) return first;
   console.warn(`[AI] Provider "${provider.name}" returned an invalid answer (invalid_output); asking it once to repair it`);
-  req.onProviderCall?.();
-  const second = await provider.complete({ ...req, messages: [...req.messages, repairMessage(reason)] });
+  const second = await callProvider(provider, { ...req, messages: [...req.messages, repairMessage(reason)] });
   if (req.validate(second.text) !== null) throw new LlmResponseError('invalid_output');
   return second;
+}
+
+/** One request to one provider, reported to the caller's hooks: that it left, and how it ended. */
+async function callProvider(provider: LlmProvider, req: LlmRequest): Promise<LlmCompletion> {
+  req.onProviderCall?.();
+  try {
+    const completion = await provider.complete(req);
+    req.onProviderResult?.('answered');
+    return completion;
+  } catch (err) {
+    req.onProviderResult?.(providerOutcomeOf(err));
+    throw err;
+  }
 }
 
 export function createFallbackLlm(entries: FallbackEntry[], options: FallbackOptions = {}): LlmProvider {
