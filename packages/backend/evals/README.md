@@ -169,7 +169,7 @@ El banco imprime los tokens de salida y los tokens por segundo (`tokens/s`), y c
 2. Toma los tokens de salida del percentil alto y, para los de entrada, el tamaño del prompt (cada caso cabe en unos 6000 tokens; el panel de actividad de OpenRouter muestra entrada, salida y coste exactos por llamada).
 3. `coste por generación = tokens de entrada × precio de entrada + tokens de salida × precio de salida`. Con un modelo local, el coste es el de la máquina entre las generaciones que hace.
 
-No guardes cifras de coste en el repositorio: cámbian con el modelo y el proveedor, y las anota el titular.
+No guardes cifras de coste en el repositorio: cambian con el modelo y el proveedor, y las anota el titular.
 
 ## Estructura
 
