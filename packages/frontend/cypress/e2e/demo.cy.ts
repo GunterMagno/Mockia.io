@@ -643,4 +643,269 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
       }
     });
   });
+
+  /* ------------------------------------------------------------------------------------------------------------------
+   * B6: conservar la demo al registrarse. El id viaja en sessionStorage SOLO tras pulsar el boton de guardar el proyecto
+   * y se reclama en el panel (POST /api/demo/:id/claim). El backend de Cypress es el real: la demo se crea con la ruta de
+   * apoyo POST /api/__test__/demo-mock (sin IA) y solo la generacion de la pagina esta simulada.
+   * ---------------------------------------------------------------------------------------------------------------- */
+  describe('conservar la demo al registrarse (B6)', () => {
+    const KEY = 'mockia_demo_pending';
+    const PASSWORD = 'Original-pass-123';
+    let counter = 0;
+    const uniqueEmail = (prefix: string) => `${prefix}${Date.now()}${counter++}@example.com`;
+    const claimUrl = '**/api/demo/*/claim';
+
+    interface MailEntry {
+      to: string;
+      template: 'verify' | 'reset';
+      link: string;
+    }
+    const mailsFor = (to: string) =>
+      cy.request('/api/__test__/outbox').then((res) => (res.body.data as MailEntry[]).filter((m) => m.to === to && m.template === 'verify'));
+
+    /** Una demo real en la base de datos (sin IA); el alias @realDemoId lleva su id. */
+    const createRealDemo = () =>
+      cy.request('POST', '/api/__test__/demo-mock', {}).then((res) => {
+        cy.wrap(res.body.data.demoId as string).as('realDemoId');
+      });
+
+    /** Abre /demo con la generacion simulada que devuelve el id de la demo real, y la genera. */
+    const generateRealDemo = () => {
+      cy.get<string>('@realDemoId').then((demoId) => {
+        stubStatus();
+        stubChallenge();
+        stubGenerate({
+          statusCode: 201,
+          body: generated({
+            demoId,
+            baseUrl: `http://localhost:5173/api/demo-mock/${demoId}`,
+            endpoints: [
+              { method: 'GET', path: '/products', statusCode: 200, body: [{ id: 1, name: 'E2E mug' }] },
+              { method: 'GET', path: '/products/:id', statusCode: 200, body: { id: 1, name: 'E2E mug' } },
+              { method: 'POST', path: '/orders', statusCode: 201, body: { id: 77, status: 'created' } },
+            ],
+          }),
+        });
+        cy.visit('/demo');
+        cy.wait('@status');
+        generateButton().click();
+        cy.wait('@generate');
+        cy.get('[data-testid="demo-endpoint-list"] li').should('have.length', 3);
+      });
+    };
+
+    const signUp = (email: string) => {
+      cy.get('input[name="username"]').type('Keeper');
+      cy.get('input[name="email"]').type(email);
+      cy.get('input[name="new-password"]').type(PASSWORD);
+      cy.get('button[type="submit"]').click();
+    };
+
+    const registerViaApi = (email: string) => cy.request('POST', '/api/auth/register', { email, password: PASSWORD, username: 'keeper', locale: 'en' });
+    const logIn = (email: string) => {
+      cy.get('input[name="email"]').type(email);
+      cy.get('input[name="password"]').type(PASSWORD);
+      cy.get('button[type="submit"]').click();
+    };
+    const claimNotice = () => cy.get('[data-testid="demo-claim"]');
+    const pending = () => cy.window().then((win) => win.sessionStorage.getItem(KEY));
+
+    before(() => {
+      cy.request({ url: '/api/__test__/outbox', failOnStatusCode: false }).its('status').should('eq', 200);
+    });
+    beforeEach(() => {
+      cy.clearCookies();
+      cy.clearLocalStorage();
+      createRealDemo();
+    });
+
+    it('demo -> guardar -> registrarse: el id solo se guarda al pulsar, el panel reclama la demo y el proyecto aparece', () => {
+      generateRealDemo();
+      // Generar no guarda nada: el id aun no esta en ningun almacenamiento
+      cy.window().then((win) => expect(Object.keys(win.sessionStorage)).to.deep.equal([]));
+      cy.contains('a', 'Create your free account').click();
+      cy.location('pathname').should('eq', '/signup');
+      cy.get<string>('@realDemoId').then((demoId) => pending().should('eq', demoId)); // y no va en la URL
+      cy.location('search').should('eq', '');
+
+      signUp(uniqueEmail('keep'));
+      cy.url().should('include', '/dashboard');
+      claimNotice().should('have.attr', 'data-state', 'done').and('contain', 'Your demo is now a project of your account: Demo - products');
+      cy.contains('a', 'Demo - products').should('be.visible');
+      pending().should('eq', null);
+      // Recargar no vuelve a reclamar nada
+      cy.reload();
+      cy.contains('Demo - products').should('be.visible');
+      cy.get('[data-testid="demo-claim"]').should('not.exist');
+      // y el proyecto responde de verdad por el motor de mocks real (cuerpo y estado de la demo)
+      cy.contains('a', 'Demo - products')
+        .invoke('attr', 'href')
+        .then((href) => {
+          const slug = String(href).split('/').pop();
+          cy.request(`/api/mock/${slug}/products`).its('body').should('deep.equal', [{ id: 1, name: 'E2E mug' }]);
+          cy.request('POST', `/api/mock/${slug}/orders`, {}).then((res) => {
+            expect(res.status).to.eq(201);
+            expect(res.body).to.deep.equal({ id: 77, status: 'created' });
+          });
+        });
+    });
+
+    it('correo sin verificar: el panel avisa, y al verificar con el enlace del correo (bandeja de pruebas) el proyecto aparece', () => {
+      generateRealDemo();
+      cy.contains('a', 'Create your free account').click();
+      // El servidor de pruebas no exige el correo verificado: se simula su respuesta una sola vez
+      cy.intercept({ method: 'POST', url: claimUrl, times: 1 }, { statusCode: 403, body: failure('EMAIL_NOT_VERIFIED', 'Email not verified') }).as('claim403');
+      const email = uniqueEmail('verify');
+      signUp(email);
+      cy.wait('@claim403');
+      claimNotice().should('have.attr', 'data-state', 'verify').and('contain', 'Verify your email address and we will save it as a project');
+      cy.get<string>('@realDemoId').then((demoId) => pending().should('eq', demoId));
+      cy.contains('Demo - products').should('not.exist');
+
+      mailsFor(email).then((mails) => {
+        expect(mails).to.have.length(1);
+        const url = new URL(mails[0].link);
+        cy.visit(url.pathname + url.search);
+      });
+      cy.get('[role="status"]').should('contain', 'Your email address is verified');
+      cy.contains('a', 'Continue to your projects').click();
+      cy.url().should('include', '/dashboard');
+      claimNotice().should('have.attr', 'data-state', 'done');
+      cy.contains('Demo - products').should('be.visible');
+      pending().should('eq', null);
+    });
+
+    it('limite de proyectos del plan: aviso con enlace a los planes, la demo sigue pendiente y se puede reintentar', () => {
+      generateRealDemo();
+      cy.contains('a', 'Create your free account').click();
+      cy.intercept(
+        { method: 'POST', url: claimUrl, times: 1 },
+        { statusCode: 402, body: { success: false, error: { code: 'PLAN_LIMIT_REACHED', message: 'limit', details: { plan: 'free', limit: 5, active: 5 } }, timestamp: new Date().toISOString() } },
+      ).as('claim402');
+      signUp(uniqueEmail('limit'));
+      cy.wait('@claim402');
+      claimNotice()
+        .should('have.attr', 'data-state', 'planLimit')
+        .and('have.attr', 'role', 'alert')
+        .and('contain', 'your Free plan allows 5 active projects');
+      claimNotice().contains('a', 'See plans').should('have.attr', 'href', '/billing');
+      cy.get<string>('@realDemoId').then((demoId) => pending().should('eq', demoId));
+      cy.contains('Demo - products').should('not.exist');
+      // Con hueco (aqui: la segunda respuesta ya es la real), el mismo boton la guarda
+      claimNotice().contains('button', 'Try again').click();
+      claimNotice().should('have.attr', 'data-state', 'done');
+      cy.contains('Demo - products').should('be.visible');
+      pending().should('eq', null);
+    });
+
+    it('usuario con sesion: el boton dice "Save this project to your account" y lleva al panel, donde se reclama', () => {
+      const email = uniqueEmail('session');
+      registerViaApi(email);
+      cy.visit('/login');
+      logIn(email);
+      cy.url().should('include', '/dashboard');
+      generateRealDemo();
+      cy.contains('a', 'Save this project to your account').should('have.attr', 'href', '/dashboard').click();
+      cy.url().should('include', '/dashboard');
+      claimNotice().should('have.attr', 'data-state', 'done');
+      cy.contains('Demo - products').should('be.visible');
+    });
+
+    it('la demo ya no existe (caducada o reclamada): aviso, enlace a una demo nueva y el id pendiente se borra', () => {
+      cy.get<string>('@realDemoId').then((demoId) => {
+        // Se reclama antes con otra cuenta: para la nuestra ya no queda nada
+        const first = uniqueEmail('first');
+        registerViaApi(first);
+        cy.request('POST', '/api/auth/login', { email: first, password: PASSWORD }).then((login) => {
+          cy.request({
+            method: 'POST',
+            url: `/api/demo/${demoId}/claim`,
+            headers: { Authorization: `Bearer ${login.body.data.tokens.accessToken as string}` },
+          })
+            .its('status')
+            .should('eq', 201);
+        });
+        cy.clearCookies();
+        const email = uniqueEmail('late');
+        registerViaApi(email);
+        cy.visit('/login', {
+          onBeforeLoad(win) {
+            win.sessionStorage.setItem(KEY, demoId);
+          },
+        });
+        logIn(email);
+        claimNotice().should('have.attr', 'data-state', 'gone').and('contain', 'expired or was already saved');
+        claimNotice().contains('a', 'Generate a new demo').should('have.attr', 'href', '/demo');
+        pending().should('eq', null);
+      });
+    });
+
+    it('un valor manipulado en sessionStorage se ignora y se borra', () => {
+      const email = uniqueEmail('tamper');
+      registerViaApi(email);
+      cy.intercept('POST', claimUrl).as('claim');
+      cy.visit('/login', {
+        onBeforeLoad(win) {
+          win.sessionStorage.setItem(KEY, '../../etc/passwd');
+        },
+      });
+      logIn(email);
+      cy.url().should('include', '/dashboard');
+      cy.contains('My projects').should('be.visible');
+      cy.get('[data-testid="demo-claim"]').should('not.exist');
+      pending().should('eq', null);
+      cy.get('@claim.all').should('have.length', 0);
+    });
+
+    it('sin demo pendiente no hay aviso ni peticion de reclamo', () => {
+      const email = uniqueEmail('plain');
+      registerViaApi(email);
+      cy.intercept('POST', claimUrl).as('claim');
+      cy.visit('/login');
+      logIn(email);
+      cy.contains('My projects').should('be.visible');
+      cy.get('[data-testid="demo-claim"]').should('not.exist');
+      cy.get('@claim.all').should('have.length', 0);
+    });
+
+    it('si la demo ya aparece caducada, el boton no guarda nada en el navegador', () => {
+      stubStatus();
+      stubChallenge();
+      stubGenerate({ statusCode: 201, body: generated({ expiresAt: new Date(Date.now() - 1000).toISOString() }) });
+      cy.visit('/demo');
+      cy.wait('@status');
+      generateButton().click();
+      cy.contains('Expired').should('be.visible');
+      cy.contains('a', 'Create your free account').click();
+      cy.location('pathname').should('eq', '/signup');
+      cy.window().then((win) => expect(Object.keys(win.sessionStorage)).to.deep.equal([]));
+    });
+
+    for (const [lang, expected] of [
+      ['es', { gone: 'ha caducado o ya se guardó', link: 'Generar una demo nueva' }],
+      ['zh', { gone: '已过期或已被保存', link: '生成新的演示' }],
+    ] as const) {
+      it(`los avisos de conservar la demo estan en ${lang}`, () => {
+        cy.get<string>('@realDemoId').then((demoId) => {
+          const email = uniqueEmail(`lang${lang}`);
+          registerViaApi(email);
+          cy.then(() => {
+            uiLocale = lang;
+          });
+          cy.intercept('POST', claimUrl, { statusCode: 404, body: failure('NOT_FOUND', 'gone') });
+          cy.visit('/login', {
+            onBeforeLoad(win) {
+              win.sessionStorage.setItem(KEY, demoId);
+            },
+          });
+          cy.get('input[name="email"]').type(email);
+          cy.get('input[name="password"]').type(PASSWORD);
+          cy.get('button[type="submit"]').click();
+          claimNotice().should('contain', expected.gone);
+          claimNotice().contains('a', expected.link).should('have.attr', 'href', '/demo');
+        });
+      });
+    }
+  });
 });

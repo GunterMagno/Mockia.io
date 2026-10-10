@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PATHS } from '../../routes/paths'
+import { useAuth } from '../../contexts/AuthContext'
+import { rememberPendingDemo } from '../../services/demoPending'
 import { useI18n, type MessageKey } from '../../i18n/I18nProvider'
 import {
   DEMO_TEMPLATE_IDS,
@@ -22,8 +24,10 @@ import { runPow, type PowRun } from '../../workers/runPow'
 import styles from './Demo.module.scss'
 
 /**
- * Demo publica: una sola pantalla, sin cuenta. Todo el estado vive en memoria (nada en cookies, localStorage ni
- * sessionStorage); al recargar, la demo se olvida. El reto de prueba de trabajo se resuelve en un Web Worker.
+ * Demo publica: una sola pantalla, sin cuenta. Todo el estado vive en memoria (la demo no usa cookies ni almacenamiento
+ * local); al recargar, la demo se olvida. La UNICA excepcion es la accion explicita de guardar el proyecto: solo entonces
+ * el id de la demo se recuerda en el almacenamiento de sesion de la pestana (services/demoPending.ts) para reclamarla
+ * tras registrarse. El reto de prueba de trabajo se resuelve en un Web Worker.
  */
 
 type SourceChoice = DemoTemplateId | 'text'
@@ -59,6 +63,7 @@ const clock = (ms: number): string => {
 
 const Demo: React.FC = () => {
   const { t, formatDate, formatNumber } = useI18n()
+  const { user } = useAuth()
 
   const [status, setStatus] = useState<DemoStatus | null>(null)
   const [remaining, setRemaining] = useState<number | null>(null)
@@ -455,9 +460,17 @@ const Demo: React.FC = () => {
             <aside className={styles.cta}>
               <h3>{t('demo.cta.title')}</h3>
               <p>{t('demo.cta.text')}</p>
-              {/* TODO(B6): conservar el demoId al registrarse cuando el backend lo soporte (reclamar el mock en la cuenta nueva) */}
-              <Link className={styles.linkBtn} to={PATHS.signup}>
-                {t('demo.cta.button')}
+              {/* Unico sitio que recuerda el id de la demo, y solo al pulsar: sin cuenta lleva al registro y con sesion al panel,
+                  donde se reclama (DemoClaimNotice). Si la demo ya caduco no hay nada que recordar. */}
+              <Link
+                className={styles.linkBtn}
+                to={user ? PATHS.dashboard : PATHS.signup}
+                data-testid="demo-keep"
+                onClick={() => {
+                  if (!expired) rememberPendingDemo(result.demoId)
+                }}
+              >
+                {user ? t('demo.cta.saveButton') : t('demo.cta.button')}
               </Link>
             </aside>
           </section>

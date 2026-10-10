@@ -6,6 +6,7 @@ import type { Project } from '../../services/projectService'
 import CreateProjectModal from '../../components/projects/CreateProjectModal'
 import EmailVerificationBanner from '../../components/ui/EmailVerificationBanner/EmailVerificationBanner'
 import PastDueBanner from '../../components/billing/PastDueBanner/PastDueBanner'
+import DemoClaimNotice from '../../components/demo/DemoClaimNotice/DemoClaimNotice'
 import { Link, useNavigate } from 'react-router-dom'
 import { Icon } from '../../components/ui/Icon/Icon'
 import { useAuth } from '../../contexts/AuthContext'
@@ -83,6 +84,8 @@ const Dashboard: React.FC = () => {
     <Layout>
       <EmailVerificationBanner />
       {billing && <PastDueBanner overview={billing} />}
+      {/* Si el visitante decidio conservar su demo antes de registrarse, se reclama aqui (nada si no hay demo pendiente) */}
+      <DemoClaimNotice onClaimed={() => fetchProjects(true)} />
       <header className={styles.header}>
         <article className={styles.titleSection}>
           <h1>{t('dashboard.title')}</h1>

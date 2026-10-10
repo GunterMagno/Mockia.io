@@ -1,0 +1,58 @@
+/* Aviso del panel al conservar una demo: mismo lenguaje que PastDueBanner (borde y fondo suaves; el texto explica el estado) */
+.notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-3);
+  margin: 0 0 var(--spacing-6);
+  padding: var(--spacing-3) var(--spacing-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.info {
+  border-color: var(--color-border-strong);
+}
+
+.success {
+  border-color: var(--color-ok);
+  background: var(--color-ok-soft);
+}
+
+.problem {
+  border-color: var(--color-warn);
+  background: var(--color-warn-soft);
+}
+
+.message {
+  margin: 0;
+  flex: 1 1 18rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+}
+
+.action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--tap);
+  padding: 0 var(--spacing-5);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+
+  &:hover { background: var(--color-border); }
+  &:focus-visible { outline: 2px solid var(--color-accent-text); outline-offset: 2px; }
+}

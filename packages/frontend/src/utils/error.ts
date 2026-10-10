@@ -53,7 +53,7 @@ const translateKnown = (message: string, t: Translate): string => {
 }
 
 /** Nombre del plan con las mismas claves que las tarjetas de precios (un plan desconocido se muestra tal cual). */
-const planName = (plan: unknown, t: Translate): string =>
+export const planName = (plan: unknown, t: Translate): string =>
   PLANS.includes(plan as Plan) ? t(`pricing.plans.${plan as Plan}.name`) : String(plan ?? '')
 
 /** Cuota mensual de IA agotada (429 AI_QUOTA_EXCEEDED): uso, tope y el instante en que vuelve a haber generaciones. */
