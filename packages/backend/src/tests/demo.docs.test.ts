@@ -115,6 +115,10 @@ describe('docs/demo.md', () => {
       ['el intento no se devuelve tras salir la peticion al proveedor', /no se devuelve/i],
       ['que mirar si hay abuso', /abuso/i],
       ['los logs del servidor guardan la IP en claro', /logs/i],
+      ['/status responde 200 con available false cuando la demo esta apagada', /available:\s*false/],
+      ['limite a 0 de generaciones diarias', /DEMO_DAILY_GENERATIONS=0/],
+      ['limite a 0 de generaciones por visitante', /DEMO_PER_IP_GENERATIONS=0/],
+      ['el seudonimo por si solo no permite seguirte pero los logs si tienen la IP', /seud[oó]nimo por s[ií] solo/],
       ['los textos legales son un borrador con marcadores [[REVISAR]]', /\[\[REVISAR/],
     ];
     it.each(must)('cubre: %s', (_label, re) => {
@@ -127,13 +131,30 @@ describe('docs/demo.md', () => {
   });
 
   describe('estado del despliegue', () => {
-    const forwards = ['render.yaml', 'docker-compose.prod.yml'].some((f) => /(?<![A-Z0-9_])(?:AI_)?DEMO_[A-Z]/.test(read(f)));
+    // Solo variables reales: "- key: DEMO_X" en render.yaml y "DEMO_X:" como clave de environment en compose. Un
+    // comentario que cite una variable no cuenta, y cada fichero se comprueba por separado (un reenvio parcial
+    // obliga a corregir solo la linea del fichero afectado).
+    const FORWARDS: Record<string, RegExp> = {
+      'render.yaml': /^\s*-\s*key:\s*(?:AI_)?DEMO_[A-Z0-9_]+\s*$/m,
+      'docker-compose.prod.yml': /^\s*(?:AI_)?DEMO_[A-Z0-9_]+\s*:/m,
+    };
 
-    it('lo que el documento dice sobre render.yaml y docker-compose.prod.yml es cierto hoy (cuando B7 reenvie las variables, hay que actualizarlo)', () => {
-      expect(DOC).toMatch(/render\.yaml/);
-      expect(DOC).toMatch(/docker-compose\.prod\.yml/);
-      if (forwards) expect(DOC).not.toMatch(/NO reenv[ií]an/);
-      else expect(DOC).toMatch(/NO reenv[ií]an/);
+    it.each(Object.keys(FORWARDS))(
+      'lo que el documento dice sobre %s es cierto hoy (cuando B7 reenvie las variables, hay que actualizarlo)',
+      (file) => {
+        const forwards = FORWARDS[file].test(read(file));
+        const line = DOC.split(/\r?\n/).find((l) => l.trim().startsWith('- `' + file + '`'));
+        expect(line).toBeDefined();
+        if (forwards) expect(line).toMatch(/S[ÍI] reenv[ií]a/);
+        else expect(line).toMatch(/NO reenv[ií]a/);
+      },
+    );
+
+    it('un comentario que cita una variable no activa el cable trampa, una variable real si', () => {
+      expect(FORWARDS['render.yaml'].test('  # DEMO_ENABLED se activa a mano\n')).toBe(false);
+      expect(FORWARDS['render.yaml'].test('      - key: DEMO_ENABLED\n')).toBe(true);
+      expect(FORWARDS['docker-compose.prod.yml'].test('      # DEMO_ENABLED: x\n')).toBe(false);
+      expect(FORWARDS['docker-compose.prod.yml'].test('      DEMO_ENABLED: ${DEMO_ENABLED:-}\n')).toBe(true);
     });
   });
 });
@@ -149,11 +170,35 @@ describe('textos legales de la demo', () => {
     for (const l of LANGS) expect(legal(l)).toContain('[[REVISAR: retención de logs del hosting]]');
   });
 
-  it('prometen la misma caducidad que la configuracion por defecto (30 minutos)', () => {
+  // Las secciones con id 'demo' (Privacidad, Terminos, Cookies). Cada idioma ya tenia un "30 minutos" no relacionado
+  // (el enlace de restablecimiento), asi que la caducidad se busca DENTRO de la seccion de la demo, no en el fichero.
+  const demoSections = (lang: string): string[] => legal(lang).match(/id: ['"]demo['"],[\s\S]*?\n {8}\},\n/g) ?? [];
+
+  it('Privacidad, Terminos y Cookies tienen cada uno su seccion de la demo en los tres idiomas', () => {
+    for (const l of LANGS) expect(demoSections(l)).toHaveLength(3);
+  });
+
+  it('la seccion de la demo de Privacidad y la de Terminos prometen la caducidad por defecto (30 minutos)', () => {
     expect(getDemoConfig({} as NodeJS.ProcessEnv).mockTtlMinutes).toBe(30);
-    expect(legal('es')).toMatch(/30 minutos/);
-    expect(legal('en')).toMatch(/30 minutes/);
-    expect(legal('zh')).toMatch(/30 分钟/);
+    const minutes: Record<string, RegExp> = { es: /30 minutos/, en: /30 minutes/, zh: /30 分钟/ };
+    for (const l of LANGS) {
+      const [privacy, terms] = demoSections(l);
+      expect(privacy).toMatch(minutes[l]);
+      expect(terms).toMatch(minutes[l]);
+    }
+  });
+
+  it('la seccion de la demo de Privacidad y la de Terminos avisan de que la API generada puede reproducir lo pegado', () => {
+    const phrase: Record<string, RegExp> = {
+      es: /puede reproducir fragmentos de lo que pegas/,
+      en: /may reproduce fragments of what you paste/,
+      zh: /可能复述你粘贴内容中的片段/,
+    };
+    for (const l of LANGS) {
+      const [privacy, terms] = demoSections(l);
+      expect(privacy).toMatch(phrase[l]);
+      expect(terms).toMatch(phrase[l]);
+    }
   });
 
   it('declaran que la IP se guarda con HMAC-SHA256 y sal diaria en los tres idiomas', () => {

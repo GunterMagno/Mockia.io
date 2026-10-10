@@ -178,6 +178,49 @@ interface DemoPrivacyCopy {
   forbidden: RegExp[];
 }
 
+// Ronda de arreglos de la revision (B5-I1, I2, m3, m4/m5): ponderacion coherente con los logs en claro, la API generada
+// puede reproducir lo pegado, el seudonimo "por si solo", y filas de plazos buscadas por su primera celda.
+interface Round2Copy {
+  /** Frases de la ponderacion del interes legitimo (seccion de la demo y fila de finalidades). */
+  weighing: RegExp[];
+  /** Afirmaciones falsas que no deben quedar en ninguna parte de Privacidad. */
+  falseClaims: RegExp[];
+  /** "La API generada puede reproducir fragmentos de lo que pegas" (Privacidad y Terminos). */
+  reproduces: RegExp;
+  /** El seudonimo solo no permite seguirte (los logs si contienen la IP). */
+  alone: RegExp;
+  /** Primera celda de las filas de plazos de la demo. */
+  counterRow: RegExp;
+  mockRow: RegExp;
+}
+
+const ROUND2: Record<Lang, Round2Copy> = {
+  es: {
+    weighing: [/la base de datos de la demo solo guarda datos seudonimizados/, /registros de acceso generales del servidor/, /sin perfilado ni cookies/],
+    falseClaims: [/solo se tratan datos seudonimizados/, /limitándose a datos seudonimizados/],
+    reproduces: /puede reproducir fragmentos de lo que pegas/,
+    alone: /el seudónimo por sí solo no permite/,
+    counterRow: /Demo pública: contadores diarios/,
+    mockRow: /Demo pública: la API simulada generada/,
+  },
+  en: {
+    weighing: [/the demo's database only holds pseudonymized data/, /general server access logs/, /no profiling or cookies/],
+    falseClaims: [/only pseudonymized[^.]{0,40}data is processed/, /limited to pseudonymized, short-lived data/],
+    reproduces: /may reproduce fragments of what you paste/,
+    alone: /the pseudonym alone does not/,
+    counterRow: /Public demo: daily counters/,
+    mockRow: /Public demo: the generated mock API/,
+  },
+  zh: {
+    weighing: [/演示的数据库只保存假名化数据/, /服务器的一般访问日志/, /没有用户画像和 Cookie/],
+    falseClaims: [/只处理假名化/, /仅限于假名化的短期数据/],
+    reproduces: /可能复述你粘贴内容中的片段/,
+    alone: /仅凭该假名无法/,
+    counterRow: /公开演示：带有 IP 假名的每日计数器/,
+    mockRow: /公开演示：生成的模拟 API 及其内容/,
+  },
+};
+
 const DEMO_PRIVACY: Record<Lang, DemoPrivacyCopy> = {
   es: {
     purpose: /ofrecer una demo sin registro y evitar abusos/i,
@@ -259,10 +302,10 @@ describe('Legal: la demo publica sin registro (Privacidad)', () => {
       cy.get('section#demo').invoke('text').then((text) => {
         for (const re of copy.ttl) expect(text, String(re)).to.match(re);
       });
-      // la fila del plazo esta en la tabla de "cuanto tiempo conservamos", no solo en la seccion de la demo
-      cy.get('article table').last().invoke('text').then((text) => {
-        for (const re of copy.ttl) expect(text, String(re)).to.match(re);
-      });
+      // las filas de la demo estan en la tabla de "cuanto tiempo conservamos" (se buscan por su primera celda: la
+      // fila preexistente "24 horas y 30 minutos" de los enlaces de restablecimiento no cuenta)
+      cy.contains('tr', ROUND2[lang].counterRow).invoke('text').should('match', copy.ttl[0]);
+      cy.contains('tr', ROUND2[lang].mockRow).invoke('text').should('match', copy.ttl[1]);
     });
 
     it(`Privacidad (${lang}): la demo no usa cookies ni almacenamiento local`, () => {
@@ -349,4 +392,50 @@ describe('Legal: la demo publica sin registro (Cookies)', () => {
       }
     }
   });
+});
+
+describe('Legal: ronda de arreglos de la demo (ponderacion, API generada, seudonimo)', () => {
+  for (const lang of ['es', 'en', 'zh'] as Lang[]) {
+    const r = ROUND2[lang];
+
+    it(`Privacidad (${lang}): la ponderacion del interes legitimo distingue la base de datos seudonimizada de los logs con la IP`, () => {
+      visitIn('/privacy', lang);
+      cy.get('section#demo').invoke('text').then((text) => {
+        for (const re of r.weighing) expect(text, String(re)).to.match(re);
+      });
+      // y la fila de finalidades de la tabla dice lo mismo
+      cy.contains('tr', DEMO_PRIVACY[lang].purpose).invoke('text').then((text) => {
+        for (const re of r.weighing) expect(text, String(re)).to.match(re);
+      });
+      cy.get('article').invoke('text').then((text) => {
+        for (const re of r.falseClaims) expect(text, String(re)).to.not.match(re);
+      });
+    });
+
+    it(`Privacidad (${lang}): la API generada puede reproducir lo pegado, dura 30 min y es consultable con su URL`, () => {
+      visitIn('/privacy', lang);
+      cy.get('section#demo').invoke('text').then((text) => {
+        expect(text).to.match(r.reproduces);
+        expect(text).to.match(DEMO_PRIVACY[lang].ttl[1]);
+      });
+      // tambien en la fila de plazos de la API generada
+      cy.contains('tr', r.mockRow).invoke('text').should('match', r.reproduces);
+    });
+
+    it(`Terminos (${lang}): el resultado puede reproducir lo pegado y es publico por URL durante 30 min`, () => {
+      visitIn('/terms', lang);
+      cy.get('section#demo').invoke('text').then((text) => {
+        expect(text).to.match(r.reproduces);
+        expect(text).to.match(DEMO_PRIVACY[lang].ttl[1]);
+      });
+    });
+
+    it(`Privacidad (${lang}): el seudonimo por si solo no permite seguirte, pero los logs si contienen la IP`, () => {
+      visitIn('/privacy', lang);
+      cy.get('section#demo').invoke('text').then((text) => {
+        expect(text).to.match(r.alone);
+        expect(text).to.match(DEMO_PRIVACY[lang].logsDeclared[1]);
+      });
+    });
+  }
 });
