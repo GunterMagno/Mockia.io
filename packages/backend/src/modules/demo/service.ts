@@ -7,7 +7,7 @@ import { extractJsonFromLLMOutput, validateGeneratedApi, MOCK_SPEC_JSON_SCHEMA }
 import { acquireGenerationSlot, peekDemoBudget, peekGlobalDemoBudget, refundDemoBudget, tryConsumeDemoBudget } from './budget.js';
 import { getDemoConfig } from './config.js';
 import { pseudonymizeIp } from './ipHash.js';
-import { verifyProof } from './pow.js';
+import { checkProof, isChallengeSpent, spendChallenge } from './pow.js';
 import { createDemoMock, DemoMockError, prepareDemoEndpoints, type DemoEndpoint, type DemoMethod } from './mockStore.js';
 import { DEMO_TEMPLATES, type DemoTemplateId } from './templates.js';
 import { demoClock } from './mockRouter.js';
@@ -223,18 +223,28 @@ export async function getDemoStatus(ip: string): Promise<DemoStatus> {
  */
 const AVAILABILITY_TTL_MS = 30 * 1000;
 let availabilityCache: { until: number; value: boolean } | null = null;
+let availabilityInFlight: Promise<boolean> | null = null;
 
 export const resetDemoAvailabilityCache = (): void => {
   availabilityCache = null;
+  availabilityInFlight = null;
 };
 
 export async function getDemoAvailability(): Promise<boolean> {
   if (!getDemoConfig().enabled) return false;
   const now = demoClock.now();
   if (availabilityCache && availabilityCache.until > now.getTime()) return availabilityCache.value;
-  const value = (await peekGlobalDemoBudget(now)) > 0;
-  availabilityCache = { until: now.getTime() + AVAILABILITY_TTL_MS, value };
-  return value;
+  // A burst of page loads while the cache is cold shares ONE read (otherwise every one of them would query)
+  availabilityInFlight ??= peekGlobalDemoBudget(now)
+    .then((left) => {
+      const value = left > 0;
+      availabilityCache = { until: now.getTime() + AVAILABILITY_TTL_MS, value };
+      return value;
+    })
+    .finally(() => {
+      availabilityInFlight = null;
+    });
+  return availabilityInFlight;
 }
 
 /* ------------------------------------------------------------------------------------------------------- generate */
@@ -255,7 +265,16 @@ export async function generateDemoMock(input: GenerateInput): Promise<GenerateRe
   const now = demoClock.now();
   const ipHash = pseudonymizeIp(input.ip || 'unknown', now);
 
-  // 1. Budget of the visitor, then of the whole demo (the visitor's first, so one address cannot drain the global one)
+  // 1. The proof of work, checked WITHOUT touching the database (shape, signature, expiry, the work itself, and a read of the
+  //    spent list). Before the budget on purpose: a request without a real, unspent solution can then neither write a
+  //    counter nor hold a unit of the demo-wide budget, which is what stops an attacker who invents its own address from
+  //    growing the database or flapping `available` for everybody with requests that cost it nothing.
+  const invalidProof = () =>
+    new DemoRefusal('The challenge is not valid or has expired. Request a new one and try again.', ErrorCode.DEMO_CHALLENGE_INVALID, 400);
+  const checked = checkProof(input.challenge, input.nonce, now);
+  if (!checked.ok || (await isChallengeSpent(checked.id))) throw invalidProof();
+
+  // 2. Budget of the visitor, then of the whole demo (the visitor's first, so one address cannot drain the global one)
   const budget = await tryConsumeDemoBudget(ipHash, 'generation', now);
   if (!budget.ok) {
     if (budget.scope === 'ip') {
@@ -272,11 +291,9 @@ export async function generateDemoMock(input: GenerateInput): Promise<GenerateRe
   let requestSent = false;
   let released: (() => void) | null = null;
   try {
-    // 2. Proof of work (spends the challenge only when it is valid)
-    const proof = await verifyProof(input.challenge, input.nonce, now);
-    if (!proof.ok) {
-      throw new DemoRefusal('The challenge is not valid or has expired. Request a new one and try again.', ErrorCode.DEMO_CHALLENGE_INVALID, 400);
-    }
+    // The challenge is spent only now that the budget accepted the visitor (a refusal for budget must not burn a solved
+    // challenge). Of any number of simultaneous requests with the same solution exactly one gets here with `true`.
+    if (!(await spendChallenge(checked.id, now))) throw invalidProof();
 
     // 3. Concurrency slot (per process)
     released = acquireGenerationSlot(ipHash);

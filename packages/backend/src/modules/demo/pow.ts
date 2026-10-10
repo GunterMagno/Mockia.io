@@ -61,7 +61,16 @@ function parsePayload(part: string): Payload | null {
   }
 }
 
-export async function verifyProof(challenge: unknown, nonce: unknown, now: Date = new Date()): Promise<ProofResult> {
+/** What a successful pure check hands to the steps that follow: the id the challenge is spent under. */
+export type ProofCheck = { ok: true; id: string } | { ok: false; reason: Exclude<ProofFailure, 'replayed'> };
+
+/**
+ * The part of the verification that needs no database: shape, signature, expiry and the work itself. It costs a few
+ * hashes and writes nothing, so the service runs it BEFORE it touches the budget: a request that does not carry a real
+ * solution (the whole of the cheap abuse: forged, expired, unsolved) can then neither write a counter nor hold a unit of
+ * the demo-wide budget, whatever address it claims to come from.
+ */
+export function checkProof(challenge: unknown, nonce: unknown, now: Date = new Date()): ProofCheck {
   if (typeof challenge !== 'string' || typeof nonce !== 'string') return { ok: false, reason: 'malformed' };
   if (challenge.length > MAX_CHALLENGE_LENGTH || nonce.length === 0 || nonce.length > MAX_NONCE_LENGTH || !NONCE_FORMAT.test(nonce)) {
     return { ok: false, reason: 'malformed' };
@@ -79,13 +88,28 @@ export async function verifyProof(challenge: unknown, nonce: unknown, now: Date 
 
   const digest = crypto.createHash('sha256').update(`${challenge}:${nonce}`).digest();
   if (leadingZeroBits(digest) < payload.bits) return { ok: false, reason: 'insufficient_work' };
+  return { ok: true, id: payload.id };
+}
 
-  // Spending is the last step, so a wrong nonce does not burn a challenge the client could still solve
+/** Read-only: has this challenge already been spent? (A replay is refused here without any write.) */
+export async function isChallengeSpent(id: string): Promise<boolean> {
+  return (await DemoSpentChallengeModel.exists({ _id: id })) !== null;
+}
+
+/** Spends a challenge atomically (unique _id): exactly one of any number of simultaneous callers gets `true`. */
+export async function spendChallenge(id: string, now: Date = new Date()): Promise<boolean> {
   try {
-    await DemoSpentChallengeModel.create({ _id: payload.id, createdAt: now });
+    await DemoSpentChallengeModel.create({ _id: id, createdAt: now });
+    return true;
   } catch (err) {
-    if ((err as { code?: number }).code === 11000) return { ok: false, reason: 'replayed' };
+    if ((err as { code?: number }).code === 11000) return false;
     throw err;
   }
-  return { ok: true };
+}
+
+export async function verifyProof(challenge: unknown, nonce: unknown, now: Date = new Date()): Promise<ProofResult> {
+  const checked = checkProof(challenge, nonce, now);
+  if (!checked.ok) return checked;
+  // Spending is the last step, so a wrong nonce does not burn a challenge the client could still solve
+  return (await spendChallenge(checked.id, now)) ? { ok: true } : { ok: false, reason: 'replayed' };
 }

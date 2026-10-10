@@ -61,6 +61,13 @@ export async function tryConsumeDemoBudget(ipHash: string, kind: BudgetKind, now
   const day = utcDay(now);
   const perIp = kind === 'generation' ? cfg.perIpGenerationsPerDay : cfg.ipMockRequestsPerDay;
 
+  // Once the demo-wide budget is spent, a plain read answers every later generation: no counter row is created or touched for
+  // a visitor that is going to be refused anyway (an attacker who invents addresses would otherwise add a row per request)
+  // (reads only; the visitor who was already over their own limit is still told that, as before)
+  if (kind === 'generation' && (await peekGlobalDemoBudget(now)) <= 0) {
+    const own = perIp <= 0 ? null : await DemoBudgetModel.findOne({ day, scope: 'ip', key: ipHash, kind }).lean();
+    return { ok: false, scope: perIp <= 0 || (own?.count ?? 0) >= perIp ? 'ip' : 'global' };
+  }
   if (!(await increment(day, 'ip', ipHash, kind, perIp))) return { ok: false, scope: 'ip' };
   if (kind === 'generation' && !(await increment(day, 'global', 'global', kind, cfg.dailyGenerations))) {
     await refund(day, ipHash, kind);

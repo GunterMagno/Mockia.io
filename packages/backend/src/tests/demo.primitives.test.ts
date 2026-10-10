@@ -3,7 +3,7 @@ import { connectDB, disconnectDB } from '../config/connection.js';
 import { assertProdConfig } from '../config/assertProdConfig.js';
 import { getDemoConfig } from '../modules/demo/config.js';
 import { pseudonymizeIp } from '../modules/demo/ipHash.js';
-import { issueChallenge, verifyProof } from '../modules/demo/pow.js';
+import { checkProof, isChallengeSpent, issueChallenge, spendChallenge, verifyProof } from '../modules/demo/pow.js';
 import { tryConsumeDemoBudget, acquireGenerationSlot, refundDemoBudget, peekDemoBudget } from '../modules/demo/budget.js';
 import { DemoBudgetModel } from '../models/DemoBudget.js';
 import { DemoSpentChallengeModel } from '../models/DemoSpentChallenge.js';
@@ -250,6 +250,52 @@ describe('proof of work', () => {
   });
 });
 
+describe('proof of work split in a pure check and a spend (B7)', () => {
+  beforeEach(() => {
+    process.env.DEMO_POW_BITS = '8';
+  });
+
+  it('checkProof validates shape, signature, expiry and work and writes nothing', async () => {
+    const { challenge } = issueChallenge(T0);
+    const nonce = solve(challenge);
+    const checked = checkProof(challenge, nonce, T0);
+    expect(checked.ok).toBe(true);
+    // The same solution passes the pure check as many times as you like: only spendChallenge uses it up
+    expect(checkProof(challenge, nonce, T0)).toEqual(checked);
+    expect(await DemoSpentChallengeModel.countDocuments({})).toBe(0);
+    expect(checkProof(challenge, unsolved(challenge), T0)).toEqual({ ok: false, reason: 'insufficient_work' });
+    expect(checkProof(challenge, nonce, new Date(T0.getTime() + 10 * 60_000))).toEqual({ ok: false, reason: 'expired' });
+    expect(checkProof('nope', 'a', T0)).toEqual({ ok: false, reason: 'malformed' });
+    const [payload, sig] = challenge.split('.');
+    expect(checkProof(`${payload}.${sig.slice(0, -2)}${sig.endsWith('AA') ? 'BB' : 'AA'}`, 'a', T0)).toEqual({ ok: false, reason: 'bad_signature' });
+    expect(await DemoSpentChallengeModel.countDocuments({})).toBe(0);
+  });
+
+  it('isChallengeSpent is a read: false until spendChallenge, true afterwards', async () => {
+    const { challenge } = issueChallenge(T0);
+    const checked = checkProof(challenge, solve(challenge), T0);
+    if (!checked.ok) throw new Error('expected a valid proof');
+    await expect(isChallengeSpent(checked.id)).resolves.toBe(false);
+    await expect(spendChallenge(checked.id, T0)).resolves.toBe(true);
+    await expect(isChallengeSpent(checked.id)).resolves.toBe(true);
+  });
+
+  it('with 20 simultaneous spends exactly one wins', async () => {
+    const { challenge } = issueChallenge(T0);
+    const checked = checkProof(challenge, solve(challenge), T0);
+    if (!checked.ok) throw new Error('expected a valid proof');
+    const results = await Promise.all(Array.from({ length: 20 }, () => spendChallenge(checked.id, T0)));
+    expect(results.filter(Boolean)).toHaveLength(1);
+  });
+
+  it('verifyProof is exactly the two steps: a second verification of the same solution is replayed', async () => {
+    const { challenge } = issueChallenge(T0);
+    const nonce = solve(challenge);
+    await expect(verifyProof(challenge, nonce, T0)).resolves.toEqual({ ok: true });
+    await expect(verifyProof(challenge, nonce, T0)).resolves.toEqual({ ok: false, reason: 'replayed' });
+  });
+});
+
 describe('tryConsumeDemoBudget', () => {
   it('allows two generations per IP and day and refuses the third by IP', async () => {
     process.env.DEMO_DAILY_GENERATIONS = '100';
@@ -267,6 +313,22 @@ describe('tryConsumeDemoBudget', () => {
     await expect(tryConsumeDemoBudget(ips[3], 'generation', T0)).resolves.toEqual({ ok: false, scope: 'global' });
     const row = await DemoBudgetModel.findOne({ scope: 'ip', key: ips[3], kind: 'generation' }).lean();
     expect(row?.count ?? 0).toBe(0);
+  });
+
+  it('once the global budget is spent a refused visitor creates no row at all, and one already over their limit is still told so (B7)', async () => {
+    process.env.DEMO_DAILY_GENERATIONS = '2';
+    process.env.DEMO_PER_IP_GENERATIONS = '1';
+    const a = pseudonymizeIp('1.1.1.1', T0);
+    const b = pseudonymizeIp('2.2.2.2', T0);
+    await tryConsumeDemoBudget(a, 'generation', T0);
+    await tryConsumeDemoBudget(b, 'generation', T0);
+    const rows = await DemoBudgetModel.countDocuments({});
+    const fresh = await Promise.all(Array.from({ length: 25 }, (_, i) => tryConsumeDemoBudget(pseudonymizeIp(`9.9.9.${i}`, T0), 'generation', T0)));
+    expect(fresh.every((r) => !r.ok && r.scope === 'global')).toBe(true);
+    expect(await DemoBudgetModel.countDocuments({})).toBe(rows);
+    await expect(tryConsumeDemoBudget(a, 'generation', T0)).resolves.toEqual({ ok: false, scope: 'ip' });
+    process.env.DEMO_PER_IP_GENERATIONS = '0';
+    await expect(tryConsumeDemoBudget(pseudonymizeIp('8.8.8.8', T0), 'generation', T0)).resolves.toEqual({ ok: false, scope: 'ip' });
   });
 
   it('with 30 simultaneous calls and a cap of 2 lets exactly 2 through', async () => {
