@@ -11,6 +11,7 @@
 import { parseAiProviders } from './ai.js';
 import { duplicatePriceEnvGroups } from '../modules/billing/prices.js';
 import { invalidAdminEmailCount } from './admin.js';
+import { isOpsTokenTooShort, MIN_OPS_TOKEN_LENGTH } from './ops.js';
 
 const MIN_SECRET_LENGTH = 32;
 
@@ -115,6 +116,14 @@ export function assertProdConfig(env: NodeJS.ProcessEnv = process.env): void {
   if (badAdmins > 0) {
     problems.push(
       `ADMIN_EMAILS has ${badAdmins} entr${badAdmins === 1 ? 'y' : 'ies'} that ${badAdmins === 1 ? 'is' : 'are'} not a valid email address; use a comma-separated list of addresses (or leave it empty)`
+    );
+  }
+
+  // OPS_TOKEN opens /api/ops/summary to whoever holds it: a short one is a brute-force target. Empty = endpoint off.
+  // The value is never echoed.
+  if (isOpsTokenTooShort(env)) {
+    problems.push(
+      `OPS_TOKEN must be at least ${MIN_OPS_TOKEN_LENGTH} characters (or empty to turn /api/ops/summary off)`
     );
   }
 

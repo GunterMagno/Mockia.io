@@ -93,6 +93,15 @@ class CircuitBreaker {
   onAbandoned(): void {
     this.trialInFlight = false;
   }
+
+  /**
+   * Failed and not yet proven healthy again: from the moment it opens until a request succeeds. This includes the
+   * half-open stretch after the cooldown, on purpose: the owner's monitor looks every few minutes and the cooldown is
+   * 60 s, so "open only while it is blocking" would almost never be seen.
+   */
+  isOpen(): boolean {
+    return this.openUntil !== 0;
+  }
 }
 
 /** Short, content-free name of a failure, safe to log. */
@@ -208,7 +217,7 @@ export function createFallbackLlm(
     breaker: entry.breaker ? new CircuitBreaker(entry.breaker, now) : undefined,
   }));
 
-  return {
+  const llm: LlmProvider = {
     name: slots.map((s) => s.provider.name).join(','),
     async complete(req: LlmRequest): Promise<LlmCompletion> {
       let lastError: unknown;
@@ -256,7 +265,15 @@ export function createFallbackLlm(
       throw toServiceError(lastError);
     },
   };
+  chainSlots.set(
+    llm,
+    slots.map((s) => ({ provider: s.provider.name, isOpen: () => s.breaker?.isOpen() ?? false }))
+  );
+  return llm;
 }
+
+/** What getLlmStatus reads from a chain: the provider names (never URLs or keys) and whether each circuit is open. */
+const chainSlots = new WeakMap<LlmProvider, Array<{ provider: string; isOpen: () => boolean }>>();
 
 function buildProvider(name: AiProviderName, env: NodeJS.ProcessEnv): FallbackEntry {
   if (name === 'local') {
@@ -275,7 +292,7 @@ function buildProvider(name: AiProviderName, env: NodeJS.ProcessEnv): FallbackEn
  * on every alternate request. Bounded, so changing the settings many times (tests) cannot grow it without limit.
  */
 const MAX_CACHED_CHAINS = 8;
-const cached = new Map<string, LlmProvider>();
+const cached = new Map<string, { scope: LlmScope; llm: LlmProvider }>();
 
 /**
  * Who a chain serves. The scope is part of the cache key, so the public demo ALWAYS has its own chain, with its own
@@ -296,7 +313,7 @@ export function getLlm(
   const totalTimeoutMs = getAiTotalTimeoutMs(env);
   const key = JSON.stringify([scope, env.AI_PROVIDERS ?? '', local, totalTimeoutMs]);
   const hit = cached.get(key);
-  if (hit) return hit;
+  if (hit) return hit.llm;
 
   const { providers, ignored } = parseAiProviders(env.AI_PROVIDERS);
   if (ignored.length > 0) {
@@ -313,8 +330,32 @@ export function getLlm(
     { totalTimeoutMs }
   );
   if (cached.size >= MAX_CACHED_CHAINS) cached.delete(cached.keys().next().value as string);
-  cached.set(key, llm);
+  cached.set(key, { scope, llm });
   return llm;
+}
+
+export interface LlmStatusEntry {
+  scope: LlmScope;
+  provider: string;
+  breaker: 'closed' | 'open';
+}
+
+/**
+ * Circuit-breaker state of every chain built so far, keyed "<scope>:<provider>" (for the owner's operations summary).
+ * Names only: no URL, key or model. A provider declared without a breaker (the last resort, always tried) is always
+ * 'closed'. A chain that was never requested is not listed; if the same scope and provider appear in more than one live
+ * chain (the AI_* settings changed), the entry is 'open' when any of them is.
+ */
+export function getLlmStatus(): Record<string, LlmStatusEntry> {
+  const out: Record<string, LlmStatusEntry> = {};
+  for (const { scope, llm } of cached.values()) {
+    for (const slot of chainSlots.get(llm) ?? []) {
+      const key = `${scope}:${slot.provider}`;
+      const open = slot.isOpen() || out[key]?.breaker === 'open';
+      out[key] = { scope, provider: slot.provider, breaker: open ? 'open' : 'closed' };
+    }
+  }
+  return out;
 }
 
 /** Forgets the cached chain and its circuit breakers (tests). */

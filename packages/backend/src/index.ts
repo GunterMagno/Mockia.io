@@ -13,6 +13,7 @@ import { testOutboxRouter, shouldMountTestOutbox } from './modules/testSupport/o
 import { projectsRouter } from './modules/projects/routes.js';
 import { userRouter } from './modules/users/routes.js';
 import { adminRouter } from './modules/admin/routes.js';
+import { opsRouter } from './modules/ops/routes.js';
 import { githubRouter } from './routes/github.routes.js';
 import { mockRouter } from './routes/mock.routes.js';
 import { mockRouter as catchAllMockRouter } from './modules/mock/mockRouter.js';
@@ -92,6 +93,10 @@ app.use((req, res, next) => {
 const morganFormat = isDevelopment ? 'dev' : 'combined';
 app.use(morgan(morganFormat));
 
+// Operations summary for the owner's monitors (bearer OPS_TOKEN; it does not exist without one). Before the general /api
+// limiters on purpose: it has its own light limiter (60/min per IP) and a probe must not eat the 1000 / 15 min of a NAT.
+app.use('/api/ops', opsRouter);
+
 // Rate limiting (sliding window, per IP). Off under jest so suites that hammer login/register stay deterministic.
 if (process.env.NODE_ENV !== 'test') {
   const MIN15 = 15 * 60 * 1000;
@@ -148,6 +153,9 @@ app.get('/api/health', (req: Request, res: Response) => {
     status: 'ok',
     timestamp: new Date().toISOString(),
     database: dbStatus,
+    // The deployed version (Render sets RENDER_GIT_COMMIT; elsewhere pass GIT_COMMIT): lets the post-deploy check wait
+    // for its own commit. null when the platform does not tell.
+    commit: process.env.RENDER_GIT_COMMIT?.trim() || process.env.GIT_COMMIT?.trim() || null,
   });
 });
 
