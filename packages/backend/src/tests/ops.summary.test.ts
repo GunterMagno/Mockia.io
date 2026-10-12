@@ -55,8 +55,11 @@ const ENV_KEYS = [
 
 describe('/api/ops/summary', () => {
   const saved: Record<string, string | undefined> = {};
+  // the error handler logs every 4xx it answers; this suite provokes dozens on purpose
+  let errorLog: jest.SpyInstance;
 
   beforeAll(async () => {
+    errorLog = jest.spyOn(console, 'error').mockImplementation(() => undefined);
     await connectDB();
     await AiCallModel.init();
     await DemoBudgetModel.init();
@@ -76,6 +79,7 @@ describe('/api/ops/summary', () => {
   });
 
   afterAll(async () => {
+    errorLog.mockRestore();
     for (const k of ENV_KEYS) {
       if (saved[k] === undefined) delete process.env[k];
       else process.env[k] = saved[k];
