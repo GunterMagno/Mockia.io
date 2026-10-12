@@ -12,6 +12,7 @@ import { parseAiProviders } from './ai.js';
 import { duplicatePriceEnvGroups } from '../modules/billing/prices.js';
 import { invalidAdminEmailCount } from './admin.js';
 import { isOpsTokenTooShort, MIN_OPS_TOKEN_LENGTH } from './ops.js';
+import { parseAiPrices } from './aiPrices.js';
 
 const MIN_SECRET_LENGTH = 32;
 
@@ -124,6 +125,14 @@ export function assertProdConfig(env: NodeJS.ProcessEnv = process.env): void {
   if (isOpsTokenTooShort(env)) {
     problems.push(
       `OPS_TOKEN must be at least ${MIN_OPS_TOKEN_LENGTH} characters (or empty to turn /api/ops/summary off)`
+    );
+  }
+
+  // AI_PRICES_JSON feeds the cost estimate of the metrics panel. A broken table would be ignored at runtime with a
+  // warning; in production fail at boot instead, so the owner finds out now. The value is never echoed.
+  if (parseAiPrices(env).status === 'invalid') {
+    problems.push(
+      'AI_PRICES_JSON must be a JSON object {"<provider>/<model>": {"inputPerMTok": number, "outputPerMTok": number}} (or empty)'
     );
   }
 

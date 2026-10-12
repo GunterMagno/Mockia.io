@@ -125,6 +125,9 @@ const userSchema = new Schema<UserDocument>(
   }
 );
 
+// The owner's metrics read the accounts registered inside a window of days (modules/admin/metrics.ts)
+userSchema.index({ createdAt: 1 });
+
 /**
  * User model for CRUD operations in MongoDB
  * Will be mapped to API types in the service layer

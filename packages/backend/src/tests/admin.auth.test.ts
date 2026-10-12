@@ -80,13 +80,13 @@ describe('/api/admin', () => {
     const me = await request(app).get('/api/admin/me').set(auth);
     expect(me.status).toBe(200);
     expect(me.body.data).toEqual({ isAdmin: true });
-    const guarded = await request(app).get('/api/admin/ping').set(auth);
+    const guarded = await request(app).get('/api/admin/metrics').set(auth);
     expect(guarded.status).toBe(200);
   });
 
   it('(b) a listed address that is NOT verified is refused (registering with someone else address gives nothing)', async () => {
     const { auth } = await createUser(OWNER, false);
-    const guarded = await request(app).get('/api/admin/ping').set(auth);
+    const guarded = await request(app).get('/api/admin/metrics').set(auth);
     expect(guarded.status).toBe(403);
     expect(guarded.body.error.code).toBe('FORBIDDEN');
     const me = await request(app).get('/api/admin/me').set(auth);
@@ -97,12 +97,12 @@ describe('/api/admin', () => {
   it('(b2) verification is required even when REQUIRE_EMAIL_VERIFICATION=false', async () => {
     process.env.REQUIRE_EMAIL_VERIFICATION = 'false';
     const { auth } = await createUser(OWNER, false);
-    expect((await request(app).get('/api/admin/ping').set(auth)).status).toBe(403);
+    expect((await request(app).get('/api/admin/metrics').set(auth)).status).toBe(403);
   });
 
   it('(c) a normal user is refused', async () => {
     const { auth } = await createUser('someone@example.com', true);
-    const guarded = await request(app).get('/api/admin/ping').set(auth);
+    const guarded = await request(app).get('/api/admin/metrics').set(auth);
     expect(guarded.status).toBe(403);
     expect(guarded.body.error.code).toBe('FORBIDDEN');
   });
@@ -112,7 +112,7 @@ describe('/api/admin', () => {
     for (const value of [undefined, '']) {
       if (value === undefined) delete process.env.ADMIN_EMAILS;
       else process.env.ADMIN_EMAILS = value;
-      expect((await request(app).get('/api/admin/ping').set(auth)).status).toBe(403);
+      expect((await request(app).get('/api/admin/metrics').set(auth)).status).toBe(403);
       expect((await request(app).get('/api/admin/me').set(auth)).body.data).toEqual({
         isAdmin: false,
       });
@@ -121,33 +121,33 @@ describe('/api/admin', () => {
 
   it('(c3) every path under /api/admin is guarded, including ones that do not exist (no hint about what exists)', async () => {
     const { auth } = await createUser('someone@example.com', true);
-    for (const p of ['/api/admin/metrics', '/api/admin/nope', '/api/admin/']) {
+    for (const p of ['/api/admin/metrics', '/api/admin/ping', '/api/admin/nope', '/api/admin/']) {
       expect((await request(app).get(p).set(auth)).status).toBe(403);
     }
     for (const method of ['post', 'put', 'delete'] as const) {
-      expect((await request(app)[method]('/api/admin/ping').set(auth)).status).toBe(403);
+      expect((await request(app)[method]('/api/admin/metrics').set(auth)).status).toBe(403);
     }
   });
 
   it('(d) without a session it is 401 (also /me)', async () => {
     expect((await request(app).get('/api/admin/me')).status).toBe(401);
-    expect((await request(app).get('/api/admin/ping')).status).toBe(401);
+    expect((await request(app).get('/api/admin/metrics')).status).toBe(401);
     expect(
-      (await request(app).get('/api/admin/ping').set('Authorization', 'Bearer garbage')).status
+      (await request(app).get('/api/admin/metrics').set('Authorization', 'Bearer garbage')).status
     ).toBe(401);
   });
 
   it('(d2) a valid token of a deleted account is 401, not an administrator', async () => {
     const { id, auth } = await createUser(OWNER, true);
     await UserModel.deleteOne({ _id: id });
-    expect((await request(app).get('/api/admin/ping').set(auth)).status).toBe(401);
+    expect((await request(app).get('/api/admin/metrics').set(auth)).status).toBe(401);
     expect((await request(app).get('/api/admin/me').set(auth)).status).toBe(401);
   });
 
   it('(e) the list does not distinguish upper and lower case', async () => {
     process.env.ADMIN_EMAILS = '  OWNER@Example.COM ';
     const { auth } = await createUser(OWNER, true);
-    expect((await request(app).get('/api/admin/ping').set(auth)).status).toBe(200);
+    expect((await request(app).get('/api/admin/metrics').set(auth)).status).toBe(200);
     expect((await request(app).get('/api/admin/me').set(auth)).body.data).toEqual({
       isAdmin: true,
     });
@@ -161,10 +161,10 @@ describe('/api/admin', () => {
     expect(JSON.stringify(res.body)).not.toContain('owner');
     expect(JSON.stringify(res.headers)).not.toContain('owner');
     // the refusal of a guarded route does not name them either, and it is the same for "not listed" and "not verified"
-    const refused = await request(app).get('/api/admin/ping').set(auth);
+    const refused = await request(app).get('/api/admin/metrics').set(auth);
     const unverified = await createUser('late@example.com', false);
     process.env.ADMIN_EMAILS = 'late@example.com';
-    const refusedUnverified = await request(app).get('/api/admin/ping').set(unverified.auth);
+    const refusedUnverified = await request(app).get('/api/admin/metrics').set(unverified.auth);
     expect(refused.status).toBe(403);
     expect(refusedUnverified.status).toBe(403);
     expect(refusedUnverified.body.error).toEqual(refused.body.error);
@@ -184,7 +184,7 @@ describe('/api/admin', () => {
       { _id: new (await import('mongoose')).Types.ObjectId(id) },
       { $set: { role: 'admin', isAdmin: true } }
     );
-    expect((await request(app).get('/api/admin/ping').set(auth)).status).toBe(403);
+    expect((await request(app).get('/api/admin/metrics').set(auth)).status).toBe(403);
   });
 });
 
