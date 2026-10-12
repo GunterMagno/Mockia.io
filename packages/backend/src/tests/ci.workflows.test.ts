@@ -115,6 +115,10 @@ describe('security.yml', () => {
     expect(runs('npm-audit')).toContain('npm audit --omit=dev --audit-level=high');
   });
 
+  it('npm audit bloquea: el trabajo no lleva continue-on-error', () => {
+    expect(wf().jobs['npm-audit']['continue-on-error']).toBeUndefined();
+  });
+
   it('gitleaks escanea el historial (checkout completo) con un binario de version fijada', () => {
     const checkout = steps('gitleaks').find((s) =>
       String(s.uses).includes('actions/checkout')

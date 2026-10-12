@@ -48,12 +48,8 @@ jobs:
     name: npm audit (dependencias de produccion)
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # TODO(A2): ADVERTENCIA, no bloquea, mientras haya hallazgos altos/criticos heredados.
-    # El 2026-10-12 `npm audit --omit=dev --audit-level=high` ya salia con codigo 1 (8 altas y 3 criticas: simple-git,
-    # tar, proxy-addr, axios, joi, js-yaml, path-to-regexp, form-data...). Un trabajo rojo desde el primer dia, en todos
-    # los PR, se acaba ignorando y tapa los hallazgos nuevos. Cuando `npm audit` salga limpio, QUITA la linea
-    # `continue-on-error` de abajo y pasara a bloquear (y habra que marcarlo como obligatorio en la proteccion de main).
-    continue-on-error: true
+    # Bloquea (sin continue-on-error): `npm audit` sale limpio desde el 2026-10-12. Si un aviso nuevo en una dependencia
+    # de produccion lo pone rojo, se actualiza el paquete; no se vuelve a poner continue-on-error.
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
