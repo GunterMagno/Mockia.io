@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main, develop]
 
+# Una ejecucion nueva en la misma rama cancela la anterior (ahorra minutos y evita resultados desfasados)
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint-and-format:
     name: Lint & Format Check
@@ -24,24 +29,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # TODO(H10): estos tres pasos siguen en continue-on-error SOLO por la deuda previa del repo (medida al hacer
-      # la Tarea 1): Prettier 244 ficheros sin formatear; ESLint backend 1210 errores (1162 de prettier/prettier) y
-      # ESLint frontend 2050 errores (1971 de prettier/prettier). Hacer un barrido unico (`npm run format` +
-      # `npm run lint:fix`, corrigiendo a mano los ~130 errores no autofixables) en un commit aparte y entonces
-      # quitar continue-on-error de los tres pasos para que bloqueen.
       - name: Run Prettier format check
         run: npm run format:check
-        continue-on-error: true
 
       - name: Run ESLint - Backend
         working-directory: ./packages/backend
         run: npm run lint
-        continue-on-error: true
 
       - name: Run ESLint - Frontend
         working-directory: ./packages/frontend
         run: npm run lint
-        continue-on-error: true
 
   build:
     name: Build (shared + backend + frontend)
