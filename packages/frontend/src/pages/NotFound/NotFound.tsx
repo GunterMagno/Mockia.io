@@ -16,13 +16,13 @@ const NotFound: React.FC = () => {
           </figure>
           <h1 className={styles.title}>404</h1>
           <h2 className={styles.subtitle}>
-            {rich('notFound.title', { em: (chunk) => <span className={styles.gradientText}>{chunk}</span> })}
+            {rich('notFound.title', {
+              em: (chunk) => <span className={styles.gradientText}>{chunk}</span>,
+            })}
           </h2>
         </header>
         <article className={styles.content}>
-          <p className={styles.description}>
-            {t('notFound.text')}
-          </p>
+          <p className={styles.description}>{t('notFound.text')}</p>
           <nav className={styles.actions}>
             <Link to={PATHS.home} className={styles.primaryBtn}>
               {t('notFound.home')}

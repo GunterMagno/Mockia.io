@@ -69,7 +69,7 @@
   padding: var(--spacing-2) var(--spacing-4);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
-  
+
   @include respond-to('sm') {
     flex-direction: column;
     align-items: flex-start;
@@ -91,7 +91,6 @@
   font-weight: 600;
   text-transform: uppercase;
 }
-
 
 .backBtn {
   background: transparent;
@@ -126,14 +125,12 @@
   }
 }
 
-
-
 .settingsBtn {
   color: var(--color-text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
-  
+
   &:hover {
     color: var(--color-accent-text);
   }
@@ -247,7 +244,6 @@
   }
 }
 
-
 /* AI Modal Styles */
 .aiModalContent {
   padding: var(--spacing-6);
@@ -336,4 +332,3 @@
     color: var(--color-ok);
   }
 }
-

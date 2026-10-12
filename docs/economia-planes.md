@@ -1,17 +1,17 @@
 # Economía de los planes y cómo fijar los límites con datos
 
-Este documento explica por qué cada plan tiene los límites que tiene y cómo comprobar, con números tuyos, que ninguno pierde dinero. **No contiene ningún coste inventado**: las cifras de coste real las mide el titular (ver "Cómo medir el coste por generación") y hasta entonces las celdas dicen *pendiente de medir*.
+Este documento explica por qué cada plan tiene los límites que tiene y cómo comprobar, con números tuyos, que ninguno pierde dinero. **No contiene ningún coste inventado**: las cifras de coste real las mide el titular (ver "Cómo medir el coste por generación") y hasta entonces las celdas dicen _pendiente de medir_.
 
 Las columnas de precio y de límites se copian de `@mockia/shared` (`PLAN_PRICE_USD`, `PLAN_LIMITS`) y un test (`packages/backend/src/tests/docs.economics.test.ts`) falla si esta tabla y el catálogo dejan de coincidir.
 
 ## Tabla de planes
 
-| Plan | Precio mensual (USD) | Precio anual (USD) | Proyectos activos | Peticiones al mes | Generaciones de IA al mes | Coste de IA en el peor caso | Margen estimado |
-|---|---|---|---|---|---|---|---|
-| Free | 0 | 0 | 5 | 10.000 | 5 | pendiente de medir por el titular | pendiente de medir por el titular |
-| Starter | 5 | 50 | 15 | 100.000 | 40 | pendiente de medir por el titular | pendiente de medir por el titular |
-| Pro | 29 | 290 | 50 | 1.000.000 | 300 | pendiente de medir por el titular | pendiente de medir por el titular |
-| Team | 99 | 990 | Ilimitados | 10.000.000 | 1.500 | pendiente de medir por el titular | pendiente de medir por el titular |
+| Plan    | Precio mensual (USD) | Precio anual (USD) | Proyectos activos | Peticiones al mes | Generaciones de IA al mes | Coste de IA en el peor caso       | Margen estimado                   |
+| ------- | -------------------- | ------------------ | ----------------- | ----------------- | ------------------------- | --------------------------------- | --------------------------------- |
+| Free    | 0                    | 0                  | 5                 | 10.000            | 5                         | pendiente de medir por el titular | pendiente de medir por el titular |
+| Starter | 5                    | 50                 | 15                | 100.000           | 40                        | pendiente de medir por el titular | pendiente de medir por el titular |
+| Pro     | 29                   | 290                | 50                | 1.000.000         | 300                       | pendiente de medir por el titular | pendiente de medir por el titular |
+| Team    | 99                   | 990                | Ilimitados        | 10.000.000        | 1.500                     | pendiente de medir por el titular | pendiente de medir por el titular |
 
 - Los precios son **sin IVA**. En la factura de un consumidor de España (u otro país con IVA) Stripe Tax añade el impuesto encima del precio. Si prefieres anunciar el precio con IVA incluido, es una decisión del titular y de su gestoría: cambia lo que ingresas por cada venta (el importe neto es menor) y los Price de Stripe pasarían a "Tax behavior = Inclusive".
 - El pago anual cobra 10 meses (dos meses gratis). Cobra una sola vez al año, así que la comisión fija de Stripe se paga una vez en lugar de doce: el plan anual es **más** rentable por euro ingresado en comisiones, aunque entre menos dinero al mes.

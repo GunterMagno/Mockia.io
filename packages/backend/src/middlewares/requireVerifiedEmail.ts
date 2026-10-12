@@ -21,7 +21,11 @@ export function isEmailVerificationRequired(env: NodeJS.ProcessEnv = process.env
  * verified their address it answers 403 with the EMAIL_NOT_VERIFIED code (the SPA shows its "verify your email"
  * notice for it). Evaluated per request, so the environment is read at call time.
  */
-export async function requireVerifiedEmail(req: AuthenticatedRequest, _res: Response, next: NextFunction): Promise<void> {
+export async function requireVerifiedEmail(
+  req: AuthenticatedRequest,
+  _res: Response,
+  next: NextFunction
+): Promise<void> {
   try {
     if (!isEmailVerificationRequired()) return next();
 

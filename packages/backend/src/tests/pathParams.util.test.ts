@@ -17,10 +17,7 @@ describe('Path Parameters Utility', () => {
     });
 
     it('should extract multiple parameters from path', () => {
-      const params = extractPathParams(
-        '/posts/:postId/comments/:commentId',
-        '/posts/1/comments/5'
-      );
+      const params = extractPathParams('/posts/:postId/comments/:commentId', '/posts/1/comments/5');
       expect(params).toEqual({ postId: '1', commentId: '5' });
     });
 
@@ -60,10 +57,7 @@ describe('Path Parameters Utility', () => {
     });
 
     it('should extract parameters with alphanumeric values', () => {
-      const params = extractPathParams(
-        '/users/:username',
-        '/users/john_doe123'
-      );
+      const params = extractPathParams('/users/:username', '/users/john_doe123');
       expect(params).toEqual({ username: 'john_doe123' });
     });
 

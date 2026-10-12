@@ -13,10 +13,14 @@ import { mockCache } from '../mock/mockCache.service.js';
  *
  * @returns number of endpoints deleted
  */
-export async function deleteEndpointsCascade(endpointIds: Array<string | Types.ObjectId>): Promise<number> {
+export async function deleteEndpointsCascade(
+  endpointIds: Array<string | Types.ObjectId>
+): Promise<number> {
   if (endpointIds.length === 0) return 0;
   const ids = endpointIds.map((id) => new Types.ObjectId(id));
-  const endpoints = await EndpointModel.find({ _id: { $in: ids } }).select('_id responses').lean();
+  const endpoints = await EndpointModel.find({ _id: { $in: ids } })
+    .select('_id responses')
+    .lean();
   const responseIds = endpoints.flatMap((e) => e.responses ?? []);
 
   await ResponseModel.deleteMany({ _id: { $in: responseIds } });
@@ -41,13 +45,27 @@ export async function deleteEndpointsCascade(endpointIds: Array<string | Types.O
  * @param projectIds - ids of the projects to delete (strings or ObjectIds); unknown ids are ignored
  * @returns number of projects deleted
  */
-export async function deleteProjectsCascade(projectIds: Array<string | Types.ObjectId>): Promise<number> {
+export async function deleteProjectsCascade(
+  projectIds: Array<string | Types.ObjectId>
+): Promise<number> {
   if (projectIds.length === 0) return 0;
   const ids = projectIds.map((id) => new Types.ObjectId(id));
 
-  const slugs = (await ProjectModel.find({ _id: { $in: ids } }).select('slug').lean()).map((p) => p.slug);
-  const mockApiIds = (await MockAPIModel.find({ projectId: { $in: ids } }).select('_id').lean()).map((m) => m._id);
-  const endpointIds = (await EndpointModel.find({ mockApiId: { $in: mockApiIds } }).select('_id').lean()).map((e) => e._id);
+  const slugs = (
+    await ProjectModel.find({ _id: { $in: ids } })
+      .select('slug')
+      .lean()
+  ).map((p) => p.slug);
+  const mockApiIds = (
+    await MockAPIModel.find({ projectId: { $in: ids } })
+      .select('_id')
+      .lean()
+  ).map((m) => m._id);
+  const endpointIds = (
+    await EndpointModel.find({ mockApiId: { $in: mockApiIds } })
+      .select('_id')
+      .lean()
+  ).map((e) => e._id);
 
   await deleteEndpointsCascade(endpointIds);
   await EndpointModel.deleteMany({ mockApiId: { $in: mockApiIds } });

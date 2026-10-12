@@ -17,6 +17,7 @@ La aplicación se ha desarrollado utilizando el célebre y demandado **Stack MER
 ## 2.2 Funcionalidades Priorizadas (MoSCoW)
 
 ### Must Have (Obligatorio para el MVP)
+
 1. **Gestión de Identidad (Auth):** Registro, login y sesión mediante JWT seguros.
 2. **Dashboard de Gestión:** Panel para crear, editar, listar y eliminar proyectos aislados.
 3. **Ingesta desde GitHub:** Conexión pública a repositorios para extraer código e interpretarlo con IA.
@@ -25,10 +26,12 @@ La aplicación se ha desarrollado utilizando el célebre y demandado **Stack MER
 6. **Editor Visual:** Panel para visualizar respuestas autogeneradas por la IA y editar sus esquemas JSON.
 
 ### Should Have (Muy Importante)
+
 - Sincronización Automática.
 - Notificaciones asíncronas del Sistema.
 
 ### Could Have (Opcional)
+
 - Autenticación OAuth con GitHub.
 - Múltiples respuestas por endpoint (selección por Headers).
 
@@ -37,11 +40,12 @@ La aplicación se ha desarrollado utilizando el célebre y demandado **Stack MER
 ## 2.3 Interfaz y Experiencia de Usuario (UI/UX)
 
 La plataforma se ha diseñado priorizando la eficiencia y la reducción de la carga cognitiva para desarrolladores. La experiencia de usuario (UX) se basa en flujos de trabajo sin fricciones:
-- **Flujo de Trabajo Centralizado:** El núcleo de la aplicación es el *Mock Editor*, el cual presenta un diseño de **triple columna vertical**:
+
+- **Flujo de Trabajo Centralizado:** El núcleo de la aplicación es el _Mock Editor_, el cual presenta un diseño de **triple columna vertical**:
   1. **Árbol de Endpoints (Izquierda):** Navegación rápida con distintivos de color semánticos por método (Verde para POST, Azul para GET).
   2. **Editor JSON (Centro):** Un editor de código integrado en el navegador con resaltado de sintaxis para visualizar y modificar la estructura de datos generada por la IA.
   3. **Inspector (Derecha):** Un panel de configuración en caliente para forzar latencias y códigos de estado con un solo clic.
-- **Feedback Constante:** El uso de notificaciones tipo *Toast* y alertas modales (combinadas con ligeros efectos de sonido en caso de error) garantizan que el usuario siempre sepa el estado de sus acciones asíncronas.
+- **Feedback Constante:** El uso de notificaciones tipo _Toast_ y alertas modales (combinadas con ligeros efectos de sonido en caso de error) garantizan que el usuario siempre sepa el estado de sus acciones asíncronas.
 
 ---
 

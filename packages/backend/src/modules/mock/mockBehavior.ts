@@ -9,10 +9,25 @@ export const MAX_DELAY_MS = 30_000;
 
 /** Headers que un mock nunca puede fijar: cookies arbitrarias, hop-by-hop, framing y CORS/seguridad del propio servidor. */
 const FORBIDDEN_HEADERS = new Set([
-  'set-cookie', 'set-cookie2', 'connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization',
-  'proxy-connection', 'te', 'trailer', 'transfer-encoding', 'upgrade', 'content-length', 'content-encoding',
-  'host', 'access-control-allow-origin', 'access-control-allow-credentials', 'strict-transport-security',
-  'content-security-policy', 'x-mockia-request-id',
+  'set-cookie',
+  'set-cookie2',
+  'connection',
+  'keep-alive',
+  'proxy-authenticate',
+  'proxy-authorization',
+  'proxy-connection',
+  'te',
+  'trailer',
+  'transfer-encoding',
+  'upgrade',
+  'content-length',
+  'content-encoding',
+  'host',
+  'access-control-allow-origin',
+  'access-control-allow-credentials',
+  'strict-transport-security',
+  'content-security-policy',
+  'x-mockia-request-id',
 ]);
 
 const HEADER_NAME = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/;
@@ -26,7 +41,11 @@ export function clampDelay(value: unknown): number {
 }
 
 /** Latencia final: base + aleatorio uniforme en [-jitter, +jitter], acotada a [0, MAX_DELAY_MS]. */
-export function computeDelay(delayMs: unknown, jitterMs: unknown, rand: () => number = Math.random): number {
+export function computeDelay(
+  delayMs: unknown,
+  jitterMs: unknown,
+  rand: () => number = Math.random
+): number {
   const base = clampDelay(delayMs);
   const jitter = clampDelay(jitterMs);
   if (jitter === 0) return base;
@@ -60,7 +79,11 @@ export function applyCustomHeaders(res: Response, headers: unknown): void {
 }
 
 /** Espera `computeDelay(...)` menos lo ya transcurrido desde startTime. */
-export async function waitDelay(startTime: number, delayMs: unknown, jitterMs: unknown): Promise<void> {
+export async function waitDelay(
+  startTime: number,
+  delayMs: unknown,
+  jitterMs: unknown
+): Promise<void> {
   const remaining = computeDelay(delayMs, jitterMs) - (Date.now() - startTime);
   if (remaining > 0) await new Promise((resolve) => setTimeout(resolve, remaining));
 }

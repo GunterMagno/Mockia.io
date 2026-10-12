@@ -1,5 +1,11 @@
 import { UserModel } from '../../models/User.js';
-import { PAST_DUE_GRACE_DAYS, PLAN_LIMITS, type BillingStatus, type PaidPlan, type Plan } from '@mockia/shared';
+import {
+  PAST_DUE_GRACE_DAYS,
+  PLAN_LIMITS,
+  type BillingStatus,
+  type PaidPlan,
+  type Plan,
+} from '@mockia/shared';
 
 /**
  * Plan limits and prices live in @mockia/shared (billing.ts): one catalog for what the backend
@@ -62,7 +68,10 @@ export async function getUserPlan(userId: string): Promise<Plan> {
   const user = await UserModel.findById(userId).select('plan billingStatus pastDueSince').lean();
   const plan = effectivePlan(user, now);
   const graceEnd = graceEndsAt(user)?.getTime();
-  const exp = graceEnd !== undefined && graceEnd > now ? Math.min(now + PLAN_TTL_MS, graceEnd) : now + PLAN_TTL_MS;
+  const exp =
+    graceEnd !== undefined && graceEnd > now
+      ? Math.min(now + PLAN_TTL_MS, graceEnd)
+      : now + PLAN_TTL_MS;
   if (planCache.size >= PLAN_CACHE_MAX) planCache.clear();
   planCache.set(userId, { plan, exp });
   return plan;

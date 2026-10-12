@@ -1,6 +1,6 @@
 /**
  * Prompt Building Service for Mockia AI
- * 
+ *
  * Orchestrates the construction of prompts by combining:
  * - System prompt (role and rules)
  * - GitHub repository context
@@ -29,7 +29,7 @@ const TOKEN_LIMITS = {
 /**
  * Truncates context to fit within token budget
  * Uses a simple heuristic: ~4 characters ≈ 1 token
- * 
+ *
  * @param context - The GitHub context to truncate
  * @param maxTokens - Maximum tokens allowed
  * @returns Truncated context string
@@ -41,16 +41,13 @@ function truncateContext(context: string, maxTokens: number): string {
   }
 
   // Truncate and add indicator
-  return (
-    context.substring(0, maxChars) +
-    '\n... [Context truncated due to length]'
-  );
+  return context.substring(0, maxChars) + '\n... [Context truncated due to length]';
 }
 
 /**
  * Formats the GitHub context into a readable string for the prompt
  * Implements intelligent sorting, noise filtering, and file-level budgeting
- * 
+ *
  * @param context - Raw GitHub context data
  * @param maxTokens - Maximum tokens allowed for the context budget
  * @returns Formatted context string
@@ -103,12 +100,16 @@ function formatGitHubContext(context: any, maxTokens: number): string {
   // Priority scoring for files (lower is higher priority)
   const getFilePriority = (file: any): number => {
     const lowerPath = file.path.toLowerCase();
-    if (lowerPath === 'readme.md' || lowerPath.endsWith('/readme.md') || lowerPath.endsWith('\\readme.md')) {
+    if (
+      lowerPath === 'readme.md' ||
+      lowerPath.endsWith('/readme.md') ||
+      lowerPath.endsWith('\\readme.md')
+    ) {
       return 0;
     }
-    
+
     if (file.type === 'swagger') return 1;
-    
+
     // Models, schemas, interfaces, DTOs
     if (
       lowerPath.includes('model') ||
@@ -119,7 +120,7 @@ function formatGitHubContext(context: any, maxTokens: number): string {
     ) {
       return 2;
     }
-    
+
     // Routes and controllers
     if (
       lowerPath.includes('route') ||
@@ -128,7 +129,7 @@ function formatGitHubContext(context: any, maxTokens: number): string {
     ) {
       return 3;
     }
-    
+
     // Core entry points
     const baseName = lowerPath.split('/').pop() || '';
     if (
@@ -143,7 +144,7 @@ function formatGitHubContext(context: any, maxTokens: number): string {
     ) {
       return 4;
     }
-    
+
     return 5;
   };
 
@@ -161,8 +162,12 @@ function formatGitHubContext(context: any, maxTokens: number): string {
   const formatFileSection = (file: any): string => {
     const fileLines: string[] = [];
     const lowerPath = file.path.toLowerCase();
-    
-    if (lowerPath === 'readme.md' || lowerPath.endsWith('/readme.md') || lowerPath.endsWith('\\readme.md')) {
+
+    if (
+      lowerPath === 'readme.md' ||
+      lowerPath.endsWith('/readme.md') ||
+      lowerPath.endsWith('\\readme.md')
+    ) {
       fileLines.push(`- [Project Documentation / README] ${file.path}`);
       if (file.summary) {
         fileLines.push(`  Content:\n${file.summary}`);
@@ -214,7 +219,7 @@ function formatGitHubContext(context: any, maxTokens: number): string {
         });
       }
     }
-    
+
     return fileLines.join('\n');
   };
 
@@ -227,7 +232,7 @@ function formatGitHubContext(context: any, maxTokens: number): string {
   for (const file of filteredFiles) {
     const formatted = formatFileSection(file);
     const fileTokens = Math.ceil(formatted.length / 4);
-    
+
     if (currentTokens + fileTokens <= maxTokens) {
       budgetLines.push(formatted);
       currentTokens += fileTokens;
@@ -237,7 +242,9 @@ function formatGitHubContext(context: any, maxTokens: number): string {
     }
   }
 
-  sections.push(`\n## Code Structure (Priority Sorted & Budgeted - Included: ${includedCount}, Omitted: ${skippedCount})\n`);
+  sections.push(
+    `\n## Code Structure (Priority Sorted & Budgeted - Included: ${includedCount}, Omitted: ${skippedCount})\n`
+  );
   sections.push(budgetLines.join('\n\n'));
 
   return sections.join('\n');
@@ -245,10 +252,10 @@ function formatGitHubContext(context: any, maxTokens: number): string {
 
 /**
  * Builds a complete prompt for OpenRouter API
- * 
+ *
  * Combines system prompt, GitHub context, and user input into
  * a structured message array ready for OpenRouter API call
- * 
+ *
  * @param projectId - The project ID to load context for
  * @param userInput - The user's request/requirements for the mock API
  * @param options - Optional configuration
@@ -266,21 +273,17 @@ export async function buildPrompt(
   // Verify project exists (by ID or Slug)
   const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(projectId);
   let project;
-  
+
   if (isValidObjectId) {
     project = await ProjectModel.findById(projectId);
   }
-  
+
   if (!project) {
     project = await ProjectModel.findOne({ slug: projectId });
   }
 
   if (!project) {
-    throw new AppError(
-      'Project not found',
-      ErrorCode.NOT_FOUND,
-      404
-    );
+    throw new AppError('Project not found', ErrorCode.NOT_FOUND, 404);
   }
 
   // Use the real _id for subsequent operations
@@ -328,7 +331,12 @@ export interface PromptGitHubContext {
   repoOwner?: string;
   branch?: string;
   summary?: string;
-  stats?: { totalFiles?: number; totalInterfaces?: number; totalFunctions?: number; totalRoutes?: number };
+  stats?: {
+    totalFiles?: number;
+    totalInterfaces?: number;
+    totalFunctions?: number;
+    totalRoutes?: number;
+  };
   files?: Array<{
     path: string;
     type?: string;
@@ -349,8 +357,7 @@ export function buildPromptFromInput(input: PromptInput): OpenRouterMessage[] {
   const { projectTitle, projectDescription, context, userInput, options } = input;
 
   // Budget context
-  const contextBudget =
-    options?.contextBudgetOverride || TOKEN_LIMITS.contextBudget;
+  const contextBudget = options?.contextBudgetOverride || TOKEN_LIMITS.contextBudget;
 
   let contextString = '';
   let hasContext = false;
@@ -429,7 +436,7 @@ Rules for EXCELLENCE:
 
 /**
  * Validates that a response from OpenRouter is valid JSON
- * 
+ *
  * @param response - The response string from OpenRouter
  * @returns Parsed JSON if valid
  * @throws AppError if JSON is invalid
@@ -437,7 +444,7 @@ Rules for EXCELLENCE:
 export function validateJsonResponse(response: string): MockAPIOutput {
   try {
     const parsed = JSON.parse(response) as MockAPIOutput;
-    
+
     // Basic structure validation
     if (!parsed.endpoints || !Array.isArray(parsed.endpoints)) {
       throw new Error('Missing or invalid "endpoints" array');
@@ -455,14 +462,12 @@ export function validateJsonResponse(response: string): MockAPIOutput {
 
 /**
  * Extracts the mock API specification from an OpenRouter response
- * 
+ *
  * @param responseContent - The content string from OpenRouter response
  * @returns Validated mock API output
  * @throws AppError if response is not valid JSON
  */
-export function extractMockAPIFromResponse(
-  responseContent: string
-): MockAPIOutput {
+export function extractMockAPIFromResponse(responseContent: string): MockAPIOutput {
   // Try to extract JSON if wrapped in markdown code blocks
   let jsonString = responseContent;
   const jsonMatch = responseContent.match(/```(?:json)?\s*([\s\S]*?)```/);

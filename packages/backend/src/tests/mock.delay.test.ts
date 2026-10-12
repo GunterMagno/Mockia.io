@@ -36,12 +36,10 @@ describe('Mock Router Delay and Status Code Interceptors', () => {
     userId = user._id.toString();
 
     // 2. Log in
-    const loginRes = await request(app)
-      .post('/api/auth/login')
-      .send({
-        email: 'testdelay@example.com',
-        password: 'testpassword123',
-      });
+    const loginRes = await request(app).post('/api/auth/login').send({
+      email: 'testdelay@example.com',
+      password: 'testpassword123',
+    });
     accessToken = loginRes.body.data.tokens.accessToken;
 
     // 3. Create project
@@ -85,7 +83,7 @@ describe('Mock Router Delay and Status Code Interceptors', () => {
       .set('Authorization', `Bearer ${accessToken}`)
       .send({
         delay_ms: 1000,
-        responseBody: { ok: true }
+        responseBody: { ok: true },
       });
 
     expect(updateRes.status).toBe(200);
@@ -133,7 +131,7 @@ describe('Mock Router Delay and Status Code Interceptors', () => {
     });
 
     await EndpointModel.findByIdAndUpdate(endpointId, {
-      $push: { responses: custom500Response._id }
+      $push: { responses: custom500Response._id },
     });
 
     mockCache.invalidateProject(projectSlug);

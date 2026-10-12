@@ -1,11 +1,7 @@
 {
   "id": "express-auth-session",
   "description": "Express auth module: register, login, logout and current user.",
-  "tags": [
-    "express",
-    "auth",
-    "errors"
-  ],
+  "tags": ["express", "auth", "errors"],
   "input": {
     "projectTitle": "Members Portal",
     "userInput": "Mock the authentication endpoints of the portal.",
@@ -33,27 +29,19 @@
           "summary": "Auth router",
           "routes": [
             {
-              "methods": [
-                "POST"
-              ],
+              "methods": ["POST"],
               "path": "/auth/register"
             },
             {
-              "methods": [
-                "POST"
-              ],
+              "methods": ["POST"],
               "path": "/auth/login"
             },
             {
-              "methods": [
-                "POST"
-              ],
+              "methods": ["POST"],
               "path": "/auth/logout"
             },
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/auth/me"
             }
           ]
@@ -65,19 +53,11 @@
           "interfaces": [
             {
               "name": "User",
-              "properties": [
-                "id: string",
-                "email: string",
-                "displayName: string"
-              ]
+              "properties": ["id: string", "email: string", "displayName: string"]
             },
             {
               "name": "AuthResponse",
-              "properties": [
-                "accessToken: string",
-                "expiresIn: number",
-                "user: User"
-              ]
+              "properties": ["accessToken: string", "expiresIn: number", "user: User"]
             }
           ]
         }
@@ -102,11 +82,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "email",
-          "password",
-          "displayName"
-        ]
+        "required": ["email", "password", "displayName"]
       },
       "responseSchema": {
         "type": "object",
@@ -130,18 +106,10 @@
                 "type": "string"
               }
             },
-            "required": [
-              "id",
-              "email",
-              "displayName"
-            ]
+            "required": ["id", "email", "displayName"]
           }
         },
-        "required": [
-          "accessToken",
-          "expiresIn",
-          "user"
-        ]
+        "required": ["accessToken", "expiresIn", "user"]
       },
       "examples": [
         {
@@ -183,10 +151,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "email",
-          "password"
-        ]
+        "required": ["email", "password"]
       },
       "responseSchema": {
         "type": "object",
@@ -210,18 +175,10 @@
                 "type": "string"
               }
             },
-            "required": [
-              "id",
-              "email",
-              "displayName"
-            ]
+            "required": ["id", "email", "displayName"]
           }
         },
-        "required": [
-          "accessToken",
-          "expiresIn",
-          "user"
-        ]
+        "required": ["accessToken", "expiresIn", "user"]
       },
       "examples": [
         {
@@ -264,9 +221,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "success"
-        ]
+        "required": ["success"]
       },
       "examples": [
         {
@@ -299,11 +254,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "email",
-          "displayName"
-        ]
+        "required": ["id", "email", "displayName"]
       },
       "examples": [
         {

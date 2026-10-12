@@ -1,11 +1,7 @@
 {
   "id": "es-tienda-tipos",
   "description": "Spanish TypeScript interfaces only, Spanish instruction: list and get by id for two entities.",
-  "tags": [
-    "es",
-    "typescript-types",
-    "path-params"
-  ],
+  "tags": ["es", "typescript-types", "path-params"],
   "input": {
     "projectTitle": "Tienda Online",
     "userInput": "Crea una API REST para productos y clientes: listar y obtener por id.",
@@ -34,21 +30,11 @@
           "interfaces": [
             {
               "name": "Producto",
-              "properties": [
-                "id: string",
-                "nombre: string",
-                "precio: number",
-                "stock: number"
-              ]
+              "properties": ["id: string", "nombre: string", "precio: number", "stock: number"]
             },
             {
               "name": "Cliente",
-              "properties": [
-                "id: string",
-                "nombre: string",
-                "correo: string",
-                "ciudad: string"
-              ]
+              "properties": ["id: string", "nombre: string", "correo: string", "ciudad: string"]
             }
           ]
         }
@@ -83,12 +69,7 @@
               "type": "integer"
             }
           },
-          "required": [
-            "id",
-            "nombre",
-            "precio",
-            "stock"
-          ]
+          "required": ["id", "nombre", "precio", "stock"]
         }
       },
       "examples": [
@@ -130,12 +111,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "id",
-          "nombre",
-          "precio",
-          "stock"
-        ]
+        "required": ["id", "nombre", "precio", "stock"]
       },
       "examples": [
         {
@@ -176,12 +152,7 @@
               "type": "string"
             }
           },
-          "required": [
-            "id",
-            "nombre",
-            "correo",
-            "ciudad"
-          ]
+          "required": ["id", "nombre", "correo", "ciudad"]
         }
       },
       "examples": [
@@ -223,12 +194,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "nombre",
-          "correo",
-          "ciudad"
-        ]
+        "required": ["id", "nombre", "correo", "ciudad"]
       },
       "examples": [
         {

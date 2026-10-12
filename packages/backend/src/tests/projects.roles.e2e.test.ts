@@ -124,9 +124,7 @@ describe('Projects - Roles and Access Control E2E', () => {
 
       expect(response.status).toBe(201);
       expect(response.body.data).toHaveProperty('members');
-      const editorMember = response.body.data.members.find(
-        (m: any) => m.userId === editorId
-      );
+      const editorMember = response.body.data.members.find((m: any) => m.userId === editorId);
       expect(editorMember).toBeDefined();
       expect(editorMember.role).toBe('EDITOR');
     });
@@ -143,9 +141,7 @@ describe('Projects - Roles and Access Control E2E', () => {
 
       expect(response.status).toBe(201);
       expect(response.body.data).toHaveProperty('members');
-      const viewerMember = response.body.data.members.find(
-        (m: any) => m.userId === viewerId
-      );
+      const viewerMember = response.body.data.members.find((m: any) => m.userId === viewerId);
       expect(viewerMember).toBeDefined();
       expect(viewerMember.role).toBe('VIEWER');
     });

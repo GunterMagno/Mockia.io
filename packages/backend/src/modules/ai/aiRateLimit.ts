@@ -42,7 +42,10 @@ export async function consumeAiQuota(
   let doc;
   for (let attempt = 0; ; attempt++) {
     try {
-      doc = await AiRateWindowModel.findOneAndUpdate(filter, update, { upsert: true, new: true }).lean();
+      doc = await AiRateWindowModel.findOneAndUpdate(filter, update, {
+        upsert: true,
+        new: true,
+      }).lean();
       break;
     } catch (err) {
       // Two first calls of the window raced to insert the bucket: the loser retries as a plain $inc.

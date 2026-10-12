@@ -3,7 +3,15 @@ import { UserModel } from '../../models/User.js';
 import { generateUniqueSlug } from '../../utils/slugGenerator.js';
 import { AppError } from '../../middlewares/errorHandler.js';
 import { ErrorCode } from '@mockia/shared';
-import type { Project as ProjectDTO, IssuedApiKey, MockVisibility, CreateProjectRequest, ImportGitHubRequest, ProjectMember, ProjectRole } from '@mockia/shared';
+import type {
+  Project as ProjectDTO,
+  IssuedApiKey,
+  MockVisibility,
+  CreateProjectRequest,
+  ImportGitHubRequest,
+  ProjectMember,
+  ProjectRole,
+} from '@mockia/shared';
 import { ProjectRoleEnum } from '../../models/Project.js';
 import { parseGitHubUrl } from '../../services/github.service.js';
 import { importAndAnalyzeRepository } from '../../services/github-context.service.js';
@@ -30,27 +38,27 @@ function mapProjectToDTO(doc: any): ProjectDTO {
     description: doc.description,
     slug: doc.slug,
     ownerId: doc.ownerId.toString(),
-    members: (doc.members || []).map(
-      (m: any): ProjectMember => {
-        const user = m.userId;
-        const isPopulated = user && typeof user === 'object' && '_id' in user;
-        
-        return {
-          userId: isPopulated ? user._id.toString() : (user?.toString() || ''),
-          username: isPopulated ? (user.username || 'User') : 'User',
-          email: isPopulated ? (user.email || '') : '',
-          role: m.role.toUpperCase() as ProjectRole,
-          addedAt: ensureISO(m.addedAt) || new Date().toISOString(),
-        };
-      }
-    ),
-    gitHubRepo: doc.gitHubRepo ? {
-      owner: doc.gitHubRepo.owner,
-      repo: doc.gitHubRepo.repo,
-      branch: doc.gitHubRepo.branch,
-      url: doc.gitHubRepo.url,
-      importedAt: ensureISO(doc.gitHubRepo.importedAt) || new Date().toISOString(),
-    } : undefined,
+    members: (doc.members || []).map((m: any): ProjectMember => {
+      const user = m.userId;
+      const isPopulated = user && typeof user === 'object' && '_id' in user;
+
+      return {
+        userId: isPopulated ? user._id.toString() : user?.toString() || '',
+        username: isPopulated ? user.username || 'User' : 'User',
+        email: isPopulated ? user.email || '' : '',
+        role: m.role.toUpperCase() as ProjectRole,
+        addedAt: ensureISO(m.addedAt) || new Date().toISOString(),
+      };
+    }),
+    gitHubRepo: doc.gitHubRepo
+      ? {
+          owner: doc.gitHubRepo.owner,
+          repo: doc.gitHubRepo.repo,
+          branch: doc.gitHubRepo.branch,
+          url: doc.gitHubRepo.url,
+          importedAt: ensureISO(doc.gitHubRepo.importedAt) || new Date().toISOString(),
+        }
+      : undefined,
     // The key itself is never in a DTO: only whether one exists and its display prefix (the hash is select:false).
     visibility: doc.visibility === 'key' ? 'key' : 'public',
     hasApiKey: Boolean(doc.apiKeyPrefix),
@@ -70,7 +78,7 @@ async function resolveProject(idOrSlug: string) {
   const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(idOrSlug);
   const populateOptions = {
     path: 'members.userId',
-    model: 'User'
+    model: 'User',
   };
 
   if (isValidObjectId) {
@@ -84,14 +92,14 @@ async function resolveProject(idOrSlug: string) {
 
 /**
  * Creates a new project with the authenticated user as owner
- * 
+ *
  * Flow:
  * 1. Validate input
  * 2. Generate unique slug from title
  * 3. Create project document with owner as the first member
  * 4. Save to database
  * 5. Map and return as DTO
- * 
+ *
  * @param ownerId - User ID of the project creator (from auth middleware)
  * @param createRequest - DTO with title and optional description
  * @returns Created project as DTO
@@ -104,11 +112,7 @@ export async function createProject(
   const { title, description } = createRequest;
 
   if (!title || title.trim().length === 0) {
-    throw new AppError(
-      'Project title is required',
-      ErrorCode.VALIDATION_ERROR,
-      400
-    );
+    throw new AppError('Project title is required', ErrorCode.VALIDATION_ERROR, 400);
   }
 
   if (title.length > 100) {
@@ -168,23 +172,19 @@ export async function createProject(
 
     // For any other error, wrap it
     console.error('Error creating project:', error);
-    throw new AppError(
-      'Failed to create project',
-      ErrorCode.INTERNAL_SERVER_ERROR,
-      500
-    );
+    throw new AppError('Failed to create project', ErrorCode.INTERNAL_SERVER_ERROR, 500);
   }
 }
 
 /**
  * Retrieves all projects where the user is a member
- * 
+ *
  * Flow:
  * 1. Query database for projects where user is in members array
  * 2. Filter out archived projects (optional - can be removed for admin views)
  * 3. Sort by creation date (newest first)
  * 4. Map each document to ProjectDTO
- * 
+ *
  * @param userId - User ID to retrieve projects for
  * @returns Array of projects where user is a member
  * @throws AppError if database error occurs
@@ -202,62 +202,45 @@ export async function getUserProjects(userId: string): Promise<ProjectDTO[]> {
     return projects.map(mapProjectToDTO);
   } catch (error) {
     console.error('Error retrieving user projects:', error);
-    throw new AppError(
-      'Failed to retrieve projects',
-      ErrorCode.INTERNAL_SERVER_ERROR,
-      500
-    );
+    throw new AppError('Failed to retrieve projects', ErrorCode.INTERNAL_SERVER_ERROR, 500);
   }
 }
 
 /**
  * Retrieves a specific project by ID, with access control
- * 
+ *
  * Flow:
  * 1. Find project by ID
  * 2. If not found, throw 404 error
  * 3. Check if user is a member of the project
  * 4. If not a member, throw 403 error
  * 5. Map and return the project
- * 
+ *
  * @param projectId - Project ID to retrieve
  * @param userId - User ID requesting access (for permission check)
  * @returns The project DTO
  * @throws AppError 404 if project not found
  * @throws AppError 403 if user doesn't have access
  */
-export async function getProjectById(
-  projectId: string,
-  userId: string
-): Promise<ProjectDTO> {
+export async function getProjectById(projectId: string, userId: string): Promise<ProjectDTO> {
   try {
     const project = await resolveProject(projectId);
 
     // Check if project exists
     if (!project) {
-      throw new AppError(
-        'Project not found',
-        ErrorCode.NOT_FOUND,
-        404
-      );
+      throw new AppError('Project not found', ErrorCode.NOT_FOUND, 404);
     }
 
     await project.populate('members.userId');
 
     // Check if user is a member
-    const isMember = project.members.some(
-      (member: any) => {
-        const memberId = member.userId?._id ? member.userId._id.toString() : member.userId.toString();
-        return memberId === userId;
-      }
-    );
+    const isMember = project.members.some((member: any) => {
+      const memberId = member.userId?._id ? member.userId._id.toString() : member.userId.toString();
+      return memberId === userId;
+    });
 
     if (!isMember) {
-      throw new AppError(
-        'You do not have access to this project',
-        ErrorCode.FORBIDDEN,
-        403
-      );
+      throw new AppError('You do not have access to this project', ErrorCode.FORBIDDEN, 403);
     }
 
     // Map and return
@@ -272,7 +255,7 @@ export async function getProjectById(
 /**
  * Updates a project's title and/or description
  * Only the project owner can update
- * 
+ *
  * Flow:
  * 1. Find project by ID
  * 2. If not found, throw 404 error
@@ -280,7 +263,7 @@ export async function getProjectById(
  * 4. If title changed, regenerate slug
  * 5. Update fields and save
  * 6. Return updated project as DTO
- * 
+ *
  * @param projectId - Project ID to update
  * @param userId - User ID requesting update (must be owner)
  * @param updateData - Object with fields to update (title?, description?)
@@ -298,23 +281,17 @@ export async function updateProject(
 
     // Check if project exists
     if (!project) {
-      throw new AppError(
-        'Project not found',
-        ErrorCode.NOT_FOUND,
-        404
-      );
+      throw new AppError('Project not found', ErrorCode.NOT_FOUND, 404);
     }
 
     await project.populate('members.userId');
 
     // Verify user is the owner or editor
     const isOwner = project.ownerId.toString() === userId;
-    const member = project.members.find(
-      (m: any) => {
-        const mId = (m.userId as any)._id ? (m.userId as any)._id.toString() : m.userId.toString();
-        return mId === userId;
-      }
-    );
+    const member = project.members.find((m: any) => {
+      const mId = (m.userId as any)._id ? (m.userId as any)._id.toString() : m.userId.toString();
+      return mId === userId;
+    });
     const canEdit = isOwner || (member && (member.role === 'editor' || member.role === 'owner'));
 
     if (!canEdit) {
@@ -337,11 +314,7 @@ export async function updateProject(
     if (updateData.title !== undefined) {
       const trimmedTitle = updateData.title.trim();
       if (!trimmedTitle) {
-        throw new AppError(
-          'Project title is required',
-          ErrorCode.VALIDATION_ERROR,
-          400
-        );
+        throw new AppError('Project title is required', ErrorCode.VALIDATION_ERROR, 400);
       }
 
       if (trimmedTitle.length > 100) {
@@ -368,7 +341,7 @@ export async function updateProject(
           400
         );
       }
-      
+
       // Treat empty string same as null/undefined for comparison
       const currentDesc = project.description || '';
       if (trimmedDesc !== currentDesc) {
@@ -376,7 +349,10 @@ export async function updateProject(
       }
     }
 
-    if (updateData.visibility !== undefined && updateData.visibility !== (project.visibility ?? 'public')) {
+    if (
+      updateData.visibility !== undefined &&
+      updateData.visibility !== (project.visibility ?? 'public')
+    ) {
       if (updateData.visibility === 'key' && !project.apiKeyPrefix) {
         throw new AppError(
           'Create an API key before requiring it on the mock endpoints',
@@ -388,18 +364,25 @@ export async function updateProject(
     }
 
     const titleChanged = updateData.title !== undefined && updateData.title.trim() !== oldTitle;
-    const descriptionChanged = updateData.description !== undefined && updateData.description.trim() !== (oldDescription || '');
+    const descriptionChanged =
+      updateData.description !== undefined &&
+      updateData.description.trim() !== (oldDescription || '');
 
     // Save and return
     const savedProject = await project.save();
     await savedProject.populate('members.userId');
     // The mock engine caches projects for a few seconds: visibility (and slug) changes must apply at once
-    await Promise.all([mockCache.invalidateProject(oldSlug), mockCache.invalidateProject(savedProject.slug)]);
+    await Promise.all([
+      mockCache.invalidateProject(oldSlug),
+      mockCache.invalidateProject(savedProject.slug),
+    ]);
 
     // Notify other members about the update (except the one who did it)
     if (titleChanged || descriptionChanged) {
       for (const member of savedProject.members) {
-        const mId = (member.userId as any)._id ? (member.userId as any)._id.toString() : member.userId.toString();
+        const mId = (member.userId as any)._id
+          ? (member.userId as any)._id.toString()
+          : member.userId.toString();
         if (mId !== userId) {
           let title = 'Project Updated';
           let message = '';
@@ -421,8 +404,8 @@ export async function updateProject(
             title,
             message,
             link: `/editor/${project.slug}`,
-            projectId: project._id.toString()
-          }).catch(err => console.error('Failed to send update notification:', err));
+            projectId: project._id.toString(),
+          }).catch((err) => console.error('Failed to send update notification:', err));
         }
       }
     }
@@ -436,11 +419,7 @@ export async function updateProject(
 
     // For any other error, wrap it
     console.error('Error updating project:', error);
-    throw new AppError(
-      'Failed to update project',
-      ErrorCode.INTERNAL_SERVER_ERROR,
-      500
-    );
+    throw new AppError('Failed to update project', ErrorCode.INTERNAL_SERVER_ERROR, 500);
   }
 }
 
@@ -448,34 +427,27 @@ export async function updateProject(
  * Archives a project (soft-delete)
  * Only the project owner can archive
  * Sets isArchived = true instead of deleting
- * 
+ *
  * Flow:
  * 1. Find project by ID
  * 2. If not found, throw 404 error
  * 3. Verify user is the owner
  * 4. Set isArchived = true
  * 5. Save and return updated project
- * 
+ *
  * @param projectId - Project ID to archive
  * @param userId - User ID requesting archive (must be owner)
  * @returns Archived project DTO
  * @throws AppError 404 if project not found
  * @throws AppError 403 if user is not the owner
  */
-export async function archiveProject(
-  projectId: string,
-  userId: string
-): Promise<ProjectDTO> {
+export async function archiveProject(projectId: string, userId: string): Promise<ProjectDTO> {
   try {
     const project = await resolveProject(projectId);
 
     // Check if project exists
     if (!project) {
-      throw new AppError(
-        'Project not found',
-        ErrorCode.NOT_FOUND,
-        404
-      );
+      throw new AppError('Project not found', ErrorCode.NOT_FOUND, 404);
     }
 
     // Verify user is the owner
@@ -503,11 +475,7 @@ export async function archiveProject(
 
     // For any other error, wrap it
     console.error('Error archiving project:', error);
-    throw new AppError(
-      'Failed to archive project',
-      ErrorCode.INTERNAL_SERVER_ERROR,
-      500
-    );
+    throw new AppError('Failed to archive project', ErrorCode.INTERNAL_SERVER_ERROR, 500);
   }
 }
 
@@ -536,13 +504,13 @@ export async function hardDeleteProject(projectId: string, userId: string): Prom
 /**
  * Permanently deletes projects that have been archived for more than 30 days
  * This is a maintenance task that should be run periodically (e.g., daily)
- * 
+ *
  * Flow:
  * 1. Calculate date 30 days ago
  * 2. Find all projects where isArchived = true AND archivedAt is older than 30 days
  * 3. Delete those projects permanently, with their mock APIs, endpoints, responses and GitHub context
  * 4. Return count of deleted projects
- * 
+ *
  * @returns Number of projects permanently deleted
  * @throws AppError if database error occurs
  */
@@ -571,11 +539,7 @@ export async function cleanupArchivedProjects(): Promise<number> {
     return deletedCount;
   } catch (error) {
     console.error('Error cleaning up archived projects:', error);
-    throw new AppError(
-      'Failed to cleanup archived projects',
-      ErrorCode.INTERNAL_SERVER_ERROR,
-      500
-    );
+    throw new AppError('Failed to cleanup archived projects', ErrorCode.INTERNAL_SERVER_ERROR, 500);
   }
 }
 
@@ -592,15 +556,11 @@ export async function addProjectMember(
   try {
     const project = await resolveProject(projectId);
     if (!project) {
-      throw new AppError(
-        'Project not found',
-        ErrorCode.NOT_FOUND,
-        404
-      );
+      throw new AppError('Project not found', ErrorCode.NOT_FOUND, 404);
     }
 
     // Check permissions
-    const inviterMember = project.members.find(m => {
+    const inviterMember = project.members.find((m) => {
       const mid = m.userId?._id ? m.userId._id.toString() : m.userId.toString();
       return mid === inviterUserId;
     });
@@ -622,15 +582,11 @@ export async function addProjectMember(
     // Find user by email
     const targetUser = await UserModel.findOne({ email: targetEmail });
     if (!targetUser) {
-      throw new AppError(
-        'User not found',
-        ErrorCode.NOT_FOUND,
-        404
-      );
+      throw new AppError('User not found', ErrorCode.NOT_FOUND, 404);
     }
 
     // Check if user is already a member
-    const isAlreadyMember = project.members.some(m => {
+    const isAlreadyMember = project.members.some((m) => {
       const mid = m.userId?._id ? m.userId._id.toString() : m.userId.toString();
       return mid === targetUser._id.toString();
     });
@@ -662,8 +618,8 @@ export async function addProjectMember(
       title: 'Project Invitation',
       message: `You have been invited to collaborate on "${project.title}" as ${role}.`,
       link: `/editor/${project.slug}`,
-      projectId: project._id.toString()
-    }).catch(err => console.error('Failed to send invite notification:', err));
+      projectId: project._id.toString(),
+    }).catch((err) => console.error('Failed to send invite notification:', err));
 
     return mapProjectToDTO(updatedProject!);
   } catch (error) {
@@ -672,11 +628,7 @@ export async function addProjectMember(
     }
 
     console.error('Error adding project member:', error);
-    throw new AppError(
-      'Failed to add project member',
-      ErrorCode.INTERNAL_SERVER_ERROR,
-      500
-    );
+    throw new AppError('Failed to add project member', ErrorCode.INTERNAL_SERVER_ERROR, 500);
   }
 }
 
@@ -692,15 +644,11 @@ export async function removeProjectMember(
   try {
     const project = await resolveProject(projectId);
     if (!project) {
-      throw new AppError(
-        'Project not found',
-        ErrorCode.NOT_FOUND,
-        404
-      );
+      throw new AppError('Project not found', ErrorCode.NOT_FOUND, 404);
     }
 
     // Check permissions
-    const removerMember = project.members.find(m => {
+    const removerMember = project.members.find((m) => {
       const mid = m.userId?._id ? m.userId._id.toString() : m.userId.toString();
       return mid === removerUserId;
     });
@@ -714,17 +662,13 @@ export async function removeProjectMember(
     }
 
     // Find member to remove
-    const targetMemberIndex = project.members.findIndex(m => {
+    const targetMemberIndex = project.members.findIndex((m) => {
       const mid = m.userId?._id ? m.userId._id.toString() : m.userId.toString();
       return mid === targetUserId;
     });
 
     if (targetMemberIndex === -1) {
-      throw new AppError(
-        'Member not found in project',
-        ErrorCode.NOT_FOUND,
-        404
-      );
+      throw new AppError('Member not found in project', ErrorCode.NOT_FOUND, 404);
     }
 
     // Check if trying to remove the last owner
@@ -733,15 +677,13 @@ export async function removeProjectMember(
 
     // Protection: Editors cannot remove owners
     if (removerRole === 'EDITOR' && targetRole === 'OWNER') {
-      throw new AppError(
-        'Editors cannot remove project owners',
-        ErrorCode.FORBIDDEN,
-        403
-      );
+      throw new AppError('Editors cannot remove project owners', ErrorCode.FORBIDDEN, 403);
     }
 
     if (targetRole === 'OWNER') {
-      const ownerCount = project.members.filter((m) => String(m.role).toUpperCase() === 'OWNER').length;
+      const ownerCount = project.members.filter(
+        (m) => String(m.role).toUpperCase() === 'OWNER'
+      ).length;
       if (ownerCount === 1) {
         throw new AppError(
           'Cannot remove the last owner of a project',
@@ -767,8 +709,8 @@ export async function removeProjectMember(
       title: 'Project Removal',
       message: `You have been removed from the project "${project.title}".`,
       link: '/dashboard',
-      projectId: project._id.toString()
-    }).catch(err => console.error('Failed to send removal notification:', err));
+      projectId: project._id.toString(),
+    }).catch((err) => console.error('Failed to send removal notification:', err));
 
     return mapProjectToDTO(updatedProject!);
   } catch (error) {
@@ -777,25 +719,21 @@ export async function removeProjectMember(
     }
 
     console.error('Error removing project member:', error);
-    throw new AppError(
-      'Failed to remove project member',
-      ErrorCode.INTERNAL_SERVER_ERROR,
-      500
-    );
+    throw new AppError('Failed to remove project member', ErrorCode.INTERNAL_SERVER_ERROR, 500);
   }
 }
 
 /**
  * Imports a GitHub repository to a project
  * Only the project owner can import repositories
- * 
+ *
  * Flow:
  * 1. Find project by ID
  * 2. Verify user is project owner
  * 3. Parse and validate GitHub URL
  * 4. Store repository information in project
  * 5. Save and return updated project
- * 
+ *
  * @param projectId - Project ID to import repository into
  * @param userId - User ID requesting import (must be owner)
  * @param importRequest - DTO with GitHub URL and optional branch
@@ -814,11 +752,7 @@ export async function importGitHubRepository(
 
     // Check if project exists
     if (!project) {
-      throw new AppError(
-        'Project not found',
-        ErrorCode.NOT_FOUND,
-        404
-      );
+      throw new AppError('Project not found', ErrorCode.NOT_FOUND, 404);
     }
 
     // Verify user is the owner
@@ -835,7 +769,11 @@ export async function importGitHubRepository(
 
     // Clone, analyze, and store context in one operation
     console.log(`Starting GitHub repository import process...`);
-    await importAndAnalyzeRepository(project._id.toString(), importRequest.repoUrl, importRequest.branch);
+    await importAndAnalyzeRepository(
+      project._id.toString(),
+      importRequest.repoUrl,
+      importRequest.branch
+    );
 
     // Store GitHub repository reference in project
     project.gitHubRepo = {
@@ -858,11 +796,7 @@ export async function importGitHubRepository(
 
     // For any other error, wrap it
     console.error('Error importing GitHub repository:', error);
-    throw new AppError(
-      'Failed to import GitHub repository',
-      ErrorCode.INTERNAL_SERVER_ERROR,
-      500
-    );
+    throw new AppError('Failed to import GitHub repository', ErrorCode.INTERNAL_SERVER_ERROR, 500);
   }
 }
 
@@ -877,7 +811,12 @@ async function projectOwnedBy(projectId: string, userId: string) {
 }
 
 /** Tells the other members that the credential of the mock changed (they may have it in their clients). */
-async function notifyKeyChange(project: any, actorId: string, title: string, verb: string): Promise<void> {
+async function notifyKeyChange(
+  project: any,
+  actorId: string,
+  title: string,
+  verb: string
+): Promise<void> {
   const actor = await UserModel.findById(actorId);
   const actorName = actor ? actor.username : 'The owner';
   for (const member of project.members) {
@@ -908,7 +847,8 @@ export async function issueApiKey(projectId: string, userId: string): Promise<Is
       { $set: { apiKeyHash: hash, apiKeyPrefix: prefix, apiKeyCreatedAt: new Date() } }
     );
     await mockCache.invalidateProject(project.slug);
-    if (rotated) await notifyKeyChange(project, userId, 'Security: API Key Regenerated', 'regenerated');
+    if (rotated)
+      await notifyKeyChange(project, userId, 'Security: API Key Regenerated', 'regenerated');
     return { apiKey, prefix };
   } catch (error) {
     if (error instanceof AppError) throw error;
@@ -946,18 +886,11 @@ export async function revokeApiKey(projectId: string, userId: string): Promise<P
  * Leave a project
  * Only non-owners can leave
  */
-export async function leaveProject(
-  projectId: string,
-  userId: string
-): Promise<void> {
+export async function leaveProject(projectId: string, userId: string): Promise<void> {
   try {
     const project = await resolveProject(projectId);
     if (!project) {
-      throw new AppError(
-        'Project not found',
-        ErrorCode.NOT_FOUND,
-        404
-      );
+      throw new AppError('Project not found', ErrorCode.NOT_FOUND, 404);
     }
 
     // Verify user is a member
@@ -967,11 +900,7 @@ export async function leaveProject(
     });
 
     if (memberIndex === -1) {
-      throw new AppError(
-        'You are not a member of this project',
-        ErrorCode.FORBIDDEN,
-        403
-      );
+      throw new AppError('You are not a member of this project', ErrorCode.FORBIDDEN, 403);
     }
 
     const member = project.members[memberIndex];
@@ -1004,20 +933,14 @@ export async function leaveProject(
       title: 'Participant Left Project',
       message: `${leavingUsername} has left "${project.title}".`,
       link: `/editor/${project.slug}`,
-      projectId: project._id.toString()
-    }).catch(err => console.error('Failed to send leave notification:', err));
-
+      projectId: project._id.toString(),
+    }).catch((err) => console.error('Failed to send leave notification:', err));
   } catch (error) {
     if (error instanceof AppError) {
       throw error;
     }
 
     console.error('Error leaving project:', error);
-    throw new AppError(
-      'Failed to leave project',
-      ErrorCode.INTERNAL_SERVER_ERROR,
-      500
-    );
+    throw new AppError('Failed to leave project', ErrorCode.INTERNAL_SERVER_ERROR, 500);
   }
 }
-

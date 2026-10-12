@@ -1,6 +1,6 @@
-import React from 'react'
-import LegalDocument from './LegalDocument'
+import React from 'react';
+import LegalDocument from './LegalDocument';
 
-const Privacy: React.FC = () => <LegalDocument doc="privacy" />
+const Privacy: React.FC = () => <LegalDocument doc="privacy" />;
 
-export default Privacy
+export default Privacy;

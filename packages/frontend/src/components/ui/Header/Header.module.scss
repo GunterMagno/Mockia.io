@@ -51,7 +51,9 @@
   @include respond-to('md') {
     width: 100%;
 
-    select { width: 100%; }
+    select {
+      width: 100%;
+    }
   }
 }
 
@@ -161,7 +163,9 @@
   border-radius: var(--radius-full);
   color: var(--color-text-muted);
   cursor: pointer;
-  transition: color var(--transition-fast), background-color var(--transition-fast);
+  transition:
+    color var(--transition-fast),
+    background-color var(--transition-fast);
 
   &:hover {
     color: var(--color-text);
@@ -204,8 +208,14 @@
 }
 
 @keyframes slideDown {
-  from { transform: translateY(-12px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from {
+    transform: translateY(-12px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .menuBackdrop {
@@ -248,7 +258,11 @@
     text-underline-offset: 0.35em;
   }
 
-  &:focus-visible { outline: 2px solid var(--color-accent-text); outline-offset: 2px; border-radius: var(--radius-md); }
+  &:focus-visible {
+    outline: 2px solid var(--color-accent-text);
+    outline-offset: 2px;
+    border-radius: var(--radius-md);
+  }
 }
 
 .loginBtn,
@@ -262,7 +276,9 @@
   font-size: var(--text-base);
   font-weight: var(--weight-bold);
   text-decoration: none;
-  transition: background-color var(--transition-fast), transform var(--transition-fast);
+  transition:
+    background-color var(--transition-fast),
+    transform var(--transition-fast);
 }
 
 .loginBtn {
@@ -270,14 +286,19 @@
   color: var(--color-text);
   border: 1px solid var(--color-border-strong);
 
-  &:hover { background: var(--color-border); }
+  &:hover {
+    background: var(--color-border);
+  }
 }
 
 .signupBtn {
   background: var(--color-accent-solid);
   color: var(--color-on-accent); /* blanco sobre #4f46e5: 6,3:1 (AA) */
 
-  &:hover { transform: translateY(-1px); background: var(--color-accent-solid-hover); }
+  &:hover {
+    transform: translateY(-1px);
+    background: var(--color-accent-solid-hover);
+  }
 }
 
 /* ---- Sesion iniciada: escritorio ---- */
@@ -311,7 +332,9 @@
   text-decoration: none;
   transition: background-color var(--transition-fast);
 
-  &:hover { background: var(--color-active); }
+  &:hover {
+    background: var(--color-active);
+  }
 }
 
 .actionItem {
@@ -389,7 +412,9 @@
   transition: background-color var(--transition-fast);
 
   &:hover,
-  &:active { background: var(--color-border); }
+  &:active {
+    background: var(--color-border);
+  }
 }
 
 .mobileSettingsHeaderBtn {
@@ -457,13 +482,22 @@
     height: 2px;
     background-color: var(--color-text);
     border-radius: 2px;
-    transition: transform 0.3s var(--ease-out), opacity 0.2s var(--ease-out);
+    transition:
+      transform 0.3s var(--ease-out),
+      opacity 0.2s var(--ease-out);
     transform-origin: center;
   }
 
   &.menuOpen {
-    span:nth-child(1) { transform: translateY(8px) rotate(45deg); }
-    span:nth-child(2) { opacity: 0; transform: scaleX(0); }
-    span:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
+    span:nth-child(1) {
+      transform: translateY(8px) rotate(45deg);
+    }
+    span:nth-child(2) {
+      opacity: 0;
+      transform: scaleX(0);
+    }
+    span:nth-child(3) {
+      transform: translateY(-8px) rotate(-45deg);
+    }
   }
 }

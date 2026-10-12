@@ -1,9 +1,7 @@
 {
   "id": "express-query-filters",
   "description": "Directory API whose list endpoints take query filters; query strings are not part of the path.",
-  "tags": [
-    "express"
-  ],
+  "tags": ["express"],
   "input": {
     "projectTitle": "Staff Directory",
     "userInput": "Mock the staff directory endpoints.",
@@ -31,21 +29,15 @@
           "summary": "People router",
           "routes": [
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/people"
             },
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/people/:id"
             },
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/search"
             }
           ]
@@ -101,13 +93,7 @@
               "type": "string"
             }
           },
-          "required": [
-            "id",
-            "fullName",
-            "department",
-            "role",
-            "email"
-          ]
+          "required": ["id", "fullName", "department", "role", "email"]
         }
       },
       "examples": [
@@ -153,13 +139,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "fullName",
-          "department",
-          "role",
-          "email"
-        ]
+        "required": ["id", "fullName", "department", "role", "email"]
       },
       "examples": [
         {
@@ -211,13 +191,7 @@
               "type": "string"
             }
           },
-          "required": [
-            "id",
-            "fullName",
-            "department",
-            "role",
-            "email"
-          ]
+          "required": ["id", "fullName", "department", "role", "email"]
         }
       },
       "examples": [

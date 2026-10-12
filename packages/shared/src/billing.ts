@@ -24,7 +24,11 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
   free: { maxActiveProjects: 5, maxMonthlyRequests: 10_000, maxMonthlyAiGenerations: 5 },
   starter: { maxActiveProjects: 15, maxMonthlyRequests: 100_000, maxMonthlyAiGenerations: 40 },
   pro: { maxActiveProjects: 50, maxMonthlyRequests: 1_000_000, maxMonthlyAiGenerations: 300 },
-  team: { maxActiveProjects: Infinity, maxMonthlyRequests: 10_000_000, maxMonthlyAiGenerations: 1500 },
+  team: {
+    maxActiveProjects: Infinity,
+    maxMonthlyRequests: 10_000_000,
+    maxMonthlyAiGenerations: 1500,
+  },
 };
 
 /**
@@ -37,7 +41,8 @@ export const PAST_DUE_GRACE_DAYS = 7;
 export type BillingInterval = 'month' | 'year';
 export const BILLING_INTERVALS: readonly BillingInterval[] = ['month', 'year'];
 
-export const isBillingInterval = (value: unknown): value is BillingInterval => value === 'month' || value === 'year';
+export const isBillingInterval = (value: unknown): value is BillingInterval =>
+  value === 'month' || value === 'year';
 
 /** Meses que se pagan al contratar un ano: 10 (dos meses gratis). */
 export const ANNUAL_MONTHS_CHARGED = 10;
@@ -49,7 +54,10 @@ export interface PlanPrice {
   annual: number;
 }
 
-const priceOf = (monthly: number): PlanPrice => ({ monthly, annual: monthly * ANNUAL_MONTHS_CHARGED });
+const priceOf = (monthly: number): PlanPrice => ({
+  monthly,
+  annual: monthly * ANNUAL_MONTHS_CHARGED,
+});
 
 /** Precios anunciados en USD (sin impuestos). Free no tiene precio. */
 export const PLAN_PRICE_USD: Record<Plan, PlanPrice> = {
@@ -85,7 +93,9 @@ export interface PlanLimitsDTO {
 export const toLimitsDTO = (limits: PlanLimits): PlanLimitsDTO => ({
   maxActiveProjects: Number.isFinite(limits.maxActiveProjects) ? limits.maxActiveProjects : null,
   maxMonthlyRequests: Number.isFinite(limits.maxMonthlyRequests) ? limits.maxMonthlyRequests : null,
-  maxMonthlyAiGenerations: Number.isFinite(limits.maxMonthlyAiGenerations) ? limits.maxMonthlyAiGenerations : null,
+  maxMonthlyAiGenerations: Number.isFinite(limits.maxMonthlyAiGenerations)
+    ? limits.maxMonthlyAiGenerations
+    : null,
 });
 
 /** Respuesta de GET /api/billing/me */

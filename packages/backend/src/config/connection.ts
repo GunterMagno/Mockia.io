@@ -74,9 +74,7 @@ const setupConnectionListeners = (): void => {
  */
 const attemptReconnect = async (): Promise<void> => {
   if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-    console.error(
-      `[MongoDB] Maximum reconnection attempts reached (${MAX_RECONNECT_ATTEMPTS})`
-    );
+    console.error(`[MongoDB] Maximum reconnection attempts reached (${MAX_RECONNECT_ATTEMPTS})`);
     return;
   }
 

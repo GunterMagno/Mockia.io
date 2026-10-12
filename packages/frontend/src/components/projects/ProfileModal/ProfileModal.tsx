@@ -1,93 +1,93 @@
-import React, { useState, useEffect, useId } from 'react'
-import { Modal } from '../../ui/Modal/Modal'
-import { getProfile, updateProfile, changePassword } from '../../../services/userService'
-import { Link, useNavigate } from 'react-router-dom'
-import { useAuth } from '../../../contexts/AuthContext'
-import { PATHS } from '../../../routes/paths'
-import { Input } from '../../ui/Input/Input'
-import styles from './ProfileModal.module.scss'
-import { playErrorSound } from '../../../utils/audio'
-import { getBackendErrorMessage } from '../../../utils/error'
-import ModalErrorAlert from '../../ui/ModalErrorAlert/ModalErrorAlert'
-import { useI18n } from '../../../i18n/I18nProvider'
-import AccountData from '../../ui/AccountData/AccountData'
+import React, { useState, useEffect, useId } from 'react';
+import { Modal } from '../../ui/Modal/Modal';
+import { getProfile, updateProfile, changePassword } from '../../../services/userService';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../contexts/AuthContext';
+import { PATHS } from '../../../routes/paths';
+import { Input } from '../../ui/Input/Input';
+import styles from './ProfileModal.module.scss';
+import { playErrorSound } from '../../../utils/audio';
+import { getBackendErrorMessage } from '../../../utils/error';
+import ModalErrorAlert from '../../ui/ModalErrorAlert/ModalErrorAlert';
+import { useI18n } from '../../../i18n/I18nProvider';
+import AccountData from '../../ui/AccountData/AccountData';
 
 type Props = {
-  isOpen: boolean
-  onClose: () => void
-}
+  isOpen: boolean;
+  onClose: () => void;
+};
 
 const ProfileModal: React.FC<Props> = ({ isOpen, onClose }) => {
-  const { logout } = useAuth()
-  const { t } = useI18n()
-  const uid = useId()
-  const navigate = useNavigate()
-  const [username, setUsername] = useState('')
-  const [email, setEmail] = useState('')
-  const [currentPassword, setCurrentPassword] = useState('')
-  const [newPassword, setNewPassword] = useState('')
-  
-  const [loading, setLoading] = useState(false)
-  const [status, setStatus] = useState({ type: '', message: '' })
+  const { logout } = useAuth();
+  const { t } = useI18n();
+  const uid = useId();
+  const navigate = useNavigate();
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+
+  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState({ type: '', message: '' });
 
   useEffect(() => {
     if (isOpen) {
       getProfile()
-        .then(profile => {
-          setUsername(profile.username || '')
-          setEmail(profile.email)
-          setStatus({ type: '', message: '' })
+        .then((profile) => {
+          setUsername(profile.username || '');
+          setEmail(profile.email);
+          setStatus({ type: '', message: '' });
         })
-        .catch(err => console.error('Failed to load profile', err))
+        .catch((err) => console.error('Failed to load profile', err));
     }
-  }, [isOpen])
+  }, [isOpen]);
 
   const handleSave = async () => {
-    setLoading(true)
-    setStatus({ type: '', message: '' })
+    setLoading(true);
+    setStatus({ type: '', message: '' });
     try {
       // Update profile info
-      await updateProfile({ username })
-      
+      await updateProfile({ username });
+
       // Update password if provided
       if (currentPassword && newPassword) {
-        await changePassword({ currentPassword, newPassword })
-        setCurrentPassword('')
-        setNewPassword('')
+        await changePassword({ currentPassword, newPassword });
+        setCurrentPassword('');
+        setNewPassword('');
       }
-      
-      setStatus({ type: 'success', message: t('profile.updated') })
+
+      setStatus({ type: 'success', message: t('profile.updated') });
       setTimeout(() => {
-        setStatus({ type: '', message: '' })
-        onClose()
-      }, 1500)
+        setStatus({ type: '', message: '' });
+        onClose();
+      }, 1500);
     } catch (err: any) {
-      setStatus({ type: 'error', message: getBackendErrorMessage(err, t) })
-      playErrorSound()
+      setStatus({ type: 'error', message: getBackendErrorMessage(err, t) });
+      playErrorSound();
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleLogout = () => {
-    navigate(PATHS.home)
-    logout()
-    onClose()
-  }
+    navigate(PATHS.home);
+    logout();
+    onClose();
+  };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} noPadding maxWidth="800px">
       <article className={styles.container}>
         <section className={styles.innerContent}>
           <h2 className={styles.title}>{t('profile.title')}</h2>
-          
+
           <section className={styles.formSection}>
             <article className={styles.formGroup}>
               <label htmlFor={`${uid}-username`}>{t('profile.username')}</label>
-              <input 
+              <input
                 id={`${uid}-username`}
                 value={username}
-                onChange={e => setUsername(e.target.value)}
+                onChange={(e) => setUsername(e.target.value)}
                 className={styles.input}
                 placeholder={t('profile.usernamePlaceholder')}
               />
@@ -95,7 +95,7 @@ const ProfileModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
             <article className={styles.formGroup}>
               <label htmlFor={`${uid}-email`}>{t('profile.email')}</label>
-              <input 
+              <input
                 id={`${uid}-email`}
                 value={email}
                 readOnly
@@ -107,11 +107,11 @@ const ProfileModal: React.FC<Props> = ({ isOpen, onClose }) => {
             <fieldset className={styles.passwordGrid}>
               <article className={styles.formGroup}>
                 <label htmlFor={`${uid}-current`}>{t('profile.currentPassword')}</label>
-                <Input 
+                <Input
                   id={`${uid}-current`}
                   type="password"
                   value={currentPassword}
-                  onChange={e => setCurrentPassword(e.target.value)}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
                   className={styles.input}
                   placeholder={t('profile.currentPassword')}
                   autoComplete="one-time-code"
@@ -119,11 +119,11 @@ const ProfileModal: React.FC<Props> = ({ isOpen, onClose }) => {
               </article>
               <article className={styles.formGroup}>
                 <label htmlFor={`${uid}-new`}>{t('profile.newPassword')}</label>
-                <Input 
+                <Input
                   id={`${uid}-new`}
                   type="password"
                   value={newPassword}
-                  onChange={e => setNewPassword(e.target.value)}
+                  onChange={(e) => setNewPassword(e.target.value)}
                   className={styles.input}
                   placeholder={t('profile.newPassword')}
                   autoComplete="new-password"
@@ -144,9 +144,7 @@ const ProfileModal: React.FC<Props> = ({ isOpen, onClose }) => {
           )}
 
           {status.message && status.type === 'success' && (
-            <article className={`${styles.status} ${styles.success}`}>
-              {status.message}
-            </article>
+            <article className={`${styles.status} ${styles.success}`}>{status.message}</article>
           )}
 
           <nav className={styles.actions}>
@@ -157,9 +155,9 @@ const ProfileModal: React.FC<Props> = ({ isOpen, onClose }) => {
               <button className={styles.cancelBtn} onClick={onClose}>
                 {t('common.cancel')}
               </button>
-              <button 
-                className={styles.saveBtn} 
-                onClick={handleSave} 
+              <button
+                className={styles.saveBtn}
+                onClick={handleSave}
                 disabled={loading || (!!newPassword && !currentPassword)}
               >
                 {loading ? t('common.saving') : t('common.save')}
@@ -169,7 +167,7 @@ const ProfileModal: React.FC<Props> = ({ isOpen, onClose }) => {
         </section>
       </article>
     </Modal>
-  )
-}
+  );
+};
 
-export default ProfileModal
+export default ProfileModal;

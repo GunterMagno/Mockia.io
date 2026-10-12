@@ -47,14 +47,29 @@ export async function exportUserData(userId: string): Promise<Record<string, unk
   const projects = await ProjectModel.find({ ownerId: uid }).sort({ createdAt: 1 }).lean();
   const projectIds = projects.map((p) => p._id);
 
-  const [mockApis, githubContexts, notifications, usage, sessions, memberOf, aiGenerations, aiFeedback] = await Promise.all([
-    MockAPIModel.find({ projectId: { $in: projectIds } }).sort({ createdAt: 1 }).lean(),
+  const [
+    mockApis,
+    githubContexts,
+    notifications,
+    usage,
+    sessions,
+    memberOf,
+    aiGenerations,
+    aiFeedback,
+  ] = await Promise.all([
+    MockAPIModel.find({ projectId: { $in: projectIds } })
+      .sort({ createdAt: 1 })
+      .lean(),
     GitHubContextModel.find({ projectId: { $in: projectIds } }).lean(),
     NotificationModel.find({ userId: uid }).sort({ createdAt: 1 }).lean(),
     UsageModel.find({ ownerId: uid }).sort({ period: 1 }).lean(),
     // Every refresh session the server still keeps (until it expires): live and already used/rotated ones
-    RefreshSessionModel.find({ userId: uid, expiresAt: { $gt: new Date() } }).sort({ createdAt: 1 }).lean(),
-    ProjectModel.find({ ownerId: { $ne: uid }, 'members.userId': uid }).select('title slug members').lean(),
+    RefreshSessionModel.find({ userId: uid, expiresAt: { $gt: new Date() } })
+      .sort({ createdAt: 1 })
+      .lean(),
+    ProjectModel.find({ ownerId: { $ne: uid }, 'members.userId': uid })
+      .select('title slug members')
+      .lean(),
     AiGenerationModel.find({ userId: uid }).sort({ createdAt: 1 }).lean(),
     AiFeedbackModel.find({ userId: uid }).sort({ createdAt: 1 }).lean(),
   ]);
@@ -133,7 +148,13 @@ export async function exportUserData(userId: string): Promise<Record<string, unk
       isArchived: p.isArchived,
       archivedAt: iso(p.archivedAt),
       gitHubRepo: p.gitHubRepo
-        ? { owner: p.gitHubRepo.owner, repo: p.gitHubRepo.repo, branch: p.gitHubRepo.branch ?? null, url: p.gitHubRepo.url, importedAt: iso(p.gitHubRepo.importedAt) }
+        ? {
+            owner: p.gitHubRepo.owner,
+            repo: p.gitHubRepo.repo,
+            branch: p.gitHubRepo.branch ?? null,
+            url: p.gitHubRepo.url,
+            importedAt: iso(p.gitHubRepo.importedAt),
+          }
         : null,
       memberCount: p.members?.length ?? 0,
       createdAt: iso(p.createdAt),
@@ -147,7 +168,9 @@ export async function exportUserData(userId: string): Promise<Record<string, unk
           apiVersion: m.apiVersion,
           createdAt: iso(m.createdAt),
           updatedAt: iso(m.updatedAt),
-          endpoints: endpoints.filter((e) => e.mockApiId.toString() === m._id.toString()).map(endpointDTO),
+          endpoints: endpoints
+            .filter((e) => e.mockApiId.toString() === m._id.toString())
+            .map(endpointDTO),
         })),
       githubContexts: githubContexts
         .filter((g) => g.projectId.toString() === p._id.toString())
@@ -164,7 +187,12 @@ export async function exportUserData(userId: string): Promise<Record<string, unk
     })),
     memberships: memberOf.map((p) => {
       const mine = p.members.find((m) => m.userId.toString() === userId);
-      return { projectId: p._id.toString(), title: p.title, role: mine?.role ?? null, addedAt: iso(mine?.addedAt) };
+      return {
+        projectId: p._id.toString(),
+        title: p.title,
+        role: mine?.role ?? null,
+        addedAt: iso(mine?.addedAt),
+      };
     }),
     notifications: notifications.map((n) => ({
       id: n._id.toString(),
@@ -176,7 +204,11 @@ export async function exportUserData(userId: string): Promise<Record<string, unk
       projectId: n.projectId?.toString() ?? null,
       createdAt: iso(n.createdAt),
     })),
-    usage: usage.map((u) => ({ period: u.period, requests: u.requests, aiGenerations: u.aiGenerations ?? 0 })),
+    usage: usage.map((u) => ({
+      period: u.period,
+      requests: u.requests,
+      aiGenerations: u.aiGenerations ?? 0,
+    })),
     // What the user contributed to improving the AI (only exists with their consent): prompts as sent, model output, thumbs and corrections
     aiGenerations: aiGenerations.map((g) => ({
       generationId: g.generationId,
@@ -233,7 +265,8 @@ export async function deleteUserAccount(userId: string, password: string): Promi
 
   // A subscription still live in Stripe (anything but already cancelled, past_due included) keeps charging the card.
   // With a Stripe customer, every live subscription Stripe lists for it is cancelled too (not only the stored one).
-  const hasStoredLiveSubscription = Boolean(user.stripeSubscriptionId) && user.billingStatus !== 'canceled';
+  const hasStoredLiveSubscription =
+    Boolean(user.stripeSubscriptionId) && user.billingStatus !== 'canceled';
   if (hasStoredLiveSubscription || user.stripeCustomerId) {
     const secretKey = process.env.STRIPE_SECRET_KEY;
     if (!secretKey) {

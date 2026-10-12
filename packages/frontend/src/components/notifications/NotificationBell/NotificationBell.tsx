@@ -15,13 +15,8 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className }) => {
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef<HTMLElement>(null);
   const { t } = useI18n();
-  const { 
-    notifications, 
-    activeToast, 
-    unreadCount, 
-    fetchNotifications, 
-    clearToast 
-  } = useNotifications();
+  const { notifications, activeToast, unreadCount, fetchNotifications, clearToast } =
+    useNotifications();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -29,12 +24,12 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className }) => {
       if (wrapperRef.current && wrapperRef.current.contains(event.target as Node)) {
         return;
       }
-      
+
       const target = event.target as HTMLElement;
       if (target.closest('[class*="mobileNotificationItem"]')) {
         return;
       }
-      
+
       setIsOpen(false);
     };
 
@@ -44,11 +39,15 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className }) => {
 
   return (
     <section className={`${styles.wrapper} ${className || ''}`} ref={wrapperRef}>
-      <button 
-        className={`${styles.bellBtn} ${unreadCount > 0 ? styles.hasUnread : ''}`} 
+      <button
+        className={`${styles.bellBtn} ${unreadCount > 0 ? styles.hasUnread : ''}`}
         onClick={() => setIsOpen(!isOpen)}
         title={t('notifications.title')}
-        aria-label={unreadCount > 0 ? `${t('notifications.title')}: ${t('notifications.unread', { count: unreadCount })}` : t('notifications.title')}
+        aria-label={
+          unreadCount > 0
+            ? `${t('notifications.title')}: ${t('notifications.unread', { count: unreadCount })}`
+            : t('notifications.title')
+        }
         aria-expanded={isOpen}
       >
         <Icon src={bellIcon} />
@@ -56,19 +55,14 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className }) => {
       </button>
 
       {isOpen && (
-        <NotificationPanel 
-          notifications={notifications} 
+        <NotificationPanel
+          notifications={notifications}
           onClose={() => setIsOpen(false)}
           onRefresh={fetchNotifications}
         />
       )}
 
-      {activeToast && (
-        <NotificationToast 
-          notification={activeToast} 
-          onClose={clearToast} 
-        />
-      )}
+      {activeToast && <NotificationToast notification={activeToast} onClose={clearToast} />}
     </section>
   );
 };

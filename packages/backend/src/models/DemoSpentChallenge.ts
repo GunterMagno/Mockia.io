@@ -15,4 +15,7 @@ const spentSchema = new Schema<DemoSpentChallengeDocument>({
   createdAt: { type: Date, required: true, default: () => new Date(), expires: 600 },
 });
 
-export const DemoSpentChallengeModel = model<DemoSpentChallengeDocument>('DemoSpentChallenge', spentSchema);
+export const DemoSpentChallengeModel = model<DemoSpentChallengeDocument>(
+  'DemoSpentChallenge',
+  spentSchema
+);

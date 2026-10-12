@@ -1,11 +1,7 @@
 {
   "id": "openapi3-library-pagination",
   "description": "OpenAPI 3 spec whose list operations document limit/offset pagination and a wrapped response.",
-  "tags": [
-    "openapi3",
-    "pagination",
-    "path-params"
-  ],
+  "tags": ["openapi3", "pagination", "path-params"],
   "input": {
     "projectTitle": "Records API",
     "userInput": "Mock every operation of the OpenAPI document.",
@@ -28,21 +24,15 @@
           "summary": "OpenAPI 3.0.1. GET /records takes query params limit and offset and returns { data: Record[], limit: integer, offset: integer, count: integer }. Record = { id: string, title: string, artist: string, year: integer }.",
           "routes": [
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/records"
             },
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/records/{id}"
             },
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/artists/{artistId}/records"
             }
           ]
@@ -81,12 +71,7 @@
                   "type": "integer"
                 }
               },
-              "required": [
-                "id",
-                "title",
-                "artist",
-                "year"
-              ]
+              "required": ["id", "title", "artist", "year"]
             }
           },
           "limit": {
@@ -99,12 +84,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "data",
-          "limit",
-          "offset",
-          "count"
-        ]
+        "required": ["data", "limit", "offset", "count"]
       },
       "examples": [
         {
@@ -150,12 +130,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "id",
-          "title",
-          "artist",
-          "year"
-        ]
+        "required": ["id", "title", "artist", "year"]
       },
       "examples": [
         {
@@ -206,12 +181,7 @@
                   "type": "integer"
                 }
               },
-              "required": [
-                "id",
-                "title",
-                "artist",
-                "year"
-              ]
+              "required": ["id", "title", "artist", "year"]
             }
           },
           "limit": {
@@ -224,12 +194,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "data",
-          "limit",
-          "offset",
-          "count"
-        ]
+        "required": ["data", "limit", "offset", "count"]
       },
       "examples": [
         {

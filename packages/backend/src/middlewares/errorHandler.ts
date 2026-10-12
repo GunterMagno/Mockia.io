@@ -20,12 +20,7 @@ export class AppError extends Error {
  * Global error handling middleware
  * Normalizes all error responses
  */
-export const errorHandler = (
-  err: Error,
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void => {
+export const errorHandler = (err: Error, req: Request, res: Response, next: NextFunction): void => {
   let appError: AppError;
 
   if (err instanceof AppError) {
@@ -34,14 +29,8 @@ export const errorHandler = (
 
   // Specific handling for DuplicateUserError
   else if (err.name === 'DuplicateUserError') {
-    appError = new AppError(
-      err.message,
-      ErrorCode.CONFLICT,
-      409
-    );
-  }
-
-  else if (err.name === 'ValidationError' || err.name === 'CastError') {
+    appError = new AppError(err.message, ErrorCode.CONFLICT, 409);
+  } else if (err.name === 'ValidationError' || err.name === 'CastError') {
     appError = new AppError(
       'Validation error',
       ErrorCode.VALIDATION_ERROR,
@@ -49,8 +38,7 @@ export const errorHandler = (
       // Mongoose messages echo schema paths/values: development only.
       process.env.NODE_ENV === 'development' ? { originalError: err.message } : undefined
     );
-  }
-  else {
+  } else {
     // Unexpected errors: real message only in development/test, generic in production (no internals leak).
     const expose = process.env.NODE_ENV !== 'production';
     appError = new AppError(
@@ -74,7 +62,9 @@ export const errorHandler = (
     error: {
       code: appError.code,
       message: appError.message,
-      ...( (process.env.NODE_ENV === 'development' || appError.code === ErrorCode.VALIDATION_ERROR) && appError.details && { details: appError.details }),
+      ...((process.env.NODE_ENV === 'development' ||
+        appError.code === ErrorCode.VALIDATION_ERROR) &&
+        appError.details && { details: appError.details }),
     },
     timestamp: new Date().toISOString(),
   });
@@ -83,11 +73,7 @@ export const errorHandler = (
 /**
  * Middleware for 404 errors
  */
-export const notFoundHandler = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void => {
+export const notFoundHandler = (req: Request, res: Response, next: NextFunction): void => {
   const error = new AppError(
     `Route not found: ${req.method} ${req.path}`,
     ErrorCode.NOT_FOUND,
@@ -100,8 +86,8 @@ export const notFoundHandler = (
  * Wrapper for async in routes
  * Usage: router.get('/path', asyncHandler(async (req, res) => { ... }))
  */
-export const asyncHandler = (
-  fn: (req: Request, res: Response, next: NextFunction) => Promise<any>
-) => (req: Request, res: Response, next: NextFunction) => {
-  Promise.resolve(fn(req, res, next)).catch(next);
-};
+export const asyncHandler =
+  (fn: (req: Request, res: Response, next: NextFunction) => Promise<any>) =>
+  (req: Request, res: Response, next: NextFunction) => {
+    Promise.resolve(fn(req, res, next)).catch(next);
+  };

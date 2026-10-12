@@ -55,7 +55,12 @@ interface UserDocument extends Document {
    * (kept after a withdrawal); `withdrawnAt` = when it was withdrawn (null while it stands). Older rows only have
    * { granted, at }: for them `at` is the grant time.
    */
-  aiTrainingConsent?: { granted: boolean; at: Date; grantedAt?: Date | null; withdrawnAt?: Date | null };
+  aiTrainingConsent?: {
+    granted: boolean;
+    at: Date;
+    grantedAt?: Date | null;
+    withdrawnAt?: Date | null;
+  };
   createdAt: Date;
   updatedAt: Date;
 }

@@ -24,7 +24,10 @@
   font-size: var(--text-base);
   font-weight: 600;
   cursor: pointer;
-  transition: background-color var(--transition-fast), border-color var(--transition-fast), opacity var(--transition-fast);
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    opacity var(--transition-fast);
 
   &:hover:not(:disabled) {
     background: var(--color-surface-2);

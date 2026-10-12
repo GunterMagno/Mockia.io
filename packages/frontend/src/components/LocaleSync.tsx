@@ -1,7 +1,7 @@
-import { useEffect, useRef } from 'react'
-import { useAuth } from '../contexts/AuthContext'
-import { useI18n, type Locale } from '../i18n/I18nProvider'
-import { saveLocalePreference } from '../services/preferences'
+import { useEffect, useRef } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { useI18n, type Locale } from '../i18n/I18nProvider';
+import { saveLocalePreference } from '../services/preferences';
 
 /**
  * Sincroniza el idioma de la interfaz con el de la cuenta. No pinta nada.
@@ -13,39 +13,39 @@ import { saveLocalePreference } from '../services/preferences'
  * - Despues, cada cambio de idioma hecho con la sesion iniciada se guarda en segundo plano.
  */
 export const LocaleSync: React.FC = () => {
-  const { user } = useAuth()
-  const { locale, setLocale } = useI18n()
-  const syncedUserId = useRef<string | null>(null)
+  const { user } = useAuth();
+  const { locale, setLocale } = useI18n();
+  const syncedUserId = useRef<string | null>(null);
   // Ultimo idioma que el servidor tiene (o que ya se le ha enviado)
-  const serverLocale = useRef<Locale | undefined>(undefined)
+  const serverLocale = useRef<Locale | undefined>(undefined);
 
   useEffect(() => {
     if (!user) {
-      syncedUserId.current = null
-      serverLocale.current = undefined
-      return
+      syncedUserId.current = null;
+      serverLocale.current = undefined;
+      return;
     }
 
     if (syncedUserId.current !== user.id) {
-      syncedUserId.current = user.id
+      syncedUserId.current = user.id;
       if (user.locale) {
         // El servidor manda: se aplica y, una vez cargado el diccionario, `locale` coincidira y no se reenvia nada
-        serverLocale.current = user.locale
-        if (user.locale !== locale) void setLocale(user.locale)
-        return
+        serverLocale.current = user.locale;
+        if (user.locale !== locale) void setLocale(user.locale);
+        return;
       }
-      serverLocale.current = locale
-      saveLocalePreference(locale)
-      return
+      serverLocale.current = locale;
+      saveLocalePreference(locale);
+      return;
     }
 
     if (locale !== serverLocale.current) {
-      serverLocale.current = locale
-      saveLocalePreference(locale)
+      serverLocale.current = locale;
+      saveLocalePreference(locale);
     }
-  }, [user, locale, setLocale])
+  }, [user, locale, setLocale]);
 
-  return null
-}
+  return null;
+};
 
-export default LocaleSync
+export default LocaleSync;

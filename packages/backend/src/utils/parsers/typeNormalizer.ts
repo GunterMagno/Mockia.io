@@ -22,7 +22,9 @@ export interface NormalizationResult {
  */
 export function normalizeType(type: string): NormalizationResult {
   // Tope de longitud: los regex lazy `<(.+?)>` son cuadraticos con entradas enormes sin `>`; no-string no debe lanzar
-  const original = String(type ?? '').trim().slice(0, MAX_TYPE_LENGTH);
+  const original = String(type ?? '')
+    .trim()
+    .slice(0, MAX_TYPE_LENGTH);
   let normalized = original;
   let simplified = false;
 
@@ -64,9 +66,7 @@ export function normalizeType(type: string): NormalizationResult {
   }
 
   // Remove leading/trailing whitespace and duplicate spaces
-  normalized = normalized
-    .replace(/\s+/g, ' ')
-    .trim();
+  normalized = normalized.replace(/\s+/g, ' ').trim();
 
   const wasSimplified = original !== normalized;
 

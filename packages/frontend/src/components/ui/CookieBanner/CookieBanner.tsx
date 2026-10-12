@@ -1,17 +1,17 @@
-import React, { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { useI18n } from '../../../i18n/I18nProvider'
-import { PATHS } from '../../../routes/paths'
-import styles from './CookieBanner.module.scss'
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useI18n } from '../../../i18n/I18nProvider';
+import { PATHS } from '../../../routes/paths';
+import styles from './CookieBanner.module.scss';
 
 /** localStorage key that remembers the notice was dismissed (also listed in the Cookies page). */
-export const COOKIE_NOTICE_KEY = 'mockia_cookie_notice_dismissed'
+export const COOKIE_NOTICE_KEY = 'mockia_cookie_notice_dismissed';
 
 function wasDismissed(): boolean {
   try {
-    return window.localStorage.getItem(COOKIE_NOTICE_KEY) === '1'
+    return window.localStorage.getItem(COOKIE_NOTICE_KEY) === '1';
   } catch {
-    return false
+    return false;
   }
 }
 
@@ -22,22 +22,27 @@ function wasDismissed(): boolean {
  * "Accept" and "Reject" of equal weight (AEPD criteria).
  */
 const CookieBanner: React.FC = () => {
-  const { t, rich } = useI18n()
-  const [dismissed, setDismissed] = useState(wasDismissed)
+  const { t, rich } = useI18n();
+  const [dismissed, setDismissed] = useState(wasDismissed);
 
-  if (dismissed) return null
+  if (dismissed) return null;
 
   const dismiss = () => {
     try {
-      window.localStorage.setItem(COOKIE_NOTICE_KEY, '1')
+      window.localStorage.setItem(COOKIE_NOTICE_KEY, '1');
     } catch {
       // storage unavailable: hidden for this visit only
     }
-    setDismissed(true)
-  }
+    setDismissed(true);
+  };
 
   return (
-    <section className={styles.banner} role="region" aria-label={t('cookieNotice.label')} data-cookie-notice>
+    <section
+      className={styles.banner}
+      role="region"
+      aria-label={t('cookieNotice.label')}
+      data-cookie-notice
+    >
       <p className={styles.text}>
         {rich('cookieNotice.text', {
           more: (chunk) => <Link to={PATHS.cookies}>{chunk}</Link>,
@@ -47,7 +52,7 @@ const CookieBanner: React.FC = () => {
         {t('cookieNotice.ok')}
       </button>
     </section>
-  )
-}
+  );
+};
 
-export default CookieBanner
+export default CookieBanner;

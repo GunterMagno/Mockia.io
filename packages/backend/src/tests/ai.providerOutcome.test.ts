@@ -5,7 +5,10 @@ import { AppError } from '../middlewares/errorHandler.js';
 import { createRefundTracker } from '../controllers/ai.controller.js';
 import { openRouterConfig } from '../config/ai.js';
 import { createFallbackLlm, providerOutcomeOf, resetLlm } from '../modules/ai/providers/index.js';
-import { createOpenAiCompatibleProvider, createOpenRouterProvider } from '../modules/ai/providers/openaiCompatible.js';
+import {
+  createOpenAiCompatibleProvider,
+  createOpenRouterProvider,
+} from '../modules/ai/providers/openaiCompatible.js';
 import { LlmResponseError, type LlmProvider } from '../modules/ai/providers/types.js';
 
 /**
@@ -15,13 +18,26 @@ import { LlmResponseError, type LlmProvider } from '../modules/ai/providers/type
  */
 
 const axiosError = (code?: string, status?: number): AxiosError => {
-  const err = new AxiosError('boom', code, undefined, undefined, status ? ({ status, statusText: '', headers: {}, config: {} as never, data: {} } as never) : undefined);
+  const err = new AxiosError(
+    'boom',
+    code,
+    undefined,
+    undefined,
+    status
+      ? ({ status, statusText: '', headers: {}, config: {} as never, data: {} } as never)
+      : undefined
+  );
   return err;
 };
 
 describe('providerOutcomeOf', () => {
   it('a completion that is cut, empty or not a chat envelope is an answer (the provider generated it)', () => {
-    for (const kind of ['truncated', 'empty_content', 'invalid_envelope', 'invalid_output'] as const) {
+    for (const kind of [
+      'truncated',
+      'empty_content',
+      'invalid_envelope',
+      'invalid_output',
+    ] as const) {
       expect(providerOutcomeOf(new LlmResponseError(kind))).toBe('answered');
     }
   });
@@ -42,16 +58,22 @@ describe('providerOutcomeOf', () => {
     const abort = new Error('aborted');
     abort.name = 'AbortError';
     expect(providerOutcomeOf(abort)).toBe('uncertain');
-    expect(providerOutcomeOf(new DOMException('The operation timed out', 'TimeoutError'))).toBe('uncertain');
+    expect(providerOutcomeOf(new DOMException('The operation timed out', 'TimeoutError'))).toBe(
+      'uncertain'
+    );
     expect(providerOutcomeOf('weird')).toBe('uncertain');
   });
 
   it('a plain local error (a missing key, a bad URL) happened before anything could be generated', () => {
-    expect(providerOutcomeOf(new Error('OPENROUTER_API_KEY environment variable is not set'))).toBe('refused');
+    expect(providerOutcomeOf(new Error('OPENROUTER_API_KEY environment variable is not set'))).toBe(
+      'refused'
+    );
   });
 
   it('an error the OpenRouter client already classified keeps its classification', () => {
-    const marked = Object.assign(new AppError('x', 'EXTERNAL_SERVICE_ERROR' as never, 503), { providerOutcome: 'uncertain' });
+    const marked = Object.assign(new AppError('x', 'EXTERNAL_SERVICE_ERROR' as never, 503), {
+      providerOutcome: 'uncertain',
+    });
     expect(providerOutcomeOf(marked)).toBe('uncertain');
   });
 });
@@ -110,15 +132,21 @@ describe('the provider chain reports how each request ended', () => {
 
   it('answered once for a good completion', async () => {
     const r = record();
-    const chain = createFallbackLlm([{ provider: stub(async () => ({ text: 'ok', provider: 'stub', model: 'm' })) }]);
+    const chain = createFallbackLlm([
+      { provider: stub(async () => ({ text: 'ok', provider: 'stub', model: 'm' })) },
+    ]);
     await chain.complete({ messages: MESSAGES, ...r.hooks });
     expect(r.events).toEqual(['call', 'answered']);
   });
 
   it('a repair retry is a second request, and an answer that stays invalid is still an answer', async () => {
     const r = record();
-    const chain = createFallbackLlm([{ provider: stub(async () => ({ text: 'nope', provider: 'stub', model: 'm' })) }]);
-    await expect(chain.complete({ messages: MESSAGES, validate: () => 'bad', ...r.hooks })).rejects.toBeInstanceOf(AppError);
+    const chain = createFallbackLlm([
+      { provider: stub(async () => ({ text: 'nope', provider: 'stub', model: 'm' })) },
+    ]);
+    await expect(
+      chain.complete({ messages: MESSAGES, validate: () => 'bad', ...r.hooks })
+    ).rejects.toBeInstanceOf(AppError);
     expect(r.events).toEqual(['call', 'answered', 'call', 'answered']);
   });
 
@@ -132,7 +160,9 @@ describe('the provider chain reports how each request ended', () => {
       },
       { provider: stub(async () => Promise.reject(axiosError('ERR_BAD_RESPONSE', 500))) },
     ]);
-    await expect(chain.complete({ messages: MESSAGES, ...r.hooks })).rejects.toBeInstanceOf(AppError);
+    await expect(chain.complete({ messages: MESSAGES, ...r.hooks })).rejects.toBeInstanceOf(
+      AppError
+    );
     expect(r.events).toEqual(['call', 'answered', 'call', 'refused']);
   });
 
@@ -145,13 +175,15 @@ describe('the provider chain reports how each request ended', () => {
             (req) =>
               new Promise((_resolve, reject) => {
                 req.signal?.addEventListener('abort', () => reject(axiosError('ERR_CANCELED')));
-              }),
+              })
           ),
         },
       ],
-      { totalTimeoutMs: 100 },
+      { totalTimeoutMs: 100 }
     );
-    await expect(chain.complete({ messages: MESSAGES, ...r.hooks })).rejects.toMatchObject({ statusCode: 504 });
+    await expect(chain.complete({ messages: MESSAGES, ...r.hooks })).rejects.toMatchObject({
+      statusCode: 504,
+    });
     expect(r.events).toEqual(['call', 'uncertain']);
   });
 });
@@ -203,7 +235,8 @@ describe('real clients against a fake server', () => {
   };
 
   it('the local client: HTTP 500 is refused, a refused connection is refused, a timeout is uncertain', async () => {
-    const local = (baseUrl: string, timeoutMs = 2000) => createOpenAiCompatibleProvider({ name: 'local', baseUrl, model: 'm', timeoutMs });
+    const local = (baseUrl: string, timeoutMs = 2000) =>
+      createOpenAiCompatibleProvider({ name: 'local', baseUrl, model: 'm', timeoutMs });
     expect(await outcomeOf(local(url))).toBe('refused');
     expect(await outcomeOf(local('http://127.0.0.1:1'))).toBe('refused');
     reply = () => undefined; // never answers

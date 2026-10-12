@@ -23,21 +23,43 @@ const withRepo: PromptInput = {
     summary: 'Repository with 2 analyzed files (1 interfaces, 0 functions, 2 API routes)',
     stats: { totalFiles: 2, totalInterfaces: 1, totalFunctions: 0, totalRoutes: 2 },
     files: [
-      { path: 'README.md', type: 'other', summary: '# Gym\nBook classes. Maintained by Maria Gonzalez (maria@acme.io).' },
-      { path: 'src/routes/members.ts', type: 'typescript', summary: 's', routes: [{ methods: ['GET'], path: '/members' }] },
+      {
+        path: 'README.md',
+        type: 'other',
+        summary: '# Gym\nBook classes. Maintained by Maria Gonzalez (maria@acme.io).',
+      },
+      {
+        path: 'src/routes/members.ts',
+        type: 'typescript',
+        summary: 's',
+        routes: [{ methods: ['GET'], path: '/members' }],
+      },
     ],
   },
   userInput: 'Members and classes',
 };
-const noRepo: PromptInput = { projectTitle: TITLE, projectDescription: DESCRIPTION, context: null, userInput: 'Members and classes' };
-const noRepoNoDescription: PromptInput = { projectTitle: TITLE, context: null, userInput: 'Members and classes' };
+const noRepo: PromptInput = {
+  projectTitle: TITLE,
+  projectDescription: DESCRIPTION,
+  context: null,
+  userInput: 'Members and classes',
+};
+const noRepoNoDescription: PromptInput = {
+  projectTitle: TITLE,
+  context: null,
+  userInput: 'Members and classes',
+};
 
-const promptText = (input: PromptInput) => buildPromptFromInput(input).map((m) => anonymizePromptIdentifiers(m.content)).join('\n----\n');
+const promptText = (input: PromptInput) =>
+  buildPromptFromInput(input)
+    .map((m) => anonymizePromptIdentifiers(m.content))
+    .join('\n----\n');
 
 describe('anonymizePromptIdentifiers with the real prompt builder', () => {
   it('a prompt with a repository loses owner, repo name, URL and branch', () => {
     const out = promptText(withRepo);
-    for (const secret of [OWNER, REPO, `github.com/${OWNER}`, 'feature/acme-payroll']) expect(out).not.toContain(secret);
+    for (const secret of [OWNER, REPO, `github.com/${OWNER}`, 'feature/acme-payroll'])
+      expect(out).not.toContain(secret);
     expect(out).toContain('## Repository: [REDACTED_REPO]');
     expect(out).toContain('Owner: [REDACTED_OWNER]');
     expect(out).toContain('Branch: [REDACTED_BRANCH]');
@@ -77,7 +99,8 @@ describe('anonymizePromptIdentifiers with the real prompt builder', () => {
       userInput: 'x',
     };
     const out = promptText(input);
-    for (const s of ['My "App"', '(v2)', 'SECRETWORD', 'SECRETWORD2', 'line two']) expect(out).not.toContain(s);
+    for (const s of ['My "App"', '(v2)', 'SECRETWORD', 'SECRETWORD2', 'line two'])
+      expect(out).not.toContain(s);
     expect(out).toContain('x');
   });
 
@@ -92,7 +115,9 @@ describe('anonymizePromptIdentifiers with the real prompt builder', () => {
   });
 
   it('keeps working together with redactSecrets (the dataset applies both)', () => {
-    const out = buildPromptFromInput(withRepo).map((m) => redactSecrets(anonymizePromptIdentifiers(m.content))).join('\n');
+    const out = buildPromptFromInput(withRepo)
+      .map((m) => redactSecrets(anonymizePromptIdentifiers(m.content)))
+      .join('\n');
     expect(out).not.toContain(OWNER);
     expect(out).not.toContain('maria@acme.io');
   });
@@ -115,7 +140,11 @@ describe('anonymizePromptIdentifiers: repository URLs anywhere in the text', () 
     ['bitbucket', 'https://bitbucket.org/some-owner/some-repo', 'some-owner'],
     ['ssh scp style', 'git@github.com:some-owner/some-repo.git', 'some-owner'],
     ['ssh url', 'ssh://git@gitlab.com/some-owner/some-repo.git', 'some-owner'],
-    ['badge in README', '![build](https://github.com/some-owner/some-repo/actions/workflows/ci.yml/badge.svg)', 'some-owner'],
+    [
+      'badge in README',
+      '![build](https://github.com/some-owner/some-repo/actions/workflows/ci.yml/badge.svg)',
+      'some-owner',
+    ],
   ];
   it.each(cases)('%s', (_n, text, owner) => {
     const out = anonymizePromptIdentifiers(text);
@@ -124,7 +153,12 @@ describe('anonymizePromptIdentifiers: repository URLs anywhere in the text', () 
   });
 
   it('text without such URLs is unchanged', () => {
-    for (const t of ['Use the GitHub API to list repos', 'Visit https://example.com/some-owner/some-repo', 'The repository owner', 'Owner of the gym: the members']) {
+    for (const t of [
+      'Use the GitHub API to list repos',
+      'Visit https://example.com/some-owner/some-repo',
+      'The repository owner',
+      'Owner of the gym: the members',
+    ]) {
       expect(anonymizePromptIdentifiers(t)).toBe(t);
     }
   });
@@ -159,11 +193,15 @@ describe('anonymizePromptIdentifiers on adversarial 100 KB input', () => {
   });
   it('a long description (over 600 characters) is still anonymised', () => {
     const long = 'd'.repeat(5000);
-    const out = anonymizePromptIdentifiers(`Project Name ("Gym") and Description ("${long}"), generate a beautiful API`);
+    const out = anonymizePromptIdentifiers(
+      `Project Name ("Gym") and Description ("${long}"), generate a beautiful API`
+    );
     expect(out).not.toContain(long);
   });
   it('a real sentence is still anonymised', () => {
-    const out = anonymizePromptIdentifiers('Project Name ("Gym") and Description ("A gym API"), generate a beautiful API');
+    const out = anonymizePromptIdentifiers(
+      'Project Name ("Gym") and Description ("A gym API"), generate a beautiful API'
+    );
     expect(out).not.toContain('Gym');
     expect(out).not.toContain('A gym API');
   });

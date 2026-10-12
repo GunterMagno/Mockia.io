@@ -11,11 +11,20 @@
 import fs from 'fs';
 import path from 'path';
 import { performance } from 'perf_hooks';
-import { AI_PROVIDER_NAMES, getAiTotalTimeoutMs, getLocalAiConfig, getSpecGenerationSampling, openRouterConfig } from '../src/config/ai.js';
+import {
+  AI_PROVIDER_NAMES,
+  getAiTotalTimeoutMs,
+  getLocalAiConfig,
+  getSpecGenerationSampling,
+  openRouterConfig,
+} from '../src/config/ai.js';
 import { buildPromptFromInput } from '../src/modules/ai/prompt.service.js';
 import { MOCK_SPEC_JSON_SCHEMA } from '../src/modules/ai/outputSchema.js';
 import { classifyFailure } from '../src/modules/ai/providers/index.js';
-import { createOpenAiCompatibleProvider, createOpenRouterProvider } from '../src/modules/ai/providers/openaiCompatible.js';
+import {
+  createOpenAiCompatibleProvider,
+  createOpenRouterProvider,
+} from '../src/modules/ai/providers/openaiCompatible.js';
 import type { LlmProvider } from '../src/modules/ai/providers/types.js';
 import { CASES_DIR_NAME, loadCases, type EvalCase } from './cases.js';
 import { createFakeProvider, isFakeProvider, FAKE_PROVIDERS } from './fakeProviders.js';
@@ -68,7 +77,10 @@ const VALID_PROVIDERS = [...AI_PROVIDER_NAMES, ...FAKE_PROVIDERS];
 /** `qwen2.5-coder:7b-instruct` -> `qwen2.5-coder-7b-instruct`: safe in a file name on every OS. */
 export function resultFileName(provider: string, model: string, when: Date): string {
   const safeModel = model.replace(/[^A-Za-z0-9.]+/g, '-').replace(/^-+|-+$/g, '') || 'model';
-  const stamp = when.toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z');
+  const stamp = when
+    .toISOString()
+    .replace(/[-:]/g, '')
+    .replace(/\.\d+Z$/, 'Z');
   return `${provider}-${safeModel}-${stamp}.json`;
 }
 
@@ -77,14 +89,25 @@ function loadPrevious(file: string): EvalResult {
   try {
     parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
   } catch (error) {
-    throw new Error(`Cannot read the --compare file ${file}: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(
+      `Cannot read the --compare file ${file}: ${error instanceof Error ? error.message : String(error)}`
+    );
   }
-  if (!isEvalResult(parsed)) throw new Error(`The --compare file ${file} is not an evaluation result`);
+  if (!isEvalResult(parsed))
+    throw new Error(`The --compare file ${file} is not an evaluation result`);
   return parsed;
 }
 
 function failedRow(id: string, latencyMs: number, error: unknown): CaseRow {
-  return { id, validJson: false, schemaValid: false, methodPathF1: 0, fieldCoverage: 0, latencyMs, error: classifyFailure(error) };
+  return {
+    id,
+    validJson: false,
+    schemaValid: false,
+    methodPathF1: 0,
+    fieldCoverage: 0,
+    latencyMs,
+    error: classifyFailure(error),
+  };
 }
 
 /**
@@ -93,7 +116,10 @@ function failedRow(id: string, latencyMs: number, error: unknown): CaseRow {
  * The overall request deadline (AI_TOTAL_TIMEOUT_MS) still applies.
  */
 function createBenchLlm(provider: 'local' | 'openrouter', env: NodeJS.ProcessEnv): LlmProvider {
-  const inner = provider === 'local' ? createOpenAiCompatibleProvider({ name: 'local', ...getLocalAiConfig(env) }) : createOpenRouterProvider();
+  const inner =
+    provider === 'local'
+      ? createOpenAiCompatibleProvider({ name: 'local', ...getLocalAiConfig(env) })
+      : createOpenRouterProvider();
   const totalTimeoutMs = getAiTotalTimeoutMs(env);
   return {
     name: inner.name,
@@ -112,7 +138,9 @@ function createBenchLlm(provider: 'local' | 'openrouter', env: NodeJS.ProcessEnv
 /** Fails before any call when the chosen real provider cannot work, naming what is missing. */
 function assertProviderConfigured(provider: string, env: NodeJS.ProcessEnv): void {
   if (provider === 'local' && getLocalAiConfig(env).baseUrl === '') {
-    throw new Error('--provider=local needs AI_LOCAL_BASE_URL: the server root without /v1, e.g. http://localhost:11434');
+    throw new Error(
+      '--provider=local needs AI_LOCAL_BASE_URL: the server root without /v1, e.g. http://localhost:11434'
+    );
   }
   if (provider === 'openrouter' && !openRouterConfig.apiKey) {
     throw new Error('--provider=openrouter needs OPENROUTER_API_KEY');
@@ -128,7 +156,12 @@ async function runCase(c: EvalCase, llm: LlmProvider, params: SamplingParams): P
   const started = performance.now();
   try {
     const messages = c.messages ?? buildPromptFromInput(c.input);
-    const completion = await llm.complete({ messages, jsonSchema: MOCK_SPEC_JSON_SCHEMA, temperature: params.temperature, maxTokens: params.maxTokens });
+    const completion = await llm.complete({
+      messages,
+      jsonSchema: MOCK_SPEC_JSON_SCHEMA,
+      temperature: params.temperature,
+      maxTokens: params.maxTokens,
+    });
     const latencyMs = performance.now() - started;
     const row: CaseRow = { id: c.id, ...scoreOutput(c.expected, completion.text), latencyMs };
     if (completion.usage) {
@@ -152,18 +185,25 @@ async function pool<T>(tasks: Array<() => Promise<T>>, concurrency: number): Pro
       results[index] = await tasks[index]();
     }
   };
-  await Promise.all(Array.from({ length: Math.max(1, Math.min(concurrency, tasks.length)) }, worker));
+  await Promise.all(
+    Array.from({ length: Math.max(1, Math.min(concurrency, tasks.length)) }, worker)
+  );
   return results;
 }
 
 export async function runEval(options: RunOptions): Promise<RunOutcome> {
   const log = options.log ?? ((line: string) => console.log(line));
   if (!(VALID_PROVIDERS as string[]).includes(options.provider)) {
-    throw new Error(`Unknown provider "${options.provider}" (valid: ${VALID_PROVIDERS.join(', ')})`);
+    throw new Error(
+      `Unknown provider "${options.provider}" (valid: ${VALID_PROVIDERS.join(', ')})`
+    );
   }
   const previous = options.compare ? loadPrevious(options.compare) : undefined;
   const fake = isFakeProvider(options.provider);
-  const env: NodeJS.ProcessEnv = { ...(options.env ?? process.env), AI_PROVIDERS: options.provider };
+  const env: NodeJS.ProcessEnv = {
+    ...(options.env ?? process.env),
+    AI_PROVIDERS: options.provider,
+  };
   if (!fake && !options.providerFactory) assertProviderConfigured(options.provider, env);
   const params: SamplingParams = {
     temperature: options.temperature ?? getSpecGenerationSampling().temperature,
@@ -175,7 +215,8 @@ export async function runEval(options: RunOptions): Promise<RunOutcome> {
 
   if (!fake && options.provider === 'local' && options.model) env.AI_LOCAL_MODEL = options.model;
   const savedOpenRouterModel = openRouterConfig.model;
-  if (!fake && options.provider === 'openrouter' && options.model) openRouterConfig.model = options.model;
+  if (!fake && options.provider === 'openrouter' && options.model)
+    openRouterConfig.model = options.model;
 
   const model = fake
     ? 'fake'
@@ -186,16 +227,23 @@ export async function runEval(options: RunOptions): Promise<RunOutcome> {
   const startedAt = new Date();
   let rows: CaseRow[];
   try {
-    const realLlm = fake || options.providerFactory ? undefined : createBenchLlm(options.provider as 'local' | 'openrouter', env);
+    const realLlm =
+      fake || options.providerFactory
+        ? undefined
+        : createBenchLlm(options.provider as 'local' | 'openrouter', env);
     let done = 0;
     rows = await pool(
       cases.map((c, index) => async () => {
         const llm =
           options.providerFactory?.(c, index) ??
-          (fake ? createFakeProvider(options.provider as (typeof FAKE_PROVIDERS)[number], c, index) : realLlm!);
+          (fake
+            ? createFakeProvider(options.provider as (typeof FAKE_PROVIDERS)[number], c, index)
+            : realLlm!);
         const row = await runCase(c, llm, params);
         done += 1;
-        log(`[${done}/${cases.length}] ${c.id}  F1=${row.methodPathF1.toFixed(2)}  ${Math.round(row.latencyMs)} ms${row.error ? `  ${row.error}` : ''}`);
+        log(
+          `[${done}/${cases.length}] ${c.id}  F1=${row.methodPathF1.toFixed(2)}  ${Math.round(row.latencyMs)} ms${row.error ? `  ${row.error}` : ''}`
+        );
         return row;
       }),
       options.concurrency ?? 1
@@ -255,7 +303,8 @@ export interface CliArgs {
 
 function positiveInt(flag: string, value: string): number {
   const n = Number(value);
-  if (!Number.isInteger(n) || n < 1) throw new Error(`${flag} must be a positive integer, got "${value}"`);
+  if (!Number.isInteger(n) || n < 1)
+    throw new Error(`${flag} must be a positive integer, got "${value}"`);
   return n;
 }
 
@@ -284,7 +333,8 @@ export function parseArgs(argv: string[]): CliArgs {
         break;
       case 'temperature': {
         const n = Number(value);
-        if (value.trim() === '' || !Number.isFinite(n) || n < 0 || n > 2) throw new Error(`--temperature must be a number between 0 and 2, got "${value}"`);
+        if (value.trim() === '' || !Number.isFinite(n) || n < 0 || n > 2)
+          throw new Error(`--temperature must be a number between 0 and 2, got "${value}"`);
         args.temperature = n;
         break;
       }
@@ -305,7 +355,8 @@ export function parseArgs(argv: string[]): CliArgs {
         throw new Error(`Unknown flag --${key}`);
     }
   }
-  if (!args.provider) throw new Error(`--provider is required (one of: ${VALID_PROVIDERS.join(', ')})`);
+  if (!args.provider)
+    throw new Error(`--provider is required (one of: ${VALID_PROVIDERS.join(', ')})`);
   return args;
 }
 
@@ -313,7 +364,11 @@ export function parseArgs(argv: string[]): CliArgs {
  * The whole command line: parses, runs, and turns every outcome into an exit code (0 criteria met or --no-fail,
  * 1 criteria not met, 2 usage or configuration error, with the reason on stderr).
  */
-export async function cli(argv: string[], evalsDir: string, env: NodeJS.ProcessEnv = process.env): Promise<number> {
+export async function cli(
+  argv: string[],
+  evalsDir: string,
+  env: NodeJS.ProcessEnv = process.env
+): Promise<number> {
   let args: CliArgs;
   try {
     args = parseArgs(argv);

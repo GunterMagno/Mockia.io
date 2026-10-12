@@ -5,7 +5,9 @@ jest.mock('../models/User.js', () => ({
   UserModel: { findOneAndUpdate: jest.fn(), findById: jest.fn() },
 }));
 jest.mock('../models/Project.js', () => ({ ProjectModel: { countDocuments: jest.fn() } }));
-jest.mock('../models/Usage.js', () => ({ UsageModel: { findOne: jest.fn(), findOneAndUpdate: jest.fn() } }));
+jest.mock('../models/Usage.js', () => ({
+  UsageModel: { findOne: jest.fn(), findOneAndUpdate: jest.fn() },
+}));
 jest.mock('../middlewares/authenticateToken.js', () => ({
   authenticateToken: (req: any, _res: unknown, next: () => void) => {
     req.user = { id: 'aaaaaaaaaaaaaaaaaaaaaaaa' };
@@ -17,7 +19,10 @@ import { UserModel } from '../models/User.js';
 import { errorHandler } from '../middlewares/errorHandler.js';
 import { billingRouter } from '../modules/billing/routes.js';
 import { createCheckoutSession } from '../modules/billing/service.js';
-import { TERMS_ACCEPTANCE_MESSAGES, stripeCheckoutLocale } from '../modules/billing/checkoutText.js';
+import {
+  TERMS_ACCEPTANCE_MESSAGES,
+  stripeCheckoutLocale,
+} from '../modules/billing/checkoutText.js';
 
 const findById = UserModel.findById as unknown as jest.Mock;
 const UID = 'aaaaaaaaaaaaaaaaaaaaaaaa';
@@ -36,7 +41,11 @@ beforeEach(() => {
   process.env.STRIPE_SECRET_KEY = 'sk_test_123';
   process.env.STRIPE_PRICE_PRO = 'price_pro';
   process.env.APP_URL = 'https://app.mockia.test/';
-  fetchMock = jest.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ id: 'cs_1', url: 'https://checkout.stripe.com/c/cs_1' }) });
+  fetchMock = jest.fn().mockResolvedValue({
+    ok: true,
+    status: 200,
+    json: async () => ({ id: 'cs_1', url: 'https://checkout.stripe.com/c/cs_1' }),
+  });
   (global as any).fetch = fetchMock;
   jest.spyOn(console, 'error').mockImplementation(() => undefined);
 });
@@ -46,7 +55,13 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-const base = { userId: UID, email: 'a@b.co', plan: 'pro' as const, secretKey: 'sk_test_123', priceId: 'price_pro' };
+const base = {
+  userId: UID,
+  email: 'a@b.co',
+  plan: 'pro' as const,
+  secretKey: 'sk_test_123',
+  priceId: 'price_pro',
+};
 const sentBody = (): URLSearchParams => fetchMock.mock.calls[0][1].body as URLSearchParams;
 
 describe('createCheckoutSession: impuestos, factura y consentimiento', () => {
@@ -104,15 +119,18 @@ describe('createCheckoutSession: impuestos, factura y consentimiento', () => {
     expect(stripeCheckoutLocale(undefined)).toBe('auto');
   });
 
-  it.each(['en', 'es', 'zh'])('custom_text[terms_of_service_acceptance][message] en %s: presente, <=1200 y con el enlace a /terms', async (locale) => {
-    await createCheckoutSession({ ...base, locale });
-    const message = sentBody().get('custom_text[terms_of_service_acceptance][message]');
-    expect(message).toBeTruthy();
-    expect(message!.length).toBeLessThanOrEqual(1200);
-    // APP_URL llega sin barra final aunque se configure con ella
-    expect(message).toContain('(https://app.mockia.test/terms)');
-    expect(message).not.toContain('test//terms');
-  });
+  it.each(['en', 'es', 'zh'])(
+    'custom_text[terms_of_service_acceptance][message] en %s: presente, <=1200 y con el enlace a /terms',
+    async (locale) => {
+      await createCheckoutSession({ ...base, locale });
+      const message = sentBody().get('custom_text[terms_of_service_acceptance][message]');
+      expect(message).toBeTruthy();
+      expect(message!.length).toBeLessThanOrEqual(1200);
+      // APP_URL llega sin barra final aunque se configure con ella
+      expect(message).toContain('(https://app.mockia.test/terms)');
+      expect(message).not.toContain('test//terms');
+    }
+  );
 
   it('el mensaje de desistimiento difiere por idioma y reconoce acceso inmediato y perdida de los 14 dias', () => {
     const url = 'https://app.mockia.test/terms';
@@ -129,7 +147,9 @@ describe('createCheckoutSession: impuestos, factura y consentimiento', () => {
 
   it('el locale sin soporte usa el mensaje en ingles', async () => {
     await createCheckoutSession({ ...base, locale: 'fr' as any });
-    expect(sentBody().get('custom_text[terms_of_service_acceptance][message]')).toMatch(/immediate/i);
+    expect(sentBody().get('custom_text[terms_of_service_acceptance][message]')).toMatch(
+      /immediate/i
+    );
   });
 
   it('se conservan los campos de siempre (modo, precio, referencias, metadatos)', async () => {
@@ -145,7 +165,17 @@ describe('createCheckoutSession: impuestos, factura y consentimiento', () => {
 
 describe('POST /api/billing/checkout: usa el idioma guardado del usuario', () => {
   it('envia locale y el mensaje en el idioma del usuario y customer_update solo con cliente', async () => {
-    findById.mockReturnValue({ select: () => ({ lean: () => Promise.resolve({ email: 'a@b.co', locale: 'es', stripeCustomerId: 'cus_9', plan: 'free' }) }) });
+    findById.mockReturnValue({
+      select: () => ({
+        lean: () =>
+          Promise.resolve({
+            email: 'a@b.co',
+            locale: 'es',
+            stripeCustomerId: 'cus_9',
+            plan: 'free',
+          }),
+      }),
+    });
     const res = await request(app).post('/api/billing/checkout').send({ plan: 'pro' });
     expect(res.status).toBe(200);
     const sent = sentBody();
@@ -155,7 +185,9 @@ describe('POST /api/billing/checkout: usa el idioma guardado del usuario', () =>
   });
 
   it('un usuario nuevo sin locale ni cliente: locale auto, customer_email y sin customer_update', async () => {
-    findById.mockReturnValue({ select: () => ({ lean: () => Promise.resolve({ email: 'a@b.co', plan: 'free' }) }) });
+    findById.mockReturnValue({
+      select: () => ({ lean: () => Promise.resolve({ email: 'a@b.co', plan: 'free' }) }),
+    });
     const res = await request(app).post('/api/billing/checkout').send({ plan: 'pro' });
     expect(res.status).toBe(200);
     const sent = sentBody();

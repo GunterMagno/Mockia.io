@@ -9,24 +9,23 @@ import { ErrorCode } from '@mockia/shared';
 
 /**
  * Extracts JSON from LLM output that may be wrapped in markdown or contain extra text
- * 
+ *
  * Handles cases like:
  * - Pure JSON: {"key": "value"}
  * - Markdown wrapped: ```json\n{"key": "value"}\n```
  * - Text with JSON: "Here's the JSON: {...}"
- * 
+ *
  * @param rawOutput - The raw text output from the LLM
  * @param options - `silent` skips the error log (the eval bench scores many broken answers on purpose)
  * @returns Parsed JSON object
  * @throws AppError if JSON cannot be extracted or parsed
  */
-export function extractJsonFromLLMOutput(rawOutput: string, options: { silent?: boolean } = {}): unknown {
+export function extractJsonFromLLMOutput(
+  rawOutput: string,
+  options: { silent?: boolean } = {}
+): unknown {
   if (!rawOutput || typeof rawOutput !== 'string') {
-    throw new AppError(
-      'Invalid input: expected non-empty string',
-      ErrorCode.VALIDATION_ERROR,
-      400
-    );
+    throw new AppError('Invalid input: expected non-empty string', ErrorCode.VALIDATION_ERROR, 400);
   }
 
   if (rawOutput.length > MAX_LLM_OUTPUT_CHARS) {
@@ -39,7 +38,10 @@ export function extractJsonFromLLMOutput(rawOutput: string, options: { silent?: 
   // Antes solo se probaba UN candidato: un bloque de codigo no-JSON o un array rompian el parseo.
   const candidates: string[] = [];
   for (const m of text.matchAll(/```[a-zA-Z]*\s*([\s\S]*?)```/g)) candidates.push(m[1].trim());
-  for (const [open, close] of [['{', '}'], ['[', ']']] as const) {
+  for (const [open, close] of [
+    ['{', '}'],
+    ['[', ']'],
+  ] as const) {
     const first = text.indexOf(open);
     const last = text.lastIndexOf(close);
     if (first !== -1 && last > first) candidates.push(text.substring(first, last + 1));
@@ -60,7 +62,9 @@ export function extractJsonFromLLMOutput(rawOutput: string, options: { silent?: 
   // Never log or return a snippet of the model output (it can echo repository content); the length is enough to debug
   if (!options.silent) console.error(`Failed to parse extracted JSON (${text.length} chars)`);
   throw new AppError(
-    lastError instanceof Error ? 'Failed to parse AI output as JSON' : 'Failed to parse AI output as JSON: no JSON object or array found',
+    lastError instanceof Error
+      ? 'Failed to parse AI output as JSON'
+      : 'Failed to parse AI output as JSON: no JSON object or array found',
     ErrorCode.INTERNAL_SERVER_ERROR,
     500
   );
@@ -71,7 +75,7 @@ const MAX_LLM_OUTPUT_CHARS = 2_000_000;
 /**
  * Safety wrapper that returns null instead of throwing if JSON extraction fails
  * Useful for non-critical parsing attempts
- * 
+ *
  * @param rawOutput - The raw text output from the LLM
  * @returns Parsed JSON object or null if parsing failed
  */

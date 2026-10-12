@@ -17,7 +17,8 @@ const spec = (examples: unknown[]) => ({
   endpoints: [{ path: '/members/:id', method: 'GET', description: 'Get a member', examples }],
   dataModels: [],
 });
-const healed = (examples: unknown[]) => validateGeneratedApi(spec(examples)).endpoints[0].examples as Array<Record<string, unknown>>;
+const healed = (examples: unknown[]) =>
+  validateGeneratedApi(spec(examples)).endpoints[0].examples as Array<Record<string, unknown>>;
 
 describe('validateGeneratedApi keeps the status of an example', () => {
   it('keeps a valid integer statusCode on a wrapped example', () => {
@@ -33,14 +34,21 @@ describe('validateGeneratedApi keeps the status of an example', () => {
   });
 
   it('statusCode wins over status; an invalid statusCode falls back to a valid status', () => {
-    expect(healed([{ request: {}, response: {}, statusCode: 400, status: 500 }])[0].statusCode).toBe(400);
-    expect(healed([{ request: {}, response: {}, statusCode: 'x', status: 500 }])[0].statusCode).toBe(500);
+    expect(
+      healed([{ request: {}, response: {}, statusCode: 400, status: 500 }])[0].statusCode
+    ).toBe(400);
+    expect(
+      healed([{ request: {}, response: {}, statusCode: 'x', status: 500 }])[0].statusCode
+    ).toBe(500);
   });
 
-  it.each([99, 600, 404.5, '404', null, true, NaN, -1, 0])('drops an invalid status %p (the example stays valid)', (bad) => {
-    const [example] = healed([{ request: {}, response: { id: 1 }, statusCode: bad }]);
-    expect(example).toEqual({ request: {}, response: { id: 1 } });
-  });
+  it.each([99, 600, 404.5, '404', null, true, NaN, -1, 0])(
+    'drops an invalid status %p (the example stays valid)',
+    (bad) => {
+      const [example] = healed([{ request: {}, response: { id: 1 }, statusCode: bad }]);
+      expect(example).toEqual({ request: {}, response: { id: 1 } });
+    }
+  );
 
   it('accepts the whole 100-599 range at its edges', () => {
     expect(healed([{ request: {}, response: {}, statusCode: 100 }])[0].statusCode).toBe(100);
@@ -61,7 +69,9 @@ describe('validateGeneratedApi keeps the status of an example', () => {
   });
 
   it('a flat example (no request/response wrapper) is still wrapped as before, its fields are the response', () => {
-    expect(healed([{ id: 1, name: 'Ada' }])).toEqual([{ request: {}, response: { id: 1, name: 'Ada' } }]);
+    expect(healed([{ id: 1, name: 'Ada' }])).toEqual([
+      { request: {}, response: { id: 1, name: 'Ada' } },
+    ]);
   });
 });
 
@@ -80,7 +90,9 @@ describe('saved responses keep the example status', () => {
     await connectDB();
   });
   afterAll(async () => {
-    await Promise.all([MockAPIModel, EndpointModel, ResponseModel].map((m) => (m as any).deleteMany({})));
+    await Promise.all(
+      [MockAPIModel, EndpointModel, ResponseModel].map((m) => (m as any).deleteMany({}))
+    );
     await disconnectDB();
   });
 
@@ -97,7 +109,11 @@ describe('saved responses keep the example status', () => {
     expect(result.responsesCreated).toBe(3);
 
     const endpoint = await EndpointModel.findOne({ path: '/members/:id' }).populate('responses');
-    const codes = (endpoint!.responses as unknown as Array<{ statusCode: number; examples: unknown[] }>).map((r) => r.statusCode).sort();
+    const codes = (
+      endpoint!.responses as unknown as Array<{ statusCode: number; examples: unknown[] }>
+    )
+      .map((r) => r.statusCode)
+      .sort();
     expect(codes).toEqual([200, 401, 404]);
     jest.restoreAllMocks();
   });

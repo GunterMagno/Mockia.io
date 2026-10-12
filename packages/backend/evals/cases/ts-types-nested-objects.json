@@ -1,10 +1,7 @@
 {
   "id": "ts-types-nested-objects",
   "description": "Interfaces with nested objects: only top-level field names are compared.",
-  "tags": [
-    "typescript-types",
-    "path-params"
-  ],
+  "tags": ["typescript-types", "path-params"],
   "input": {
     "projectTitle": "Clinic Appointments",
     "userInput": "Mock appointments: list, get by id and create.",
@@ -33,19 +30,11 @@
           "interfaces": [
             {
               "name": "Patient",
-              "properties": [
-                "id: string",
-                "fullName: string",
-                "phone: string"
-              ]
+              "properties": ["id: string", "fullName: string", "phone: string"]
             },
             {
               "name": "Doctor",
-              "properties": [
-                "id: string",
-                "fullName: string",
-                "specialty: string"
-              ]
+              "properties": ["id: string", "fullName: string", "specialty: string"]
             },
             {
               "name": "Appointment",
@@ -93,11 +82,7 @@
                   "type": "string"
                 }
               },
-              "required": [
-                "id",
-                "fullName",
-                "phone"
-              ]
+              "required": ["id", "fullName", "phone"]
             },
             "doctor": {
               "type": "object",
@@ -112,11 +97,7 @@
                   "type": "string"
                 }
               },
-              "required": [
-                "id",
-                "fullName",
-                "specialty"
-              ]
+              "required": ["id", "fullName", "specialty"]
             },
             "slot": {
               "type": "object",
@@ -128,22 +109,13 @@
                   "type": "string"
                 }
               },
-              "required": [
-                "start",
-                "end"
-              ]
+              "required": ["start", "end"]
             },
             "status": {
               "type": "string"
             }
           },
-          "required": [
-            "id",
-            "patient",
-            "doctor",
-            "slot",
-            "status"
-          ]
+          "required": ["id", "patient", "doctor", "slot", "status"]
         }
       },
       "examples": [
@@ -200,11 +172,7 @@
                 "type": "string"
               }
             },
-            "required": [
-              "id",
-              "fullName",
-              "phone"
-            ]
+            "required": ["id", "fullName", "phone"]
           },
           "doctor": {
             "type": "object",
@@ -219,11 +187,7 @@
                 "type": "string"
               }
             },
-            "required": [
-              "id",
-              "fullName",
-              "specialty"
-            ]
+            "required": ["id", "fullName", "specialty"]
           },
           "slot": {
             "type": "object",
@@ -235,22 +199,13 @@
                 "type": "string"
               }
             },
-            "required": [
-              "start",
-              "end"
-            ]
+            "required": ["start", "end"]
           },
           "status": {
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "patient",
-          "doctor",
-          "slot",
-          "status"
-        ]
+        "required": ["id", "patient", "doctor", "slot", "status"]
       },
       "examples": [
         {
@@ -293,11 +248,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "patientId",
-          "doctorId",
-          "start"
-        ]
+        "required": ["patientId", "doctorId", "start"]
       },
       "responseSchema": {
         "type": "object",
@@ -318,11 +269,7 @@
                 "type": "string"
               }
             },
-            "required": [
-              "id",
-              "fullName",
-              "phone"
-            ]
+            "required": ["id", "fullName", "phone"]
           },
           "doctor": {
             "type": "object",
@@ -337,11 +284,7 @@
                 "type": "string"
               }
             },
-            "required": [
-              "id",
-              "fullName",
-              "specialty"
-            ]
+            "required": ["id", "fullName", "specialty"]
           },
           "slot": {
             "type": "object",
@@ -353,22 +296,13 @@
                 "type": "string"
               }
             },
-            "required": [
-              "start",
-              "end"
-            ]
+            "required": ["start", "end"]
           },
           "status": {
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "patient",
-          "doctor",
-          "slot",
-          "status"
-        ]
+        "required": ["id", "patient", "doctor", "slot", "status"]
       },
       "examples": [
         {

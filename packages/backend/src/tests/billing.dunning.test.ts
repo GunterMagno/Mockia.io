@@ -24,7 +24,11 @@ const sign = (body: string) => {
 };
 const send = (event: object) => {
   const body = JSON.stringify(event);
-  return request(app).post('/api/billing/webhook').set('Content-Type', 'application/json').set('Stripe-Signature', sign(body)).send(body);
+  return request(app)
+    .post('/api/billing/webhook')
+    .set('Content-Type', 'application/json')
+    .set('Stripe-Signature', sign(body))
+    .send(body);
 };
 
 let seq = 0;
@@ -32,7 +36,14 @@ const failedInvoice = (invoice: string, created: number, id = `evt_f_${++seq}`) 
   id,
   created,
   type: 'invoice.payment_failed',
-  data: { object: { id: invoice, customer: 'cus_dun', subscription: 'sub_dun', billing_reason: 'subscription_cycle' } },
+  data: {
+    object: {
+      id: invoice,
+      customer: 'cus_dun',
+      subscription: 'sub_dun',
+      billing_reason: 'subscription_cycle',
+    },
+  },
 });
 const paidInvoice = (invoice: string, created: number, type = 'invoice.paid') => ({
   id: `evt_p_${++seq}`,
@@ -97,8 +108,14 @@ describe('Impagos: periodo de gracia, avisos y recuperacion (MongoDB real)', () 
     expect(user?.lastPaymentFailedInvoiceId).toBe('in_1');
 
     expect(mails()).toHaveLength(1);
-    expect(mails()[0]).toMatchObject({ to: 'dun@example.com', locale: 'es', link: 'https://app.mockia.test/billing' });
-    const graceEnd = new Intl.DateTimeFormat('es', { dateStyle: 'long', timeZone: 'UTC' }).format(new Date((t0 + 7 * DAY) * 1000));
+    expect(mails()[0]).toMatchObject({
+      to: 'dun@example.com',
+      locale: 'es',
+      link: 'https://app.mockia.test/billing',
+    });
+    const graceEnd = new Intl.DateTimeFormat('es', { dateStyle: 'long', timeZone: 'UTC' }).format(
+      new Date((t0 + 7 * DAY) * 1000)
+    );
     expect(mails()[0].text).toContain(graceEnd);
 
     const list = await notices();
@@ -139,14 +156,22 @@ describe('Impagos: periodo de gracia, avisos y recuperacion (MongoDB real)', () 
     expect(effectivePlan(user)).toBe('pro');
     expect(await getUserPlan(userId)).toBe('pro');
     const inGrace = await getBillingOverview(userId);
-    expect(inGrace).toMatchObject({ plan: 'pro', subscribedPlan: 'pro', billingStatus: 'past_due' });
+    expect(inGrace).toMatchObject({
+      plan: 'pro',
+      subscribedPlan: 'pro',
+      billingStatus: 'past_due',
+    });
     expect(inGrace.pastDueUntil).toBe(new Date((t0 + 7 * DAY) * 1000).toISOString());
 
     // day 7.1: same row, later clock
     const later = t0 * 1000 + 7.1 * DAY * 1000;
     expect(effectivePlan(user, later)).toBe('free');
     const afterGrace = await getBillingOverview(userId, new Date(later));
-    expect(afterGrace).toMatchObject({ plan: 'free', subscribedPlan: 'pro', billingStatus: 'past_due' });
+    expect(afterGrace).toMatchObject({
+      plan: 'free',
+      subscribedPlan: 'pro',
+      billingStatus: 'past_due',
+    });
   });
 
   it('a payment that finally goes through (invoice.paid) restores active and ends the sequence; a later failure notifies again', async () => {
@@ -155,7 +180,11 @@ describe('Impagos: periodo de gracia, avisos y recuperacion (MongoDB real)', () 
     await send(paidInvoice('in_1', t0 + 3 * DAY));
 
     let user = await reload();
-    expect(user).toMatchObject({ billingStatus: 'active', pastDueSince: null, lastPaymentFailedInvoiceId: null });
+    expect(user).toMatchObject({
+      billingStatus: 'active',
+      pastDueSince: null,
+      lastPaymentFailedInvoiceId: null,
+    });
     expect(effectivePlan(user!)).toBe('pro');
 
     // invoice.payment_succeeded for the same payment is a no-op
@@ -176,14 +205,21 @@ describe('Impagos: periodo de gracia, avisos y recuperacion (MongoDB real)', () 
     const t0 = nowSec() - 5 * DAY;
     await send(failedInvoice('in_1', t0));
     await send(subscriptionEvent('active', t0 + 2 * DAY));
-    expect(await reload()).toMatchObject({ billingStatus: 'active', pastDueSince: null, lastPaymentFailedInvoiceId: null });
+    expect(await reload()).toMatchObject({
+      billingStatus: 'active',
+      pastDueSince: null,
+      lastPaymentFailedInvoiceId: null,
+    });
   });
 
   it('an unrelated invoice paid while the failed one is still open does not restore the plan', async () => {
     const t0 = nowSec() - 2 * DAY;
     await send(failedInvoice('in_1', t0));
     await send(paidInvoice('in_other', t0 + 3600));
-    expect(await reload()).toMatchObject({ billingStatus: 'past_due', lastPaymentFailedInvoiceId: 'in_1' });
+    expect(await reload()).toMatchObject({
+      billingStatus: 'past_due',
+      lastPaymentFailedInvoiceId: 'in_1',
+    });
   });
 
   it('subscription.updated(past_due) arriving before invoice.payment_failed still gets the user ONE email, and one grace period', async () => {
@@ -199,7 +235,10 @@ describe('Impagos: periodo de gracia, avisos y recuperacion (MongoDB real)', () 
   });
 
   it('an unpaid / incomplete subscription gets no grace period (it never had a paid, failing renewal)', async () => {
-    await UserModel.updateOne({ _id: userId }, { $set: { plan: 'free', stripeSubscriptionId: undefined } });
+    await UserModel.updateOne(
+      { _id: userId },
+      { $set: { plan: 'free', stripeSubscriptionId: undefined } }
+    );
     await send(subscriptionEvent('incomplete', nowSec() - 60));
     const user = await reload();
     expect(user?.billingStatus).toBe('past_due');
@@ -217,7 +256,10 @@ describe('Impagos: periodo de gracia, avisos y recuperacion (MongoDB real)', () 
   });
 
   it('a user that is not on a paid plan is not moved to past_due by a stray failed invoice', async () => {
-    await UserModel.updateOne({ _id: userId }, { $set: { plan: 'free', billingStatus: 'canceled' } });
+    await UserModel.updateOne(
+      { _id: userId },
+      { $set: { plan: 'free', billingStatus: 'canceled' } }
+    );
     const res = await send(failedInvoice('in_x', nowSec() - 60));
     expect(res.status).toBe(200);
     expect(res.body.result).toBe('ignored');
@@ -228,8 +270,18 @@ describe('Impagos: periodo de gracia, avisos y recuperacion (MongoDB real)', () 
   it('cancellation ends the sequence', async () => {
     const t0 = nowSec() - 9 * DAY;
     await send(failedInvoice('in_1', t0));
-    await send({ id: 'evt_del', created: t0 + 8 * DAY, type: 'customer.subscription.deleted', data: { object: { id: 'sub_dun', customer: 'cus_dun' } } });
-    expect(await reload()).toMatchObject({ plan: 'free', billingStatus: 'canceled', pastDueSince: null, lastPaymentFailedInvoiceId: null });
+    await send({
+      id: 'evt_del',
+      created: t0 + 8 * DAY,
+      type: 'customer.subscription.deleted',
+      data: { object: { id: 'sub_dun', customer: 'cus_dun' } },
+    });
+    expect(await reload()).toMatchObject({
+      plan: 'free',
+      billingStatus: 'canceled',
+      pastDueSince: null,
+      lastPaymentFailedInvoiceId: null,
+    });
   });
 
   it('trial_will_end emails once and refunds leave only an in-app notice', async () => {
@@ -314,7 +366,10 @@ describe('Impagos: periodo de gracia, avisos y recuperacion (MongoDB real)', () 
       const T = nowSec() - 120;
       await send(refund(T));
       await send(failedInvoice('in_late', T - 30));
-      expect(await reload()).toMatchObject({ billingStatus: 'past_due', pastDueSince: new Date((T - 30) * 1000) });
+      expect(await reload()).toMatchObject({
+        billingStatus: 'past_due',
+        pastDueSince: new Date((T - 30) * 1000),
+      });
       expect(mails()).toHaveLength(1);
     });
 
@@ -350,7 +405,9 @@ describe('Impagos: periodo de gracia, avisos y recuperacion (MongoDB real)', () 
       id: `evt_ghost_${created}`,
       created,
       type: 'invoice.payment_failed',
-      data: { object: { id: 'in_g', customer: 'cus_nobody', billing_reason: 'subscription_cycle' } },
+      data: {
+        object: { id: 'in_g', customer: 'cus_nobody', billing_reason: 'subscription_cycle' },
+      },
     });
     const young = await send(ghost(nowSec() - 120));
     expect(young.status).toBe(500);

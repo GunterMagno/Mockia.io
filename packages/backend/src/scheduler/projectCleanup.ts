@@ -40,9 +40,7 @@ export function startProjectCleanupScheduler(): void {
     console.log('Project cleanup scheduler: RUNNING IN DEVELOPMENT MODE');
     console.log('Running cleanup every 30 minutes for testing');
   } else {
-    console.log(
-      `Project cleanup scheduler: Starting (runs daily at ${CLEANUP_HOUR}:00 AM)`
-    );
+    console.log(`Project cleanup scheduler: Starting (runs daily at ${CLEANUP_HOUR}:00 AM)`);
   }
 
   // Initial delay calculation

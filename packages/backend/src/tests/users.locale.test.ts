@@ -24,7 +24,11 @@ describe('Users - saved language (PATCH /api/users/me/preferences)', () => {
   beforeEach(async () => {
     await UserModel.deleteMany({});
     await RefreshSessionModel.deleteMany({});
-    await UserModel.create({ email: EMAIL, username: 'localeuser', passwordHash: await bcrypt.hash(PASSWORD, 12) });
+    await UserModel.create({
+      email: EMAIL,
+      username: 'localeuser',
+      passwordHash: await bcrypt.hash(PASSWORD, 12),
+    });
   });
 
   afterAll(async () => {
@@ -35,7 +39,10 @@ describe('Users - saved language (PATCH /api/users/me/preferences)', () => {
 
   it('saves "es" and answers it', async () => {
     const { auth } = await login();
-    const res = await request(app).patch('/api/users/me/preferences').set(auth).send({ locale: 'es' });
+    const res = await request(app)
+      .patch('/api/users/me/preferences')
+      .set(auth)
+      .send({ locale: 'es' });
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ locale: 'es' });
     expect((await UserModel.findOne({ email: EMAIL }))?.locale).toBe('es');
@@ -69,7 +76,12 @@ describe('Users - saved language (PATCH /api/users/me/preferences)', () => {
   });
 
   it('only touches the caller (another user keeps their language)', async () => {
-    await UserModel.create({ email: 'other@example.com', username: 'other', passwordHash: 'x', locale: 'zh' });
+    await UserModel.create({
+      email: 'other@example.com',
+      username: 'other',
+      passwordHash: 'x',
+      locale: 'zh',
+    });
     const { auth } = await login();
     await request(app).patch('/api/users/me/preferences').set(auth).send({ locale: 'es' });
     expect((await UserModel.findOne({ email: 'other@example.com' }))?.locale).toBe('zh');

@@ -129,7 +129,7 @@
   font-size: var(--text-base);
   font-weight: 600;
   cursor: pointer;
-  
+
   &:hover {
     opacity: 0.9;
   }
@@ -141,7 +141,7 @@
   font-size: 1.8rem;
   color: var(--color-text);
   cursor: pointer;
-  
+
   &:hover {
     text-decoration: underline;
   }
@@ -155,7 +155,9 @@
   font-size: 1.8rem;
   min-width: 200px;
   cursor: pointer;
-  transition: background-color var(--transition-fast), transform 0.1s;
+  transition:
+    background-color var(--transition-fast),
+    transform 0.1s;
 
   &:hover:not(:disabled) {
     background-color: var(--color-accent-solid-hover);
@@ -164,7 +166,7 @@
   &:active:not(:disabled) {
     transform: scale(0.98);
   }
-  
+
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
@@ -175,18 +177,18 @@
   .passwordGrid {
     grid-template-columns: 1fr;
   }
-  
+
   .actions {
     flex-direction: column-reverse;
     gap: var(--spacing-6);
   }
-  
+
   .rightActions {
     width: 100%;
     flex-direction: column-reverse;
     gap: var(--spacing-4);
   }
-  
+
   .saveBtn {
     width: 100%;
   }
@@ -208,6 +210,11 @@
   text-decoration: none;
   transition: border-color var(--transition-fast);
 
-  &:hover { border-color: var(--color-border-strong); }
-  &:focus-visible { outline: 2px solid var(--color-accent-text); outline-offset: 2px; }
+  &:hover {
+    border-color: var(--color-border-strong);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--color-accent-text);
+    outline-offset: 2px;
+  }
 }

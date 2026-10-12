@@ -11,7 +11,13 @@ import { UsageModel } from '../models/Usage.js';
 import { mockCache } from '../modules/mock/mockCache.service.js';
 import { apiKeyMatches, hashApiKey } from '../modules/mock/mockAuth.js';
 import { PLAN_LIMITS, invalidatePlanCache } from '../modules/billing/plans.js';
-import { flushUsage, getMonthlyUsage, nextPeriodStart, periodOf, resetUsage } from '../modules/billing/usage.js';
+import {
+  flushUsage,
+  getMonthlyUsage,
+  nextPeriodStart,
+  periodOf,
+  resetUsage,
+} from '../modules/billing/usage.js';
 import { mockClock } from '../middlewares/planGate.js';
 import { migrateLegacyApiKeys } from '../modules/projects/apiKeyMigration.js';
 import { exportUserData } from '../modules/users/gdpr.js';
@@ -27,35 +33,71 @@ const unique = (prefix: string) => `${prefix}${Date.now().toString(36)}${(counte
 async function createUser(over: Record<string, unknown> = {}) {
   const name = unique('u');
   const email = `${name}@example.com`;
-  const user = await UserModel.create({ email, username: name, passwordHash: await bcrypt.hash(PASSWORD, 4), ...over });
+  const user = await UserModel.create({
+    email,
+    username: name,
+    passwordHash: await bcrypt.hash(PASSWORD, 4),
+    ...over,
+  });
   const res = await request(app).post('/api/auth/login').send({ email, password: PASSWORD });
   expect(res.status).toBe(200);
-  return { user, email, auth: { Authorization: `Bearer ${res.body.data.tokens.accessToken as string}` } };
+  return {
+    user,
+    email,
+    auth: { Authorization: `Bearer ${res.body.data.tokens.accessToken as string}` },
+  };
 }
 
 /** Project with one endpoint `GET /users`, created straight in the DB. */
-async function seedProject(ownerId: Types.ObjectId, extra: Record<string, unknown> = {}, members: Array<{ userId: Types.ObjectId; role: ProjectRoleEnum }> = []) {
+async function seedProject(
+  ownerId: Types.ObjectId,
+  extra: Record<string, unknown> = {},
+  members: Array<{ userId: Types.ObjectId; role: ProjectRoleEnum }> = []
+) {
   const slug = unique('proj');
   const project = await ProjectModel.create({
     title: `Project ${slug}`,
     slug,
     ownerId,
-    members: [{ userId: ownerId, role: ProjectRoleEnum.OWNER, addedAt: new Date() }, ...members.map((m) => ({ ...m, addedAt: new Date() }))],
+    members: [
+      { userId: ownerId, role: ProjectRoleEnum.OWNER, addedAt: new Date() },
+      ...members.map((m) => ({ ...m, addedAt: new Date() })),
+    ],
     ...extra,
   });
-  const mockApi = await MockAPIModel.create({ projectId: project._id, title: slug, apiVersion: '1.0.0' });
-  const response = await ResponseModel.create({ statusCode: 200, description: 'ok', schema: { users: ['ana'] }, examples: [] });
-  const endpoint = await EndpointModel.create({ path: '/users', method: 'GET', description: 'users', responses: [response._id], mockApiId: mockApi._id });
+  const mockApi = await MockAPIModel.create({
+    projectId: project._id,
+    title: slug,
+    apiVersion: '1.0.0',
+  });
+  const response = await ResponseModel.create({
+    statusCode: 200,
+    description: 'ok',
+    schema: { users: ['ana'] },
+    examples: [],
+  });
+  const endpoint = await EndpointModel.create({
+    path: '/users',
+    method: 'GET',
+    description: 'users',
+    responses: [response._id],
+    mockApiId: mockApi._id,
+  });
   await MockAPIModel.updateOne({ _id: mockApi._id }, { endpoints: [endpoint._id] });
   return project;
 }
 
 /** Project that requires `key` (its hash is stored, like the API does). */
 const seedPrivate = (ownerId: Types.ObjectId, key: string) =>
-  seedProject(ownerId, { visibility: 'key', apiKeyHash: hashApiKey(key), apiKeyPrefix: key.slice(0, 9) });
+  seedProject(ownerId, {
+    visibility: 'key',
+    apiKeyHash: hashApiKey(key),
+    apiKeyPrefix: key.slice(0, 9),
+  });
 
 const mockUrl = (slug: string, path = '/users') => `/api/mock/${slug}${path}`;
-const rawProject = (id: unknown) => ProjectModel.collection.findOne({ _id: new Types.ObjectId(String(id)) });
+const rawProject = (id: unknown) =>
+  ProjectModel.collection.findOne({ _id: new Types.ObjectId(String(id)) });
 
 beforeAll(async () => {
   await connectDB();
@@ -84,7 +126,10 @@ beforeEach(async () => {
 describe('acceso a un mock con visibilidad "key"', () => {
   it('sin clave responde 401 con el formato de error del mock y sin WWW-Authenticate', async () => {
     const owner = await createUser();
-    const project = await seedPrivate(owner.user._id as Types.ObjectId, 'mk_correct-key-0123456789');
+    const project = await seedPrivate(
+      owner.user._id as Types.ObjectId,
+      'mk_correct-key-0123456789'
+    );
     const res = await request(app).get(mockUrl(project.slug));
     expect(res.status).toBe(401);
     expect(res.headers['www-authenticate']).toBeUndefined();
@@ -100,7 +145,9 @@ describe('acceso a un mock con visibilidad "key"', () => {
     const api = await request(app).get(mockUrl(project.slug)).set('X-Mockia-API-Key', key);
     expect(api.status).toBe(200);
     expect(api.body).toEqual({ users: ['ana'] });
-    const short = await request(app).get(`/mock/${project.slug}/users`).set('X-Mockia-API-Key', key);
+    const short = await request(app)
+      .get(`/mock/${project.slug}/users`)
+      .set('X-Mockia-API-Key', key);
     expect(short.status).toBe(200);
   });
 
@@ -120,7 +167,10 @@ describe('acceso a un mock con visibilidad "key"', () => {
     ['vacia', ''],
   ])('clave incorrecta (%s) responde 401', async (_label, wrong) => {
     const owner = await createUser();
-    const project = await seedPrivate(owner.user._id as Types.ObjectId, 'mk_correct-key-0123456789');
+    const project = await seedPrivate(
+      owner.user._id as Types.ObjectId,
+      'mk_correct-key-0123456789'
+    );
     const res = await request(app).get(mockUrl(project.slug)).set('X-Mockia-API-Key', wrong);
     expect(res.status).toBe(401);
     expect(res.body.error.code).toBe('UNAUTHORIZED');
@@ -143,7 +193,9 @@ describe('acceso a un mock con visibilidad "key"', () => {
     const owner = await createUser();
     const project = await seedProject(owner.user._id as Types.ObjectId, { visibility: 'key' });
     expect((await request(app).get(mockUrl(project.slug))).status).toBe(401);
-    expect((await request(app).get(mockUrl(project.slug)).set('X-Mockia-API-Key', '')).status).toBe(401);
+    expect((await request(app).get(mockUrl(project.slug)).set('X-Mockia-API-Key', '')).status).toBe(
+      401
+    );
   });
 
   it('un proyecto publico (o antiguo, sin el campo) responde sin clave e ignora la cabecera', async () => {
@@ -153,13 +205,18 @@ describe('acceso a un mock con visibilidad "key"', () => {
     await ProjectModel.collection.updateOne({ _id: legacy._id }, { $unset: { visibility: '' } });
     mockCache.clearAll();
     expect((await request(app).get(mockUrl(pub.slug))).status).toBe(200);
-    expect((await request(app).get(mockUrl(pub.slug)).set('X-Mockia-API-Key', 'whatever')).status).toBe(200);
+    expect(
+      (await request(app).get(mockUrl(pub.slug)).set('X-Mockia-API-Key', 'whatever')).status
+    ).toBe(200);
     expect((await request(app).get(mockUrl(legacy.slug))).status).toBe(200);
   });
 
   it('el preflight CORS no exige la clave, permite la cabecera y no cuenta', async () => {
     const owner = await createUser();
-    const project = await seedPrivate(owner.user._id as Types.ObjectId, 'mk_correct-key-0123456789');
+    const project = await seedPrivate(
+      owner.user._id as Types.ObjectId,
+      'mk_correct-key-0123456789'
+    );
     const res = await request(app)
       .options(mockUrl(project.slug))
       .set('Origin', 'https://app.example.com')
@@ -167,17 +224,29 @@ describe('acceso a un mock con visibilidad "key"', () => {
       .set('Access-Control-Request-Headers', 'x-mockia-api-key, x-mockia-key, content-type');
     expect(res.status).toBeLessThan(300);
     expect(res.headers['access-control-allow-origin']).toBe('*');
-    expect(res.headers['access-control-allow-headers'].toLowerCase()).toEqual(expect.stringContaining('x-mockia-api-key'));
-    expect(res.headers['access-control-allow-headers'].toLowerCase()).toEqual(expect.stringContaining('x-mockia-key'));
+    expect(res.headers['access-control-allow-headers'].toLowerCase()).toEqual(
+      expect.stringContaining('x-mockia-api-key')
+    );
+    expect(res.headers['access-control-allow-headers'].toLowerCase()).toEqual(
+      expect.stringContaining('x-mockia-key')
+    );
     expect(await getMonthlyUsage(owner.user._id.toString())).toBe(0);
   });
 
   it('las respuestas del mock exponen a los navegadores las cabeceras de limite', async () => {
     const owner = await createUser();
     const project = await seedProject(owner.user._id as Types.ObjectId);
-    const res = await request(app).get(mockUrl(project.slug)).set('Origin', 'https://app.example.com');
+    const res = await request(app)
+      .get(mockUrl(project.slug))
+      .set('Origin', 'https://app.example.com');
     const exposed = String(res.headers['access-control-expose-headers']).toLowerCase();
-    for (const h of ['x-ratelimit-limit', 'x-ratelimit-remaining', 'x-ratelimit-reset', 'retry-after']) expect(exposed).toContain(h);
+    for (const h of [
+      'x-ratelimit-limit',
+      'x-ratelimit-remaining',
+      'x-ratelimit-reset',
+      'retry-after',
+    ])
+      expect(exposed).toContain(h);
   });
 });
 
@@ -201,24 +270,36 @@ describe('cuota mensual de peticiones al mock', () => {
   it('superado el tope del plan Free responde 429 con Retry-After y cabeceras, y no cuenta la rechazada', async () => {
     const owner = await createUser();
     const project = await seedProject(owner.user._id as Types.ObjectId);
-    await UsageModel.create({ ownerId: owner.user._id, period: periodOf(new Date()), requests: FREE_LIMIT - 1 });
+    await UsageModel.create({
+      ownerId: owner.user._id,
+      period: periodOf(new Date()),
+      requests: FREE_LIMIT - 1,
+    });
 
     const last = await request(app).get(mockUrl(project.slug));
     expect(last.status).toBe(200);
     expect(last.headers['x-ratelimit-remaining']).toBe('0');
 
-    const over = await request(app).get(mockUrl(project.slug)).set('Origin', 'https://app.example.com');
+    const over = await request(app)
+      .get(mockUrl(project.slug))
+      .set('Origin', 'https://app.example.com');
     expect(over.status).toBe(429);
     expect(over.body).toMatchObject({ success: false, error: { code: 'QUOTA_EXCEEDED' } });
     const now = Date.now();
     const retry = Number(over.headers['retry-after']);
     expect(retry).toBeGreaterThan(0);
-    expect(Math.abs(retry - Math.ceil((nextPeriodStart(new Date()).getTime() - now) / 1000))).toBeLessThanOrEqual(5);
+    expect(
+      Math.abs(retry - Math.ceil((nextPeriodStart(new Date()).getTime() - now) / 1000))
+    ).toBeLessThanOrEqual(5);
     expect(over.headers['x-ratelimit-limit']).toBe(String(FREE_LIMIT));
     expect(over.headers['x-ratelimit-remaining']).toBe('0');
-    expect(over.headers['x-ratelimit-reset']).toBe(String(Math.floor(nextPeriodStart(new Date()).getTime() / 1000)));
+    expect(over.headers['x-ratelimit-reset']).toBe(
+      String(Math.floor(nextPeriodStart(new Date()).getTime() / 1000))
+    );
     expect(over.headers['access-control-allow-origin']).toBe('*');
-    expect(String(over.headers['access-control-expose-headers']).toLowerCase()).toContain('retry-after');
+    expect(String(over.headers['access-control-expose-headers']).toLowerCase()).toContain(
+      'retry-after'
+    );
 
     await request(app).get(mockUrl(project.slug));
     expect(await getMonthlyUsage(ownerIdOf(owner))).toBe(FREE_LIMIT);
@@ -231,14 +312,25 @@ describe('cuota mensual de peticiones al mock', () => {
     const pub = await seedProject(owner.user._id as Types.ObjectId);
 
     expect((await request(app).get(mockUrl(priv.slug))).status).toBe(401);
-    expect((await request(app).get(mockUrl(priv.slug)).set('X-Mockia-API-Key', 'mk_wrong')).status).toBe(401);
+    expect(
+      (await request(app).get(mockUrl(priv.slug)).set('X-Mockia-API-Key', 'mk_wrong')).status
+    ).toBe(401);
     expect((await request(app).get(mockUrl(pub.slug, '/nope'))).status).toBe(404);
     expect((await request(app).post(mockUrl(pub.slug))).status).toBe(404);
     expect((await request(app).get(mockUrl('no-such-project'))).status).toBe(404);
-    expect((await request(app).options(mockUrl(pub.slug)).set('Origin', 'https://x.test').set('Access-Control-Request-Method', 'GET')).status).toBeLessThan(300);
+    expect(
+      (
+        await request(app)
+          .options(mockUrl(pub.slug))
+          .set('Origin', 'https://x.test')
+          .set('Access-Control-Request-Method', 'GET')
+      ).status
+    ).toBeLessThan(300);
     expect(await getMonthlyUsage(ownerIdOf(owner))).toBe(0);
 
-    expect((await request(app).get(mockUrl(priv.slug)).set('X-Mockia-API-Key', key)).status).toBe(200);
+    expect((await request(app).get(mockUrl(priv.slug)).set('X-Mockia-API-Key', key)).status).toBe(
+      200
+    );
     expect(await getMonthlyUsage(ownerIdOf(owner))).toBe(1);
   });
 
@@ -261,7 +353,11 @@ describe('cuota mensual de peticiones al mock', () => {
   it('el propietario en Pro tiene el tope de Pro, no el de Free', async () => {
     const owner = await createUser({ plan: 'pro', billingStatus: 'active' });
     const project = await seedProject(owner.user._id as Types.ObjectId);
-    await UsageModel.create({ ownerId: owner.user._id, period: periodOf(new Date()), requests: FREE_LIMIT + 5 });
+    await UsageModel.create({
+      ownerId: owner.user._id,
+      period: periodOf(new Date()),
+      requests: FREE_LIMIT + 5,
+    });
     const res = await request(app).get(mockUrl(project.slug));
     expect(res.status).toBe(200);
     expect(res.headers['x-ratelimit-limit']).toBe(String(PRO_LIMIT));
@@ -283,7 +379,8 @@ describe('cuota mensual de peticiones al mock', () => {
     await request(app).get(mockUrl(project.slug)); // calienta caches
     const inc = jest.spyOn(UsageModel, 'findOneAndUpdate');
     const read = jest.spyOn(UsageModel, 'findOne');
-    for (let i = 0; i < 5; i += 1) expect((await request(app).get(mockUrl(project.slug))).status).toBe(200);
+    for (let i = 0; i < 5; i += 1)
+      expect((await request(app).get(mockUrl(project.slug))).status).toBe(200);
     expect(inc).not.toHaveBeenCalled();
     expect(read).not.toHaveBeenCalled();
     await flushUsage();
@@ -296,14 +393,28 @@ describe('cuota mensual de peticiones al mock', () => {
 
 describe('gestion de la clave por la API', () => {
   async function createViaApi(auth: Record<string, string>) {
-    const res = await request(app).post('/api/projects').set(auth).send({ title: unique('Mi API ') });
+    const res = await request(app)
+      .post('/api/projects')
+      .set(auth)
+      .send({ title: unique('Mi API ') });
     expect(res.status).toBe(201);
     return res.body.data as { id: string; slug: string; [k: string]: unknown };
   }
   const seedEndpoint = async (projectId: string) => {
     const mockApi = await MockAPIModel.findOne({ projectId });
-    const response = await ResponseModel.create({ statusCode: 200, description: 'ok', schema: { ok: true }, examples: [] });
-    const endpoint = await EndpointModel.create({ path: '/users', method: 'GET', description: 'u', responses: [response._id], mockApiId: mockApi!._id });
+    const response = await ResponseModel.create({
+      statusCode: 200,
+      description: 'ok',
+      schema: { ok: true },
+      examples: [],
+    });
+    const endpoint = await EndpointModel.create({
+      path: '/users',
+      method: 'GET',
+      description: 'u',
+      responses: [response._id],
+      mockApiId: mockApi!._id,
+    });
     await MockAPIModel.updateOne({ _id: mockApi!._id }, { endpoints: [endpoint._id] });
   };
 
@@ -321,7 +432,10 @@ describe('gestion de la clave por la API', () => {
   it('cambiar a "key" sin haber emitido clave responde 409 API_KEY_REQUIRED', async () => {
     const owner = await createUser();
     const project = await createViaApi(owner.auth);
-    const res = await request(app).put(`/api/projects/${project.id}`).set(owner.auth).send({ visibility: 'key' });
+    const res = await request(app)
+      .put(`/api/projects/${project.id}`)
+      .set(owner.auth)
+      .send({ visibility: 'key' });
     expect(res.status).toBe(409);
     expect(res.body.error.code).toBe('API_KEY_REQUIRED');
     expect((await rawProject(project.id))?.visibility).not.toBe('key');
@@ -330,7 +444,10 @@ describe('gestion de la clave por la API', () => {
   it('visibility solo acepta public o key', async () => {
     const owner = await createUser();
     const project = await createViaApi(owner.auth);
-    const res = await request(app).put(`/api/projects/${project.id}`).set(owner.auth).send({ visibility: 'secret' });
+    const res = await request(app)
+      .put(`/api/projects/${project.id}`)
+      .set(owner.auth)
+      .send({ visibility: 'secret' });
     expect(res.status).toBe(400);
   });
 
@@ -355,15 +472,30 @@ describe('gestion de la clave por la API', () => {
   it('la clave completa no vuelve por GET proyecto, listado, exportacion ni exportacion RGPD', async () => {
     const owner = await createUser();
     const project = await createViaApi(owner.auth);
-    const { apiKey, prefix } = (await request(app).post(`/api/projects/${project.id}/api-key`).set(owner.auth)).body.data;
-    expect((await request(app).put(`/api/projects/${project.id}`).set(owner.auth).send({ visibility: 'key' })).status).toBe(200);
+    const { apiKey, prefix } = (
+      await request(app).post(`/api/projects/${project.id}/api-key`).set(owner.auth)
+    ).body.data;
+    expect(
+      (
+        await request(app)
+          .put(`/api/projects/${project.id}`)
+          .set(owner.auth)
+          .send({ visibility: 'key' })
+      ).status
+    ).toBe(200);
 
     const get = await request(app).get(`/api/projects/${project.id}`).set(owner.auth);
-    expect(get.body.data).toMatchObject({ visibility: 'key', hasApiKey: true, apiKeyPrefix: prefix });
+    expect(get.body.data).toMatchObject({
+      visibility: 'key',
+      hasApiKey: true,
+      apiKeyPrefix: prefix,
+    });
     const list = await request(app).get('/api/projects').set(owner.auth);
     const bodies = [JSON.stringify(get.body), JSON.stringify(list.body)];
     for (const format of ['openapi', 'postman', 'msw']) {
-      const exp = await request(app).get(`/api/projects/${project.id}/export?format=${format}`).set(owner.auth);
+      const exp = await request(app)
+        .get(`/api/projects/${project.id}/export?format=${format}`)
+        .set(owner.auth);
       expect(exp.status).toBe(200);
       bodies.push(exp.text);
     }
@@ -373,7 +505,9 @@ describe('gestion de la clave por la API', () => {
       expect(body).not.toContain(hashApiKey(apiKey));
     }
     // La exportacion sigue anunciando la cabecera de la clave
-    const openapi = (await request(app).get(`/api/projects/${project.id}/export?format=openapi`).set(owner.auth)).body;
+    const openapi = (
+      await request(app).get(`/api/projects/${project.id}/export?format=openapi`).set(owner.auth)
+    ).body;
     expect(openapi.components.securitySchemes.MockiaApiKey.name).toBe('X-Mockia-API-Key');
   });
 
@@ -381,16 +515,27 @@ describe('gestion de la clave por la API', () => {
     const owner = await createUser();
     const project = await createViaApi(owner.auth);
     await seedEndpoint(project.id);
-    const first = (await request(app).post(`/api/projects/${project.id}/api-key`).set(owner.auth)).body.data.apiKey as string;
-    await request(app).put(`/api/projects/${project.id}`).set(owner.auth).send({ visibility: 'key' });
+    const first = (await request(app).post(`/api/projects/${project.id}/api-key`).set(owner.auth))
+      .body.data.apiKey as string;
+    await request(app)
+      .put(`/api/projects/${project.id}`)
+      .set(owner.auth)
+      .send({ visibility: 'key' });
 
     expect((await request(app).get(mockUrl(project.slug))).status).toBe(401);
-    expect((await request(app).get(mockUrl(project.slug)).set('X-Mockia-API-Key', first)).status).toBe(200);
+    expect(
+      (await request(app).get(mockUrl(project.slug)).set('X-Mockia-API-Key', first)).status
+    ).toBe(200);
 
-    const second = (await request(app).post(`/api/projects/${project.id}/api-key`).set(owner.auth)).body.data.apiKey as string;
+    const second = (await request(app).post(`/api/projects/${project.id}/api-key`).set(owner.auth))
+      .body.data.apiKey as string;
     expect(second).not.toBe(first);
-    expect((await request(app).get(mockUrl(project.slug)).set('X-Mockia-API-Key', first)).status).toBe(401);
-    expect((await request(app).get(mockUrl(project.slug)).set('X-Mockia-API-Key', second)).status).toBe(200);
+    expect(
+      (await request(app).get(mockUrl(project.slug)).set('X-Mockia-API-Key', first)).status
+    ).toBe(401);
+    expect(
+      (await request(app).get(mockUrl(project.slug)).set('X-Mockia-API-Key', second)).status
+    ).toBe(200);
   });
 
   it('volver a "public" abre el mock sin clave y conserva la clave emitida', async () => {
@@ -398,9 +543,15 @@ describe('gestion de la clave por la API', () => {
     const project = await createViaApi(owner.auth);
     await seedEndpoint(project.id);
     await request(app).post(`/api/projects/${project.id}/api-key`).set(owner.auth);
-    await request(app).put(`/api/projects/${project.id}`).set(owner.auth).send({ visibility: 'key' });
+    await request(app)
+      .put(`/api/projects/${project.id}`)
+      .set(owner.auth)
+      .send({ visibility: 'key' });
     expect((await request(app).get(mockUrl(project.slug))).status).toBe(401);
-    const back = await request(app).patch(`/api/projects/${project.id}`).set(owner.auth).send({ visibility: 'public' });
+    const back = await request(app)
+      .patch(`/api/projects/${project.id}`)
+      .set(owner.auth)
+      .send({ visibility: 'public' });
     expect(back.status).toBe(200);
     expect(back.body.data).toMatchObject({ visibility: 'public', hasApiKey: true });
     expect((await request(app).get(mockUrl(project.slug))).status).toBe(200);
@@ -410,34 +561,59 @@ describe('gestion de la clave por la API', () => {
     const owner = await createUser();
     const project = await createViaApi(owner.auth);
     await seedEndpoint(project.id);
-    const key = (await request(app).post(`/api/projects/${project.id}/api-key`).set(owner.auth)).body.data.apiKey as string;
-    await request(app).put(`/api/projects/${project.id}`).set(owner.auth).send({ visibility: 'key' });
+    const key = (await request(app).post(`/api/projects/${project.id}/api-key`).set(owner.auth))
+      .body.data.apiKey as string;
+    await request(app)
+      .put(`/api/projects/${project.id}`)
+      .set(owner.auth)
+      .send({ visibility: 'key' });
 
     const del = await request(app).delete(`/api/projects/${project.id}/api-key`).set(owner.auth);
     expect(del.status).toBe(200);
-    expect(del.body.data).toMatchObject({ visibility: 'key', hasApiKey: false, apiKeyPrefix: null });
+    expect(del.body.data).toMatchObject({
+      visibility: 'key',
+      hasApiKey: false,
+      apiKeyPrefix: null,
+    });
     const raw = await rawProject(project.id);
     expect(raw?.apiKeyHash ?? null).toBeNull();
-    expect((await request(app).get(mockUrl(project.slug)).set('X-Mockia-API-Key', key)).status).toBe(401);
+    expect(
+      (await request(app).get(mockUrl(project.slug)).set('X-Mockia-API-Key', key)).status
+    ).toBe(401);
   });
 
   it('revocar, rotar o cerrar surte efecto al instante tambien por la URL con el id del proyecto (sin cache vieja)', async () => {
     const owner = await createUser();
     const project = await createViaApi(owner.auth);
     await seedEndpoint(project.id);
-    const key = (await request(app).post(`/api/projects/${project.id}/api-key`).set(owner.auth)).body.data.apiKey as string;
-    await request(app).put(`/api/projects/${project.id}`).set(owner.auth).send({ visibility: 'key' });
+    const key = (await request(app).post(`/api/projects/${project.id}/api-key`).set(owner.auth))
+      .body.data.apiKey as string;
+    await request(app)
+      .put(`/api/projects/${project.id}`)
+      .set(owner.auth)
+      .send({ visibility: 'key' });
     // Warm the cache under the ObjectId key (project:<objectId>) through the id URL
-    expect((await request(app).get(mockUrl(project.id)).set('X-Mockia-API-Key', key)).status).toBe(200);
+    expect((await request(app).get(mockUrl(project.id)).set('X-Mockia-API-Key', key)).status).toBe(
+      200
+    );
 
     // Rotation: the old key stops working through the id URL right away
-    const rotated = (await request(app).post(`/api/projects/${project.id}/api-key`).set(owner.auth)).body.data.apiKey as string;
-    expect((await request(app).get(mockUrl(project.id)).set('X-Mockia-API-Key', key)).status).toBe(401);
-    expect((await request(app).get(mockUrl(project.id)).set('X-Mockia-API-Key', rotated)).status).toBe(200);
+    const rotated = (await request(app).post(`/api/projects/${project.id}/api-key`).set(owner.auth))
+      .body.data.apiKey as string;
+    expect((await request(app).get(mockUrl(project.id)).set('X-Mockia-API-Key', key)).status).toBe(
+      401
+    );
+    expect(
+      (await request(app).get(mockUrl(project.id)).set('X-Mockia-API-Key', rotated)).status
+    ).toBe(200);
 
     // Revocation: the id URL closes right away
-    expect((await request(app).delete(`/api/projects/${project.id}/api-key`).set(owner.auth)).status).toBe(200);
-    expect((await request(app).get(mockUrl(project.id)).set('X-Mockia-API-Key', rotated)).status).toBe(401);
+    expect(
+      (await request(app).delete(`/api/projects/${project.id}/api-key`).set(owner.auth)).status
+    ).toBe(200);
+    expect(
+      (await request(app).get(mockUrl(project.id)).set('X-Mockia-API-Key', rotated)).status
+    ).toBe(401);
   });
 
   it('pasar de publico a "key" cierra al instante la URL con el id del proyecto', async () => {
@@ -446,7 +622,14 @@ describe('gestion de la clave por la API', () => {
     await seedEndpoint(project.id);
     await request(app).post(`/api/projects/${project.id}/api-key`).set(owner.auth);
     expect((await request(app).get(mockUrl(project.id))).status).toBe(200);
-    expect((await request(app).put(`/api/projects/${project.id}`).set(owner.auth).send({ visibility: 'key' })).status).toBe(200);
+    expect(
+      (
+        await request(app)
+          .put(`/api/projects/${project.id}`)
+          .set(owner.auth)
+          .send({ visibility: 'key' })
+      ).status
+    ).toBe(200);
     expect((await request(app).get(mockUrl(project.id))).status).toBe(401);
   });
 
@@ -475,15 +658,31 @@ describe('gestion de la clave por la API', () => {
     const project = await seedProject(owner.user._id as Types.ObjectId, {}, [
       { userId: editor.user._id as Types.ObjectId, role: ProjectRoleEnum.EDITOR },
     ]);
-    expect((await request(app).put(`/api/projects/${project._id}`).set(editor.auth).send({ visibility: 'key' })).status).toBe(409);
+    expect(
+      (
+        await request(app)
+          .put(`/api/projects/${project._id}`)
+          .set(editor.auth)
+          .send({ visibility: 'key' })
+      ).status
+    ).toBe(409);
     await request(app).post(`/api/projects/${project._id}/api-key`).set(owner.auth);
-    expect((await request(app).put(`/api/projects/${project._id}`).set(editor.auth).send({ visibility: 'key' })).status).toBe(200);
+    expect(
+      (
+        await request(app)
+          .put(`/api/projects/${project._id}`)
+          .set(editor.auth)
+          .send({ visibility: 'key' })
+      ).status
+    ).toBe(200);
   });
 
   it('ya no existe la ruta antigua regenerate-api-key (devolvia la clave en claro)', async () => {
     const owner = await createUser();
     const project = await createViaApi(owner.auth);
-    const res = await request(app).post(`/api/projects/${project.id}/regenerate-api-key`).set(owner.auth);
+    const res = await request(app)
+      .post(`/api/projects/${project.id}/regenerate-api-key`)
+      .set(owner.auth);
     expect(res.status).toBe(404);
   });
 });
@@ -493,7 +692,10 @@ describe('migracion de claves antiguas en claro', () => {
     const owner = await createUser();
     const legacyKey = 'a'.repeat(24) + 'b'.repeat(24);
     const project = await seedProject(owner.user._id as Types.ObjectId);
-    await ProjectModel.collection.updateOne({ _id: project._id }, { $set: { apiKey: legacyKey }, $unset: { visibility: '' } });
+    await ProjectModel.collection.updateOne(
+      { _id: project._id },
+      { $set: { apiKey: legacyKey }, $unset: { visibility: '' } }
+    );
     const untouched = await seedProject(owner.user._id as Types.ObjectId);
 
     expect(await migrateLegacyApiKeys()).toBe(1);
@@ -509,15 +711,22 @@ describe('migracion de claves antiguas en claro', () => {
 
     mockCache.clearAll();
     expect((await request(app).get(mockUrl(project.slug))).status).toBe(401);
-    expect((await request(app).get(mockUrl(project.slug)).set('X-Mockia-API-Key', legacyKey)).status).toBe(200);
+    expect(
+      (await request(app).get(mockUrl(project.slug)).set('X-Mockia-API-Key', legacyKey)).status
+    ).toBe(200);
   });
 
   it('es idempotente y no pisa una clave nueva ya emitida', async () => {
     const owner = await createUser();
-    const project = await seedPrivate(owner.user._id as Types.ObjectId, 'mk_already-hashed-key-000');
+    const project = await seedPrivate(
+      owner.user._id as Types.ObjectId,
+      'mk_already-hashed-key-000'
+    );
     expect(await migrateLegacyApiKeys()).toBe(0);
     expect(await migrateLegacyApiKeys()).toBe(0);
-    expect((await rawProject(project._id))?.apiKeyHash).toBe(hashApiKey('mk_already-hashed-key-000'));
+    expect((await rawProject(project._id))?.apiKeyHash).toBe(
+      hashApiKey('mk_already-hashed-key-000')
+    );
   });
 
   it('ignora apiKey vacia o no textual sin romperse', async () => {
@@ -547,13 +756,18 @@ describe('IDOR de swagger.json y pagina de docs', () => {
     const ok = await request(app).get(url).set(owner.auth);
     expect(ok.status).toBe(200);
     expect(ok.body.paths).toBeDefined();
-    expect((await request(app).get(`/api/projects/${new Types.ObjectId()}/swagger.json`).set(owner.auth)).status).toBe(404);
+    expect(
+      (await request(app).get(`/api/projects/${new Types.ObjectId()}/swagger.json`).set(owner.auth))
+        .status
+    ).toBe(404);
   });
 
   it('la pagina /mock/:slug/docs escapa o rechaza un slug hostil', async () => {
     const owner = await createUser();
     const hostile = `x</title><script>alert(1)</script>`;
-    await seedProject(owner.user._id as Types.ObjectId).then((p) => ProjectModel.collection.updateOne({ _id: p._id }, { $set: { slug: hostile } }));
+    await seedProject(owner.user._id as Types.ObjectId).then((p) =>
+      ProjectModel.collection.updateOne({ _id: p._id }, { $set: { slug: hostile } })
+    );
     const res = await request(app).get(`/mock/${encodeURIComponent(hostile)}/docs`);
     expect(res.text).not.toContain('<script>alert(1)');
     expect(res.text).not.toContain('</title><script>');

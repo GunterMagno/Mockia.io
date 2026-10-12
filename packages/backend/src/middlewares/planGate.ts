@@ -20,21 +20,32 @@ const body = (code: string, message: string, details: Record<string, unknown>) =
  * ponytail: count-then-create is not atomic; two concurrent creates at limit-1 can both pass.
  * Acceptable for a soft commercial limit; use a transaction/unique counter if it must be strict.
  */
-export const enforceProjectLimit: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+export const enforceProjectLimit: RequestHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const userId = (req as AuthenticatedRequest).user?.id;
     if (!userId) return next(); // authenticateToken owns the 401
     const plan = await getUserPlan(userId);
     const limit = PLAN_LIMITS[plan].maxActiveProjects;
     if (Number.isFinite(limit)) {
-      const active = await ProjectModel.countDocuments({ ownerId: userId, isArchived: { $ne: true } });
+      const active = await ProjectModel.countDocuments({
+        ownerId: userId,
+        isArchived: { $ne: true },
+      });
       if (active >= limit) {
         res.status(402).json(
-          body('PLAN_LIMIT_REACHED', `The ${plan} plan allows ${limit} active projects. Archive one or upgrade.`, {
-            plan,
-            limit,
-            active,
-          })
+          body(
+            'PLAN_LIMIT_REACHED',
+            `The ${plan} plan allows ${limit} active projects. Archive one or upgrade.`,
+            {
+              plan,
+              limit,
+              active,
+            }
+          )
         );
         return;
       }
@@ -93,7 +104,11 @@ function setRateLimitHeaders(res: Response, limit: number, remaining: number, re
  * never consume quota, so strangers cannot burn an owner's quota by guessing slugs, routes or keys.
  * Fails open on lookup errors: a billing hiccup must not take mocks down.
  */
-export const mockQuotaGate: RequestHandler = async (req: Request, res: Response, next: NextFunction) => {
+export const mockQuotaGate: RequestHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     if (req.method === 'OPTIONS') return next();
     const slug = extractMockSlug(req.path);
@@ -123,11 +138,15 @@ export const mockQuotaGate: RequestHandler = async (req: Request, res: Response,
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Expose-Headers', MOCK_EXPOSED_HEADERS.join(', '));
     res.status(429).json(
-      body('QUOTA_EXCEEDED', `Monthly mock request quota (${limit}) exceeded for the ${plan} plan`, {
-        plan,
-        limit,
-        resetAt: resetAt.toISOString(),
-      })
+      body(
+        'QUOTA_EXCEEDED',
+        `Monthly mock request quota (${limit}) exceeded for the ${plan} plan`,
+        {
+          plan,
+          limit,
+          resetAt: resetAt.toISOString(),
+        }
+      )
     );
   } catch (err) {
     console.error('[planGate] quota check failed, allowing request:', err);

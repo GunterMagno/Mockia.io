@@ -9,10 +9,16 @@ const MAX_CHARS = 6000;
 const DEMO_ID = 'a1b2c3d4e5f6';
 
 const envelope = <T>(data: T) => ({ success: true, data, timestamp: new Date().toISOString() });
-const failure = (code: string, message: string) => ({ success: false, error: { code, message }, timestamp: new Date().toISOString() });
+const failure = (code: string, message: string) => ({
+  success: false,
+  error: { code, message },
+  timestamp: new Date().toISOString(),
+});
 
 const leadingZeroBits = async (text: string): Promise<number> => {
-  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)));
+  const digest = new Uint8Array(
+    await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text))
+  );
   let zeros = 0;
   for (const byte of digest) {
     if (byte === 0) {
@@ -29,8 +35,18 @@ const generated = (overrides: Record<string, unknown> = {}) =>
     demoId: DEMO_ID,
     baseUrl: `http://localhost:5173/api/demo-mock/${DEMO_ID}`,
     endpoints: [
-      { method: 'GET', path: '/products', statusCode: 200, body: { items: [{ id: 1, name: 'Ceramic mug', price: 9.5 }], total: 1 } },
-      { method: 'GET', path: '/products/:id', statusCode: 200, body: { id: 1, name: 'Ceramic mug', price: 9.5 } },
+      {
+        method: 'GET',
+        path: '/products',
+        statusCode: 200,
+        body: { items: [{ id: 1, name: 'Ceramic mug', price: 9.5 }], total: 1 },
+      },
+      {
+        method: 'GET',
+        path: '/products/:id',
+        statusCode: 200,
+        body: { id: 1, name: 'Ceramic mug', price: 9.5 },
+      },
       { method: 'POST', path: '/orders', statusCode: 201, body: { id: 77, status: 'created' } },
     ],
     expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
@@ -40,20 +56,40 @@ const generated = (overrides: Record<string, unknown> = {}) =>
 
 describe('Demo publica: probar Mockia sin registrarse', () => {
   const stubStatus = (body: Record<string, unknown> = {}, statusCode = 200) =>
-    cy.intercept('GET', '**/api/demo/status', { statusCode, body: envelope({ available: true, remainingToday: 2, maxEndpoints: 5, ttlMinutes: 30, ...body }) }).as('status');
+    cy
+      .intercept('GET', '**/api/demo/status', {
+        statusCode,
+        body: envelope({
+          available: true,
+          remainingToday: 2,
+          maxEndpoints: 5,
+          ttlMinutes: 30,
+          ...body,
+        }),
+      })
+      .as('status');
   const stubChallenge = (bits = 6) =>
     cy
       .intercept('POST', '**/api/demo/challenge', {
-        body: envelope({ challenge: 'cGF5bG9hZA.c2lnbmF0dXJl', bits, expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString() }),
+        body: envelope({
+          challenge: 'cGF5bG9hZA.c2lnbmF0dXJl',
+          bits,
+          expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+        }),
       })
       .as('challenge');
-  const stubGenerate = (response: Record<string, unknown> = { statusCode: 201, body: generated() }) =>
-    cy.intercept('POST', '**/api/demo/generate', response).as('generate');
+  const stubGenerate = (
+    response: Record<string, unknown> = { statusCode: 201, body: generated() }
+  ) => cy.intercept('POST', '**/api/demo/generate', response).as('generate');
   const stubMock = () =>
     cy
       .intercept('GET', `**/api/demo-mock/${DEMO_ID}/**`, {
         statusCode: 200,
-        headers: { 'x-mockia-demo': 'true', 'content-type': 'application/json; charset=utf-8', 'x-total-count': '1' },
+        headers: {
+          'x-mockia-demo': 'true',
+          'content-type': 'application/json; charset=utf-8',
+          'x-total-count': '1',
+        },
         body: { id: 1, name: 'Ceramic mug', price: 9.5 },
       })
       .as('mock');
@@ -95,20 +131,28 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
           expect(await solvePow('payload.signature', 8)).to.deep.equal({ error: 'unsupported' });
         } finally {
           delete (crypto as unknown as Record<string, unknown>).subtle;
-          expect(Object.getOwnPropertyDescriptor(Crypto.prototype, 'subtle')).to.deep.equal(original);
+          expect(Object.getOwnPropertyDescriptor(Crypto.prototype, 'subtle')).to.deep.equal(
+            original
+          );
         }
       });
     });
 
     it('se detiene con timeout cuando no hay solucion a tiempo y con aborted si se cancela', () => {
       cy.wrap(null).then(async () => {
-        expect(await solvePow('payload.signature', 60, { maxMs: 150 })).to.deep.equal({ error: 'timeout' });
+        expect(await solvePow('payload.signature', 60, { maxMs: 150 })).to.deep.equal({
+          error: 'timeout',
+        });
         const controller = new AbortController();
         setTimeout(() => controller.abort(), 50);
-        expect(await solvePow('payload.signature', 60, { signal: controller.signal })).to.deep.equal({ error: 'aborted' });
+        expect(
+          await solvePow('payload.signature', 60, { signal: controller.signal })
+        ).to.deep.equal({ error: 'aborted' });
         const already = new AbortController();
         already.abort();
-        expect(await solvePow('payload.signature', 1, { signal: already.signal })).to.deep.equal({ error: 'aborted' });
+        expect(await solvePow('payload.signature', 1, { signal: already.signal })).to.deep.equal({
+          error: 'aborted',
+        });
       });
     });
   });
@@ -118,8 +162,14 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
     stubGenerate();
     stubMock();
     // Aunque el servidor contestara 401 a la demo, la pagina sigue ahi (no usa el cliente con refresco de sesion)
-    cy.intercept('GET', '**/api/demo/status', { statusCode: 401, body: failure('UNAUTHORIZED', 'No session') }).as('status');
-    cy.intercept('POST', '**/api/auth/refresh', { statusCode: 401, body: failure('UNAUTHORIZED', 'No session') });
+    cy.intercept('GET', '**/api/demo/status', {
+      statusCode: 401,
+      body: failure('UNAUTHORIZED', 'No session'),
+    }).as('status');
+    cy.intercept('POST', '**/api/auth/refresh', {
+      statusCode: 401,
+      body: failure('UNAUTHORIZED', 'No session'),
+    });
     cy.visit('/demo');
     cy.wait('@status');
     cy.location('pathname').should('eq', '/demo');
@@ -132,7 +182,9 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
     });
     cy.window().then((win) => {
       // La demo no usa almacenamiento propio: solo existe la preferencia de idioma de toda la app
-      const keys = Object.keys(win.localStorage).filter((k) => k !== 'mockia_locale' && k !== 'mockia_cookie_notice_dismissed');
+      const keys = Object.keys(win.localStorage).filter(
+        (k) => k !== 'mockia_locale' && k !== 'mockia_cookie_notice_dismissed'
+      );
       expect(keys, 'claves de localStorage').to.deep.equal([]);
       expect(Object.keys(win.sessionStorage), 'claves de sessionStorage').to.deep.equal([]);
     });
@@ -153,7 +205,9 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
       expect(request.body.challenge).to.eq('cGF5bG9hZA.c2lnbmF0dXJl');
       expect(request.body.nonce).to.match(/^[A-Za-z0-9_-]{1,64}$/);
       // El nonce que viaja es una solucion real del reto (6 bits)
-      expect(await leadingZeroBits(`${request.body.challenge}:${request.body.nonce}`)).to.be.at.least(6);
+      expect(
+        await leadingZeroBits(`${request.body.challenge}:${request.body.nonce}`)
+      ).to.be.at.least(6);
     });
 
     cy.get('[data-testid="demo-endpoint-list"]').within(() => {
@@ -189,20 +243,38 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
     let challenges = 0;
     cy.intercept('POST', '**/api/demo/challenge', (req) => {
       challenges += 1;
-      req.reply(envelope({ challenge: `payload${challenges}.sig`, bits: 4, expiresAt: new Date(Date.now() + 60000).toISOString() }));
+      req.reply(
+        envelope({
+          challenge: `payload${challenges}.sig`,
+          bits: 4,
+          expiresAt: new Date(Date.now() + 60000).toISOString(),
+        })
+      );
     }).as('challenge');
     let attempts = 0;
     cy.intercept('POST', '**/api/demo/generate', (req) => {
       attempts += 1;
-      if (attempts === 1) req.reply({ statusCode: 400, body: failure('DEMO_CHALLENGE_INVALID', 'The challenge is not valid') });
+      if (attempts === 1)
+        req.reply({
+          statusCode: 400,
+          body: failure('DEMO_CHALLENGE_INVALID', 'The challenge is not valid'),
+        });
       else req.reply({ statusCode: 201, body: generated() });
     }).as('generate');
 
     cy.visit('/demo');
     cy.get('input[type="radio"][value="text"]').check({ force: true });
-    cy.get('textarea').type('type User = { id: string }', { delay: 0, parseSpecialCharSequences: false });
+    cy.get('textarea').type('type User = { id: string }', {
+      delay: 0,
+      parseSpecialCharSequences: false,
+    });
     generateButton().click();
-    cy.wait('@generate').its('request.body').should('deep.include', { challenge: 'payload1.sig', source: { type: 'text', text: 'type User = { id: string }' } });
+    cy.wait('@generate')
+      .its('request.body')
+      .should('deep.include', {
+        challenge: 'payload1.sig',
+        source: { type: 'text', text: 'type User = { id: string }' },
+      });
     cy.wait('@generate').its('request.body.challenge').should('eq', 'payload2.sig');
     cy.get('[data-testid="demo-endpoint-list"] li').should('have.length', 3);
   });
@@ -210,7 +282,10 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
   it('(b3) dos retos invalidos seguidos: error generico, solo dos envios', () => {
     stubStatus();
     stubChallenge(4);
-    cy.intercept('POST', '**/api/demo/generate', { statusCode: 400, body: failure('DEMO_CHALLENGE_INVALID', 'The challenge is not valid') }).as('generate');
+    cy.intercept('POST', '**/api/demo/generate', {
+      statusCode: 400,
+      body: failure('DEMO_CHALLENGE_INVALID', 'The challenge is not valid'),
+    }).as('generate');
     cy.visit('/demo');
     generateButton().click();
     cy.contains('[data-testid="demo-problem"]', 'Something went wrong').should('be.visible');
@@ -256,7 +331,11 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
   it('(d) 503 DEMO_UNAVAILABLE: mensaje claro con enlace a registrarse y sin errores en consola', () => {
     stubStatus();
     stubChallenge(4);
-    stubGenerate({ statusCode: 503, headers: { 'retry-after': '10' }, body: failure('DEMO_UNAVAILABLE', 'The public demo is not available right now') });
+    stubGenerate({
+      statusCode: 503,
+      headers: { 'retry-after': '10' },
+      body: failure('DEMO_UNAVAILABLE', 'The public demo is not available right now'),
+    });
     cy.visit('/demo', {
       onBeforeLoad(win) {
         cy.spy(win.console, 'error').as('consoleError');
@@ -296,7 +375,8 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
           w.__created += 1;
         }
         postMessage() {
-          if (mode === 'fail') setTimeout(() => this.onmessage?.({ data: { error: 'failed' } }), 10);
+          if (mode === 'fail')
+            setTimeout(() => this.onmessage?.({ data: { error: 'failed' } }), 10);
         }
         terminate() {
           w.__terminated += 1;
@@ -376,7 +456,10 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
     stubStatus();
     stubChallenge(4);
     // 503 con el codigo del proveedor (EXTERNAL_SERVICE_ERROR): la peticion salio al modelo
-    stubGenerate({ statusCode: 503, body: failure('EXTERNAL_SERVICE_ERROR', 'AI service temporarily unavailable') });
+    stubGenerate({
+      statusCode: 503,
+      body: failure('EXTERNAL_SERVICE_ERROR', 'AI service temporarily unavailable'),
+    });
     cy.visit('/demo');
     generateButton().click();
     cy.wait('@generate');
@@ -388,10 +471,15 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
     });
     generateButton().should('be.enabled');
     // 504 (plazo del modelo): otro texto, tambien cuenta
-    stubGenerate({ statusCode: 504, body: failure('EXTERNAL_SERVICE_ERROR', 'The AI request took too long') });
+    stubGenerate({
+      statusCode: 504,
+      body: failure('EXTERNAL_SERVICE_ERROR', 'The AI request took too long'),
+    });
     generateButton().click();
     cy.wait('@generate');
-    cy.get('[data-testid="demo-problem"]').should('contain.text', 'took too long').and('contain.text', 'counted');
+    cy.get('[data-testid="demo-problem"]')
+      .should('contain.text', 'took too long')
+      .and('contain.text', 'counted');
     // 503 DEMO_UNAVAILABLE sigue siendo "no disponible" (test d)
     stubGenerate({ statusCode: 503, body: failure('DEMO_UNAVAILABLE', 'busy') });
     generateButton().click();
@@ -403,15 +491,23 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
     stubAll();
     cy.visit('/demo');
     // Montada y vacia desde el principio (una region viva que aparece ya con texto suele no anunciarse)
-    cy.get('[data-testid="demo-live"]').should('have.attr', 'role', 'status').and('have.attr', 'aria-live', 'polite').and('have.text', '');
+    cy.get('[data-testid="demo-live"]')
+      .should('have.attr', 'role', 'status')
+      .and('have.attr', 'aria-live', 'polite')
+      .and('have.text', '');
     cy.get('[data-testid="demo-live"]').then(($live) => {
       generateButton().click();
-      cy.get('[data-testid="demo-live"]').should('contain.text', 'Your mock API is ready').and('contain.text', '3 endpoints');
+      cy.get('[data-testid="demo-live"]')
+        .should('contain.text', 'Your mock API is ready')
+        .and('contain.text', '3 endpoints');
       cy.get('[data-testid="demo-endpoint-list"] li').should('have.length', 3);
       cy.wrap($live).should(($el) => expect(Cypress.dom.isAttached($el)).to.eq(true)); // el mismo nodo: no se desmonto
     });
     cy.contains('button', 'Send request').click();
-    cy.get('[data-testid="demo-live"]').should('contain.text', 'Response received').and('contain.text', '200').and('not.contain.text', 'Ceramic');
+    cy.get('[data-testid="demo-live"]')
+      .should('contain.text', 'Response received')
+      .and('contain.text', '200')
+      .and('not.contain.text', 'Ceramic');
     // Error: el texto breve del problema tambien se anuncia
     stubGenerate({ statusCode: 503, body: failure('DEMO_UNAVAILABLE', 'busy') });
     generateButton().click();
@@ -423,20 +519,36 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
     cy.clock(now, ['Date']);
     stubStatus();
     stubChallenge(4);
-    stubGenerate({ statusCode: 429, headers: { 'retry-after': '7200' }, body: failure('DEMO_LIMIT_REACHED', 'Daily limit reached') });
+    stubGenerate({
+      statusCode: 429,
+      headers: { 'retry-after': '7200' },
+      body: failure('DEMO_LIMIT_REACHED', 'Daily limit reached'),
+    });
     cy.visit('/demo');
     generateButton().click();
     cy.wait('@generate');
-    const back = new Intl.DateTimeFormat('en', { hour: 'numeric', minute: '2-digit' }).format(new Date(now + 7200 * 1000));
+    const back = new Intl.DateTimeFormat('en', { hour: 'numeric', minute: '2-digit' }).format(
+      new Date(now + 7200 * 1000)
+    );
     cy.contains('[data-testid="demo-problem"]', "today's attempts").should('contain.text', back);
-    cy.contains('[data-testid="demo-problem"] a', 'Create your free account').should('have.attr', 'href', '/signup');
+    cy.contains('[data-testid="demo-problem"] a', 'Create your free account').should(
+      'have.attr',
+      'href',
+      '/signup'
+    );
     generateButton().should('be.disabled');
 
     // Demasiadas peticiones: esperar un momento, no es el cupo diario
-    cy.intercept('POST', '**/api/demo/challenge', { statusCode: 429, headers: { 'retry-after': '120' }, body: failure('DEMO_RATE_LIMIT', 'Too many') });
+    cy.intercept('POST', '**/api/demo/challenge', {
+      statusCode: 429,
+      headers: { 'retry-after': '120' },
+      body: failure('DEMO_RATE_LIMIT', 'Too many'),
+    });
     cy.visit('/demo');
     generateButton().click();
-    cy.contains('[data-testid="demo-problem"]', 'Too many requests').should('be.visible').and('not.contain.text', "today's attempts");
+    cy.contains('[data-testid="demo-problem"]', 'Too many requests')
+      .should('be.visible')
+      .and('not.contain.text', "today's attempts");
     generateButton().should('be.enabled');
   });
 
@@ -449,7 +561,10 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
 
     stubStatus();
     stubChallenge(4);
-    stubGenerate({ statusCode: 502, body: failure('EXTERNAL_SERVICE_ERROR', 'The AI returned something unusable') });
+    stubGenerate({
+      statusCode: 502,
+      body: failure('EXTERNAL_SERVICE_ERROR', 'The AI returned something unusable'),
+    });
     cy.visit('/demo');
     generateButton().click();
     cy.contains('[data-testid="demo-problem"]', 'counted').should('be.visible');
@@ -462,7 +577,10 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
     const setText = (text: string) =>
       cy.get('textarea').then(($el) => {
         const el = $el[0] as HTMLTextAreaElement;
-        const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!;
+        const setter = Object.getOwnPropertyDescriptor(
+          HTMLTextAreaElement.prototype,
+          'value'
+        )!.set!;
         setter.call(el, text);
         el.dispatchEvent(new Event('input', { bubbles: true }));
       });
@@ -478,7 +596,10 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
       .should('have.attr', 'aria-invalid', 'true')
       .invoke('attr', 'aria-describedby')
       .then((ids) => {
-        const described = ids!.split(' ').map((id) => Cypress.$(`#${id}`).text()).join(' ');
+        const described = ids!
+          .split(' ')
+          .map((id) => Cypress.$(`#${id}`).text())
+          .join(' ');
         expect(described).to.contain('6,001').and.to.contain('6,000');
       });
     cy.get('[role="alert"]').should('contain.text', 'too long');
@@ -490,7 +611,8 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
     cy.viewport(375, 812);
     cy.visit('/demo');
     cy.wait('@status');
-    const noOverflow = () => cy.document().then((doc) => expect(doc.documentElement.scrollWidth).to.be.at.most(375));
+    const noOverflow = () =>
+      cy.document().then((doc) => expect(doc.documentElement.scrollWidth).to.be.at.most(375));
     noOverflow();
 
     // Teclado: las plantillas son radios nativos; Tab sale del grupo directo al boton (la activacion con Enter/Espacio
@@ -498,20 +620,30 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
     cy.get('input[type="radio"][value="blog"]').check({ force: true }).focus();
     cy.press(Cypress.Keyboard.Keys.TAB);
     cy.focused().should('contain.text', 'Generate mock API').click();
-    cy.wait('@generate').its('request.body.source').should('deep.equal', { type: 'template', id: 'blog' });
+    cy.wait('@generate')
+      .its('request.body.source')
+      .should('deep.equal', { type: 'template', id: 'blog' });
 
     // Con el resultado, el orden de tabulacion recorre los endpoints, "Enviar" y el enlace de registro; nada tiene tabindex negativo
     cy.get('[data-testid="demo-endpoint-list"] li').should('have.length', 3);
     noOverflow();
     cy.get('main [tabindex="-1"]').should('not.exist');
     cy.contains('button', 'Generate mock API').focus();
-    for (const expected of ['/products', '/products/:id', '/orders', 'Send request', 'Create your free account']) {
+    for (const expected of [
+      '/products',
+      '/products/:id',
+      '/orders',
+      'Send request',
+      'Create your free account',
+    ]) {
       cy.press(Cypress.Keyboard.Keys.TAB);
       cy.focused().should('contain.text', expected);
     }
     cy.get('[data-testid="demo-endpoint-list"]').contains('button', '/products/:id').click();
     cy.contains('button', 'Send request').click();
-    cy.get('[data-testid="demo-response"] pre').should('contain.text', 'Ceramic mug').and('have.attr', 'tabindex', '0');
+    cy.get('[data-testid="demo-response"] pre')
+      .should('contain.text', 'Ceramic mug')
+      .and('have.attr', 'tabindex', '0');
     noOverflow();
     // Nada dentro de la pagina se sale de la pantalla
     cy.get('[data-testid="demo-page"] *').each(($el) => {
@@ -523,12 +655,17 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
 
   it('(g2) 768 y 1440 px sin desbordes con el resultado a la vista', () => {
     stubAll();
-    for (const [width, height] of [[768, 1024], [1440, 900]]) {
+    for (const [width, height] of [
+      [768, 1024],
+      [1440, 900],
+    ]) {
       cy.viewport(width, height);
       cy.visit('/demo');
       generateButton().click();
       cy.get('[data-testid="demo-endpoint-list"] li').should('have.length', 3);
-      cy.document().then((doc) => expect(doc.documentElement.scrollWidth, `ancho ${width}`).to.be.at.most(width));
+      cy.document().then((doc) =>
+        expect(doc.documentElement.scrollWidth, `ancho ${width}`).to.be.at.most(width)
+      );
     }
   });
 
@@ -552,9 +689,14 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
       uiLocale = 'zh';
     });
     cy.visit('/demo');
-    cy.get('main h1').invoke('text').should('match', /[一-鿿]/);
+    cy.get('main h1')
+      .invoke('text')
+      .should('match', /[一-鿿]/);
     cy.get('main').invoke('text').should('not.contain', 'Try Mockia');
-    cy.get('main button[type="button"]').first().invoke('text').should('match', /[一-鿿]/);
+    cy.get('main button[type="button"]')
+      .first()
+      .invoke('text')
+      .should('match', /[一-鿿]/);
     cy.get('main button[type="button"]').first().click();
     cy.contains(/\d+:\d{2} 后过期/).should('be.visible');
   });
@@ -563,10 +705,14 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
     // La respuesta real de /availability es cacheable 60 s: una entrada de la cache HTTP del navegador (de otra visita
     // anterior) no pasaria por cy.intercept. Se vacia antes de cada prueba.
     beforeEach(() => {
-      cy.wrap(Cypress.automation('remote:debugger:protocol', { command: 'Network.clearBrowserCache' }));
+      cy.wrap(
+        Cypress.automation('remote:debugger:protocol', { command: 'Network.clearBrowserCache' })
+      );
     });
     const availability = (response: Record<string, unknown>, delay = 0) =>
-      cy.intercept('GET', '**/api/demo/availability', delay ? { delay, ...response } : response).as('availability');
+      cy
+        .intercept('GET', '**/api/demo/availability', delay ? { delay, ...response } : response)
+        .as('availability');
     const heroSection = () => cy.get('#hero-title').parents('section').first();
     const headerLink = () => cy.get('#site-nav a[href="/demo"]');
 
@@ -625,7 +771,8 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
           .find('figure')
           .first()
           .then(($f) => {
-            before = $f[0].getBoundingClientRect().top + ($f[0].ownerDocument.defaultView?.scrollY ?? 0);
+            before =
+              $f[0].getBoundingClientRect().top + ($f[0].ownerDocument.defaultView?.scrollY ?? 0);
           });
         cy.wait('@availability');
         if (available) heroSection().contains('a', 'Try without signing up').should('be.visible');
@@ -636,8 +783,12 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
           .find('figure')
           .first()
           .then(($f) => {
-            const after = $f[0].getBoundingClientRect().top + ($f[0].ownerDocument.defaultView?.scrollY ?? 0);
-            expect(Math.abs(after - before), `desplazamiento con available=${available}`).to.be.at.most(1);
+            const after =
+              $f[0].getBoundingClientRect().top + ($f[0].ownerDocument.defaultView?.scrollY ?? 0);
+            expect(
+              Math.abs(after - before),
+              `desplazamiento con available=${available}`
+            ).to.be.at.most(1);
           });
         cy.document().then((doc) => expect(doc.documentElement.scrollWidth).to.be.at.most(375));
       }
@@ -662,7 +813,11 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
       link: string;
     }
     const mailsFor = (to: string) =>
-      cy.request('/api/__test__/outbox').then((res) => (res.body.data as MailEntry[]).filter((m) => m.to === to && m.template === 'verify'));
+      cy
+        .request('/api/__test__/outbox')
+        .then((res) =>
+          (res.body.data as MailEntry[]).filter((m) => m.to === to && m.template === 'verify')
+        );
 
     /** Una demo real en la base de datos (sin IA); el alias @realDemoId lleva su id. */
     const createRealDemo = () =>
@@ -681,9 +836,24 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
             demoId,
             baseUrl: `http://localhost:5173/api/demo-mock/${demoId}`,
             endpoints: [
-              { method: 'GET', path: '/products', statusCode: 200, body: [{ id: 1, name: 'E2E mug' }] },
-              { method: 'GET', path: '/products/:id', statusCode: 200, body: { id: 1, name: 'E2E mug' } },
-              { method: 'POST', path: '/orders', statusCode: 201, body: { id: 77, status: 'created' } },
+              {
+                method: 'GET',
+                path: '/products',
+                statusCode: 200,
+                body: [{ id: 1, name: 'E2E mug' }],
+              },
+              {
+                method: 'GET',
+                path: '/products/:id',
+                statusCode: 200,
+                body: { id: 1, name: 'E2E mug' },
+              },
+              {
+                method: 'POST',
+                path: '/orders',
+                statusCode: 201,
+                body: { id: 77, status: 'created' },
+              },
             ],
           }),
         });
@@ -702,7 +872,13 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
       cy.get('button[type="submit"]').click();
     };
 
-    const registerViaApi = (email: string) => cy.request('POST', '/api/auth/register', { email, password: PASSWORD, username: 'keeper', locale: 'en' });
+    const registerViaApi = (email: string) =>
+      cy.request('POST', '/api/auth/register', {
+        email,
+        password: PASSWORD,
+        username: 'keeper',
+        locale: 'en',
+      });
     const logIn = (email: string) => {
       cy.get('input[name="email"]').type(email);
       cy.get('input[name="password"]').type(PASSWORD);
@@ -712,7 +888,9 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
     const pending = () => cy.window().then((win) => win.sessionStorage.getItem(KEY));
 
     before(() => {
-      cy.request({ url: '/api/__test__/outbox', failOnStatusCode: false }).its('status').should('eq', 200);
+      cy.request({ url: '/api/__test__/outbox', failOnStatusCode: false })
+        .its('status')
+        .should('eq', 200);
     });
     beforeEach(() => {
       cy.clearCookies();
@@ -731,7 +909,9 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
 
       signUp(uniqueEmail('keep'));
       cy.url().should('include', '/dashboard');
-      claimNotice().should('have.attr', 'data-state', 'done').and('contain', 'Your demo is now a project of your account: Demo - products');
+      claimNotice()
+        .should('have.attr', 'data-state', 'done')
+        .and('contain', 'Your demo is now a project of your account: Demo - products');
       cy.contains('a', 'Demo - products').should('be.visible');
       pending().should('eq', null);
       // Recargar no vuelve a reclamar nada
@@ -743,7 +923,9 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
         .invoke('attr', 'href')
         .then((href) => {
           const slug = String(href).split('/').pop();
-          cy.request(`/api/mock/${slug}/products`).its('body').should('deep.equal', [{ id: 1, name: 'E2E mug' }]);
+          cy.request(`/api/mock/${slug}/products`)
+            .its('body')
+            .should('deep.equal', [{ id: 1, name: 'E2E mug' }]);
           cy.request('POST', `/api/mock/${slug}/orders`, {}).then((res) => {
             expect(res.status).to.eq(201);
             expect(res.body).to.deep.equal({ id: 77, status: 'created' });
@@ -755,11 +937,16 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
       generateRealDemo();
       cy.contains('a', 'Create your free account').click();
       // El servidor de pruebas no exige el correo verificado: se simula su respuesta una sola vez
-      cy.intercept({ method: 'POST', url: claimUrl, times: 1 }, { statusCode: 403, body: failure('EMAIL_NOT_VERIFIED', 'Email not verified') }).as('claim403');
+      cy.intercept(
+        { method: 'POST', url: claimUrl, times: 1 },
+        { statusCode: 403, body: failure('EMAIL_NOT_VERIFIED', 'Email not verified') }
+      ).as('claim403');
       const email = uniqueEmail('verify');
       signUp(email);
       cy.wait('@claim403');
-      claimNotice().should('have.attr', 'data-state', 'verify').and('contain', 'Verify your email address and we will save it as a project');
+      claimNotice()
+        .should('have.attr', 'data-state', 'verify')
+        .and('contain', 'Verify your email address and we will save it as a project');
       cy.get<string>('@realDemoId').then((demoId) => pending().should('eq', demoId));
       cy.contains('Demo - products').should('not.exist');
 
@@ -781,7 +968,18 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
       cy.contains('a', 'Create your free account').click();
       cy.intercept(
         { method: 'POST', url: claimUrl, times: 1 },
-        { statusCode: 402, body: { success: false, error: { code: 'PLAN_LIMIT_REACHED', message: 'limit', details: { plan: 'free', limit: 5, active: 5 } }, timestamp: new Date().toISOString() } },
+        {
+          statusCode: 402,
+          body: {
+            success: false,
+            error: {
+              code: 'PLAN_LIMIT_REACHED',
+              message: 'limit',
+              details: { plan: 'free', limit: 5, active: 5 },
+            },
+            timestamp: new Date().toISOString(),
+          },
+        }
       ).as('claim402');
       signUp(uniqueEmail('limit'));
       cy.wait('@claim402');
@@ -806,7 +1004,9 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
       logIn(email);
       cy.url().should('include', '/dashboard');
       generateRealDemo();
-      cy.contains('a', 'Save this project to your account').should('have.attr', 'href', '/dashboard').click();
+      cy.contains('a', 'Save this project to your account')
+        .should('have.attr', 'href', '/dashboard')
+        .click();
       cy.url().should('include', '/dashboard');
       claimNotice().should('have.attr', 'data-state', 'done');
       cy.contains('Demo - products').should('be.visible');
@@ -817,15 +1017,17 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
         // Se reclama antes con otra cuenta: para la nuestra ya no queda nada
         const first = uniqueEmail('first');
         registerViaApi(first);
-        cy.request('POST', '/api/auth/login', { email: first, password: PASSWORD }).then((login) => {
-          cy.request({
-            method: 'POST',
-            url: `/api/demo/${demoId}/claim`,
-            headers: { Authorization: `Bearer ${login.body.data.tokens.accessToken as string}` },
-          })
-            .its('status')
-            .should('eq', 201);
-        });
+        cy.request('POST', '/api/auth/login', { email: first, password: PASSWORD }).then(
+          (login) => {
+            cy.request({
+              method: 'POST',
+              url: `/api/demo/${demoId}/claim`,
+              headers: { Authorization: `Bearer ${login.body.data.tokens.accessToken as string}` },
+            })
+              .its('status')
+              .should('eq', 201);
+          }
+        );
         cy.clearCookies();
         const email = uniqueEmail('late');
         registerViaApi(email);
@@ -835,7 +1037,9 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
           },
         });
         logIn(email);
-        claimNotice().should('have.attr', 'data-state', 'gone').and('contain', 'expired or was already saved');
+        claimNotice()
+          .should('have.attr', 'data-state', 'gone')
+          .and('contain', 'expired or was already saved');
         claimNotice().contains('a', 'Generate a new demo').should('have.attr', 'href', '/demo');
         pending().should('eq', null);
       });
@@ -872,7 +1076,10 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
     it('si la demo ya aparece caducada, el boton no guarda nada en el navegador', () => {
       stubStatus();
       stubChallenge();
-      stubGenerate({ statusCode: 201, body: generated({ expiresAt: new Date(Date.now() - 1000).toISOString() }) });
+      stubGenerate({
+        statusCode: 201,
+        body: generated({ expiresAt: new Date(Date.now() - 1000).toISOString() }),
+      });
       cy.visit('/demo');
       cy.wait('@status');
       generateButton().click();

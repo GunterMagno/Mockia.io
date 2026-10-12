@@ -17,12 +17,21 @@ import {
   leaveProjectHandler,
   exportProjectHandler,
 } from './controller.js';
-import { authenticateToken, type AuthenticatedRequest } from '../../middlewares/authenticateToken.js';
+import {
+  authenticateToken,
+  type AuthenticatedRequest,
+} from '../../middlewares/authenticateToken.js';
 import { authorizeRole } from '../../middlewares/authorizeRole.js';
 import { enforceProjectLimit } from '../../middlewares/planGate.js';
 import { validate } from '../../middlewares/validateRequest.js';
 import { rateLimit } from '../../middlewares/rateLimit.js';
-import { createProjectSchema, updateProjectSchema, addProjectMemberSchema, importGitHubSchema, exportQuerySchema } from './validation.js';
+import {
+  createProjectSchema,
+  updateProjectSchema,
+  addProjectMemberSchema,
+  importGitHubSchema,
+  exportQuerySchema,
+} from './validation.js';
 import type { ProjectRole } from '@mockia/shared';
 import { getProjectSwagger } from '../mock/swagger.controller.js';
 
@@ -102,11 +111,7 @@ projectsRouter.post(
  *       401:
  *         description: Unauthorized
  */
-projectsRouter.get(
-  '/',
-  authenticateToken,
-  getUserProjectsHandler
-);
+projectsRouter.get('/', authenticateToken, getUserProjectsHandler);
 
 /**
  * @swagger
@@ -120,11 +125,7 @@ projectsRouter.get(
  *       200:
  *         description: Cleanup successful
  */
-projectsRouter.post(
-  '/cleanup-archived',
-  authenticateToken,
-  cleanupArchivedProjectsHandler
-);
+projectsRouter.post('/cleanup-archived', authenticateToken, cleanupArchivedProjectsHandler);
 
 /**
  * @swagger
@@ -146,11 +147,7 @@ projectsRouter.post(
  *       404:
  *         description: Project not found
  */
-projectsRouter.get(
-  '/:id',
-  authenticateToken,
-  getProjectByIdHandler
-);
+projectsRouter.get('/:id', authenticateToken, getProjectByIdHandler);
 
 /**
  * @swagger
@@ -335,11 +332,7 @@ projectsRouter.patch(
  *       204:
  *         description: Project archived
  */
-projectsRouter.delete(
-  '/:id',
-  authenticateToken,
-  archiveProjectHandler
-);
+projectsRouter.delete('/:id', authenticateToken, archiveProjectHandler);
 
 /**
  * @swagger
@@ -359,11 +352,7 @@ projectsRouter.delete(
  *       204:
  *         description: Project deleted
  */
-projectsRouter.delete(
-  '/:id/hard',
-  authenticateToken,
-  hardDeleteProjectHandler
-);
+projectsRouter.delete('/:id/hard', authenticateToken, hardDeleteProjectHandler);
 
 /**
  * @swagger
@@ -492,11 +481,7 @@ projectsRouter.post(
  *       200:
  *         description: Project context
  */
-projectsRouter.get(
-  '/:id/context',
-  authenticateToken,
-  getProjectContextHandler
-);
+projectsRouter.get('/:id/context', authenticateToken, getProjectContextHandler);
 
 /**
  * @swagger
@@ -516,11 +501,7 @@ projectsRouter.get(
  *       200:
  *         description: Context deleted
  */
-projectsRouter.delete(
-  '/:id/context',
-  authenticateToken,
-  deleteProjectContextHandler
-);
+projectsRouter.delete('/:id/context', authenticateToken, deleteProjectContextHandler);
 
 /**
  * @swagger
@@ -540,10 +521,6 @@ projectsRouter.delete(
  *       200:
  *         description: Successfully left the project
  */
-projectsRouter.post(
-  '/:id/leave',
-  authenticateToken,
-  leaveProjectHandler
-);
+projectsRouter.post('/:id/leave', authenticateToken, leaveProjectHandler);
 
 export default projectsRouter;

@@ -1,6 +1,6 @@
-import React from 'react'
-import LegalDocument from './LegalDocument'
+import React from 'react';
+import LegalDocument from './LegalDocument';
 
-const Cookies: React.FC = () => <LegalDocument doc="cookies" />
+const Cookies: React.FC = () => <LegalDocument doc="cookies" />;
 
-export default Cookies
+export default Cookies;

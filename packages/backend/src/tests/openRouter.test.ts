@@ -1,9 +1,9 @@
 import axios from 'axios';
-import { 
-  sleep, 
-  calculateBackoffDelay, 
-  callOpenRouterWithRetry, 
-  generateWithOpenRouter 
+import {
+  sleep,
+  calculateBackoffDelay,
+  callOpenRouterWithRetry,
+  generateWithOpenRouter,
 } from '../services/openRouter.service.js';
 import * as aiConfig from '../config/ai.js';
 import { AppError } from '../middlewares/errorHandler.js';
@@ -32,11 +32,11 @@ describe('OpenRouter Service', () => {
     it('should increase delay exponentially', () => {
       const base = 1000;
       const max = 30000;
-      
+
       const delay0 = calculateBackoffDelay(0, base, max);
       const delay1 = calculateBackoffDelay(1, base, max);
       const delay2 = calculateBackoffDelay(2, base, max);
-      
+
       expect(delay0).toBeGreaterThanOrEqual(1000);
       expect(delay1).toBeGreaterThanOrEqual(2000);
       expect(delay2).toBeGreaterThanOrEqual(4000);
@@ -84,11 +84,13 @@ describe('OpenRouter Service', () => {
     });
 
     it('should handle token limit error by reducing max_tokens', async () => {
-      const tokenError = { 
-        response: { 
-          status: 400, 
-          data: { error: { message: 'requires more credits, or fewer max_tokens. can only afford 500' } } 
-        } 
+      const tokenError = {
+        response: {
+          status: 400,
+          data: {
+            error: { message: 'requires more credits, or fewer max_tokens. can only afford 500' },
+          },
+        },
       };
       mockedAxios.isAxiosError.mockReturnValue(true);
       mockedAxios.post
@@ -112,7 +114,9 @@ describe('OpenRouter Service', () => {
       mockedAxios.isAxiosError.mockReturnValue(true);
       mockedAxios.post.mockRejectedValue(error400);
 
-      await expect(callOpenRouterWithRetry(mockMessages)).rejects.toThrow('OpenRouter API error (upstream status 400)');
+      await expect(callOpenRouterWithRetry(mockMessages)).rejects.toThrow(
+        'OpenRouter API error (upstream status 400)'
+      );
       expect(mockedAxios.post).toHaveBeenCalledTimes(1);
     });
 
@@ -121,22 +125,29 @@ describe('OpenRouter Service', () => {
       mockedAxios.isAxiosError.mockReturnValue(true);
       mockedAxios.post.mockRejectedValue(error401);
 
-      await expect(callOpenRouterWithRetry(mockMessages)).rejects.toThrow('OpenRouter API authentication failed');
+      await expect(callOpenRouterWithRetry(mockMessages)).rejects.toThrow(
+        'OpenRouter API authentication failed'
+      );
     });
 
     // An upstream 401/402/404 is OUR misconfiguration (key, credits, model), never the user's session: passing the
     // status through made the SPA read a 401 as "session expired", refresh and repeat the whole generation.
-    it.each([400, 401, 402, 403, 404, 422])('maps an upstream %i to 502 with a generic message', async (status) => {
-      const upstream = { response: { status, data: { error: { message: 'upstream secret detail' } } } };
-      mockedAxios.isAxiosError.mockReturnValue(true);
-      mockedAxios.post.mockRejectedValue(upstream);
+    it.each([400, 401, 402, 403, 404, 422])(
+      'maps an upstream %i to 502 with a generic message',
+      async (status) => {
+        const upstream = {
+          response: { status, data: { error: { message: 'upstream secret detail' } } },
+        };
+        mockedAxios.isAxiosError.mockReturnValue(true);
+        mockedAxios.post.mockRejectedValue(upstream);
 
-      const err = await callOpenRouterWithRetry(mockMessages).catch((e) => e);
-      expect(err).toBeInstanceOf(AppError);
-      expect(err.statusCode).toBe(502);
-      expect(err.code).toBe('EXTERNAL_SERVICE_ERROR');
-      expect(err.message).not.toContain('upstream secret detail');
-    });
+        const err = await callOpenRouterWithRetry(mockMessages).catch((e) => e);
+        expect(err).toBeInstanceOf(AppError);
+        expect(err.statusCode).toBe(502);
+        expect(err.code).toBe('EXTERNAL_SERVICE_ERROR');
+        expect(err.message).not.toContain('upstream secret detail');
+      }
+    );
 
     it('keeps 429 as 429 and 503 as 503', async () => {
       mockedAxios.isAxiosError.mockReturnValue(true);
@@ -148,7 +159,9 @@ describe('OpenRouter Service', () => {
 
     it('maps any other upstream 5xx to 502', async () => {
       mockedAxios.isAxiosError.mockReturnValue(true);
-      mockedAxios.post.mockRejectedValue({ response: { status: 500, data: { error: { message: 'boom' } } } });
+      mockedAxios.post.mockRejectedValue({
+        response: { status: 500, data: { error: { message: 'boom' } } },
+      });
       const err = await callOpenRouterWithRetry(mockMessages).catch((e) => e);
       expect(err.statusCode).toBe(502);
       expect(err.message).not.toContain('boom');
@@ -158,14 +171,16 @@ describe('OpenRouter Service', () => {
       mockedAxios.isAxiosError.mockReturnValue(false);
       mockedAxios.post.mockRejectedValue(new Error('Fatal'));
 
-      await expect(callOpenRouterWithRetry(mockMessages)).rejects.toThrow('OpenRouter API error: Fatal');
+      await expect(callOpenRouterWithRetry(mockMessages)).rejects.toThrow(
+        'OpenRouter API error: Fatal'
+      );
     });
   });
 
   describe('generateWithOpenRouter', () => {
     it('should extract content from the first choice', async () => {
       const mockResponse = {
-        choices: [{ message: { content: 'Generated text' } }]
+        choices: [{ message: { content: 'Generated text' } }],
       };
       mockedAxios.post.mockResolvedValueOnce({ data: mockResponse });
 

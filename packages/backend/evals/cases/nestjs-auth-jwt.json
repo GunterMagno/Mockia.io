@@ -1,10 +1,7 @@
 {
   "id": "nestjs-auth-jwt",
   "description": "NestJS auth controller with JWT login, refresh and a guarded profile route.",
-  "tags": [
-    "nestjs",
-    "auth"
-  ],
+  "tags": ["nestjs", "auth"],
   "input": {
     "projectTitle": "Identity Service",
     "userInput": "Mock the login flow and the profile endpoint.",
@@ -32,15 +29,11 @@
           "summary": "@Controller(\"auth\") AuthController",
           "routes": [
             {
-              "methods": [
-                "POST"
-              ],
+              "methods": ["POST"],
               "path": "/auth/login"
             },
             {
-              "methods": [
-                "POST"
-              ],
+              "methods": ["POST"],
               "path": "/auth/refresh"
             }
           ]
@@ -51,9 +44,7 @@
           "summary": "@UseGuards(JwtAuthGuard) @Controller(\"profile\")",
           "routes": [
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/profile"
             }
           ]
@@ -65,18 +56,11 @@
           "interfaces": [
             {
               "name": "TokenPair",
-              "properties": [
-                "accessToken: string",
-                "refreshToken: string"
-              ]
+              "properties": ["accessToken: string", "refreshToken: string"]
             },
             {
               "name": "Profile",
-              "properties": [
-                "userId: string",
-                "email: string",
-                "roles: string[]"
-              ]
+              "properties": ["userId: string", "email: string", "roles: string[]"]
             }
           ]
         }
@@ -98,10 +82,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "email",
-          "password"
-        ]
+        "required": ["email", "password"]
       },
       "responseSchema": {
         "type": "object",
@@ -113,10 +94,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "accessToken",
-          "refreshToken"
-        ]
+        "required": ["accessToken", "refreshToken"]
       },
       "examples": [
         {
@@ -149,9 +127,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "refreshToken"
-        ]
+        "required": ["refreshToken"]
       },
       "responseSchema": {
         "type": "object",
@@ -163,10 +139,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "accessToken",
-          "refreshToken"
-        ]
+        "required": ["accessToken", "refreshToken"]
       },
       "examples": [
         {
@@ -212,11 +185,7 @@
             }
           }
         },
-        "required": [
-          "userId",
-          "email",
-          "roles"
-        ]
+        "required": ["userId", "email", "roles"]
       },
       "examples": [
         {
@@ -224,9 +193,7 @@
           "response": {
             "userId": "u1",
             "email": "admin@example.com",
-            "roles": [
-              "admin"
-            ]
+            "roles": ["admin"]
           }
         },
         {

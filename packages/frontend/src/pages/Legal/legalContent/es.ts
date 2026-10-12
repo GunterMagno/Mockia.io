@@ -1,4 +1,4 @@
-import type { LegalContent } from './types'
+import type { LegalContent } from './types';
 
 /**
  * Textos legales en español (idioma principal).
@@ -124,7 +124,9 @@ const es: LegalContent = {
         {
           heading: 'Qué datos tratamos y de dónde proceden',
           blocks: [
-            { p: 'Solo tratamos los datos que el Servicio necesita para funcionar. Estos son todos los que guardamos:' },
+            {
+              p: 'Solo tratamos los datos que el Servicio necesita para funcionar. Estos son todos los que guardamos:',
+            },
             {
               table: {
                 head: ['Categoría', 'Datos', 'Origen'],
@@ -350,7 +352,10 @@ const es: LegalContent = {
                     'Cuenta, proyectos y contenido',
                     'Mientras mantengas la cuenta. Si la eliminas o nos pides la supresión, los borramos, salvo lo indicado más abajo.',
                   ],
-                  ['Proyectos archivados', 'Se eliminan definitivamente 30 días después de archivarlos.'],
+                  [
+                    'Proyectos archivados',
+                    'Se eliminan definitivamente 30 días después de archivarlos.',
+                  ],
                   [
                     'Generaciones guardadas para mejorar la IA y valoraciones (solo con tu consentimiento)',
                     '180 días, o hasta que retires el consentimiento o elimines la cuenta; al retirarlo se borran de inmediato.',
@@ -733,6 +738,6 @@ const es: LegalContent = {
       ],
     },
   },
-}
+};
 
-export default es
+export default es;

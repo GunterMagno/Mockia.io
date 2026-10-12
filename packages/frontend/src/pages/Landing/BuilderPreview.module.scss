@@ -65,7 +65,9 @@
   background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
-  box-shadow: 0 0 0 1px var(--color-glow-accent), 0 20px 40px rgba(0, 0, 0, 0.4);
+  box-shadow:
+    0 0 0 1px var(--color-glow-accent),
+    0 20px 40px rgba(0, 0, 0, 0.4);
   overflow: hidden;
   min-width: 0;
 }
@@ -100,11 +102,21 @@
 }
 
 /* Colores por verbo (todos AAA sobre --color-surface) */
-.get { color: var(--color-ok); }
-.post { color: var(--color-accent-text); }
-.put { color: var(--color-warn); }
-.patch { color: var(--color-accent-text); }
-.delete { color: var(--color-danger); }
+.get {
+  color: var(--color-ok);
+}
+.post {
+  color: var(--color-accent-text);
+}
+.put {
+  color: var(--color-warn);
+}
+.patch {
+  color: var(--color-accent-text);
+}
+.delete {
+  color: var(--color-danger);
+}
 
 .body {
   margin: 0;
@@ -116,10 +128,18 @@
   overflow-x: auto;
 }
 
-.key { color: var(--color-accent-text); }
-.str { color: var(--color-warn); }
-.ok { color: var(--color-ok); }
-.bad { color: var(--color-danger); }
+.key {
+  color: var(--color-accent-text);
+}
+.str {
+  color: var(--color-warn);
+}
+.ok {
+  color: var(--color-ok);
+}
+.bad {
+  color: var(--color-danger);
+}
 
 .previewFoot {
   display: flex;

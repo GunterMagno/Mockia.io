@@ -110,9 +110,15 @@
   font-weight: var(--weight-bold);
 }
 
-.active { color: var(--color-ok); }
-.past_due { color: var(--color-danger); }
-.canceled { color: var(--color-text-muted); }
+.active {
+  color: var(--color-ok);
+}
+.past_due {
+  color: var(--color-danger);
+}
+.canceled {
+  color: var(--color-text-muted);
+}
 
 .muted {
   margin: 0;
@@ -139,9 +145,17 @@
   font-weight: 700;
   cursor: pointer;
 
-  &:hover:not(:disabled) { background: var(--color-border); }
-  &:focus-visible { outline: 2px solid var(--color-accent-text); outline-offset: 2px; }
-  &:disabled { cursor: progress; opacity: 0.7; }
+  &:hover:not(:disabled) {
+    background: var(--color-border);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--color-accent-text);
+    outline-offset: 2px;
+  }
+  &:disabled {
+    cursor: progress;
+    opacity: 0.7;
+  }
 }
 
 .inlineBtn {
@@ -194,9 +208,15 @@
   transition: width var(--transition-fast);
 }
 
-.ok .fill { background: var(--color-accent-text); }
-.warn .fill { background: var(--color-warn); }
-.full .fill { background: var(--color-danger); }
+.ok .fill {
+  background: var(--color-accent-text);
+}
+.warn .fill {
+  background: var(--color-warn);
+}
+.full .fill {
+  background: var(--color-danger);
+}
 
 .plans {
   display: flex;

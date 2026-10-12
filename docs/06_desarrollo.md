@@ -15,17 +15,18 @@ El proyecto se ha gestionado siguiendo directrices de la metodología ágil **Sc
 
 ## 6.2 Herramientas de Control de Versiones
 
-Todo el ciclo de vida del código se ha gestionado mediante **Git** y alojado en **GitHub**. 
+Todo el ciclo de vida del código se ha gestionado mediante **Git** y alojado en **GitHub**.
 Se ha seguido una estrategia de ramificación basada en **GitFlow** simplificado:
+
 - `main`: Rama de producción, código estable y desplegable.
 - `develop`: Rama de integración donde se unen todas las características.
-  
+
 ---
 
 ## 6.3 Dificultades Encontradas y Soluciones Técnicas
 
 1. **Configuración del Monorepo con TypeScript:** Compartir interfaces entre el frontend y el backend (`@mockia/shared`) generó problemas de resolución de rutas en tiempo de compilación. **Solución:** Ajustar rigurosamente los `tsconfig.json` utilizando `Project References` y modificar los scripts de Docker para compilar siempre el paquete compartido antes que los servicios principales.
-2. **Inconsistencia en las respuestas de la IA (LLM):** Los modelos de lenguaje a menudo devolvían el JSON rodeado de texto explicativo o etiquetas Markdown (```json ... ```), lo que rompía el parseo de `JSON.parse()`. **Solución:** Se implementó un algoritmo robusto (`llmOutputParser.ts`) que extrae la subcadena JSON exacta mediante expresiones regulares, logrando un flujo de "auto-sanado" (Self-Healing) antes de inyectarlo a la base de datos.
+2. **Inconsistencia en las respuestas de la IA (LLM):** Los modelos de lenguaje a menudo devolvían el JSON rodeado de texto explicativo o etiquetas Markdown (`json ... `), lo que rompía el parseo de `JSON.parse()`. **Solución:** Se implementó un algoritmo robusto (`llmOutputParser.ts`) que extrae la subcadena JSON exacta mediante expresiones regulares, logrando un flujo de "auto-sanado" (Self-Healing) antes de inyectarlo a la base de datos.
 3. **Rendimiento del Interceptor Dinámico:** Capturar todas las peticiones web mediante un wildcard (`/*`) y buscar coincidencias en MongoDB generaba lentitud, afectando a la latencia simulada. **Solución:** Se añadieron índices compuestos nativos en MongoDB (`mockApiId` + `method`) y un sistema de caché en memoria (`mockCache.service.ts`) que resuelve las peticiones sin tocar el disco en el 95% de los casos.
 
 ---
@@ -35,7 +36,7 @@ Se ha seguido una estrategia de ramificación basada en **GitFlow** simplificado
 El backend está diseñado bajo principios de **arquitectura de tres capas (MVC modificado)** para garantizar la modularidad y separación estricta de responsabilidades, facilitando la escalabilidad del sistema:
 
 1. **Rutas (Routing Layer):** Mapean los endpoints de la API, configuran los middlewares y delegan la ejecución al controlador correspondiente.
-2. **Controladores (Interface Layer):** Actúan como delgados receptores de peticiones HTTP. Validan la entrada (mediante Joi), manejan el flujo básico de negocio, capturan errores con `asyncHandler` y devuelven respuestas HTTP. *No interactúan directamente con la base de datos ni contienen lógica compleja.*
+2. **Controladores (Interface Layer):** Actúan como delgados receptores de peticiones HTTP. Validan la entrada (mediante Joi), manejan el flujo básico de negocio, capturan errores con `asyncHandler` y devuelven respuestas HTTP. _No interactúan directamente con la base de datos ni contienen lógica compleja._
 3. **Servicios (Business Logic Layer):** Capa donde reside toda la lógica de negocio y las consultas complejas de base de datos (Mongoose/MongoDB). Los servicios son reutilizables y desacoplados del protocolo HTTP (facilitando su prueba unitaria).
 4. **Modelos (DataAccess Layer):** Esquemas de Mongoose que interactúan directamente con las colecciones de MongoDB y definen sus tipos TypeScript.
 
@@ -52,7 +53,9 @@ La autenticación de usuarios se implementa de manera robusta y sin estado utili
 - **Cifrado de Contraseñas:** Se utiliza **bcrypt** con un factor de sal de 10 para encriptar y verificar las claves de usuario de forma segura.
 
 ### Control de Acceso basado en Roles (RBAC)
+
 Para proteger la integridad de los espacios de trabajo, se define el middleware `authorizeRole.ts` que intercepta las llamadas basándose en el rol del usuario para el proyecto específico (`OWNER`, `EDITOR`, `VIEWER`):
+
 - `OWNER`: Permiso total de lectura, edición, invitación de miembros y borrado/archivado de proyectos.
 - `EDITOR`: Permiso de lectura y edición de endpoints de mock. Puede invitar colaboradores y eliminar otros miembros (excepto al `OWNER`), pero no puede borrar ni archivar el proyecto.
 - `VIEWER`: Permiso de solo lectura sobre la estructura de endpoints y visualización en el dashboard.
@@ -64,10 +67,13 @@ Para proteger la integridad de los espacios de trabajo, se define el middleware 
 Una de las joyas arquitectónicas de Mockia.io es el **Mock Router**. Mientras que otros servidores de mocks requieren definir rutas estáticas en código, Mockia captura peticiones de forma dinámica absoluta utilizando el enrutador wildcard de Express.
 
 ### Mecanismo de Intercepción:
+
 En `index.ts`:
+
 ```typescript
 app.all('/mock/:projectSlug/*', catchAllMockRouter);
 ```
+
 1. El middleware captura cualquier verbo HTTP (GET, POST, PUT, DELETE, PATCH) en cualquier ruta que comience por `/mock/:projectSlug/`.
 2. Extrae el `projectSlug` y localiza el proyecto correspondiente en MongoDB cargando sus índices únicos optimizados.
 3. Analiza el path dinámico solicitado (ej: `/users/profile`) y compara mediante expresiones regulares avanzadas si existe un endpoint que coincida con el método y path en la colección de `Endpoint`.

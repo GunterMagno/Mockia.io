@@ -52,7 +52,8 @@ const COPY: Record<MailTemplate, Record<MailLocale, Copy>> = {
     en: {
       subject: 'Verify your email address',
       greeting: (n) => (n ? `Hi ${n},` : 'Hi,'),
-      intro: 'Welcome to Mockia. Confirm that this is your email address to unlock AI generation and billing.',
+      intro:
+        'Welcome to Mockia. Confirm that this is your email address to unlock AI generation and billing.',
       button: 'Verify email',
       fallback: 'If the button does not work, copy this link into your browser:',
       expires: 'The link works once and expires in 24 hours.',
@@ -61,7 +62,8 @@ const COPY: Record<MailTemplate, Record<MailLocale, Copy>> = {
     es: {
       subject: 'Verifica tu correo electrónico',
       greeting: (n) => (n ? `Hola ${n},` : 'Hola,'),
-      intro: 'Te damos la bienvenida a Mockia. Confirma que este es tu correo para desbloquear la generación con IA y la facturación.',
+      intro:
+        'Te damos la bienvenida a Mockia. Confirma que este es tu correo para desbloquear la generación con IA y la facturación.',
       button: 'Verificar correo',
       fallback: 'Si el botón no funciona, copia este enlace en tu navegador:',
       expires: 'El enlace funciona una sola vez y caduca en 24 horas.',
@@ -81,19 +83,23 @@ const COPY: Record<MailTemplate, Record<MailLocale, Copy>> = {
     en: {
       subject: 'Reset your Mockia password',
       greeting: (n) => (n ? `Hi ${n},` : 'Hi,'),
-      intro: 'We received a request to reset your Mockia password. Use the button below to choose a new one.',
+      intro:
+        'We received a request to reset your Mockia password. Use the button below to choose a new one.',
       button: 'Reset password',
       fallback: 'If the button does not work, copy this link into your browser:',
-      expires: 'The link works once and expires in 30 minutes. Resetting your password signs you out everywhere.',
+      expires:
+        'The link works once and expires in 30 minutes. Resetting your password signs you out everywhere.',
       ignore: 'If you did not ask for this, ignore this message: your password has not changed.',
     },
     es: {
       subject: 'Restablece tu contraseña de Mockia',
       greeting: (n) => (n ? `Hola ${n},` : 'Hola,'),
-      intro: 'Hemos recibido una solicitud para restablecer tu contraseña de Mockia. Usa el botón para elegir una nueva.',
+      intro:
+        'Hemos recibido una solicitud para restablecer tu contraseña de Mockia. Usa el botón para elegir una nueva.',
       button: 'Restablecer contraseña',
       fallback: 'Si el botón no funciona, copia este enlace en tu navegador:',
-      expires: 'El enlace funciona una sola vez y caduca en 30 minutos. Al restablecer la contraseña se cierran todas tus sesiones.',
+      expires:
+        'El enlace funciona una sola vez y caduca en 30 minutos. Al restablecer la contraseña se cierran todas tus sesiones.',
       ignore: 'Si no lo has solicitado, ignora este mensaje: tu contraseña no ha cambiado.',
     },
     zh: {
@@ -114,7 +120,8 @@ const COPY: Record<MailTemplate, Record<MailLocale, Copy>> = {
         `We couldn't process your latest Mockia payment. Your plan stays active until ${d.date ?? ''}, and Stripe will retry the charge in the meantime. If it is still unpaid by then, your account moves to the Free plan.`,
       button: 'Update payment method',
       fallback: 'If the button does not work, copy this link into your browser:',
-      expires: 'Updating your card (or paying the open invoice) is enough: your plan stays as it is.',
+      expires:
+        'Updating your card (or paying the open invoice) is enough: your plan stays as it is.',
       ignore: 'If you have already fixed it, you can ignore this message.',
     },
     es: {
@@ -124,7 +131,8 @@ const COPY: Record<MailTemplate, Record<MailLocale, Copy>> = {
         `No hemos podido procesar tu último pago de Mockia. Tu plan sigue activo hasta el ${d.date ?? ''} y Stripe volverá a intentar el cobro mientras tanto. Si para entonces sigue sin pagarse, tu cuenta pasará al plan Free.`,
       button: 'Actualizar método de pago',
       fallback: 'Si el botón no funciona, copia este enlace en tu navegador:',
-      expires: 'Basta con actualizar la tarjeta (o pagar la factura pendiente): tu plan se queda como está.',
+      expires:
+        'Basta con actualizar la tarjeta (o pagar la factura pendiente): tu plan se queda como está.',
       ignore: 'Si ya lo has solucionado, puedes ignorar este mensaje.',
     },
     zh: {
@@ -156,7 +164,8 @@ const COPY: Record<MailTemplate, Record<MailLocale, Copy>> = {
         `Tu prueba gratuita termina el ${d.date ?? ''}. A partir de entonces tu suscripción se cobrará automáticamente, salvo que la canceles antes.`,
       button: 'Gestionar suscripción',
       fallback: 'Si el botón no funciona, copia este enlace en tu navegador:',
-      expires: 'Puedes cancelar en cualquier momento antes de que termine la prueba y no se te cobrará.',
+      expires:
+        'Puedes cancelar en cualquier momento antes de que termine la prueba y no se te cobrará.',
       ignore: 'Si quieres conservar tu plan, no tienes que hacer nada.',
     },
     zh: {
@@ -269,7 +278,9 @@ export async function sendMail(to: string, template: MailTemplate, data: MailDat
 
   if (process.env.NODE_ENV === 'production') {
     // No address, no link, no token in the log: only the fact that mail is not configured
-    console.error(`[Mailer] SMTP_URL is not set: the "${template}" email was NOT sent. Configure SMTP_URL and MAIL_FROM.`);
+    console.error(
+      `[Mailer] SMTP_URL is not set: the "${template}" email was NOT sent. Configure SMTP_URL and MAIL_FROM.`
+    );
     return;
   }
   if (process.env.NODE_ENV === 'development') {

@@ -1,6 +1,6 @@
 /**
  * AI Module - Prompt Engineering and Context Management
- * 
+ *
  * This module handles:
  * - System prompt definition for AI instruction
  * - Prompt building and context integration
@@ -17,10 +17,7 @@ export {
   validateJsonResponse,
   extractMockAPIFromResponse,
 } from './prompt.service.js';
-export {
-  extractJsonFromLLMOutput,
-  tryExtractJsonFromLLMOutput,
-} from './llmOutputParser.js';
+export { extractJsonFromLLMOutput, tryExtractJsonFromLLMOutput } from './llmOutputParser.js';
 export { validateGeneratedApi } from './llmOutputValidator.js';
 export { MOCK_SPEC_JSON_SCHEMA } from './outputSchema.js';
 export {

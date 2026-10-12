@@ -29,9 +29,15 @@ describe('Projects - only an OWNER can grant the OWNER role', () => {
     await ProjectModel.deleteMany({});
     const hash = await bcrypt.hash(PASSWORD, 10);
     for (const name of ['owner', 'editor', 'alt', 'friend', 'coowner']) {
-      const user = await UserModel.create({ email: `${name}@grant-example.com`, username: `${name}grant`, passwordHash: hash });
+      const user = await UserModel.create({
+        email: `${name}@grant-example.com`,
+        username: `${name}grant`,
+        passwordHash: hash,
+      });
       ids[name] = user._id.toString();
-      const login = await request(app).post('/api/auth/login').send({ email: `${name}@grant-example.com`, password: PASSWORD });
+      const login = await request(app)
+        .post('/api/auth/login')
+        .send({ email: `${name}@grant-example.com`, password: PASSWORD });
       tokens[name] = login.body.data.tokens.accessToken;
     }
     const created = await request(app)

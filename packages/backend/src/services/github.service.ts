@@ -55,23 +55,15 @@ export function parseGitHubUrl(url: string): GitHubUrlParsed {
 
     // Validate that it's GitHub
     if (!urlObj.hostname.includes('github.com')) {
-      throw new AppError(
-        'URL must be from github.com',
-        ErrorCode.VALIDATION_ERROR,
-        400
-      );
+      throw new AppError('URL must be from github.com', ErrorCode.VALIDATION_ERROR, 400);
     }
 
     // Extract path and split by /
-    const pathParts = urlObj.pathname.split('/').filter(part => part.length > 0);
+    const pathParts = urlObj.pathname.split('/').filter((part) => part.length > 0);
 
     // We need at least owner/repo
     if (pathParts.length < 2) {
-      throw new AppError(
-        'URL must contain owner/repo',
-        ErrorCode.VALIDATION_ERROR,
-        400
-      );
+      throw new AppError('URL must contain owner/repo', ErrorCode.VALIDATION_ERROR, 400);
     }
 
     const owner = pathParts[0];
@@ -97,30 +89,18 @@ export function parseGitHubUrl(url: string): GitHubUrlParsed {
     if (error instanceof AppError) {
       throw error;
     }
-    
+
     // Handle URL parsing errors
     if (error instanceof TypeError) {
-      throw new AppError(
-        'Invalid GitHub URL format',
-        ErrorCode.VALIDATION_ERROR,
-        400
-      );
+      throw new AppError('Invalid GitHub URL format', ErrorCode.VALIDATION_ERROR, 400);
     }
 
     // Fallback for unknown errors
     if (error instanceof Error) {
-      throw new AppError(
-        `Invalid GitHub URL: ${error.message}`,
-        ErrorCode.VALIDATION_ERROR,
-        400
-      );
+      throw new AppError(`Invalid GitHub URL: ${error.message}`, ErrorCode.VALIDATION_ERROR, 400);
     }
-    
-    throw new AppError(
-      'Invalid GitHub URL',
-      ErrorCode.VALIDATION_ERROR,
-      400
-    );
+
+    throw new AppError('Invalid GitHub URL', ErrorCode.VALIDATION_ERROR, 400);
   }
 }
 
@@ -135,7 +115,8 @@ export async function checkRepoAccessibility(owner: string, repo: string): Promi
   try {
     await axios.get(`https://github.com/${owner}/${repo}`, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       },
       timeout: 10000,
     });
@@ -188,7 +169,9 @@ export async function cloneRepository(
     const git: SimpleGit = simpleGit();
 
     // Clone the repository
-    const cloneOptions = branch ? ['clone', '--branch', branch, repoUrl, tempDir] : ['clone', repoUrl, tempDir];
+    const cloneOptions = branch
+      ? ['clone', '--branch', branch, repoUrl, tempDir]
+      : ['clone', repoUrl, tempDir];
 
     await git.raw(cloneOptions);
 
@@ -206,16 +189,18 @@ export async function cloneRepository(
       const errorMsg = error.message.toLowerCase();
 
       // Repository not found (404)
-      if (errorMsg.includes('not found') || errorMsg.includes('does not appear to be a git repository')) {
-        throw new AppError(
-          `Repository not found: ${owner}/${repo}`,
-          ErrorCode.NOT_FOUND,
-          404
-        );
+      if (
+        errorMsg.includes('not found') ||
+        errorMsg.includes('does not appear to be a git repository')
+      ) {
+        throw new AppError(`Repository not found: ${owner}/${repo}`, ErrorCode.NOT_FOUND, 404);
       }
 
       // Branch not found (400)
-      if (errorMsg.includes('remote: not found') || errorMsg.includes('no such file or directory')) {
+      if (
+        errorMsg.includes('remote: not found') ||
+        errorMsg.includes('no such file or directory')
+      ) {
         throw new AppError(
           `Branch not found: ${branch || 'default'}`,
           ErrorCode.VALIDATION_ERROR,
@@ -298,7 +283,16 @@ export async function codeAnalyzer(repoPath: string): Promise<AnalyzedFile[]> {
   const ignoreFiles = new Set(['.DS_Store', '.gitignore', '.env', '.env.local']);
 
   // Relevant extensions
-  const relevantExtensions = new Set(['.ts', '.js', '.json', '.yaml', '.yml', '.md', '.jsx', '.tsx']);
+  const relevantExtensions = new Set([
+    '.ts',
+    '.js',
+    '.json',
+    '.yaml',
+    '.yml',
+    '.md',
+    '.jsx',
+    '.tsx',
+  ]);
 
   // Maximum size to read markdown content (50KB)
   const MAX_MARKDOWN_CONTENT_SIZE = 50 * 1024;
@@ -390,11 +384,7 @@ export async function codeAnalyzer(repoPath: string): Promise<AnalyzedFile[]> {
     // Validate that the directory exists
     const stats = await fs.stat(repoPath);
     if (!stats.isDirectory()) {
-      throw new AppError(
-        'The provided path is not a directory',
-        ErrorCode.VALIDATION_ERROR,
-        400
-      );
+      throw new AppError('The provided path is not a directory', ErrorCode.VALIDATION_ERROR, 400);
     }
 
     // Start analysis
@@ -422,7 +412,7 @@ export async function codeAnalyzer(repoPath: string): Promise<AnalyzedFile[]> {
         500
       );
     }
-    
+
     throw new AppError(
       'Unknown error occurred while analyzing repository',
       ErrorCode.INTERNAL_SERVER_ERROR,

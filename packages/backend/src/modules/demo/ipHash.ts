@@ -24,7 +24,9 @@ function ipv6Groups(address: string): number[] | null {
   const right = tail === undefined ? [] : tail ? tail.split(':') : [];
   const fill = tail === undefined ? 0 : 8 - left.length - right.length;
   const groups = [...left, ...Array(fill).fill('0'), ...right].map((g) => parseInt(g, 16));
-  return groups.length === 8 && groups.every((g) => Number.isInteger(g) && g >= 0 && g <= 0xffff) ? groups : null;
+  return groups.length === 8 && groups.every((g) => Number.isInteger(g) && g >= 0 && g <= 0xffff)
+    ? groups
+    : null;
 }
 
 /** Canonical form that the limits are keyed on: "v4:a.b.c.d", "v6:xxxx:xxxx:xxxx:xxxx" (the /64) or the raw text. */
@@ -35,13 +37,19 @@ export function normalizeIp(ip: string): string {
   if (!groups) return `raw:${text.toLowerCase()}`;
   const mapped = groups.slice(0, 5).every((g) => g === 0) && groups[5] === 0xffff;
   if (mapped) return `v4:${groups[6] >> 8}.${groups[6] & 255}.${groups[7] >> 8}.${groups[7] & 255}`;
-  return `v6:${groups.slice(0, 4).map((g) => g.toString(16).padStart(4, '0')).join(':')}`;
+  return `v6:${groups
+    .slice(0, 4)
+    .map((g) => g.toString(16).padStart(4, '0'))
+    .join(':')}`;
 }
 
 export const utcDay = (d: Date): string => d.toISOString().slice(0, 10);
 
 export function pseudonymizeIp(ip: string, now: Date = new Date()): string {
-  return crypto.createHmac('sha256', demoKey('demo-ip')).update(`${utcDay(now)}|${normalizeIp(ip)}`).digest('hex');
+  return crypto
+    .createHmac('sha256', demoKey('demo-ip'))
+    .update(`${utcDay(now)}|${normalizeIp(ip)}`)
+    .digest('hex');
 }
 
 /**
@@ -54,5 +62,8 @@ export function pseudonymizeNet(ip: string, now: Date = new Date()): string | nu
   const normalized = normalizeIp(ip);
   if (!normalized.startsWith('v6:')) return null;
   const net48 = normalized.slice(3).split(':').slice(0, 3).join(':');
-  return crypto.createHmac('sha256', demoKey('demo-ip')).update(`${utcDay(now)}|net48|${net48}`).digest('hex');
+  return crypto
+    .createHmac('sha256', demoKey('demo-ip'))
+    .update(`${utcDay(now)}|net48|${net48}`)
+    .digest('hex');
 }

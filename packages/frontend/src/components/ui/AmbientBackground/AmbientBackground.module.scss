@@ -50,6 +50,18 @@
   -webkit-mask-image: radial-gradient(ellipse at 50% 30%, #000, transparent 75%);
 }
 
-@keyframes driftA { to { transform: translate3d(-12vmax, 10vmax, 0) scale(1.15); } }
-@keyframes driftB { to { transform: translate3d(14vmax, -8vmax, 0) scale(1.1); } }
-@keyframes driftC { to { transform: translate3d(-10vmax, -12vmax, 0) scale(0.9); } }
+@keyframes driftA {
+  to {
+    transform: translate3d(-12vmax, 10vmax, 0) scale(1.15);
+  }
+}
+@keyframes driftB {
+  to {
+    transform: translate3d(14vmax, -8vmax, 0) scale(1.1);
+  }
+}
+@keyframes driftC {
+  to {
+    transform: translate3d(-10vmax, -12vmax, 0) scale(0.9);
+  }
+}

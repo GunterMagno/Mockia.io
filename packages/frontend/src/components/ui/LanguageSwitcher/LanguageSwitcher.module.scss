@@ -17,7 +17,8 @@
   padding: 0 var(--spacing-8) 0 calc(var(--spacing-3) + 18px + var(--spacing-2));
   background:
     linear-gradient(45deg, transparent 50%, currentColor 50%) right 1rem center / 5px 5px no-repeat,
-    linear-gradient(135deg, currentColor 50%, transparent 50%) right calc(1rem - 5px) center / 5px 5px no-repeat,
+    linear-gradient(135deg, currentColor 50%, transparent 50%) right calc(1rem - 5px) center / 5px
+      5px no-repeat,
     var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -28,9 +29,20 @@
   cursor: pointer;
   transition: border-color var(--transition-fast);
 
-  &:hover { border-color: var(--color-border-strong); }
-  &:focus-visible { outline: 2px solid var(--color-accent-text); outline-offset: 2px; }
-  &:disabled { cursor: progress; opacity: 0.7; }
+  &:hover {
+    border-color: var(--color-border-strong);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--color-accent-text);
+    outline-offset: 2px;
+  }
+  &:disabled {
+    cursor: progress;
+    opacity: 0.7;
+  }
 
-  option { background: var(--color-surface); color: var(--color-text); }
+  option {
+    background: var(--color-surface);
+    color: var(--color-text);
+  }
 }

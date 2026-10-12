@@ -27,9 +27,18 @@ interface ComposeService {
   depends_on?: unknown;
   mem_limit?: string;
   shm_size?: string;
-  healthcheck?: { test: string[] | string; interval?: string; retries?: number; start_period?: string };
+  healthcheck?: {
+    test: string[] | string;
+    interval?: string;
+    retries?: number;
+    start_period?: string;
+  };
   deploy?: {
-    resources?: { reservations?: { devices?: Array<{ driver?: string; count?: unknown; capabilities?: string[] }> } };
+    resources?: {
+      reservations?: {
+        devices?: Array<{ driver?: string; count?: unknown; capabilities?: string[] }>;
+      };
+    };
   };
 }
 interface ComposeFile {
@@ -42,7 +51,8 @@ interface ComposeFile {
 const MIN_CONTEXT = 16384;
 
 const load = (rel: string): ComposeFile => yaml.load(read(rel)) as ComposeFile;
-const asText = (v: string[] | string | undefined): string => (Array.isArray(v) ? v.join(' ') : (v ?? ''));
+const asText = (v: string[] | string | undefined): string =>
+  Array.isArray(v) ? v.join(' ') : (v ?? '');
 const networkNames = (s: ComposeService): string[] =>
   Array.isArray(s.networks) ? s.networks : Object.keys(s.networks ?? {});
 
@@ -82,7 +92,9 @@ describe('docker-compose.ai.yml (Ollama)', () => {
 
   it('gives the model a context big enough for the real requests (repo budget + system prompt + max_tokens)', () => {
     // A small default num_ctx silently truncates the OLDEST tokens (the system prompt), which makes any evaluation unrepresentative.
-    const m = /^\$\{OLLAMA_CONTEXT_LENGTH:-(\d+)\}$/.exec(llm.environment?.OLLAMA_CONTEXT_LENGTH ?? '');
+    const m = /^\$\{OLLAMA_CONTEXT_LENGTH:-(\d+)\}$/.exec(
+      llm.environment?.OLLAMA_CONTEXT_LENGTH ?? ''
+    );
     expect(m).not.toBeNull();
     expect(Number(m?.[1])).toBeGreaterThanOrEqual(MIN_CONTEXT);
   });
@@ -271,7 +283,7 @@ describe('scripts/pull-model.sh', () => {
         'exit 0',
         '',
       ].join('\n'),
-      { mode: 0o755 },
+      { mode: 0o755 }
     );
   });
   afterAll(() => fs.rmSync(tmp, { recursive: true, force: true }));
@@ -287,7 +299,8 @@ describe('scripts/pull-model.sh', () => {
         ...env,
       },
     });
-  const calls = (): string[] => (fs.existsSync(log) ? fs.readFileSync(log, 'utf8').trim().split('\n') : []);
+  const calls = (): string[] =>
+    fs.existsSync(log) ? fs.readFileSync(log, 'utf8').trim().split('\n') : [];
 
   itWithSh.each([
     ['', 'empty'],
@@ -315,7 +328,9 @@ describe('scripts/pull-model.sh', () => {
     expect(r.status).toBe(0);
     const lines = calls();
     expect(lines[0]).toContain('-f docker-compose.prod.yml -f docker-compose.ai.yml');
-    expect(lines.some((l) => l.includes('exec -T llm ollama pull qwen2.5-coder:7b-instruct'))).toBe(true);
+    expect(lines.some((l) => l.includes('exec -T llm ollama pull qwen2.5-coder:7b-instruct'))).toBe(
+      true
+    );
     const pull = lines.findIndex((l) => l.includes('ollama pull'));
     const warm = lines.findIndex((l) => l.includes('ollama run qwen2.5-coder:7b-instruct'));
     expect(warm).toBeGreaterThan(pull);
@@ -328,7 +343,9 @@ describe('scripts/pull-model.sh', () => {
     });
     expect(r.status).toBe(0);
     const lines = calls();
-    expect(lines[0]).toContain('-f docker-compose.yml -f docker-compose.ai.yml -f docker-compose.ai.gpu.yml');
+    expect(lines[0]).toContain(
+      '-f docker-compose.yml -f docker-compose.ai.yml -f docker-compose.ai.gpu.yml'
+    );
     expect(lines.some((l) => l.includes('ollama run'))).toBe(false);
   });
 
@@ -411,7 +428,13 @@ describe('CI validates every AI compose combination', () => {
  * the backend as an EMPTY string, and an empty string must keep the backend's own default (never override it).
  */
 describe('AI settings reach the backend in production', () => {
-  const AI_VARS = ['OPENROUTER_MODEL', 'AI_RATE_PER_MINUTE', 'AI_GENERATION_RETENTION_DAYS', 'OPENROUTER_JSON_SCHEMA', 'AI_SPEC_TEMPERATURE'];
+  const AI_VARS = [
+    'OPENROUTER_MODEL',
+    'AI_RATE_PER_MINUTE',
+    'AI_GENERATION_RETENTION_DAYS',
+    'OPENROUTER_JSON_SCHEMA',
+    'AI_SPEC_TEMPERATURE',
+  ];
 
   it('docker-compose.prod.yml forwards each one as ${VAR:-} (empty when unset)', () => {
     const env = load('docker-compose.prod.yml').services.backend.environment ?? {};
@@ -420,7 +443,9 @@ describe('AI settings reach the backend in production', () => {
   });
 
   it('render.yaml lists them on the backend as optional (sync: false)', () => {
-    const render = yaml.load(read('render.yaml')) as { services: Array<{ name: string; envVars: Array<{ key: string; sync?: boolean }> }> };
+    const render = yaml.load(read('render.yaml')) as {
+      services: Array<{ name: string; envVars: Array<{ key: string; sync?: boolean }> }>;
+    };
     const backend = render.services.find((s) => s.name === 'mockia-backend')!;
     for (const name of AI_VARS) {
       expect(backend.envVars.find((v) => v.key === name)).toEqual({ key: name, sync: false });
@@ -440,8 +465,12 @@ describe('AI settings reach the backend in production', () => {
 
   it('warns at startup in production when OPENROUTER_MODEL is not set (the default model may be retired)', () => {
     expect(ai.openRouterModelWarning({ NODE_ENV: 'production' })).toMatch(/OPENROUTER_MODEL/);
-    expect(ai.openRouterModelWarning({ NODE_ENV: 'production', OPENROUTER_MODEL: '' })).toMatch(/OPENROUTER_MODEL/);
-    expect(ai.openRouterModelWarning({ NODE_ENV: 'production', OPENROUTER_MODEL: 'vendor/model' })).toBeNull();
+    expect(ai.openRouterModelWarning({ NODE_ENV: 'production', OPENROUTER_MODEL: '' })).toMatch(
+      /OPENROUTER_MODEL/
+    );
+    expect(
+      ai.openRouterModelWarning({ NODE_ENV: 'production', OPENROUTER_MODEL: 'vendor/model' })
+    ).toBeNull();
     expect(ai.openRouterModelWarning({ NODE_ENV: 'development' })).toBeNull();
     // Only when OpenRouter is in the chain
     expect(ai.openRouterModelWarning({ NODE_ENV: 'production', AI_PROVIDERS: 'local' })).toBeNull();

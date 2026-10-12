@@ -14,19 +14,19 @@
 
 Verificados leyendo el código, no supuestos:
 
-| # | Hallazgo | Dónde |
-|---|----------|-------|
-| H1 | Los refresh tokens no se guardan ni se revocan: un token robado vale 7 días, el logout no invalida nada, no hay rotación ni detección de reutilización. | `services/jwt.service.ts`, `modules/auth/service.ts` (`refreshTokens`) |
-| H2 | Access token de 1 h (OWASP recomienda 5–15 min en apps sensibles) y token en `localStorage`/`sessionStorage` (legible por cualquier XSS). | `jwt.service.ts`, `frontend/src/services/session.ts` |
-| H3 | No existe recuperar contraseña, verificación de email, ni cambio de email; la contraseña se hashea con bcrypt coste 10 en `users/service.ts`. | `modules/auth`, `modules/users` |
-| H4 | `docker-compose.prod.yml` publica Mongo en `27017` con contraseña por defecto `password`, usa secretos JWT por defecto y `CORS_ORIGIN: '*'` junto a `credentials`. | `docker-compose.prod.yml` |
-| H5 | La Política de Privacidad afirma "GitHub tokens are encrypted at rest" y "regular security audits", pero no hay ningún cifrado de tokens en el backend (búsqueda sin resultados). Afirmación falsa = riesgo legal. | `frontend/src/pages/Legal/Privacy.tsx` |
-| H6 | Legal solo en inglés, sin Aviso Legal (LSSI-CE), sin Política de Cookies, sin identificar al responsable/CIF/domicilio, sin base jurídica ni plazos de conservación ni transferencias internacionales (OpenRouter/Stripe). | `Legal/*`, `Footer.tsx` |
-| H7 | No hay exportar/borrar cuenta (derechos RGPD de acceso/supresión/portabilidad); el mensaje de la política promete que existen. | `modules/users` |
-| H8 | Stripe sin cálculo de impuestos (IVA/OSS), sin recogida de NIF-IVA, sin facturas con datos fiscales. | `modules/billing/service.ts` |
-| H9 | La IA depende solo de OpenRouter (`gemini-flash-1.5`), `temperature 0.7` para salida estructurada, limitador en memoria `shouldRateLimit(60)` (se pierde al reiniciar y no escala con varias instancias). | `config/ai.ts`, `services/openRouter.service.ts`, `utils/openRouterUtils.ts` |
-| H10 | CI con lint/format en `continue-on-error: true` (no bloquea); hay scripts `scratch_*.ts` dentro de `src/tests`. | `.github/workflows/ci.yml`, `src/tests` |
-| H11 | La landing tiene cifras y testimonio de relleno (ya anotado antes). | `pages/Landing` |
+| #   | Hallazgo                                                                                                                                                                                                                   | Dónde                                                                        |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| H1  | Los refresh tokens no se guardan ni se revocan: un token robado vale 7 días, el logout no invalida nada, no hay rotación ni detección de reutilización.                                                                    | `services/jwt.service.ts`, `modules/auth/service.ts` (`refreshTokens`)       |
+| H2  | Access token de 1 h (OWASP recomienda 5–15 min en apps sensibles) y token en `localStorage`/`sessionStorage` (legible por cualquier XSS).                                                                                  | `jwt.service.ts`, `frontend/src/services/session.ts`                         |
+| H3  | No existe recuperar contraseña, verificación de email, ni cambio de email; la contraseña se hashea con bcrypt coste 10 en `users/service.ts`.                                                                              | `modules/auth`, `modules/users`                                              |
+| H4  | `docker-compose.prod.yml` publica Mongo en `27017` con contraseña por defecto `password`, usa secretos JWT por defecto y `CORS_ORIGIN: '*'` junto a `credentials`.                                                         | `docker-compose.prod.yml`                                                    |
+| H5  | La Política de Privacidad afirma "GitHub tokens are encrypted at rest" y "regular security audits", pero no hay ningún cifrado de tokens en el backend (búsqueda sin resultados). Afirmación falsa = riesgo legal.         | `frontend/src/pages/Legal/Privacy.tsx`                                       |
+| H6  | Legal solo en inglés, sin Aviso Legal (LSSI-CE), sin Política de Cookies, sin identificar al responsable/CIF/domicilio, sin base jurídica ni plazos de conservación ni transferencias internacionales (OpenRouter/Stripe). | `Legal/*`, `Footer.tsx`                                                      |
+| H7  | No hay exportar/borrar cuenta (derechos RGPD de acceso/supresión/portabilidad); el mensaje de la política promete que existen.                                                                                             | `modules/users`                                                              |
+| H8  | Stripe sin cálculo de impuestos (IVA/OSS), sin recogida de NIF-IVA, sin facturas con datos fiscales.                                                                                                                       | `modules/billing/service.ts`                                                 |
+| H9  | La IA depende solo de OpenRouter (`gemini-flash-1.5`), `temperature 0.7` para salida estructurada, limitador en memoria `shouldRateLimit(60)` (se pierde al reiniciar y no escala con varias instancias).                  | `config/ai.ts`, `services/openRouter.service.ts`, `utils/openRouterUtils.ts` |
+| H10 | CI con lint/format en `continue-on-error: true` (no bloquea); hay scripts `scratch_*.ts` dentro de `src/tests`.                                                                                                            | `.github/workflows/ci.yml`, `src/tests`                                      |
+| H11 | La landing tiene cifras y testimonio de relleno (ya anotado antes).                                                                                                                                                        | `pages/Landing`                                                              |
 
 ## Global Constraints
 
@@ -55,6 +55,7 @@ Entradas/condiciones que el plan no cubre con una tarea propia pero que el usuar
 ### Task 1: Despliegue de producción seguro (H4, H10)
 
 **Files:**
+
 - Modify: `docker-compose.prod.yml`, `render.yaml`, `.env.example`, `.github/workflows/ci.yml`
 - Create: `packages/backend/src/config/assertProdConfig.ts`
 - Modify: `packages/backend/src/index.ts` (llamar tras `assertJwtConfig()`)
@@ -62,6 +63,7 @@ Entradas/condiciones que el plan no cubre con una tarea propia pero que el usuar
 - Test: `packages/backend/src/tests/config.assertProdConfig.test.ts`
 
 **Interfaces:**
+
 - Produces: `assertProdConfig(env: NodeJS.ProcessEnv = process.env): void` — lanza `Error` si `NODE_ENV==='production'` y: `CORS_ORIGIN` es `*` o vacío; `MONGODB_URI` contiene `:password@`; falta `APP_URL`; o `JWT_*` están a un valor por defecto conocido.
 
 - [ ] **Step 1: Test** `assertProdConfig` — casos: `CORS_ORIGIN='*'` lanza; `MONGODB_URI` con `:password@` lanza; config válida no lanza; fuera de producción no lanza nunca.
@@ -75,11 +77,13 @@ Entradas/condiciones que el plan no cubre con una tarea propia pero que el usuar
 ### Task 2: Sesión con refresh tokens rotados y revocables (H1, H2)
 
 **Files:**
+
 - Create: `packages/backend/src/models/RefreshSession.ts`, `packages/backend/src/modules/auth/sessions.ts`
 - Modify: `services/jwt.service.ts` (access 15 min, refresh con `jti`), `modules/auth/service.ts`, `modules/auth/controller.ts`, `modules/auth/routes.ts`
 - Test: `packages/backend/src/tests/auth.sessions.test.ts`
 
 **Interfaces:**
+
 - Produces (`sessions.ts`):
   - `createSession(userId: string, meta: {ip?: string; ua?: string}): Promise<{ jti: string; familyId: string }>`
   - `rotateSession(jti: string): Promise<{ jti: string; familyId: string; userId: string }>` — marca el anterior como usado; si ya estaba usado fuera de la gracia de 10 s, revoca la familia entera y lanza `AppError 401`.
@@ -97,10 +101,12 @@ Entradas/condiciones que el plan no cubre con una tarea propia pero que el usuar
 ### Task 3: Refresh token en cookie HttpOnly + protección CSRF (H2)
 
 **Files:**
+
 - Modify: `modules/auth/controller.ts`, `index.ts` (cookie-parser), `frontend/src/services/session.ts`, `frontend/src/services/authService.ts`
 - Test: `packages/backend/src/tests/auth.cookie.test.ts`, `packages/frontend/cypress/e2e/auth.cy.ts`
 
 **Interfaces:**
+
 - Consumes: T2.
 - Produces: cookie `mockia_rt` (`HttpOnly; Secure` en prod; `SameSite=Lax`; `Path=/api/auth`); `POST /auth/refresh` lee la cookie y exige cabecera `X-Requested-With: mockia` (defensa CSRF). El access token solo en memoria del cliente; "Recordarme" decide `Max-Age` de la cookie (sesión vs 7 d).
 
@@ -113,11 +119,13 @@ Entradas/condiciones que el plan no cubre con una tarea propia pero que el usuar
 ### Task 4: Recuperar contraseña, verificación de email y endurecer registro (H3)
 
 **Files:**
+
 - Create: `packages/backend/src/services/mailer.ts`, `modules/auth/passwordReset.ts`, `models/AuthToken.ts`, `frontend/src/pages/Auth/ForgotPassword.tsx`, `ResetPassword.tsx`, `VerifyEmail.tsx`
 - Modify: `models/User.ts` (`emailVerifiedAt?: Date`), `modules/auth/routes.ts`, `modules/auth/validation.ts`, locales en/es/zh
 - Test: `packages/backend/src/tests/auth.passwordReset.test.ts`, `packages/frontend/cypress/e2e/passwordReset.cy.ts`
 
 **Interfaces:**
+
 - Produces: `sendMail(to: string, template: 'verify' | 'reset', data: Record<string,string>): Promise<void>` (SMTP vía `nodemailer`, en test un transport en memoria); `createAuthToken(userId, purpose: 'verify'|'reset', ttlMin: number): Promise<string>` guarda solo el **hash SHA-256**; `consumeAuthToken(raw: string, purpose): Promise<string /*userId*/>` de un solo uso.
 - Endpoints: `POST /auth/forgot` (siempre 202, no revela si el email existe), `POST /auth/reset`, `POST /auth/verify`.
 - Reglas: contraseña mínimo 10 caracteres; coste bcrypt a 12 y re-hash transparente en el login si el coste guardado es menor; reset revoca todas las sesiones (T2); acciones de pago/IA exigen email verificado.
@@ -130,14 +138,16 @@ Entradas/condiciones que el plan no cubre con una tarea propia pero que el usuar
 
 ### Task 16: Preferencias de usuario (idioma guardado) y estética morada
 
-*Añadida el 2026-10-07 a petición de la propietaria; se ejecuta justo después de la Task 4 (necesita el modelo `User` y las respuestas de auth ya estables).*
+_Añadida el 2026-10-07 a petición de la propietaria; se ejecuta justo después de la Task 4 (necesita el modelo `User` y las respuestas de auth ya estables)._
 
 **Files:**
+
 - Modify: `packages/backend/src/models/User.ts` (`locale?: 'en' | 'es' | 'zh'`), `modules/users/{routes,controller,service,validation}.ts`, `packages/shared` (`UserDTO.locale?`), `modules/auth/service.ts` (el DTO de login/me incluye `locale`)
 - Modify: `packages/frontend/src/i18n/I18nProvider.tsx`, `services/authService.ts`, `pages/Auth/{Login,Signup}.tsx`, `components/ui/Header/Header.module.scss`, `pages/Landing/Index.module.scss`
 - Test: `packages/backend/src/tests/users.locale.test.ts`, `packages/frontend/cypress/e2e/i18n.cy.ts` (ampliar)
 
 **Interfaces:**
+
 - Produces: `PATCH /users/me/preferences` body `{ locale: 'en'|'es'|'zh' }` → 200 `{ locale }` (autenticado; otro valor → 400); `UserDTO.locale?: Locale`.
 - Reglas de sincronización (frontend): idioma guardado en el usuario > idioma guardado en el navegador > navegador > `en`. Al iniciar sesión o recuperar sesión, si `user.locale` existe y difiere del actual, se aplica; si no existe, se envía el actual al backend. Si el usuario cambia de idioma estando autenticado, se hace `PATCH` en segundo plano (los errores se ignoran, no bloquean la UI).
 - Estética: "Backend." del título del héroe y los botones "Ir al panel"/"Go to dashboard" (héroe y cabecera) dejan el verde y usan el acento morado: `.gradientText` → `var(--color-accent-text)`; `.primaryBtn` fondo `var(--color-accent-solid)`, texto `var(--color-on-accent)`, brillo `var(--color-glow-accent)`, flecha blanca (`filter: brightness(0) invert(1)`); contraste AA (≥ 4,5:1).
@@ -159,11 +169,13 @@ Entradas/condiciones que el plan no cubre con una tarea propia pero que el usuar
 ### Task 5: Corregir y completar los documentos legales (H5, H6)
 
 **Files:**
+
 - Create: `frontend/src/pages/Legal/LegalNotice.tsx` (Aviso Legal LSSI), `Cookies.tsx`, `legalContent/{es,en}.ts`
 - Modify: `Privacy.tsx`, `Terms.tsx`, `Footer.tsx`, `routes/paths.ts`, `App.tsx`, locales
 - Test: `packages/frontend/cypress/e2e/legal.cy.ts`
 
 **Interfaces:**
+
 - Produces: `LEGAL_ENTITY` en `@mockia/shared` (`{ name, nif, address, email, registry? }`) leído por todas las páginas y por Stripe; vacío = el build de producción falla (`assertProdConfig` web: `VITE_LEGAL_ENTITY_*`).
 
 - [ ] **Step 1: Test** `legal.cy.ts`: existen `/legal`, `/privacy`, `/terms`, `/cookies`; el footer enlaza a los cuatro; en `es` el texto está en español (sin el aviso "solo inglés"); ninguna página contiene la cadena `encrypted at rest`.
@@ -176,11 +188,13 @@ Entradas/condiciones que el plan no cubre con una tarea propia pero que el usuar
 ### Task 6: Derechos RGPD: exportar y borrar cuenta; consentimiento de cookies (H7)
 
 **Files:**
+
 - Create: `modules/users/gdpr.ts`, `frontend/src/components/ui/CookieBanner/CookieBanner.tsx`, `frontend/src/pages/Settings/AccountData.tsx`
 - Modify: `modules/users/routes.ts`, `models/Project.ts` (índice por `ownerId` si falta), `scheduler/projectCleanup.ts`
 - Test: `packages/backend/src/tests/users.gdpr.test.ts`, `cypress/e2e/cookies.cy.ts`
 
 **Interfaces:**
+
 - Produces: `exportUserData(userId: string): Promise<Record<string, unknown>>` (usuario sin hash, proyectos, endpoints, notificaciones, uso); `deleteUserAccount(userId: string): Promise<void>` en este orden: si hay suscripción activa → `cancelSubscription` en Stripe, borrar proyectos/endpoints/notificaciones/uso/sesiones, anonimizar o conservar facturas (obligación fiscal), borrar usuario. Endpoints `GET /users/me/export`, `DELETE /users/me` (pide contraseña).
 - Banner: solo cookies/almacenamiento técnico hoy ⇒ banner informativo; si se añade analítica, consentimiento previo con opciones "Aceptar/Rechazar" de igual peso (criterio AEPD).
 
@@ -198,10 +212,12 @@ Entradas/condiciones que el plan no cubre con una tarea propia pero que el usuar
 ### Task 7: Impuestos y facturas con Stripe Tax (H8)
 
 **Files:**
+
 - Modify: `modules/billing/service.ts` (creación de la sesión de Checkout), `modules/billing/routes.ts`, `.env.example`
 - Test: `packages/backend/src/tests/billing.checkout.test.ts`
 
 **Interfaces:**
+
 - Produces: la sesión de Checkout se crea con `automatic_tax[enabled]=true`, `tax_id_collection[enabled]=true`, `billing_address_collection=required`, `customer_update[address]=auto`, `customer_update[name]=auto`, `consent_collection[terms_of_service]=required` y `invoice_creation` activada; los precios en Stripe con `tax_behavior=exclusive` y el código fiscal de SaaS `txcd_35000000`.
 
 - [ ] **Step 1: Test**: el cuerpo enviado a `/v1/checkout/sessions` (mock de `fetch`) contiene las claves anteriores.
@@ -213,10 +229,12 @@ Entradas/condiciones que el plan no cubre con una tarea propia pero que el usuar
 ### Task 8: Robustez del webhook y ciclo de vida del impago (H8)
 
 **Files:**
+
 - Modify: `modules/billing/service.ts`, `modules/billing/routes.ts`, `services/notification.service.ts`
 - Test: ampliar `billing.webhook.test.ts`
 
 **Interfaces:**
+
 - Consumes: `mailer.sendMail` (T4).
 - Produces: manejo de `invoice.payment_failed` (estado `past_due`, aviso por email y notificación dentro de la app, 7 días de gracia antes de degradar a Free), `customer.subscription.trial_will_end`, `charge.refunded`; si el evento llega para un cliente aún sin usuario devuelve 500 para que Stripe reintente.
 
@@ -227,10 +245,12 @@ Entradas/condiciones que el plan no cubre con una tarea propia pero que el usuar
 ### Task 9: Plan de precios que se pueda vender (H11)
 
 **Files:**
+
 - Modify: `shared/src/billing.ts`, `frontend/src/components/billing/PricingPlans`, `pages/Landing/*`, locales
 - Test: `packages/shared` (`billing.test.ts`) y `cypress/e2e/billing.cy.ts`
 
 **Interfaces:**
+
 - Produces: `PLAN_PRICE_USD` con precio anual (`annual: number`) y descuento visible; toggle mensual/anual en `PricingPlans`; Stripe necesita dos `price_id` por plan (`STRIPE_PRICE_PRO_YEARLY`, etc.); `plan derivado del price id` ya existente se amplía.
 
 - [ ] **Step 1: Tests**: el plan se deduce bien desde un price anual; el toggle cambia los importes mostrados.
@@ -247,10 +267,12 @@ Entradas/condiciones que el plan no cubre con una tarea propia pero que el usuar
 ### Task 10: Exportar e integrar los mocks
 
 **Files:**
+
 - Create: `modules/projects/export.ts`, `modules/mock/openapiExport.ts`, `frontend/src/components/projects/ExportMenu`
 - Test: `packages/backend/src/tests/projects.export.test.ts`
 
 **Interfaces:**
+
 - Produces: `exportOpenApi(projectId: string): Promise<object>` (OpenAPI 3.1 válido), `exportPostman(projectId: string)`, `exportMswHandlers(projectId: string): Promise<string>` (código para MSW). Endpoints `GET /projects/:id/export?format=openapi|postman|msw`.
 
 - [ ] **Step 1: Tests**: el OpenAPI generado pasa validación (`@apidevtools/swagger-parser`) y contiene todas las rutas del proyecto; los handlers MSW compilan con `tsc --noEmit`.
@@ -260,11 +282,13 @@ Entradas/condiciones que el plan no cubre con una tarea propia pero que el usuar
 ### Task 11: Uso real: claves de API del mock, URL pública estable y límites por plan
 
 **Files:**
+
 - Create: `models/ApiKey.ts`, `modules/mock/mockAuth.ts`
 - Modify: `modules/mock/interceptor.controller.ts`, `middlewares/planGate.ts`, `modules/billing/usage.ts`
 - Test: `packages/backend/src/tests/mock.apiKey.test.ts`
 
 **Interfaces:**
+
 - Produces: proyecto con `visibility: 'public' | 'key'`; con `key` el mock exige cabecera `X-Mockia-Key` (hash SHA-256 guardado); contador de peticiones mock por mes en `usages` con tope por plan y respuesta `429` con `Retry-After`; cabeceras `X-RateLimit-Remaining`.
 
 - [ ] **Step 1: Tests**: mock privado sin clave → 401; con clave → 200; superado el tope del plan Free → 429 con `Retry-After`; el contador no cuenta peticiones rechazadas.
@@ -276,19 +300,22 @@ Entradas/condiciones que el plan no cubre con una tarea propia pero que el usuar
 ## Fase E — IA propia autoalojada (reemplazo de OpenRouter)
 
 **Decisión de diseño (con razonamiento):**
+
 - **No empezar entrenando.** Primero medir. Entrenar (LoRA/QLoRA) solo compensa si hay un conjunto de ejemplos propios y volumen; las guías consultadas sitúan el punto de cruce entre 100 mil y 1 millón de consultas al mes. La tarea de Mockia (leer tipos TypeScript/OpenAPI y emitir un JSON de endpoints validable) está muy acotada, así que un modelo pequeño con **salida restringida a un JSON Schema** (vLLM `guided_json`/xgrammar u Ollama `format`) suele bastar sin entrenar.
 - **Modelo candidato:** familia Qwen2.5-Coder (7B/14B) por tamaño y soporte de contexto largo y salida estructurada. Las fuentes que encontré son artículos de blog, no benchmarks propios, así que **la elección final sale de la Task 13 con datos de Mockia**, no de este plan.
-- **Hardware = decisión de coste, no de código.** Un 7B cuantizado va en una GPU de 8–12 GB; en CPU funciona pero tarda decenas de segundos (hay que medirlo). Render *free* no sirve para esto: se necesita un VPS/GPU (p. ej. alquiler por horas) o una máquina propia. Mientras tanto OpenRouter sigue como reserva.
+- **Hardware = decisión de coste, no de código.** Un 7B cuantizado va en una GPU de 8–12 GB; en CPU funciona pero tarda decenas de segundos (hay que medirlo). Render _free_ no sirve para esto: se necesita un VPS/GPU (p. ej. alquiler por horas) o una máquina propia. Mientras tanto OpenRouter sigue como reserva.
 - **Entrenado "solo para mi app":** el camino es (1) prompt + esquema restringido, (2) recoger ejemplos con consentimiento (T15), (3) LoRA solo si la evaluación muestra un hueco. Mockia debe poder cambiar de modelo sin tocar el código: de ahí la interfaz de proveedor.
 
 ### Task 12: Interfaz de proveedor de IA con reserva automática (H9)
 
 **Files:**
+
 - Create: `packages/backend/src/modules/ai/providers/{types,openaiCompatible,index}.ts`
 - Modify: `config/ai.ts`, `services/openRouter.service.ts` (pasa a ser un caso del proveedor genérico), `controllers/ai.controller.ts`, `utils/openRouterUtils.ts`
 - Test: `packages/backend/src/tests/ai.providers.test.ts`
 
 **Interfaces:**
+
 - Produces:
   ```ts
   interface LlmProvider { name: string; complete(req: { messages: ChatMessage[]; jsonSchema?: object; maxTokens?: number; temperature?: number; signal?: AbortSignal }): Promise<{ text: string; usage?: { inputTokens: number; outputTokens: number } }> }
@@ -305,11 +332,13 @@ Entradas/condiciones que el plan no cubre con una tarea propia pero que el usuar
 ### Task 13: Banco de evaluación de la IA (antes de elegir modelo)
 
 **Files:**
+
 - Create: `packages/backend/evals/cases/*.json` (≥30 casos reales: repos pequeños con tipos TS/OpenAPI y la salida esperada), `packages/backend/evals/run.ts`, `evals/README.md`
 - Modify: `packages/backend/package.json` (`"eval": "tsx evals/run.ts"`)
 - Test: `packages/backend/src/tests/evals.scoring.test.ts` (solo el puntuador)
 
 **Interfaces:**
+
 - Produces: `scoreOutput(expected: EndpointSpec[], actual: unknown): { validJson: boolean; schemaValid: boolean; methodPathF1: number; fieldCoverage: number }` y un informe por modelo (`validJson%`, `schemaValid%`, F1 medio, latencia p50/p95, tokens/s). Criterio de aceptación para sustituir a OpenRouter: `schemaValid ≥ 95 %` y `methodPathF1 ≥ 0.85` con latencia p95 ≤ 60 s.
 
 - [ ] **Step 1: Tests** del puntuador con salida perfecta (F1=1), vacía (0), con un endpoint inventado (precisión baja) y JSON roto (`validJson=false`).
@@ -320,10 +349,12 @@ Entradas/condiciones que el plan no cubre con una tarea propia pero que el usuar
 ### Task 14: Servicio de IA en Docker (Ollama o vLLM) y puesta en producción
 
 **Files:**
+
 - Create: `docker-compose.ai.yml`, `docs/ia-local.md`, `scripts/pull-model.sh`
 - Modify: `docker-compose.prod.yml` (perfil `ai`), `nginx.conf` (no exponer el puerto del modelo), `.env.example`
 
 **Interfaces:**
+
 - Produces: servicio `llm` en la red interna (`http://llm:11434` Ollama o `:8000` vLLM), volumen persistente de modelos, `deploy.resources.reservations.devices` con `driver: nvidia` (comentado para CPU), `healthcheck`, **sin `ports:`** publicados, `restart: unless-stopped`.
 
 - [ ] **Step 1:** Levantar `docker compose -f docker-compose.yml -f docker-compose.ai.yml up -d llm` y descargar el modelo candidato con `scripts/pull-model.sh qwen2.5-coder:7b-instruct`.
@@ -335,11 +366,13 @@ Entradas/condiciones que el plan no cubre con una tarea propia pero que el usuar
 ### Task 15: Datos propios y ajuste fino opcional (LoRA)
 
 **Files:**
+
 - Create: `models/AiFeedback.ts`, `modules/ai/feedback.ts`, `scripts/ai/export-dataset.ts`, `docs/ia-entrenamiento.md`
 - Modify: `frontend` (botones "útil / no útil" y edición del resultado), `Privacy.tsx` (consentimiento específico y opt-in)
 - Test: `packages/backend/src/tests/ai.feedback.test.ts`
 
 **Interfaces:**
+
 - Produces: `recordFeedback(userId: string, generationId: string, verdict: 'good'|'bad', correctedOutput?: unknown): Promise<void>`; `export-dataset` genera `train.jsonl` en formato chat (`messages`) solo con usuarios que dieron **consentimiento explícito**, sin emails, con secretos del repo eliminados (regex de claves) y deduplicado.
 
 - [ ] **Step 1: Tests**: sin consentimiento no entra nada en el dataset; los strings que parecen claves (`sk_`, `ghp_`, `AKIA…`) se eliminan; dos generaciones idénticas se deduplican.
@@ -352,15 +385,15 @@ Entradas/condiciones que el plan no cubre con una tarea propia pero que el usuar
 
 ## Orden recomendado y estimación
 
-| Orden | Tareas | Por qué primero |
-|-------|--------|-----------------|
-| 1 | T1, T5 (paso 4) | Riesgo inmediato: Mongo expuesto y una afirmación legal falsa. Horas de trabajo. |
-| 2 | T2, T3, T4, T16 | Sesión segura y recuperar contraseña: sin esto no se puede abrir al público. |
-| 3 | T5, T6 | Cumplimiento: necesario antes de recoger datos de usuarios reales. |
-| 4 | T7, T8, T9 | Cobrar con impuestos y gestionar impagos. Requiere alta fiscal tuya (manual). |
-| 5 | T12, T13 | Abstracción y línea base de IA: bajo riesgo, desbloquea la T14. |
-| 6 | T10, T11 | Utilidad de producto. |
-| 7 | T14, T15 | IA propia: necesita decidir hardware/coste. |
+| Orden | Tareas          | Por qué primero                                                                  |
+| ----- | --------------- | -------------------------------------------------------------------------------- |
+| 1     | T1, T5 (paso 4) | Riesgo inmediato: Mongo expuesto y una afirmación legal falsa. Horas de trabajo. |
+| 2     | T2, T3, T4, T16 | Sesión segura y recuperar contraseña: sin esto no se puede abrir al público.     |
+| 3     | T5, T6          | Cumplimiento: necesario antes de recoger datos de usuarios reales.               |
+| 4     | T7, T8, T9      | Cobrar con impuestos y gestionar impagos. Requiere alta fiscal tuya (manual).    |
+| 5     | T12, T13        | Abstracción y línea base de IA: bajo riesgo, desbloquea la T14.                  |
+| 6     | T10, T11        | Utilidad de producto.                                                            |
+| 7     | T14, T15        | IA propia: necesita decidir hardware/coste.                                      |
 
 ## Lo que solo puedes hacer tú
 

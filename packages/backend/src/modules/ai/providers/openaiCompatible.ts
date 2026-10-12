@@ -10,7 +10,12 @@
 import axios from 'axios';
 import { callOpenRouterWithRetry } from '../../../services/openRouter.service.js';
 import { getOpenRouterModel } from '../../../config/ai.js';
-import { LlmResponseError, type LlmCompletion, type LlmProvider, type LlmRequest } from './types.js';
+import {
+  LlmResponseError,
+  type LlmCompletion,
+  type LlmProvider,
+  type LlmRequest,
+} from './types.js';
 
 export const DEFAULT_MAX_TOKENS = 5000;
 export const DEFAULT_TEMPERATURE = 0.7;
@@ -43,13 +48,22 @@ export function buildChatParams(req: LlmRequest): {
 }
 
 /** Validates the chat completion envelope and extracts text, usage and model. Throws LlmResponseError otherwise. */
-export function readCompletion(data: unknown, provider: string, configuredModel: string): LlmCompletion {
+export function readCompletion(
+  data: unknown,
+  provider: string,
+  configuredModel: string
+): LlmCompletion {
   const body = data as {
     model?: unknown;
     choices?: Array<{ message?: { content?: unknown }; finish_reason?: unknown }>;
     usage?: { prompt_tokens?: unknown; completion_tokens?: unknown };
   } | null;
-  if (!body || typeof body !== 'object' || !Array.isArray(body.choices) || body.choices.length === 0) {
+  if (
+    !body ||
+    typeof body !== 'object' ||
+    !Array.isArray(body.choices) ||
+    body.choices.length === 0
+  ) {
     throw new LlmResponseError('invalid_envelope');
   }
   const message = body.choices[0]?.message;
@@ -57,7 +71,8 @@ export function readCompletion(data: unknown, provider: string, configuredModel:
   // Cut by max_tokens: whatever came back is an incomplete document, never a usable answer
   if (body.choices[0]?.finish_reason === 'length') throw new LlmResponseError('truncated');
   const content = message.content;
-  if (typeof content !== 'string' || content.trim() === '') throw new LlmResponseError('empty_content');
+  if (typeof content !== 'string' || content.trim() === '')
+    throw new LlmResponseError('empty_content');
 
   const usage = body.usage;
   const completion: LlmCompletion = {
@@ -65,7 +80,11 @@ export function readCompletion(data: unknown, provider: string, configuredModel:
     provider,
     model: typeof body.model === 'string' && body.model ? body.model : configuredModel,
   };
-  if (usage && typeof usage.prompt_tokens === 'number' && typeof usage.completion_tokens === 'number') {
+  if (
+    usage &&
+    typeof usage.prompt_tokens === 'number' &&
+    typeof usage.completion_tokens === 'number'
+  ) {
     completion.usage = { inputTokens: usage.prompt_tokens, outputTokens: usage.completion_tokens };
   }
   return completion;
@@ -121,7 +140,10 @@ export function openRouterSupportsJsonSchema(env: NodeJS.ProcessEnv = process.en
 }
 
 /** The request as OpenRouter should get it: the schema is kept only when the operator opted in. */
-export function toOpenRouterRequest(req: LlmRequest, env: NodeJS.ProcessEnv = process.env): LlmRequest {
+export function toOpenRouterRequest(
+  req: LlmRequest,
+  env: NodeJS.ProcessEnv = process.env
+): LlmRequest {
   if (!req.jsonSchema || openRouterSupportsJsonSchema(env)) return req;
   const { jsonSchema: _dropped, ...rest } = req;
   return { ...rest, json: true, temperature: req.temperature ?? STRUCTURED_TEMPERATURE };
@@ -131,9 +153,13 @@ export function createOpenRouterProvider(): LlmProvider {
   return {
     name: 'openrouter',
     async complete(req) {
-      const response = await callOpenRouterWithRetry(req.messages, buildChatParams(toOpenRouterRequest(req)), {
-        signal: req.signal,
-      });
+      const response = await callOpenRouterWithRetry(
+        req.messages,
+        buildChatParams(toOpenRouterRequest(req)),
+        {
+          signal: req.signal,
+        }
+      );
       return readCompletion(response, 'openrouter', getOpenRouterModel());
     },
   };

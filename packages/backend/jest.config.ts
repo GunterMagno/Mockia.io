@@ -25,20 +25,23 @@ const config: Config = {
   },
   moduleFileExtensions: ['ts', 'js', 'json'],
   transform: {
-    '^.+\\.ts$': ['ts-jest', {
-      tsconfig: {
-        module: 'commonjs',
-        target: 'ES2020',
-        lib: ['ES2020'],
-        esModuleInterop: true,
-        skipLibCheck: true,
-        forceConsistentCasingInFileNames: true,
-        strict: true,
-        moduleResolution: 'node',
-        resolveJsonModule: true,
-        types: ['node', 'jest'],
+    '^.+\\.ts$': [
+      'ts-jest',
+      {
+        tsconfig: {
+          module: 'commonjs',
+          target: 'ES2020',
+          lib: ['ES2020'],
+          esModuleInterop: true,
+          skipLibCheck: true,
+          forceConsistentCasingInFileNames: true,
+          strict: true,
+          moduleResolution: 'node',
+          resolveJsonModule: true,
+          types: ['node', 'jest'],
+        },
       },
-    }],
+    ],
   },
   setupFilesAfterEnv: ['<rootDir>/src/tests/setup.ts'],
   testTimeout: 60000,

@@ -38,7 +38,9 @@
   color: var(--color-text-muted);
   font-size: var(--text-sm);
   text-decoration: none;
-  transition: border-color var(--transition-fast), color var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    color var(--transition-fast);
 
   &:hover {
     border-color: var(--color-border-strong);
@@ -121,7 +123,6 @@
     transform: translateY(-8px) scale(1.02);
     border-color: var(--color-accent);
     box-shadow: var(--shadow-xl);
-
 
     .cardTitle {
       color: var(--color-accent-text);

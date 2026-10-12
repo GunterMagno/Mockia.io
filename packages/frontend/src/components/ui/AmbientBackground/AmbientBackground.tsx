@@ -1,5 +1,5 @@
-import React from 'react'
-import styles from './AmbientBackground.module.scss'
+import React from 'react';
+import styles from './AmbientBackground.module.scss';
 
 /** Capa animada global: vive en el shell, asi la animacion no se corta al cambiar de seccion o ruta. */
 export const AmbientBackground: React.FC = () => (
@@ -9,6 +9,6 @@ export const AmbientBackground: React.FC = () => (
     <span className={`${styles.blob} ${styles.c}`} />
     <span className={styles.grid} />
   </div>
-)
+);
 
-export default AmbientBackground
+export default AmbientBackground;

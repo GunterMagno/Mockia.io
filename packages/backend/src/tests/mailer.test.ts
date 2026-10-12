@@ -52,15 +52,23 @@ describe('mailer', () => {
       ['en', 'trial_will_end', 'Your Mockia trial ends soon', 'October 14, 2026'],
       ['es', 'trial_will_end', 'Tu prueba de Mockia termina pronto', '14 de octubre de 2026'],
       ['zh', 'trial_will_end', '你的 Mockia 试用即将结束', '2026年10月14日'],
-    ] as const)('%s / %s: billing notice with the date, the link and the user name', (locale, template, subject, date) => {
-      const mail = renderMail(template, { link: 'https://app.example.com/billing', username: 'Ana', locale, date });
-      expect(mail.subject).toBe(subject);
-      expect(mail.text).toContain(date);
-      expect(mail.html).toContain(date);
-      expect(mail.text).toContain('https://app.example.com/billing');
-      expect(mail.html).toContain('href="https://app.example.com/billing"');
-      expect(mail.text).toContain('Ana');
-    });
+    ] as const)(
+      '%s / %s: billing notice with the date, the link and the user name',
+      (locale, template, subject, date) => {
+        const mail = renderMail(template, {
+          link: 'https://app.example.com/billing',
+          username: 'Ana',
+          locale,
+          date,
+        });
+        expect(mail.subject).toBe(subject);
+        expect(mail.text).toContain(date);
+        expect(mail.html).toContain(date);
+        expect(mail.text).toContain('https://app.example.com/billing');
+        expect(mail.html).toContain('href="https://app.example.com/billing"');
+        expect(mail.text).toContain('Ana');
+      }
+    );
 
     it('escapes html in the date of a billing notice', () => {
       const mail = renderMail('payment_failed', { link: LINK, date: '<b>x</b>' });
@@ -74,7 +82,10 @@ describe('mailer', () => {
     });
 
     it('escapes html in the user name and the link', () => {
-      const mail = renderMail('verify', { link: 'https://x.test/?a=1&b="2"', username: '<script>alert(1)</script>' });
+      const mail = renderMail('verify', {
+        link: 'https://x.test/?a=1&b="2"',
+        username: '<script>alert(1)</script>',
+      });
       expect(mail.html).not.toContain('<script>');
       expect(mail.html).toContain('&lt;script&gt;');
       expect(mail.html).toContain('a=1&amp;b=&quot;2&quot;');
@@ -102,7 +113,9 @@ describe('mailer', () => {
     it('a transport failure rejects (callers decide whether it matters)', async () => {
       process.env.SMTP_URL = 'smtp://smtp.example.com';
       sendMailMock.mockRejectedValueOnce(new Error('connection refused'));
-      await expect(sendMail('ana@example.com', 'verify', { link: LINK })).rejects.toThrow('connection refused');
+      await expect(sendMail('ana@example.com', 'verify', { link: LINK })).rejects.toThrow(
+        'connection refused'
+      );
     });
 
     it('in NODE_ENV=test without SMTP_URL it fills the in-memory outbox and sends nothing', async () => {
@@ -110,7 +123,12 @@ describe('mailer', () => {
       expect(sendMailMock).not.toHaveBeenCalled();
       const outbox = getTestOutbox();
       expect(outbox).toHaveLength(1);
-      expect(outbox[0]).toMatchObject({ to: 'ana@example.com', template: 'verify', locale: 'zh', link: LINK });
+      expect(outbox[0]).toMatchObject({
+        to: 'ana@example.com',
+        template: 'verify',
+        locale: 'zh',
+        link: LINK,
+      });
       clearTestOutbox();
       expect(getTestOutbox()).toHaveLength(0);
     });

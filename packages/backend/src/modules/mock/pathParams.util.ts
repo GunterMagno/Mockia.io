@@ -5,19 +5,19 @@
 
 /**
  * Extracts path parameters from an actual path based on a pattern
- * 
+ *
  * @param pattern - The route pattern (e.g., "/users/:id" or "/posts/:postId/comments/:commentId")
  * @param actualPath - The actual URL path (e.g., "/users/123")
  * @returns Object with extracted parameters or null if path doesn't match pattern
- * 
+ *
  * @example
  * extractPathParams("/users/:id", "/users/123")
  * // Returns: { id: "123" }
- * 
+ *
  * @example
  * extractPathParams("/posts/:postId/comments/:commentId", "/posts/1/comments/5")
  * // Returns: { postId: "1", commentId: "5" }
- * 
+ *
  * @example
  * extractPathParams("/users/:id", "/posts/123")
  * // Returns: null (doesn't match)
@@ -60,10 +60,10 @@ export function extractPathParams(
 /**
  * Calculates the specificity score of a route pattern
  * More specific routes (with more literals) score higher
- * 
+ *
  * @param pattern - The route pattern (e.g., "/users/:id" or "/users/active")
  * @returns Specificity score (higher = more specific)
- * 
+ *
  * @example
  * calculatePatternSpecificity("/users/active") // Returns: 2 (all literals)
  * calculatePatternSpecificity("/users/:id") // Returns: 1 (one literal, one param)
@@ -86,7 +86,7 @@ export function calculatePatternSpecificity(pattern: string): number {
 
 /**
  * Checks if a pattern contains any parameters
- * 
+ *
  * @param pattern - The route pattern
  * @returns true if pattern contains parameters (e.g., :id)
  */

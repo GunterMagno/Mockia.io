@@ -1,7 +1,21 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../../middlewares/authenticateToken.js';
 import { asyncHandler } from '../../middlewares/errorHandler.js';
-import { createProject, getUserProjects, getProjectById, updateProject, archiveProject, hardDeleteProject, cleanupArchivedProjects, addProjectMember, removeProjectMember, importGitHubRepository, issueApiKey, revokeApiKey, leaveProject } from './service.js';
+import {
+  createProject,
+  getUserProjects,
+  getProjectById,
+  updateProject,
+  archiveProject,
+  hardDeleteProject,
+  cleanupArchivedProjects,
+  addProjectMember,
+  removeProjectMember,
+  importGitHubRepository,
+  issueApiKey,
+  revokeApiKey,
+  leaveProject,
+} from './service.js';
 import { getProjectContext, deleteProjectContext } from '../../services/github-context.service.js';
 import { ProjectModel } from '../../models/Project.js';
 import { AppError } from '../../middlewares/errorHandler.js';
@@ -384,23 +398,21 @@ export const deleteProjectContextHandler = asyncHandler(
  * @throws 403 if the user is not the project owner
  * @throws 404 if project not found
  */
-export const issueApiKeyHandler = asyncHandler(
-  async (req: AuthenticatedRequest, res: Response) => {
-    const userId = req.user?.id;
-    if (!userId) {
-      throw new Error('User ID not found in request');
-    }
-
-    const issued = await issueApiKey(req.params.id, userId);
-
-    res.setHeader('Cache-Control', 'no-store');
-    res.status(201).json({
-      success: true,
-      data: issued,
-      timestamp: new Date().toISOString(),
-    });
+export const issueApiKeyHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user?.id;
+  if (!userId) {
+    throw new Error('User ID not found in request');
   }
-);
+
+  const issued = await issueApiKey(req.params.id, userId);
+
+  res.setHeader('Cache-Control', 'no-store');
+  res.status(201).json({
+    success: true,
+    data: issued,
+    timestamp: new Date().toISOString(),
+  });
+});
 
 /**
  * DELETE /api/projects/:id/api-key
@@ -447,7 +459,6 @@ export const leaveProjectHandler = asyncHandler(
   }
 );
 
-
 /**
  * GET /api/projects/:id/export?format=openapi|postman|msw
  * Downloads the project's mocks as an OpenAPI 3.1 document, a Postman v2.1 collection or MSW v2 handlers (TypeScript).
@@ -464,7 +475,8 @@ export const exportProjectHandler = asyncHandler(
 
     const format = req.query.format as ExportFormat;
     const base = project.slug.replace(/[^a-z0-9._-]+/gi, '-').replace(/^-+|-+$/g, '') || 'project';
-    const attach = (name: string) => res.setHeader('Content-Disposition', `attachment; filename="${name}"`);
+    const attach = (name: string) =>
+      res.setHeader('Content-Disposition', `attachment; filename="${name}"`);
     res.setHeader('Cache-Control', 'no-store');
 
     if (format === 'msw') {
@@ -475,7 +487,8 @@ export const exportProjectHandler = asyncHandler(
       return;
     }
 
-    const doc = format === 'postman' ? await exportPostman(project.id) : await exportOpenApi(project.id);
+    const doc =
+      format === 'postman' ? await exportPostman(project.id) : await exportOpenApi(project.id);
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     attach(format === 'postman' ? `${base}.postman_collection.json` : `${base}-openapi.json`);
     res.send(JSON.stringify(doc, null, 2));

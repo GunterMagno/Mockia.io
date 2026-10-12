@@ -30,18 +30,35 @@ let IP_HASH = '';
 const ENV_KEYS = ['DEMO_ENABLED', 'DEMO_HMAC_SECRET', 'DEMO_MOCK_TTL_MINUTES'] as const;
 const saved: Record<string, string | undefined> = {};
 
-const USERS_CHARGED = [UserModel, ProjectModel, UsageModel, AiGenerationModel].map((m) => m.collection.name);
+const USERS_CHARGED = [UserModel, ProjectModel, UsageModel, AiGenerationModel].map(
+  (m) => m.collection.name
+);
 const countCollection = async (name: string): Promise<number> =>
   mongoose.connection.db!.collection(name).countDocuments({});
 
 const ENDPOINTS: DemoEndpoint[] = [
-  { method: 'GET', path: '/users', statusCode: 200, body: [{ id: 1, name: 'Ada' }, { id: 2, name: 'Linus' }] },
+  {
+    method: 'GET',
+    path: '/users',
+    statusCode: 200,
+    body: [
+      { id: 1, name: 'Ada' },
+      { id: 2, name: 'Linus' },
+    ],
+  },
   { method: 'GET', path: '/users/:id', statusCode: 200, body: { id: 7, name: 'Grace' } },
-  { method: 'POST', path: '/users', statusCode: 201, body: { id: 3, created: true }, headers: { 'X-Total-Count': '3' } },
+  {
+    method: 'POST',
+    path: '/users',
+    statusCode: 201,
+    body: { id: 3, created: true },
+    headers: { 'X-Total-Count': '3' },
+  },
   { method: 'DELETE', path: '/users/:id', statusCode: 204, body: null },
 ];
 
-const makeDemo = async (endpoints: DemoEndpoint[] = ENDPOINTS, now: Date = T0) => createDemoMock(IP_HASH, endpoints, now);
+const makeDemo = async (endpoints: DemoEndpoint[] = ENDPOINTS, now: Date = T0) =>
+  createDemoMock(IP_HASH, endpoints, now);
 
 beforeAll(async () => {
   await connectDB();
@@ -77,7 +94,10 @@ describe('serving a demo mock', () => {
 
     const list = await request(app).get(`/api/demo-mock/${demoId}/users`);
     expect(list.status).toBe(200);
-    expect(list.body).toEqual([{ id: 1, name: 'Ada' }, { id: 2, name: 'Linus' }]);
+    expect(list.body).toEqual([
+      { id: 1, name: 'Ada' },
+      { id: 2, name: 'Linus' },
+    ]);
     expect(list.headers['content-type']).toMatch(/^application\/json/);
     expect(list.headers['x-mockia-demo']).toBe('true');
     expect(list.headers['x-content-type-options']).toBe('nosniff');
@@ -88,7 +108,9 @@ describe('serving a demo mock', () => {
     expect(byId.status).toBe(200);
     expect(byId.body).toEqual({ id: 7, name: 'Grace' });
 
-    const created = await request(app).post(`/api/demo-mock/${demoId}/users`).send({ any: 'thing' });
+    const created = await request(app)
+      .post(`/api/demo-mock/${demoId}/users`)
+      .send({ any: 'thing' });
     expect(created.status).toBe(201);
     expect(created.body).toEqual({ id: 3, created: true });
     expect(created.headers['x-total-count']).toBe('3');
@@ -181,11 +203,14 @@ describe('serving a demo mock', () => {
   it('stores and serves bodies that Mongo would mangle as documents (empty object, $ and . in keys, arrays, null)', async () => {
     const { demoId } = await makeDemo([
       { method: 'GET', path: '/empty', statusCode: 200, body: {} },
-      { method: 'GET', path: '/weird', statusCode: 200, body: { '$ref': 'a', 'a.b': { '': [] } } },
+      { method: 'GET', path: '/weird', statusCode: 200, body: { $ref: 'a', 'a.b': { '': [] } } },
       { method: 'GET', path: '/null', statusCode: 200, body: null },
     ]);
     expect((await request(app).get(`/api/demo-mock/${demoId}/empty`)).body).toEqual({});
-    expect((await request(app).get(`/api/demo-mock/${demoId}/weird`)).body).toEqual({ $ref: 'a', 'a.b': { '': [] } });
+    expect((await request(app).get(`/api/demo-mock/${demoId}/weird`)).body).toEqual({
+      $ref: 'a',
+      'a.b': { '': [] },
+    });
     expect((await request(app).get(`/api/demo-mock/${demoId}/null`)).text).toBe('null');
   });
 
@@ -194,8 +219,12 @@ describe('serving a demo mock', () => {
       { method: 'GET', path: '/items/:id', statusCode: 200, body: { kind: 'param' } },
       { method: 'GET', path: '/items/featured', statusCode: 200, body: { kind: 'static' } },
     ]);
-    expect((await request(app).get(`/api/demo-mock/${demoId}/items/featured/`)).body).toEqual({ kind: 'static' });
-    expect((await request(app).get(`/api/demo-mock/${demoId}/items/9`)).body).toEqual({ kind: 'param' });
+    expect((await request(app).get(`/api/demo-mock/${demoId}/items/featured/`)).body).toEqual({
+      kind: 'static',
+    });
+    expect((await request(app).get(`/api/demo-mock/${demoId}/items/9`)).body).toEqual({
+      kind: 'param',
+    });
   });
 
   it('answers CORS preflight for the allowed methods without a lookup, and does not echo arbitrary methods', async () => {
@@ -205,7 +234,9 @@ describe('serving a demo mock', () => {
       .set('Access-Control-Request-Method', 'PUT');
     expect(res.status).toBe(204);
     expect(res.headers['access-control-allow-origin']).toBe('*');
-    expect(res.headers['access-control-allow-methods']).toBe('GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    expect(res.headers['access-control-allow-methods']).toBe(
+      'GET, POST, PUT, PATCH, DELETE, OPTIONS'
+    );
     expect(res.headers['x-mockia-demo']).toBe('true');
   });
 
@@ -224,7 +255,12 @@ describe('per-IP daily limit', () => {
     const b = await makeDemo();
     // The visitor has already used 298 of the 300 daily mock requests
     await DemoBudgetModel.create({
-      day: '2026-10-09', scope: 'ip', key: IP_HASH, kind: 'mockRequest', count: 298, expiresAt: new Date(T0.getTime() + 3 * 24 * 60 * MIN),
+      day: '2026-10-09',
+      scope: 'ip',
+      key: IP_HASH,
+      kind: 'mockRequest',
+      count: 298,
+      expiresAt: new Date(T0.getTime() + 3 * 24 * 60 * MIN),
     });
 
     await request(app).get(`/api/demo-mock/${a.demoId}/users`).expect(200); // 299
@@ -248,13 +284,21 @@ describe('per-IP daily limit', () => {
     await request(app).get(`/api/demo-mock/${c.demoId}/users`).expect(200);
   });
 
-  it('a different visitor is not affected by the first one\'s exhaustion', async () => {
+  it("a different visitor is not affected by the first one's exhaustion", async () => {
     const { demoId } = await makeDemo();
     await DemoBudgetModel.create({
-      day: '2026-10-09', scope: 'ip', key: IP_HASH, kind: 'mockRequest', count: 300, expiresAt: new Date(T0.getTime() + 3 * 24 * 60 * MIN),
+      day: '2026-10-09',
+      scope: 'ip',
+      key: IP_HASH,
+      kind: 'mockRequest',
+      count: 300,
+      expiresAt: new Date(T0.getTime() + 3 * 24 * 60 * MIN),
     });
     await request(app).get(`/api/demo-mock/${demoId}/users`).expect(429);
-    await request(app).get(`/api/demo-mock/${demoId}/users`).set('X-Forwarded-For', '203.0.113.9').expect(429); // proxy header ignored: trust proxy is off
+    await request(app)
+      .get(`/api/demo-mock/${demoId}/users`)
+      .set('X-Forwarded-For', '203.0.113.9')
+      .expect(429); // proxy header ignored: trust proxy is off
   });
 
   it('never stores the visitor address in clear: only the pseudonym lands in Mongo', async () => {
@@ -270,7 +314,12 @@ describe('per-IP daily limit', () => {
 });
 
 describe('createDemoMock', () => {
-  const ep = (i: number): DemoEndpoint => ({ method: 'GET', path: `/r${i}`, statusCode: 200, body: { i } });
+  const ep = (i: number): DemoEndpoint => ({
+    method: 'GET',
+    path: `/r${i}`,
+    statusCode: 200,
+    body: { i },
+  });
 
   it('(e) keeps at most 5 endpoints', async () => {
     const { demoId } = await makeDemo(Array.from({ length: 9 }, (_, i) => ep(i)));
@@ -280,14 +329,22 @@ describe('createDemoMock', () => {
 
   it('(e) rejects a body of 9 KB and accepts one of exactly 8 KB', async () => {
     const big = (bytes: number) => ({ text: 'x'.repeat(bytes - '{"text":""}'.length) });
-    await expect(makeDemo([{ method: 'GET', path: '/big', statusCode: 200, body: big(9 * 1024) }])).rejects.toBeInstanceOf(DemoMockError);
-    await expect(makeDemo([{ method: 'GET', path: '/ok', statusCode: 200, body: big(8 * 1024) }])).resolves.toBeDefined();
-    await expect(makeDemo([{ method: 'GET', path: '/over', statusCode: 200, body: big(8 * 1024 + 1) }])).rejects.toBeInstanceOf(DemoMockError);
+    await expect(
+      makeDemo([{ method: 'GET', path: '/big', statusCode: 200, body: big(9 * 1024) }])
+    ).rejects.toBeInstanceOf(DemoMockError);
+    await expect(
+      makeDemo([{ method: 'GET', path: '/ok', statusCode: 200, body: big(8 * 1024) }])
+    ).resolves.toBeDefined();
+    await expect(
+      makeDemo([{ method: 'GET', path: '/over', statusCode: 200, body: big(8 * 1024 + 1) }])
+    ).rejects.toBeInstanceOf(DemoMockError);
   });
 
   it('(e) counts the body in bytes, not characters', async () => {
     const body = { text: 'ñ'.repeat(4096) }; // 4096 chars, 8192 bytes + wrapper
-    await expect(makeDemo([{ method: 'GET', path: '/b', statusCode: 200, body }])).rejects.toBeInstanceOf(DemoMockError);
+    await expect(
+      makeDemo([{ method: 'GET', path: '/b', statusCode: 200, body }])
+    ).rejects.toBeInstanceOf(DemoMockError);
   });
 
   it('(e) drops every header outside the allow-list (no Set-Cookie, no Location) and forces JSON', async () => {
@@ -338,13 +395,17 @@ describe('createDemoMock', () => {
       await expect(makeDemo(endpoints)).rejects.toBeInstanceOf(DemoMockError);
     }
     // Ordinary whitespace (new lines, tabs) inside text is fine
-    await expect(makeDemo([{ method: 'GET', path: '/ws', statusCode: 200, body: { t: 'line1\nline2\tx' } }])).resolves.toBeDefined();
+    await expect(
+      makeDemo([{ method: 'GET', path: '/ws', statusCode: 200, body: { t: 'line1\nline2\tx' } }])
+    ).resolves.toBeDefined();
   });
 
   it('rejects a cyclic body instead of crashing', async () => {
     const cyc: Record<string, unknown> = {};
     cyc.self = cyc;
-    await expect(makeDemo([{ method: 'GET', path: '/cyc', statusCode: 200, body: cyc }])).rejects.toBeInstanceOf(DemoMockError);
+    await expect(
+      makeDemo([{ method: 'GET', path: '/cyc', statusCode: 200, body: cyc }])
+    ).rejects.toBeInstanceOf(DemoMockError);
   });
 
   it('ignores a repeated method+path (the first wins) and returns a 128-bit hex id, unique per call', async () => {
@@ -361,7 +422,18 @@ describe('createDemoMock', () => {
   it('stores no reference to users or projects', async () => {
     const { demoId } = await makeDemo();
     const raw = await DemoMockModel.collection.findOne({ demoId });
-    expect(Object.keys(raw!).sort()).toEqual(['__v', '_id', 'createdAt', 'demoId', 'endpoints', 'expiresAt', 'ipHash', 'requestCount'].sort());
+    expect(Object.keys(raw!).sort()).toEqual(
+      [
+        '__v',
+        '_id',
+        'createdAt',
+        'demoId',
+        'endpoints',
+        'expiresAt',
+        'ipHash',
+        'requestCount',
+      ].sort()
+    );
   });
 });
 
@@ -383,14 +455,16 @@ describe('isolation from accounts, plans and generation quota', () => {
 });
 
 describe('flood protection (traffic that is not served is limited too)', () => {
-  const randomId = () => [...Array(32)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
+  const randomId = () =>
+    [...Array(32)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
 
   it('(I1) a burst of random well-formed ids from one IP ends in 429 with bounded Mongo lookups; another IP is unaffected', async () => {
     const findOne = jest.spyOn(DemoMockModel, 'findOne');
     const trustProxy = app.get('trust proxy');
     try {
       const statuses: number[] = [];
-      for (let i = 0; i < 300; i++) statuses.push((await request(app).get(`/api/demo-mock/${randomId()}/users`)).status);
+      for (let i = 0; i < 300; i++)
+        statuses.push((await request(app).get(`/api/demo-mock/${randomId()}/users`)).status);
       expect(statuses.slice(0, 120).every((s) => s === 404)).toBe(true);
       expect(statuses.slice(120).every((s) => s === 429)).toBe(true);
       // The lookups stopped growing once the limiter kicked in
@@ -418,7 +492,9 @@ describe('flood protection (traffic that is not served is limited too)', () => {
 
       // Another visitor (distinct address behind a trusted proxy) is not affected
       app.set('trust proxy', 1);
-      const other = await request(app).get(`/api/demo-mock/${demoId}/users`).set('X-Forwarded-For', '203.0.113.9');
+      const other = await request(app)
+        .get(`/api/demo-mock/${demoId}/users`)
+        .set('X-Forwarded-For', '203.0.113.9');
       expect(other.status).toBe(200);
 
       // The window slides: a minute later the first visitor is served again
@@ -451,8 +527,12 @@ describe('flood protection (traffic that is not served is limited too)', () => {
 
 describe('percent-encoded paths', () => {
   it('(I2) createDemoMock refuses "%" in a path (Express decodes it, so such a route could never be served)', async () => {
-    await expect(makeDemo([{ method: 'GET', path: '/a%20b', statusCode: 200, body: {} }])).rejects.toBeInstanceOf(DemoMockError);
-    await expect(makeDemo([{ method: 'GET', path: '/files/100%', statusCode: 200, body: {} }])).rejects.toBeInstanceOf(DemoMockError);
+    await expect(
+      makeDemo([{ method: 'GET', path: '/a%20b', statusCode: 200, body: {} }])
+    ).rejects.toBeInstanceOf(DemoMockError);
+    await expect(
+      makeDemo([{ method: 'GET', path: '/files/100%', statusCode: 200, body: {} }])
+    ).rejects.toBeInstanceOf(DemoMockError);
   });
 
   it('(I2) a malformed percent escape in a public request answers the demo 404, never a 500', async () => {
@@ -482,7 +562,9 @@ describe('wiring', () => {
 
   it('is public: no Authorization needed, and the restrictive global CORS allow-list does not answer its preflight', async () => {
     const { demoId } = await makeDemo();
-    const res = await request(app).get(`/api/demo-mock/${demoId}/users`).set('Origin', 'https://some.site');
+    const res = await request(app)
+      .get(`/api/demo-mock/${demoId}/users`)
+      .set('Origin', 'https://some.site');
     expect(res.status).toBe(200);
     expect(res.headers['access-control-allow-origin']).toBe('*');
     expect(res.headers['access-control-allow-credentials']).toBeUndefined();

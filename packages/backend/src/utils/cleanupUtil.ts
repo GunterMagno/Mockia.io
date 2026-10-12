@@ -1,9 +1,9 @@
- import fs from 'fs/promises';
+import fs from 'fs/promises';
 import path from 'path';
 
 /**
  * Removes a directory and all its contents recursively
- * 
+ *
  * @param dirPath - Absolute path to the directory to remove
  * @returns Promise that resolves when the directory is removed
  * @throws Error if the directory cannot be removed
@@ -12,7 +12,7 @@ export async function removeDirectory(dirPath: string): Promise<void> {
   try {
     // Check if the path exists before attempting removal
     await fs.access(dirPath);
-    
+
     // Remove directory recursively with force flag
     await fs.rm(dirPath, { recursive: true, force: true });
   } catch (error) {
@@ -27,15 +27,13 @@ export async function removeDirectory(dirPath: string): Promise<void> {
 /**
  * Removes multiple temporary files/directories
  * Useful for cleanup after analysis or import operations
- * 
+ *
  * @param paths - Array of paths to remove
  * @returns Promise that resolves when all paths are attempted to be removed
  */
 export async function removeDirectories(paths: string[]): Promise<void> {
-  const results = await Promise.allSettled(
-    paths.map(dirPath => removeDirectory(dirPath))
-  );
-  
+  const results = await Promise.allSettled(paths.map((dirPath) => removeDirectory(dirPath)));
+
   // Log any failures (but don't throw)
   results.forEach((result, index) => {
     if (result.status === 'rejected') {

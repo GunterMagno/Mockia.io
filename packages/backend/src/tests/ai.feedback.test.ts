@@ -30,7 +30,12 @@ const SPEC = {
   title: 'Gym API',
   description: 'd',
   endpoints: [
-    { path: '/members', method: 'GET', description: 'List members', examples: [{ request: {}, response: { id: 1 } }] },
+    {
+      path: '/members',
+      method: 'GET',
+      description: 'List members',
+      examples: [{ request: {}, response: { id: 1 } }],
+    },
   ],
   dataModels: [],
 };
@@ -38,12 +43,31 @@ const SPEC_TEXT = JSON.stringify(SPEC);
 const CORRECTED = {
   ...SPEC,
   endpoints: [
-    { path: '/members', method: 'GET', description: 'List members', examples: [{ request: {}, response: { id: 1 } }] },
-    { path: '/classes', method: 'GET', description: 'List classes', examples: [{ request: {}, response: { id: 2 } }] },
+    {
+      path: '/members',
+      method: 'GET',
+      description: 'List members',
+      examples: [{ request: {}, response: { id: 1 } }],
+    },
+    {
+      path: '/classes',
+      method: 'GET',
+      description: 'List classes',
+      examples: [{ request: {}, response: { id: 2 } }],
+    },
   ],
 };
 
-const ALL = [UserModel, ProjectModel, MockAPIModel, EndpointModel, ResponseModel, AiRateWindowModel, AiGenerationModel, AiFeedbackModel];
+const ALL = [
+  UserModel,
+  ProjectModel,
+  MockAPIModel,
+  EndpointModel,
+  ResponseModel,
+  AiRateWindowModel,
+  AiGenerationModel,
+  AiFeedbackModel,
+];
 const wipe = () => Promise.all(ALL.map((m) => (m as any).deleteMany({})));
 
 interface Actor {
@@ -60,7 +84,9 @@ async function makeActor(name: string, extra: Record<string, unknown> = {}): Pro
     emailVerifiedAt: new Date(),
     ...extra,
   });
-  const login = await request(app).post('/api/auth/login').send({ email: `${name}@example.com`, password: PASSWORD });
+  const login = await request(app)
+    .post('/api/auth/login')
+    .send({ email: `${name}@example.com`, password: PASSWORD });
   expect(login.status).toBe(200);
   const project = await ProjectModel.create({
     title: `P ${name}`,
@@ -75,10 +101,15 @@ async function makeActor(name: string, extra: Record<string, unknown> = {}): Pro
   };
 }
 
-const consent = (a: Actor, granted: boolean) => request(app).put('/api/users/me/ai-consent').set(a.auth).send({ granted });
+const consent = (a: Actor, granted: boolean) =>
+  request(app).put('/api/users/me/ai-consent').set(a.auth).send({ granted });
 const generate = (a: Actor, path = 'generate-mock-api-spec') =>
-  request(app).post(`/api/ai/${path}`).set(a.auth).send({ projectId: a.projectId, requirement: 'members CRUD' });
-const feedback = (a: Actor, body: Record<string, unknown>) => request(app).post('/api/ai/feedback').set(a.auth).send(body);
+  request(app)
+    .post(`/api/ai/${path}`)
+    .set(a.auth)
+    .send({ projectId: a.projectId, requirement: 'members CRUD' });
+const feedback = (a: Actor, body: Record<string, unknown>) =>
+  request(app).post('/api/ai/feedback').set(a.auth).send(body);
 
 describe('AI training consent, generation storage and feedback', () => {
   const complete = jest.fn();
@@ -93,9 +124,16 @@ describe('AI training consent, generation storage and feedback', () => {
 
   beforeEach(async () => {
     await wipe();
-    logs = ['log', 'warn', 'error', 'info'].map((k) => jest.spyOn(console, k as 'log').mockImplementation(() => undefined));
+    logs = ['log', 'warn', 'error', 'info'].map((k) =>
+      jest.spyOn(console, k as 'log').mockImplementation(() => undefined)
+    );
     complete.mockReset();
-    complete.mockResolvedValue({ text: SPEC_TEXT, provider: 'fake-provider', model: 'fake-model', usage: { inputTokens: 5, outputTokens: 7 } });
+    complete.mockResolvedValue({
+      text: SPEC_TEXT,
+      provider: 'fake-provider',
+      model: 'fake-model',
+      usage: { inputTokens: 5, outputTokens: 7 },
+    });
     getLlmSpy = jest.spyOn(providers, 'getLlm').mockReturnValue({ name: 'fake', complete });
     delete process.env.AI_GENERATION_RETENTION_DAYS;
     delete process.env.REQUIRE_EMAIL_VERIFICATION;
@@ -112,7 +150,14 @@ describe('AI training consent, generation storage and feedback', () => {
     await disconnectDB();
   });
 
-  const loggedText = () => logs.flatMap((l) => l.mock.calls.map((c) => c.map((x: unknown) => (typeof x === "string" ? x : JSON.stringify(x))).join(' '))).join('\n');
+  const loggedText = () =>
+    logs
+      .flatMap((l) =>
+        l.mock.calls.map((c) =>
+          c.map((x: unknown) => (typeof x === 'string' ? x : JSON.stringify(x))).join(' ')
+        )
+      )
+      .join('\n');
 
   /* ----------------------------------------------------------------------------------------------- consent */
   describe('consent', () => {
@@ -127,7 +172,9 @@ describe('AI training consent, generation storage and feedback', () => {
 
     it('needs a session and a boolean', async () => {
       const a = await makeActor('alice');
-      expect((await request(app).put('/api/users/me/ai-consent').send({ granted: true })).status).toBe(401);
+      expect(
+        (await request(app).put('/api/users/me/ai-consent').send({ granted: true })).status
+      ).toBe(401);
       for (const body of [{}, { granted: 'yes' }, { granted: 1 }, { granted: null }]) {
         const res = await request(app).put('/api/users/me/ai-consent').set(a.auth).send(body);
         expect(res.status).toBe(400);
@@ -146,7 +193,12 @@ describe('AI training consent, generation storage and feedback', () => {
       expect(at).toBeLessThanOrEqual(Date.now() + 1000);
 
       const profile = await request(app).get('/api/users/profile').set(a.auth);
-      expect(Object.keys(profile.body.aiTrainingConsent).sort()).toEqual(['at', 'granted', 'grantedAt', 'withdrawnAt']);
+      expect(Object.keys(profile.body.aiTrainingConsent).sort()).toEqual([
+        'at',
+        'granted',
+        'grantedAt',
+        'withdrawnAt',
+      ]);
       expect(profile.body.aiTrainingConsent.grantedAt).toBe(res.body.aiTrainingConsent.at);
       expect(profile.body.aiTrainingConsent.withdrawnAt).toBeNull();
       expect(profile.body.aiTrainingConsent.granted).toBe(true);
@@ -212,25 +264,30 @@ describe('AI training consent, generation storage and feedback', () => {
       await consent(a, false);
       await new Promise((r) => setTimeout(r, 15));
       const again = await consent(a, true);
-      expect(new Date(again.body.aiTrainingConsent.at).getTime()).toBeGreaterThan(new Date(first.body.aiTrainingConsent.at).getTime());
+      expect(new Date(again.body.aiTrainingConsent.at).getTime()).toBeGreaterThan(
+        new Date(first.body.aiTrainingConsent.at).getTime()
+      );
     });
   });
 
   /* ----------------------------------------------------------------------------------------- persistence */
   describe('storing generations', () => {
-    it.each(['generate-mock-api-spec', 'generate-and-save'])('%s returns a random generationId and keeps the old fields', async (path) => {
-      const a = await makeActor('alice');
-      const res = await generate(a, path);
-      expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data.generationId).toMatch(UUID_RE);
-      expect(res.body.data.specification.title).toBe('Gym API');
-      expect(res.body.data.usage).toBeDefined();
-      if (path === 'generate-and-save') expect(res.body.data.database.endpointsCreated).toBe(1);
+    it.each(['generate-mock-api-spec', 'generate-and-save'])(
+      '%s returns a random generationId and keeps the old fields',
+      async (path) => {
+        const a = await makeActor('alice');
+        const res = await generate(a, path);
+        expect(res.status).toBe(200);
+        expect(res.body.success).toBe(true);
+        expect(res.body.data.generationId).toMatch(UUID_RE);
+        expect(res.body.data.specification.title).toBe('Gym API');
+        expect(res.body.data.usage).toBeDefined();
+        if (path === 'generate-and-save') expect(res.body.data.database.endpointsCreated).toBe(1);
 
-      const again = await generate(a, path);
-      expect(again.body.data.generationId).not.toBe(res.body.data.generationId);
-    });
+        const again = await generate(a, path);
+        expect(again.body.data.generationId).not.toBe(res.body.data.generationId);
+      }
+    );
 
     it('without consent nothing about the content is persisted (but the id is still returned)', async () => {
       const a = await makeActor('alice');
@@ -248,7 +305,9 @@ describe('AI training consent, generation storage and feedback', () => {
       const a = await makeActor('alice');
       await consent(a, true);
       const res = await generate(a);
-      const doc = await AiGenerationModel.findOne({ generationId: res.body.data.generationId }).lean();
+      const doc = await AiGenerationModel.findOne({
+        generationId: res.body.data.generationId,
+      }).lean();
       expect(doc).toBeTruthy();
       expect(doc!.userId.toString()).toBe(a.id);
       expect(doc!.output).toBe(SPEC_TEXT);
@@ -266,30 +325,38 @@ describe('AI training consent, generation storage and feedback', () => {
       const a = await makeActor('alice');
       await consent(a, true);
       const res = await generate(a, 'generate-and-save');
-      expect(await AiGenerationModel.countDocuments({ generationId: res.body.data.generationId })).toBe(1);
+      expect(
+        await AiGenerationModel.countDocuments({ generationId: res.body.data.generationId })
+      ).toBe(1);
     });
 
     it('expires after 180 days by default', async () => {
       const a = await makeActor('alice');
       await consent(a, true);
       const res = await generate(a);
-      const doc = await AiGenerationModel.findOne({ generationId: res.body.data.generationId }).lean();
+      const doc = await AiGenerationModel.findOne({
+        generationId: res.body.data.generationId,
+      }).lean();
       const days = (doc!.expiresAt.getTime() - doc!.createdAt.getTime()) / 86_400_000;
       expect(days).toBeCloseTo(180, 1);
     });
 
     it('AI_GENERATION_RETENTION_DAYS changes the retention; nonsense falls back to 180', async () => {
-      const a = await makeActor('alice', { plan: 'pro', billingStatus: 'active' }) // 6 generations: more than the Free monthly AI cap;
+      const a = await makeActor('alice', { plan: 'pro', billingStatus: 'active' }); // 6 generations: more than the Free monthly AI cap;
       await consent(a, true);
       process.env.AI_GENERATION_RETENTION_DAYS = '30';
       const r1 = await generate(a);
-      const d1 = await AiGenerationModel.findOne({ generationId: r1.body.data.generationId }).lean();
+      const d1 = await AiGenerationModel.findOne({
+        generationId: r1.body.data.generationId,
+      }).lean();
       expect((d1!.expiresAt.getTime() - d1!.createdAt.getTime()) / 86_400_000).toBeCloseTo(30, 1);
 
       for (const bad of ['0', '-5', 'abc', '', '1.5e3x']) {
         process.env.AI_GENERATION_RETENTION_DAYS = bad;
         const r = await generate(a);
-        const d = await AiGenerationModel.findOne({ generationId: r.body.data.generationId }).lean();
+        const d = await AiGenerationModel.findOne({
+          generationId: r.body.data.generationId,
+        }).lean();
         expect((d!.expiresAt.getTime() - d!.createdAt.getTime()) / 86_400_000).toBeCloseTo(180, 1);
       }
     });
@@ -307,7 +374,11 @@ describe('AI training consent, generation storage and feedback', () => {
     it('a failed generation (unparseable answer) stores nothing and returns no id', async () => {
       const a = await makeActor('alice');
       await consent(a, true);
-      complete.mockResolvedValue({ text: `this is not json ${SENTINEL}`, provider: 'fake', model: 'm' });
+      complete.mockResolvedValue({
+        text: `this is not json ${SENTINEL}`,
+        provider: 'fake',
+        model: 'm',
+      });
       const res = await generate(a);
       expect(res.status).toBeGreaterThanOrEqual(400);
       expect(res.body.data?.generationId).toBeUndefined();
@@ -318,10 +389,16 @@ describe('AI training consent, generation storage and feedback', () => {
     it('the removed AI routes neither return an id nor store anything (404)', async () => {
       const a = await makeActor('alice');
       await consent(a, true);
-      const d = await request(app).post('/api/ai/generate-description').set(a.auth).send({ prompt: 'p', userMessage: 'u' });
+      const d = await request(app)
+        .post('/api/ai/generate-description')
+        .set(a.auth)
+        .send({ prompt: 'p', userMessage: 'u' });
       expect(d.status).toBe(404);
       expect(d.body.data?.generationId).toBeUndefined();
-      const m = await request(app).post('/api/ai/generate-mock-data').set(a.auth).send({ schema: { a: 'number' } });
+      const m = await request(app)
+        .post('/api/ai/generate-mock-data')
+        .set(a.auth)
+        .send({ schema: { a: 'number' } });
       expect(m.status).toBe(404);
       expect(m.body.data?.generationId).toBeUndefined();
       expect(await AiGenerationModel.countDocuments({})).toBe(0);
@@ -330,8 +407,14 @@ describe('AI training consent, generation storage and feedback', () => {
     it('still answers when the database write fails (the user got their API) and never logs the content', async () => {
       const a = await makeActor('alice');
       await consent(a, true);
-      complete.mockResolvedValue({ text: JSON.stringify({ ...SPEC, description: SENTINEL }), provider: 'fake', model: 'm' });
-      const spy = jest.spyOn(AiGenerationModel, 'create').mockRejectedValueOnce(new Error(`boom ${SENTINEL}`));
+      complete.mockResolvedValue({
+        text: JSON.stringify({ ...SPEC, description: SENTINEL }),
+        provider: 'fake',
+        model: 'm',
+      });
+      const spy = jest
+        .spyOn(AiGenerationModel, 'create')
+        .mockRejectedValueOnce(new Error(`boom ${SENTINEL}`));
       const res = await generate(a);
       spy.mockRestore();
       expect(res.status).toBe(200);
@@ -342,9 +425,20 @@ describe('AI training consent, generation storage and feedback', () => {
     it('logs never carry the prompts or the output of a stored generation', async () => {
       const a = await makeActor('alice');
       await consent(a, true);
-      complete.mockResolvedValue({ text: JSON.stringify({ ...SPEC, description: SENTINEL }), provider: 'fake', model: 'm' });
-      await request(app).post('/api/ai/generate-mock-api-spec').set(a.auth).send({ projectId: a.projectId, requirement: `members ${SENTINEL}` });
-      await feedback(a, { generationId: (await AiGenerationModel.findOne({}).lean())!.generationId, verdict: 'good', correctedOutput: { ...CORRECTED, description: SENTINEL } });
+      complete.mockResolvedValue({
+        text: JSON.stringify({ ...SPEC, description: SENTINEL }),
+        provider: 'fake',
+        model: 'm',
+      });
+      await request(app)
+        .post('/api/ai/generate-mock-api-spec')
+        .set(a.auth)
+        .send({ projectId: a.projectId, requirement: `members ${SENTINEL}` });
+      await feedback(a, {
+        generationId: (await AiGenerationModel.findOne({}).lean())!.generationId,
+        verdict: 'good',
+        correctedOutput: { ...CORRECTED, description: SENTINEL },
+      });
       expect(loggedText()).not.toContain(SENTINEL);
     });
   });
@@ -352,14 +446,19 @@ describe('AI training consent, generation storage and feedback', () => {
   /* -------------------------------------------------------------------------------------------- feedback */
   describe('POST /ai/feedback', () => {
     it('needs a session', async () => {
-      const res = await request(app).post('/api/ai/feedback').send({ generationId: '8d1c9f0e-5b5a-4a3e-9e63-0f0f6f4f9c11', verdict: 'good' });
+      const res = await request(app)
+        .post('/api/ai/feedback')
+        .send({ generationId: '8d1c9f0e-5b5a-4a3e-9e63-0f0f6f4f9c11', verdict: 'good' });
       expect(res.status).toBe(401);
     });
 
     it('requires a verified email when verification is on (like the other AI routes)', async () => {
       const a = await makeActor('alice', { emailVerifiedAt: null });
       process.env.REQUIRE_EMAIL_VERIFICATION = 'true';
-      const res = await feedback(a, { generationId: '8d1c9f0e-5b5a-4a3e-9e63-0f0f6f4f9c11', verdict: 'good' });
+      const res = await feedback(a, {
+        generationId: '8d1c9f0e-5b5a-4a3e-9e63-0f0f6f4f9c11',
+        verdict: 'good',
+      });
       expect(res.status).toBe(403);
       expect(await AiFeedbackModel.countDocuments({})).toBe(0);
     });
@@ -394,7 +493,11 @@ describe('AI training consent, generation storage and feedback', () => {
       const res = await feedback(a, { generationId: id, verdict: 'good', correctedOutput: huge });
       expect(res.status).toBe(400);
       expect(await AiFeedbackModel.countDocuments({})).toBe(0);
-      const ok = await feedback(a, { generationId: id, verdict: 'good', correctedOutput: { ...SPEC, description: 'x'.repeat(100_000) } });
+      const ok = await feedback(a, {
+        generationId: id,
+        verdict: 'good',
+        correctedOutput: { ...SPEC, description: 'x'.repeat(100_000) },
+      });
       expect(ok.status).toBe(204);
     });
 
@@ -442,7 +545,18 @@ describe('AI training consent, generation storage and feedback', () => {
       expect(row.provider ?? null).toBeNull();
       expect(row.model ?? null).toBeNull();
       expect(row.createdAt).toBeInstanceOf(Date);
-      const allowed = ['_id', '__v', 'userId', 'generationId', 'verdict', 'provider', 'model', 'createdAt', 'updatedAt', 'expiresAt'];
+      const allowed = [
+        '_id',
+        '__v',
+        'userId',
+        'generationId',
+        'verdict',
+        'provider',
+        'model',
+        'createdAt',
+        'updatedAt',
+        'expiresAt',
+      ];
       expect(Object.keys(row).filter((k) => !allowed.includes(k))).toEqual([]);
       expect(JSON.stringify(row)).not.toContain('evil');
       expect(JSON.stringify(row)).not.toContain('classes');
@@ -466,7 +580,11 @@ describe('AI training consent, generation storage and feedback', () => {
       const a = await makeActor('alice');
       await consent(a, true);
       const id = (await generate(a)).body.data.generationId as string;
-      const res = await feedback(a, { generationId: id, verdict: 'bad', correctedOutput: CORRECTED });
+      const res = await feedback(a, {
+        generationId: id,
+        verdict: 'bad',
+        correctedOutput: CORRECTED,
+      });
       expect(res.status).toBe(204);
       const row = (await AiFeedbackModel.findOne({}).lean())!;
       expect(row.verdict).toBe('bad');
@@ -477,8 +595,17 @@ describe('AI training consent, generation storage and feedback', () => {
       const a = await makeActor('alice');
       await consent(a, true);
       const id = (await generate(a)).body.data.generationId as string;
-      for (const invalid of [{}, { title: 'x' }, { ...SPEC, endpoints: [] }, { ...SPEC, endpoints: [{ path: '/x', method: 'FETCH', description: 'd' }] }]) {
-        const res = await feedback(a, { generationId: id, verdict: 'bad', correctedOutput: invalid });
+      for (const invalid of [
+        {},
+        { title: 'x' },
+        { ...SPEC, endpoints: [] },
+        { ...SPEC, endpoints: [{ path: '/x', method: 'FETCH', description: 'd' }] },
+      ]) {
+        const res = await feedback(a, {
+          generationId: id,
+          verdict: 'bad',
+          correctedOutput: invalid,
+        });
         expect(res.status).toBe(400);
       }
       expect(await AiFeedbackModel.countDocuments({})).toBe(0);
@@ -489,7 +616,11 @@ describe('AI training consent, generation storage and feedback', () => {
       await consent(a, true);
       const id = (await generate(a)).body.data.generationId as string;
       await feedback(a, { generationId: id, verdict: 'good' });
-      const res = await feedback(a, { generationId: id, verdict: 'bad', correctedOutput: { nope: true } });
+      const res = await feedback(a, {
+        generationId: id,
+        verdict: 'bad',
+        correctedOutput: { nope: true },
+      });
       expect(res.status).toBe(400);
       const rows = await AiFeedbackModel.find({}).lean();
       expect(rows).toHaveLength(1);
@@ -504,7 +635,10 @@ describe('AI training consent, generation storage and feedback', () => {
 
       for (const bobConsent of [false, true]) {
         await consent(b, bobConsent);
-        for (const body of [{ generationId: id, verdict: 'good' }, { generationId: id, verdict: 'bad', correctedOutput: CORRECTED }]) {
+        for (const body of [
+          { generationId: id, verdict: 'good' },
+          { generationId: id, verdict: 'bad', correctedOutput: CORRECTED },
+        ]) {
           const res = await feedback(b, body);
           expect(res.status).toBe(404);
         }
@@ -518,7 +652,11 @@ describe('AI training consent, generation storage and feedback', () => {
       const a = await makeActor('alice');
       const id = (await generate(a)).body.data.generationId as string; // generated BEFORE consenting: not stored
       await consent(a, true);
-      const res = await feedback(a, { generationId: id, verdict: 'bad', correctedOutput: CORRECTED });
+      const res = await feedback(a, {
+        generationId: id,
+        verdict: 'bad',
+        correctedOutput: CORRECTED,
+      });
       expect(res.status).toBe(204);
       const row = (await AiFeedbackModel.findOne({}).lean())!;
       expect(row.verdict).toBe('bad');
@@ -637,7 +775,10 @@ describe('AI training consent, generation storage and feedback', () => {
       const id = '8d1c9f0e-5b5a-4a3e-9e63-0f0f6f4f9c33';
       await recordFeedback(a.id, id, 'good');
       const first = (await AiFeedbackModel.findOne({ generationId: id }).lean())!;
-      await AiFeedbackModel.updateOne({ generationId: id }, { $set: { expiresAt: new Date(Date.now() + 86_400_000) } });
+      await AiFeedbackModel.updateOne(
+        { generationId: id },
+        { $set: { expiresAt: new Date(Date.now() + 86_400_000) } }
+      );
       await recordFeedback(a.id, id, 'bad');
       const again = (await AiFeedbackModel.findOne({ generationId: id }).lean())!;
       expect(again.expiresAt.getTime()).toBeLessThan(first.expiresAt.getTime());
@@ -650,7 +791,10 @@ describe('AI training consent, generation storage and feedback', () => {
     const generation = (userId: string) => ({
       generationId: '8d1c9f0e-5b5a-4a3e-9e63-0f0f6f4f9c11',
       userId,
-      messages: [{ role: 'system' as const, content: 's' }, { role: 'user' as const, content: 'u' }],
+      messages: [
+        { role: 'system' as const, content: 's' },
+        { role: 'user' as const, content: 'u' },
+      ],
       output: SPEC_TEXT,
       parsedOk: true,
       provider: 'p',
@@ -659,7 +803,10 @@ describe('AI training consent, generation storage and feedback', () => {
 
     it('persistGeneration removes what it just wrote when the consent is gone after the write', async () => {
       const a = await makeActor('alice');
-      const spy = jest.spyOn(consentModule, 'hasAiTrainingConsent').mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+      const spy = jest
+        .spyOn(consentModule, 'hasAiTrainingConsent')
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(false);
       const stored = await persistGeneration(generation(a.id));
       spy.mockRestore();
       expect(stored).toBe(false);
@@ -671,7 +818,10 @@ describe('AI training consent, generation storage and feedback', () => {
       await consent(a, true);
       const id = (await generate(a)).body.data.generationId as string;
       // generation lookup + consent check pass, the post-write check says withdrawn
-      const spy = jest.spyOn(consentModule, 'hasAiTrainingConsent').mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+      const spy = jest
+        .spyOn(consentModule, 'hasAiTrainingConsent')
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(false);
       await recordFeedback(a.id, id, 'bad', CORRECTED);
       spy.mockRestore();
       expect(await AiFeedbackModel.countDocuments({})).toBe(0);
@@ -718,7 +868,7 @@ describe('AI training consent, generation storage and feedback', () => {
       expect(data.account.aiTrainingConsent).toBeNull();
     });
 
-    it('deleting the account erases generations and feedback (and only that user\'s)', async () => {
+    it("deleting the account erases generations and feedback (and only that user's)", async () => {
       const a = await makeActor('alice');
       const b = await makeActor('bob');
       await consent(a, true);
@@ -728,7 +878,10 @@ describe('AI training consent, generation storage and feedback', () => {
       await feedback(a, { generationId: ga, verdict: 'good' });
       await feedback(b, { generationId: gb, verdict: 'good' });
 
-      const del = await request(app).delete('/api/users/me').set(a.auth).send({ password: PASSWORD });
+      const del = await request(app)
+        .delete('/api/users/me')
+        .set(a.auth)
+        .send({ password: PASSWORD });
       expect(del.status).toBe(204);
       expect(await AiGenerationModel.countDocuments({ userId: new Types.ObjectId(a.id) })).toBe(0);
       expect(await AiFeedbackModel.countDocuments({ userId: new Types.ObjectId(a.id) })).toBe(0);
@@ -741,7 +894,9 @@ describe('AI training consent, generation storage and feedback', () => {
       await consent(a, true);
       const realDeleteMany = AiGenerationModel.deleteMany.bind(AiGenerationModel);
       let injected = false;
-      const deleteSpy = jest.spyOn(AiGenerationModel, 'deleteMany').mockImplementation((async (filter: never) => {
+      const deleteSpy = jest.spyOn(AiGenerationModel, 'deleteMany').mockImplementation((async (
+        filter: never
+      ) => {
         const result = await realDeleteMany(filter);
         if (!injected) {
           injected = true;
@@ -750,7 +905,10 @@ describe('AI training consent, generation storage and feedback', () => {
           await persistGeneration({
             generationId: '8d1c9f0e-5b5a-4a3e-9e63-0f0f6f4f9c11',
             userId: a.id,
-            messages: [{ role: 'system', content: 's' }, { role: 'user', content: 'u' }],
+            messages: [
+              { role: 'system', content: 's' },
+              { role: 'user', content: 'u' },
+            ],
             output: SPEC_TEXT,
             parsedOk: true,
             provider: 'p',
@@ -759,7 +917,10 @@ describe('AI training consent, generation storage and feedback', () => {
         }
         return result;
       }) as never);
-      const del = await request(app).delete('/api/users/me').set(a.auth).send({ password: PASSWORD });
+      const del = await request(app)
+        .delete('/api/users/me')
+        .set(a.auth)
+        .send({ password: PASSWORD });
       deleteSpy.mockRestore();
       expect(injected).toBe(true);
       expect(del.status).toBe(204);

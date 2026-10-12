@@ -1,10 +1,7 @@
 {
   "id": "ts-types-library",
   "description": "Only TypeScript interfaces (no routes): the model must derive a REST API from the domain types.",
-  "tags": [
-    "typescript-types",
-    "path-params"
-  ],
+  "tags": ["typescript-types", "path-params"],
   "input": {
     "projectTitle": "City Library",
     "userInput": "Create a REST API for books, authors and loans.",
@@ -43,11 +40,7 @@
             },
             {
               "name": "Author",
-              "properties": [
-                "id: string",
-                "name: string",
-                "country: string"
-              ]
+              "properties": ["id: string", "name: string", "country: string"]
             },
             {
               "name": "Loan",
@@ -95,13 +88,7 @@
               "type": "integer"
             }
           },
-          "required": [
-            "id",
-            "title",
-            "isbn",
-            "authorId",
-            "copiesAvailable"
-          ]
+          "required": ["id", "title", "isbn", "authorId", "copiesAvailable"]
         }
       },
       "examples": [
@@ -147,13 +134,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "id",
-          "title",
-          "isbn",
-          "authorId",
-          "copiesAvailable"
-        ]
+        "required": ["id", "title", "isbn", "authorId", "copiesAvailable"]
       },
       "examples": [
         {
@@ -185,11 +166,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "title",
-          "isbn",
-          "authorId"
-        ]
+        "required": ["title", "isbn", "authorId"]
       },
       "responseSchema": {
         "type": "object",
@@ -210,13 +187,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "id",
-          "title",
-          "isbn",
-          "authorId",
-          "copiesAvailable"
-        ]
+        "required": ["id", "title", "isbn", "authorId", "copiesAvailable"]
       },
       "examples": [
         {
@@ -259,11 +230,7 @@
               "type": "string"
             }
           },
-          "required": [
-            "id",
-            "name",
-            "country"
-          ]
+          "required": ["id", "name", "country"]
         }
       },
       "examples": [
@@ -301,11 +268,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "name",
-          "country"
-        ]
+        "required": ["id", "name", "country"]
       },
       "examples": [
         {
@@ -348,13 +311,7 @@
               "type": "boolean"
             }
           },
-          "required": [
-            "id",
-            "bookId",
-            "memberId",
-            "dueDate",
-            "returned"
-          ]
+          "required": ["id", "bookId", "memberId", "dueDate", "returned"]
         }
       },
       "examples": [
@@ -386,10 +343,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "bookId",
-          "memberId"
-        ]
+        "required": ["bookId", "memberId"]
       },
       "responseSchema": {
         "type": "object",
@@ -410,13 +364,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "id",
-          "bookId",
-          "memberId",
-          "dueDate",
-          "returned"
-        ]
+        "required": ["id", "bookId", "memberId", "dueDate", "returned"]
       },
       "examples": [
         {

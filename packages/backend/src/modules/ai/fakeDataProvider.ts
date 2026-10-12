@@ -1,6 +1,6 @@
 /**
  * Fake Data Provider for Mockia AI
- * 
+ *
  * Generates realistic sample data using Faker.js
  * These samples are injected into prompts to guide the LLM toward
  * generating coherent and realistic mock API specifications
@@ -13,13 +13,13 @@ const MAX_SAMPLE_COUNT = 100;
 
 /**
  * Builds realistic sample data using Faker.js
- * 
+ *
  * Generates:
  * - User profiles with name, email, phone
  * - Product catalog with prices and stock
  * - Order history with items and status
  * - Pagination metadata
- * 
+ *
  * @param options - Optional configuration
  * @returns Structured sample data object
  */
@@ -96,7 +96,7 @@ export function buildSampleData(options?: {
 
 /**
  * Formats sample data into a readable string for prompt injection
- * 
+ *
  * @param sampleData - The sample data to format
  * @returns Formatted string suitable for inclusion in prompts
  */

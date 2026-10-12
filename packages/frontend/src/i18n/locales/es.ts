@@ -1,4 +1,4 @@
-import type { Messages } from './en'
+import type { Messages } from './en';
 
 const es: Messages = {
   meta: {
@@ -72,12 +72,12 @@ const es: Messages = {
     how: {
       title: 'Mira cómo funciona en 25 segundos.',
       text: 'De tu repositorio de GitHub a una API mock en vivo, paso a paso.',
-      frameTitle: 'Animación: conecta un repositorio, genera la API con IA y úsala desde tu frontend',
+      frameTitle:
+        'Animación: conecta un repositorio, genera la API con IA y úsala desde tu frontend',
     },
     story: {
       title: 'Adiós al «Lorem Ipsum».',
-      text:
-        'Apunta a cualquier repositorio. Nuestra IA analiza tus tipos, interfaces y esquemas para generar una API espejo en segundos. Mockia rellena tus endpoints con datos coherentes con el contexto que parecen de producción.',
+      text: 'Apunta a cualquier repositorio. Nuestra IA analiza tus tipos, interfaces y esquemas para generar una API espejo en segundos. Mockia rellena tus endpoints con datos coherentes con el contexto que parecen de producción.',
       added: 'Añadido: ',
       removed: 'Eliminado: ',
     },
@@ -108,7 +108,8 @@ const es: Messages = {
     },
     bento: {
       teamTitle: 'Colaboración en equipo',
-      teamText: 'Comparte mocks con tu equipo. Un entorno seguro por defecto para organizaciones de ingeniería modernas.',
+      teamText:
+        'Comparte mocks con tu equipo. Un entorno seguro por defecto para organizaciones de ingeniería modernas.',
       unlimitedProjects: 'Proyectos ilimitados',
       autoSync: 'Los cambios se sincronizan solos',
       rbac: 'Permisos por rol (RBAC)',
@@ -117,7 +118,8 @@ const es: Messages = {
 
   pricing: {
     title: 'Precios simples que crecen contigo.',
-    subtitle: 'Empieza gratis. Sube de plan cuando tus mocks vayan en serio. Cancela cuando quieras.',
+    subtitle:
+      'Empieza gratis. Sube de plan cuando tus mocks vayan en serio. Cancela cuando quieras.',
     perMonth: '/mes',
     recommended: 'Recomendado',
     cheapest: 'Más económico',
@@ -154,7 +156,10 @@ const es: Messages = {
       projects: { one: '{count} proyecto activo', other: '{count} proyectos activos' },
       unlimitedProjects: 'Proyectos activos ilimitados',
       requests: '{n} peticiones a tus mocks al mes',
-      aiGenerations: { one: '{n} generación con IA al mes', other: '{n} generaciones con IA al mes' },
+      aiGenerations: {
+        one: '{n} generación con IA al mes',
+        other: '{n} generaciones con IA al mes',
+      },
       githubImport: 'Importación desde GitHub',
       everythingFree: 'Todo lo de Free',
       everythingPro: 'Todo lo de Pro',
@@ -196,8 +201,10 @@ const es: Messages = {
     resetsOn: 'El contador de peticiones se reinicia el {date}.',
     aiLabel: 'Generaciones con IA',
     aiResetsOn: 'Se reinicia el {date}',
-    aiWarn: 'Has usado {used} de tus {limit} generaciones con IA de este mes. El contador se reinicia el {date}.',
-    aiFull: 'Has usado las {limit} generaciones con IA de tu plan {plan} este mes. Volverán a estar disponibles el {date}.',
+    aiWarn:
+      'Has usado {used} de tus {limit} generaciones con IA de este mes. El contador se reinicia el {date}.',
+    aiFull:
+      'Has usado las {limit} generaciones con IA de tu plan {plan} este mes. Volverán a estar disponibles el {date}.',
     plansTitle: 'Planes',
     upgradeCta: 'Mejorar plan',
     viewPlans: 'Ver planes',
@@ -206,23 +213,31 @@ const es: Messages = {
     checkout: {
       success: 'Pago recibido. Activando tu plan…',
       activated: 'Tu plan {plan} ya está activo. ¡Gracias por apoyar Mockia!',
-      pending: 'Stripe aún no ha confirmado el pago. Puede tardar un minuto: recarga esta página en breve.',
+      pending:
+        'Stripe aún no ha confirmado el pago. Puede tardar un minuto: recarga esta página en breve.',
       cancel: 'Pago cancelado. No se te ha cobrado nada.',
     },
-    pastDue: 'Tu último pago falló y tu cuenta ha quedado limitada al plan Free. Actualiza tu método de pago para recuperar {plan}.',
-    pastDueGrace: 'No hemos podido cobrar tu tarjeta. Las funciones de {plan} siguen activas hasta el {date}. Actualiza tu método de pago.',
+    pastDue:
+      'Tu último pago falló y tu cuenta ha quedado limitada al plan Free. Actualiza tu método de pago para recuperar {plan}.',
+    pastDueGrace:
+      'No hemos podido cobrar tu tarjeta. Las funciones de {plan} siguen activas hasta el {date}. Actualiza tu método de pago.',
     updatePayment: 'Actualizar método de pago',
-    cancelScheduled: 'Tu suscripción {plan} termina el {date}. Puedes mantenerla desde el portal de facturación.',
-    overLimit: 'Tienes más proyectos activos de los que permite tu plan. Archiva alguno o mejora el plan para crear otros nuevos.',
+    cancelScheduled:
+      'Tu suscripción {plan} termina el {date}. Puedes mantenerla desde el portal de facturación.',
+    overLimit:
+      'Tienes más proyectos activos de los que permite tu plan. Archiva alguno o mejora el plan para crear otros nuevos.',
     atLimit: 'Has llegado a los {limit} proyectos activos de tu plan.',
     paymentsOff: 'Los pagos online aún no están activados en este servidor.',
     errors: {
-      limitReached: 'Tu plan {plan} permite {limit} proyectos activos. Archiva uno o mejora tu plan.',
-      alreadySubscribed: 'Ya tienes una suscripción. Cambia de plan desde el portal de facturación.',
+      limitReached:
+        'Tu plan {plan} permite {limit} proyectos activos. Archiva uno o mejora tu plan.',
+      alreadySubscribed:
+        'Ya tienes una suscripción. Cambia de plan desde el portal de facturación.',
       noAccount: 'Aún no tienes cuenta de facturación. Suscríbete primero a un plan.',
       notConfigured: 'Los pagos online aún no están activados en este servidor.',
       stripe: 'Stripe no responde ahora mismo. Inténtalo de nuevo en unos momentos.',
-      aiQuota: 'Has usado {used} de las {limit} generaciones con IA incluidas en tu plan este mes. Volverán a estar disponibles el {date}.',
+      aiQuota:
+        'Has usado {used} de las {limit} generaciones con IA incluidas en tu plan este mes. Volverán a estar disponibles el {date}.',
     },
   },
 
@@ -258,14 +273,21 @@ const es: Messages = {
     cancelled: 'Cancelado. No se envió nada y no se gastó ningún intento.',
     progress: {
       label: 'Progreso de la generación',
-      solving: 'Resolviendo una prueba de trabajo rápida en tu navegador. Mantiene fuera a los bots y tarda unos segundos…',
+      solving:
+        'Resolviendo una prueba de trabajo rápida en tu navegador. Mantiene fuera a los bots y tarda unos segundos…',
       sending: 'Generando tu API con IA. Puede tardar hasta un minuto…',
     },
-    powTimeout: 'Resolver el reto tardó más de un minuto, así que se detuvo. No se gastó ningún intento. Vuelve a intentarlo.',
-    powUnsupported: 'Tu navegador no puede ejecutar la comprobación aquí. Necesita una conexión segura (https) y un navegador reciente. Prueba con otro navegador o crea una cuenta gratis.',
-    powFailed: 'La comprobación no pudo completarse en tu navegador. No se envió nada y no se gastó ningún intento. Inténtalo de nuevo o prueba con otro navegador.',
+    powTimeout:
+      'Resolver el reto tardó más de un minuto, así que se detuvo. No se gastó ningún intento. Vuelve a intentarlo.',
+    powUnsupported:
+      'Tu navegador no puede ejecutar la comprobación aquí. Necesita una conexión segura (https) y un navegador reciente. Prueba con otro navegador o crea una cuenta gratis.',
+    powFailed:
+      'La comprobación no pudo completarse en tu navegador. No se envió nada y no se gastó ningún intento. Inténtalo de nuevo o prueba con otro navegador.',
     announce: {
-      ready: { one: 'Tu API mock está lista: {count} endpoint. Caduca en {minutes} minutos.', other: 'Tu API mock está lista: {count} endpoints. Caduca en {minutes} minutos.' },
+      ready: {
+        one: 'Tu API mock está lista: {count} endpoint. Caduca en {minutes} minutos.',
+        other: 'Tu API mock está lista: {count} endpoints. Caduca en {minutes} minutos.',
+      },
       response: 'Respuesta recibida: estado {status}.',
     },
     result: {
@@ -296,10 +318,12 @@ const es: Messages = {
     },
     claim: {
       saving: 'Guardando tu demo como proyecto…',
-      waiting: 'Tu demo te está esperando. Verifica tu correo electrónico y la guardaremos como proyecto. La demo dura solo unos minutos, así que hazlo pronto.',
+      waiting:
+        'Tu demo te está esperando. Verifica tu correo electrónico y la guardaremos como proyecto. La demo dura solo unos minutos, así que hazlo pronto.',
       done: 'Tu demo ya es un proyecto de tu cuenta: {title}.',
       open: 'Abrir proyecto',
-      planLimit: 'No pudimos guardar tu demo porque tu plan {plan} permite {limit} proyectos activos. Archiva un proyecto o mejora tu plan y vuelve a intentarlo mientras dure la demo.',
+      planLimit:
+        'No pudimos guardar tu demo porque tu plan {plan} permite {limit} proyectos activos. Archiva un proyecto o mejora tu plan y vuelve a intentarlo mientras dure la demo.',
       plans: 'Ver planes',
       retry: 'Reintentar',
       gone: 'Esa demo ha caducado o ya se guardó, así que no queda nada que conservar. Puedes generar una nueva.',
@@ -311,11 +335,15 @@ const es: Messages = {
       unavailableTitle: 'La demo no está disponible ahora mismo',
       unavailable:
         'Puede estar apagada, ocupada o sin presupuesto por hoy. Inténtalo de nuevo en un momento, o crea una cuenta gratis para generar APIs mock sin los límites de la demo.',
-      limit: 'Has usado los intentos de hoy. Vuelve sobre las {time}, o crea una cuenta gratis para seguir.',
+      limit:
+        'Has usado los intentos de hoy. Vuelve sobre las {time}, o crea una cuenta gratis para seguir.',
       rateLimit: 'Demasiadas peticiones. Espera un minuto e inténtalo de nuevo.',
-      badOutput: 'La IA devolvió algo que no pudimos usar. Este intento ha contado en el límite de hoy. Vuelve a intentarlo o elige una plantilla.',
-      timeout: 'La IA tardó demasiado en responder. Este intento ha contado en el límite de hoy. Inténtalo de nuevo en un momento.',
-      providerDown: 'El servicio de IA no responde ahora mismo. Este intento puede haber contado en el límite de hoy (mira el contador de arriba). Inténtalo de nuevo en un momento.',
+      badOutput:
+        'La IA devolvió algo que no pudimos usar. Este intento ha contado en el límite de hoy. Vuelve a intentarlo o elige una plantilla.',
+      timeout:
+        'La IA tardó demasiado en responder. Este intento ha contado en el límite de hoy. Inténtalo de nuevo en un momento.',
+      providerDown:
+        'El servicio de IA no responde ahora mismo. Este intento puede haber contado en el límite de hoy (mira el contador de arriba). Inténtalo de nuevo en un momento.',
       network: 'No pudimos conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.',
       other: 'Algo ha salido mal. Inténtalo de nuevo.',
     },
@@ -330,7 +358,8 @@ const es: Messages = {
     emailPlaceholder: 'tu@email.com',
     password: 'Contraseña',
     rememberMe: 'Recordarme',
-    legalNotice: 'Al registrarte aceptas los <terms>Términos</terms> y la <privacy>Política de Privacidad</privacy>.',
+    legalNotice:
+      'Al registrarte aceptas los <terms>Términos</terms> y la <privacy>Política de Privacidad</privacy>.',
     signIn: 'Entrar',
     createAccount: 'Crear cuenta',
     noAccount: '¿No tienes cuenta?',
@@ -341,11 +370,14 @@ const es: Messages = {
     passwordHint: 'Al menos 10 caracteres.',
     backToLogin: 'Volver a iniciar sesión',
     forgotTitle: 'Restablece tu contraseña',
-    forgotIntro: 'Introduce el correo de tu cuenta y te enviaremos un enlace para elegir una contraseña nueva.',
+    forgotIntro:
+      'Introduce el correo de tu cuenta y te enviaremos un enlace para elegir una contraseña nueva.',
     forgotSubmit: 'Enviar enlace',
-    forgotSent: 'Si existe una cuenta con ese correo, el enlace de restablecimiento va de camino. Es válido durante 30 minutos.',
+    forgotSent:
+      'Si existe una cuenta con ese correo, el enlace de restablecimiento va de camino. Es válido durante 30 minutos.',
     resetTitle: 'Elige una contraseña nueva',
-    resetIntro: 'Elige una contraseña que no uses en ningún otro sitio. Al cambiarla se cierra tu sesión en todos los dispositivos.',
+    resetIntro:
+      'Elige una contraseña que no uses en ningún otro sitio. Al cambiarla se cierra tu sesión en todos los dispositivos.',
     newPassword: 'Contraseña nueva',
     confirmPassword: 'Confirma la contraseña nueva',
     resetSubmit: 'Cambiar contraseña',
@@ -358,7 +390,8 @@ const es: Messages = {
     verifyDone: 'Tu correo electrónico está verificado. ¡Gracias!',
     verifyMissingToken: 'Este enlace de verificación está incompleto.',
     verifyContinue: 'Ir a tus proyectos',
-    verifyBannerText: 'Verifica tu correo electrónico para desbloquear la generación con IA y la facturación. Te enviamos un enlace al registrarte.',
+    verifyBannerText:
+      'Verifica tu correo electrónico para desbloquear la generación con IA y la facturación. Te enviamos un enlace al registrarte.',
     verifyBannerResend: 'Reenviar correo',
     verifyBannerSent: 'Correo de verificación enviado. Revisa tu bandeja de entrada.',
     verifyBannerDismiss: 'Descartar',
@@ -388,28 +421,36 @@ const es: Messages = {
     forbidden: 'No tienes permiso para realizar esta acción.',
     notFound: 'El recurso solicitado no existe.',
     request: 'Error en la petición ({status}): el servidor la ha rechazado.',
-    server: 'Error del servidor ({status}): algo ha fallado por nuestra parte. Inténtalo de nuevo más tarde.',
+    server:
+      'Error del servidor ({status}): algo ha fallado por nuestra parte. Inténtalo de nuevo más tarde.',
     unexpected: 'Ha ocurrido un error inesperado. Inténtalo de nuevo.',
     invalidCredentials: 'Correo o contraseña incorrectos',
     emailTaken: 'Ese correo ya está registrado',
     tooManyRequests: 'Demasiadas peticiones. Inténtalo más tarde.',
-    aiRateLimit: 'Has hecho demasiadas generaciones con IA en poco tiempo. Espera un minuto y vuelve a intentarlo.',
+    aiRateLimit:
+      'Has hecho demasiadas generaciones con IA en poco tiempo. Espera un minuto y vuelve a intentarlo.',
     aiTimeout: 'La IA tardó demasiado en responder y se canceló la petición. Inténtalo de nuevo.',
-    aiUnavailable: 'El servicio de IA no está disponible ahora mismo. Inténtalo de nuevo en unos minutos.',
-    aiInvalidAnswer: 'La IA devolvió una respuesta que no se puede usar. Inténtalo de nuevo (reformular la descripción puede ayudar).',
+    aiUnavailable:
+      'El servicio de IA no está disponible ahora mismo. Inténtalo de nuevo en unos minutos.',
+    aiInvalidAnswer:
+      'La IA devolvió una respuesta que no se puede usar. Inténtalo de nuevo (reformular la descripción puede ayudar).',
     aiUpstream: 'El proveedor de IA ha fallado por nuestra parte. Inténtalo más tarde.',
-    unsupportedMediaType: 'La petición se envió en un formato que el servidor no acepta. Recarga la página e inténtalo de nuevo.',
-    tooLarge: 'La petición es demasiado grande. Acorta el texto (la descripción para la IA admite hasta 4000 caracteres).',
+    unsupportedMediaType:
+      'La petición se envió en un formato que el servidor no acepta. Recarga la página e inténtalo de nuevo.',
+    tooLarge:
+      'La petición es demasiado grande. Acorta el texto (la descripción para la IA admite hasta 4000 caracteres).',
     projectNotFound: 'Proyecto no encontrado',
     endpointNotFound: 'Endpoint no encontrado',
     userNotFound: 'Usuario no encontrado',
     noProjectAccess: 'No tienes acceso a este proyecto',
     alreadyMember: 'Ese usuario ya es miembro del proyecto',
-    ownerCannotLeave: 'El propietario no puede abandonar el proyecto. Transfiere la propiedad o elimina el proyecto.',
+    ownerCannotLeave:
+      'El propietario no puede abandonar el proyecto. Transfiere la propiedad o elimina el proyecto.',
     invalidGithubUrl: 'El formato de la URL de GitHub no es válido',
     sessionExpired: 'Sesión no válida o caducada. Vuelve a iniciar sesión.',
     invalidToken: 'Este enlace no es válido, ha caducado o ya se ha usado.',
-    emailNotVerified: 'Verifica tu correo electrónico para usar esta función. Puedes reenviar el correo desde tu panel.',
+    emailNotVerified:
+      'Verifica tu correo electrónico para usar esta función. Puedes reenviar el correo desde tu panel.',
   },
 
   dashboard: {
@@ -449,13 +490,15 @@ const es: Messages = {
     aiTitle: 'Generación con IA',
     aiText: '¿Quieres que Mockia IA genere los endpoints por ti?',
     aiCardTitle: 'Generación inteligente de APIs',
-    aiCardText: 'Mockia usará LLMs para crear endpoints y estructuras de datos realistas a partir de lo que le indiques.',
+    aiCardText:
+      'Mockia usará LLMs para crear endpoints y estructuras de datos realistas a partir de lo que le indiques.',
     aiToggle: 'Generar endpoints con IA',
     aiPrompt: '¿Qué debe generar la IA?',
     aiPromptPlaceholder:
       'Describe los endpoints que quieres (p. ej. una API de gestión de usuarios con login, registro y perfil…)',
     aiDefaultBasic: 'Crea una API básica para este proyecto con los endpoints habituales.',
-    aiDefaultGithub: 'Extrae todos los endpoints, interfaces y controladores relevantes para crear una API mock completa.',
+    aiDefaultGithub:
+      'Extrae todos los endpoints, interfaces y controladores relevantes para crear una API mock completa.',
     aiDefaultEmpty:
       'Crea una API REST completa con endpoints GET, POST, PUT y DELETE para un recurso sencillo (p. ej. tareas, usuarios o productos).',
     creating: 'Creando…',
@@ -481,7 +524,8 @@ const es: Messages = {
     successText: 'Tu API mock se ha creado correctamente.',
     mockBaseUrl: 'URL base del mock',
     important: 'Importante:',
-    publicNote: 'Tu mock es público: cualquiera con la URL puede llamarlo. Para exigir una clave de API, abre <strong>Ajustes del proyecto → Acceso a la API</strong>.',
+    publicNote:
+      'Tu mock es público: cualquiera con la URL puede llamarlo. Para exigir una clave de API, abre <strong>Ajustes del proyecto → Acceso a la API</strong>.',
     goToEditor: 'Ir al editor →',
   },
 
@@ -521,7 +565,8 @@ const es: Messages = {
     aiModalTitle: 'Generar endpoints con IA',
     aiModalText:
       'Dile a Mockia IA qué endpoints quieres crear. Puedes describir la lógica de negocio, los modelos de datos o las rutas concretas que necesitas.',
-    aiModalPlaceholder: 'p. ej. Crea endpoints para un carrito de la compra con añadir, quitar y pagar…',
+    aiModalPlaceholder:
+      'p. ej. Crea endpoints para un carrito de la compra con añadir, quitar y pagar…',
     generate: 'Generar',
     aiProgress: [
       'Analizando la estructura actual del proyecto…',
@@ -532,7 +577,8 @@ const es: Messages = {
       'Ya casi está…',
     ],
     confirmDeleteTitle: 'Confirmar eliminación',
-    confirmDeleteText: '¿Seguro que quieres eliminar este endpoint? Esta acción no se puede deshacer.',
+    confirmDeleteText:
+      '¿Seguro que quieres eliminar este endpoint? Esta acción no se puede deshacer.',
   },
 
   tree: {
@@ -572,7 +618,8 @@ const es: Messages = {
     openRepo: 'Abrir repositorio',
     openOnGithub: 'Abrir en GitHub',
     leaveTitle: 'Abandonar proyecto',
-    leaveText: 'Si abandonas el proyecto perderás todo el acceso. El propietario tendrá que volver a invitarte.',
+    leaveText:
+      'Si abandonas el proyecto perderás todo el acceso. El propietario tendrá que volver a invitarte.',
     leaveConfirm: '¿Seguro que quieres abandonar este proyecto?',
     stay: 'No, me quedo',
     leaving: 'Saliendo…',
@@ -603,28 +650,34 @@ const es: Messages = {
 
   apiAccess: {
     title: 'Quién puede llamar a este mock',
-    intro: 'Por defecto la URL del mock está abierta a cualquiera. Pasa a clave de API para mantener privados los datos de tu prototipo.',
+    intro:
+      'Por defecto la URL del mock está abierta a cualquiera. Pasa a clave de API para mantener privados los datos de tu prototipo.',
     visibilityLegend: 'Visibilidad del mock',
     public: 'Público',
-    publicHint: 'Cualquiera con la URL puede llamar a tu mock. Ideal para demos y prototipos abiertos.',
+    publicHint:
+      'Cualquiera con la URL puede llamar a tu mock. Ideal para demos y prototipos abiertos.',
     keyed: 'Requiere clave de API',
-    keyedHint: 'Las peticiones deben enviar la clave en la cabecera {header}. Las peticiones previas de CORS (OPTIONS) nunca la necesitan.',
+    keyedHint:
+      'Las peticiones deben enviar la clave en la cabecera {header}. Las peticiones previas de CORS (OPTIONS) nunca la necesitan.',
     keyNeededToRequire: 'Genera primero una clave de API para poder exigirla.',
     visibilitySaved: 'La visibilidad del mock ahora es: {mode}',
     visibilityFailed: 'No se pudo cambiar la visibilidad',
     keyTitle: 'Clave de API',
     noKey: 'Todavía no hay clave de API',
     currentKey: 'Clave actual: {prefix}…',
-    storedHashed: 'Las claves se guardan cifradas (hash): la clave completa solo se muestra una vez, al crearla.',
+    storedHashed:
+      'Las claves se guardan cifradas (hash): la clave completa solo se muestra una vez, al crearla.',
     generate: 'Generar clave de API',
     rotate: 'Rotar clave',
     working: 'Procesando…',
-    rotateWarning: 'Rotar invalida la clave actual al instante: cualquier cliente que la use recibirá un 401.',
+    rotateWarning:
+      'Rotar invalida la clave actual al instante: cualquier cliente que la use recibirá un 401.',
     revoke: 'Revocar clave',
     revokeConfirm: '¿Revocarla?',
     revokeConfirmText: 'Los clientes que usen esta clave recibirán un 401 de inmediato.',
     revokeYes: 'Sí, revocar',
-    lockedNote: 'Este mock exige clave pero no existe ninguna: todas las peticiones reciben un 401 hasta que generes una.',
+    lockedNote:
+      'Este mock exige clave pero no existe ninguna: todas las peticiones reciben un 401 hasta que generes una.',
     newKeyTitle: 'Tu nueva clave de API',
     newKeyWarning: 'Cópiala ahora. No volverás a verla.',
     newKeyLive: 'Clave de API creada. Cópiala ahora, no volverás a verla.',
@@ -648,7 +701,8 @@ const es: Messages = {
     logOut: 'Cerrar sesión',
     account: {
       title: 'Mis datos',
-      intro: 'Descarga una copia de todo lo que guardamos sobre ti, o elimina tu cuenta definitivamente.',
+      intro:
+        'Descarga una copia de todo lo que guardamos sobre ti, o elimina tu cuenta definitivamente.',
       download: 'Descargar mis datos',
       downloading: 'Preparando tu archivo…',
       downloaded: 'Se ha descargado el archivo con tus datos.',
@@ -661,7 +715,8 @@ const es: Messages = {
       confirm: 'Eliminar mi cuenta para siempre',
       deleting: 'Eliminando…',
       wrongPassword: 'La contraseña no es correcta. No se ha borrado nada.',
-      subscriptionFailed: 'No hemos podido cancelar tu suscripción, así que no se ha borrado nada. Inténtalo de nuevo en unos minutos.',
+      subscriptionFailed:
+        'No hemos podido cancelar tu suscripción, así que no se ha borrado nada. Inténtalo de nuevo en unos minutos.',
       subscriptionUnavailable:
         'Tu cuenta tiene una suscripción activa pero los pagos no están disponibles en este servidor, así que no se puede cancelar. No se ha borrado nada; contacta con soporte.',
       deletedNotice: 'Tu cuenta y sus datos se han eliminado.',
@@ -690,7 +745,8 @@ const es: Messages = {
     notUseful: 'No, no me ha resultado útil',
     thanks: '¡Gracias por tu opinión!',
     failed: 'No pudimos enviar tu opinión. Inténtalo de nuevo.',
-    consentNeeded: 'Las valoraciones solo se guardan si permites que Mockia use tus generaciones para mejorar la IA.',
+    consentNeeded:
+      'Las valoraciones solo se guardan si permites que Mockia use tus generaciones para mejorar la IA.',
     consentLink: 'Actívalo en Mis datos',
   },
 
@@ -710,10 +766,9 @@ const es: Messages = {
 
   notFound: {
     title: 'Perdido en la <em>matriz de APIs</em>',
-    text:
-      'El endpoint que buscas se ha desvanecido en el vacío digital. Puede que se haya movido, que se haya eliminado o que nunca haya existido.',
+    text: 'El endpoint que buscas se ha desvanecido en el vacío digital. Puede que se haya movido, que se haya eliminado o que nunca haya existido.',
     home: 'Volver al inicio',
   },
-}
+};
 
-export default es
+export default es;

@@ -53,7 +53,6 @@ describe('Endpoints CRUD (endpoints.routes)', () => {
       });
       projectId = project._id.toString();
       projectSlug = project.slug;
-
     } catch (error) {
       console.error('Error in beforeAll of endpoints test:', error);
     }
@@ -131,7 +130,7 @@ describe('Endpoints CRUD (endpoints.routes)', () => {
           method: 'POST',
           description: 'Updated description',
           statusCode: 201,
-          responseBody: { message: 'User created successfully', ok: true }
+          responseBody: { message: 'User created successfully', ok: true },
         });
 
       expect(response.status).toBe(200);
@@ -162,8 +161,7 @@ describe('Endpoints CRUD (endpoints.routes)', () => {
 
   describe('DELETE /api/endpoints/:id', () => {
     it('should block deletion without token (401)', async () => {
-      const response = await request(app)
-        .delete(`/api/endpoints/${testEndpointId}`);
+      const response = await request(app).delete(`/api/endpoints/${testEndpointId}`);
 
       expect(response.status).toBe(401);
     });

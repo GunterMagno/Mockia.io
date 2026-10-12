@@ -4,7 +4,13 @@ import { getDemoConfig } from './config.js';
 import { pseudonymizeIp } from './ipHash.js';
 import { tryConsumeDemoBudget } from './budget.js';
 import { createFloodLimiter } from './floodLimit.js';
-import { DEMO_METHODS, findLiveDemoMock, matchDemoEndpoint, releaseDemoRequest, reserveDemoRequest } from './mockStore.js';
+import {
+  DEMO_METHODS,
+  findLiveDemoMock,
+  matchDemoEndpoint,
+  releaseDemoRequest,
+  reserveDemoRequest,
+} from './mockStore.js';
 
 /**
  * Public router of the demo's ephemeral mocks: ALL /api/demo-mock/:demoId/*.
@@ -31,12 +37,18 @@ export const demoClock = { now: (): Date => new Date() };
 export const FLOOD_WINDOW_MS = 60 * 1000;
 export const FLOOD_MAX = 120;
 const FLOOD_MAX_KEYS = 10_000;
-const flood = createFloodLimiter({ windowMs: FLOOD_WINDOW_MS, max: FLOOD_MAX, maxKeys: FLOOD_MAX_KEYS, now: () => demoClock.now().getTime() });
+const flood = createFloodLimiter({
+  windowMs: FLOOD_WINDOW_MS,
+  max: FLOOD_MAX,
+  maxKeys: FLOOD_MAX_KEYS,
+  now: () => demoClock.now().getTime(),
+});
 /** Forgets every counter (tests). */
 export const resetDemoFlood = (): void => flood.clear();
 
 const ALLOWED_METHODS = [...DEMO_METHODS, 'OPTIONS'].join(', ');
-const EXPOSED_HEADERS = 'X-Mockia-Demo, Retry-After, X-Total-Count, X-Page, X-Per-Page, X-Next-Cursor, X-Request-Id';
+const EXPOSED_HEADERS =
+  'X-Mockia-Demo, Retry-After, X-Total-Count, X-Page, X-Per-Page, X-Next-Cursor, X-Request-Id';
 
 const errorBody = (code: ErrorCode, message: string) => ({
   success: false,
@@ -53,13 +65,15 @@ function applyDemoHeaders(res: Response): void {
   res.setHeader('Access-Control-Expose-Headers', EXPOSED_HEADERS);
 }
 
-const secondsUntil = (target: Date, now: Date): number => Math.max(1, Math.ceil((target.getTime() - now.getTime()) / 1000));
+const secondsUntil = (target: Date, now: Date): number =>
+  Math.max(1, Math.ceil((target.getTime() - now.getTime()) / 1000));
 
 function nextUtcMidnight(now: Date): Date {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
 }
 
-const notFound = (res: Response, message: string) => res.status(404).json(errorBody(ErrorCode.NOT_FOUND, message));
+const notFound = (res: Response, message: string) =>
+  res.status(404).json(errorBody(ErrorCode.NOT_FOUND, message));
 
 async function handleDemoMock(req: Request, res: Response): Promise<void> {
   applyDemoHeaders(res);
@@ -75,7 +89,9 @@ async function handleDemoMock(req: Request, res: Response): Promise<void> {
 
   const cfg = getDemoConfig();
   if (!cfg.enabled) {
-    res.status(503).json(errorBody(ErrorCode.DEMO_UNAVAILABLE, 'The public demo is not available right now'));
+    res
+      .status(503)
+      .json(errorBody(ErrorCode.DEMO_UNAVAILABLE, 'The public demo is not available right now'));
     return;
   }
 
@@ -102,7 +118,14 @@ async function handleDemoMock(req: Request, res: Response): Promise<void> {
   // From here on the request would be served: take one of this mock's requests, then one of the visitor's day.
   if (!(await reserveDemoRequest(demoId, cfg.mockMaxRequests))) {
     res.setHeader('Retry-After', String(secondsUntil(mock.expiresAt, now)));
-    res.status(429).json(errorBody(ErrorCode.DEMO_MOCK_LIMIT, `This demo mock already served its ${cfg.mockMaxRequests} requests`));
+    res
+      .status(429)
+      .json(
+        errorBody(
+          ErrorCode.DEMO_MOCK_LIMIT,
+          `This demo mock already served its ${cfg.mockMaxRequests} requests`
+        )
+      );
     return;
   }
   const ipHash = pseudonymizeIp(req.ip || 'unknown', now);
@@ -110,7 +133,11 @@ async function handleDemoMock(req: Request, res: Response): Promise<void> {
   if (!budget.ok) {
     await releaseDemoRequest(demoId);
     res.setHeader('Retry-After', String(secondsUntil(nextUtcMidnight(now), now)));
-    res.status(429).json(errorBody(ErrorCode.DEMO_IP_LIMIT, 'Daily limit of demo requests reached for your network'));
+    res
+      .status(429)
+      .json(
+        errorBody(ErrorCode.DEMO_IP_LIMIT, 'Daily limit of demo requests reached for your network')
+      );
     return;
   }
 
@@ -138,22 +165,34 @@ demoMockRouter.use((req: Request, res: Response, next: NextFunction) => {
   if (verdict.ok) return next();
   applyDemoHeaders(res);
   res.setHeader('Retry-After', String(verdict.retryAfterSeconds));
-  res.status(429).json(errorBody(ErrorCode.DEMO_RATE_LIMIT, 'Too many requests. Try again in a moment.'));
+  res
+    .status(429)
+    .json(errorBody(ErrorCode.DEMO_RATE_LIMIT, 'Too many requests. Try again in a moment.'));
 });
 
 // Express 4 does not catch rejections of async handlers: forward them or a DB failure would kill the process.
-demoMockRouter.all(['/:demoId', '/:demoId/*'], (req: Request, res: Response, next: NextFunction) => {
-  handleDemoMock(req, res).catch(next);
-});
+demoMockRouter.all(
+  ['/:demoId', '/:demoId/*'],
+  (req: Request, res: Response, next: NextFunction) => {
+    handleDemoMock(req, res).catch(next);
+  }
+);
 
 // Express decodes the path parameters before the handler runs, and a malformed escape (/%E0%A4%A) makes it fail with a
 // 400 that the app's error handler would turn into a 500 on a public route. Anything that is not a valid demo URL is
 // simply a demo 404; other errors keep their normal path.
-demoMockRouter.use((err: Error & { status?: number; statusCode?: number }, req: Request, res: Response, next: NextFunction) => {
-  if ((err.status ?? err.statusCode) === 400 && /decode param/i.test(err.message)) {
-    applyDemoHeaders(res);
-    notFound(res, 'Route not found');
-    return;
+demoMockRouter.use(
+  (
+    err: Error & { status?: number; statusCode?: number },
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    if ((err.status ?? err.statusCode) === 400 && /decode param/i.test(err.message)) {
+      applyDemoHeaders(res);
+      notFound(res, 'Route not found');
+      return;
+    }
+    next(err);
   }
-  next(err);
-});
+);

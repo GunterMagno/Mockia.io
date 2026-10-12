@@ -1,139 +1,151 @@
-import React, { useState, useId } from 'react'
-import { Modal } from '../../ui/Modal/Modal'
-import { Icon } from '../../ui/Icon/Icon'
-import { updateProject, archiveProject, addProjectMember, removeProjectMember, leaveProject } from '../../../services/projectService'
-import type { Project } from '@mockia/shared'
-import styles from './ProjectSettingsModal.module.scss'
-import warningIcon from '../../../assets/warning.svg'
-import { ApiAccessPanel } from '../ApiAccessPanel'
-import githubIcon from '../../../assets/github.svg'
-import externalLinkIcon from '../../../assets/external-link.svg'
-import { playErrorSound } from '../../../utils/audio'
-import ModalErrorAlert from '../../ui/ModalErrorAlert/ModalErrorAlert'
-import { useI18n } from '../../../i18n/I18nProvider'
-import { useAuth } from '../../../contexts/AuthContext'
+import React, { useState, useId } from 'react';
+import { Modal } from '../../ui/Modal/Modal';
+import { Icon } from '../../ui/Icon/Icon';
+import {
+  updateProject,
+  archiveProject,
+  addProjectMember,
+  removeProjectMember,
+  leaveProject,
+} from '../../../services/projectService';
+import type { Project } from '@mockia/shared';
+import styles from './ProjectSettingsModal.module.scss';
+import warningIcon from '../../../assets/warning.svg';
+import { ApiAccessPanel } from '../ApiAccessPanel';
+import githubIcon from '../../../assets/github.svg';
+import externalLinkIcon from '../../../assets/external-link.svg';
+import { playErrorSound } from '../../../utils/audio';
+import ModalErrorAlert from '../../ui/ModalErrorAlert/ModalErrorAlert';
+import { useI18n } from '../../../i18n/I18nProvider';
+import { useAuth } from '../../../contexts/AuthContext';
 
 type Props = {
-  isOpen: boolean
-  onClose: () => void
-  project: Project
-  isViewer?: boolean
-  onUpdate: (p: Project) => void
-  onDelete: () => void
-}
+  isOpen: boolean;
+  onClose: () => void;
+  project: Project;
+  isViewer?: boolean;
+  onUpdate: (p: Project) => void;
+  onDelete: () => void;
+};
 
-type Tab = 'general' | 'members' | 'connection'
+type Tab = 'general' | 'members' | 'connection';
 
-const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isViewer = false, onUpdate, onDelete }) => {
-  const { t } = useI18n()
-  const uid = useId()
-  const [activeTab, setActiveTab] = useState<Tab>('general')
-  const [title, setTitle] = useState(project.title)
-  const [description, setDescription] = useState(project.description || '')
-  
+const ProjectSettingsModal: React.FC<Props> = ({
+  isOpen,
+  onClose,
+  project,
+  isViewer = false,
+  onUpdate,
+  onDelete,
+}) => {
+  const { t } = useI18n();
+  const uid = useId();
+  const [activeTab, setActiveTab] = useState<Tab>('general');
+  const [title, setTitle] = useState(project.title);
+  const [description, setDescription] = useState(project.description || '');
+
   // Member invite state
-  const [inviteEmail, setInviteEmail] = useState('')
-  const [inviteRole, setInviteRole] = useState<'EDITOR' | 'VIEWER'>('VIEWER')
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState<'EDITOR' | 'VIEWER'>('VIEWER');
 
-  
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [showConfirmDelete, setShowConfirmDelete] = useState(false)
-  const [showConfirmLeave, setShowConfirmLeave] = useState(false)
-  
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  const [showConfirmLeave, setShowConfirmLeave] = useState(false);
+
   // Del usuario de la sesion (antes se decodificaba el JWT de localStorage y fallaba sin "Recordarme")
-  const currentUserId = useAuth().user?.id ?? null
+  const currentUserId = useAuth().user?.id ?? null;
 
   const handleSaveGeneral = async () => {
-    setLoading(true)
-    setError('')
+    setLoading(true);
+    setError('');
     try {
-      const updated = await updateProject(project.id, { title, description })
-      onUpdate(updated)
-      onClose()
+      const updated = await updateProject(project.id, { title, description });
+      onUpdate(updated);
+      onClose();
     } catch (err: any) {
-      setError(t('projectSettings.updateFailed'))
-      playErrorSound()
+      setError(t('projectSettings.updateFailed'));
+      playErrorSound();
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
-  
+  };
+
   const handleDeleteClick = () => {
-    setShowConfirmDelete(true)
-  }
+    setShowConfirmDelete(true);
+  };
 
   const handleCancelDelete = () => {
-    setShowConfirmDelete(false)
-  }
+    setShowConfirmDelete(false);
+  };
 
   const handleConfirmDelete = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      await archiveProject(project.id)
-      onDelete()
-      onClose()
+      await archiveProject(project.id);
+      onDelete();
+      onClose();
     } catch (err: any) {
-      setError(t('projectSettings.deleteFailed'))
-      playErrorSound()
+      setError(t('projectSettings.deleteFailed'));
+      playErrorSound();
     } finally {
-      setLoading(false)
-      setShowConfirmDelete(false)
+      setLoading(false);
+      setShowConfirmDelete(false);
     }
-  }
+  };
 
   const handleLeaveClick = () => {
-    setShowConfirmLeave(true)
-  }
+    setShowConfirmLeave(true);
+  };
 
   const handleCancelLeave = () => {
-    setShowConfirmLeave(false)
-  }
+    setShowConfirmLeave(false);
+  };
 
   const handleConfirmLeave = async () => {
-    setLoading(true)
-    setError('')
+    setLoading(true);
+    setError('');
     try {
-      await leaveProject(project.id)
-      onDelete() // Navigates to dashboard
-      onClose()
+      await leaveProject(project.id);
+      onDelete(); // Navigates to dashboard
+      onClose();
     } catch (err: any) {
-      setError(t('projectSettings.leaveFailed'))
-      playErrorSound()
+      setError(t('projectSettings.leaveFailed'));
+      playErrorSound();
     } finally {
-      setLoading(false)
-      setShowConfirmLeave(false)
+      setLoading(false);
+      setShowConfirmLeave(false);
     }
-  }
+  };
 
   const handleInvite = async () => {
-    if (!inviteEmail) return
-    setLoading(true)
-    setError('')
+    if (!inviteEmail) return;
+    setLoading(true);
+    setError('');
     try {
-      const updated = await addProjectMember(project.id, inviteEmail, inviteRole)
-      onUpdate(updated)
-      setInviteEmail('')
+      const updated = await addProjectMember(project.id, inviteEmail, inviteRole);
+      onUpdate(updated);
+      setInviteEmail('');
     } catch (err: any) {
-      setError(t('projectSettings.inviteFailed'))
-      playErrorSound()
+      setError(t('projectSettings.inviteFailed'));
+      playErrorSound();
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleRemoveMember = async (userId: string) => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const updated = await removeProjectMember(project.id, userId)
-      onUpdate(updated)
+      const updated = await removeProjectMember(project.id, userId);
+      onUpdate(updated);
     } catch (err: any) {
-      setError(t('projectSettings.removeFailed'))
-      playErrorSound()
+      setError(t('projectSettings.removeFailed'));
+      playErrorSound();
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} noPadding maxWidth="800px">
@@ -141,21 +153,21 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
         <header className={styles.header}>
           <h2>{t('projectSettings.title')}</h2>
           <nav className={styles.tabs} aria-label={t('projectSettings.tabs')}>
-            <button 
+            <button
               className={`${styles.tab} ${activeTab === 'general' ? styles.active : ''}`}
               onClick={() => setActiveTab('general')}
               aria-current={activeTab === 'general' ? 'page' : undefined}
             >
               {t('projectSettings.general')}
             </button>
-            <button 
+            <button
               className={`${styles.tab} ${activeTab === 'members' ? styles.active : ''}`}
               onClick={() => setActiveTab('members')}
               aria-current={activeTab === 'members' ? 'page' : undefined}
             >
               {t('projectSettings.members')}
             </button>
-            <button 
+            <button
               className={`${styles.tab} ${activeTab === 'connection' ? styles.active : ''}`}
               onClick={() => setActiveTab('connection')}
               aria-current={activeTab === 'connection' ? 'page' : undefined}
@@ -172,8 +184,8 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
                 <label htmlFor={`${uid}-name`}>{t('projectSettings.name')}</label>
                 <input
                   id={`${uid}-name`}
-                  value={title} 
-                  onChange={e => setTitle(e.target.value)} 
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
                   className={styles.input}
                   placeholder={t('projectSettings.namePlaceholder')}
                   disabled={isViewer}
@@ -183,8 +195,8 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
                 <label htmlFor={`${uid}-description`}>{t('projectSettings.description')}</label>
                 <input
                   id={`${uid}-description`}
-                  value={description} 
-                  onChange={e => setDescription(e.target.value)} 
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
                   className={styles.input}
                   placeholder={t('projectSettings.descriptionPlaceholder')}
                   disabled={isViewer}
@@ -199,13 +211,15 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
                     <input
                       id={`${uid}-repo`}
                       type="text"
-                      readOnly 
-                      value={project.gitHubRepo.url} 
+                      readOnly
+                      value={project.gitHubRepo.url}
                       className={styles.githubInput}
                     />
-                    <button 
+                    <button
                       type="button"
-                      onClick={() => window.open(project.gitHubRepo?.url, '_blank', 'noopener,noreferrer')}
+                      onClick={() =>
+                        window.open(project.gitHubRepo?.url, '_blank', 'noopener,noreferrer')
+                      }
                       className={styles.githubLinkBtn}
                       title={t('projectSettings.openOnGithub')}
                     >
@@ -227,19 +241,31 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
                       <p>{t('projectSettings.leaveText')}</p>
                     </article>
                   </header>
-                  
+
                   {showConfirmLeave ? (
                     <article className={styles.confirmDelete}>
                       <p>{t('projectSettings.leaveConfirm')}</p>
                       <nav className={styles.confirmActions}>
-                        <button onClick={handleCancelLeave} className={styles.cancelLeaveBtn}>{t('projectSettings.stay')}</button>
-                        <button onClick={handleConfirmLeave} className={styles.confirmDeleteBtn} disabled={loading}>
-                          {loading ? t('projectSettings.leaving') : t('projectSettings.confirmLeave')}
+                        <button onClick={handleCancelLeave} className={styles.cancelLeaveBtn}>
+                          {t('projectSettings.stay')}
+                        </button>
+                        <button
+                          onClick={handleConfirmLeave}
+                          className={styles.confirmDeleteBtn}
+                          disabled={loading}
+                        >
+                          {loading
+                            ? t('projectSettings.leaving')
+                            : t('projectSettings.confirmLeave')}
                         </button>
                       </nav>
                     </article>
                   ) : (
-                    <button onClick={handleLeaveClick} className={styles.deleteBtn} disabled={loading}>
+                    <button
+                      onClick={handleLeaveClick}
+                      className={styles.deleteBtn}
+                      disabled={loading}
+                    >
                       {t('projectSettings.leaveTitle')}
                     </button>
                   )}
@@ -256,19 +282,29 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
                         <p>{t('projectSettings.dangerText')}</p>
                       </article>
                     </header>
-                    
+
                     {showConfirmDelete ? (
                       <article className={styles.confirmDelete}>
                         <p>{t('projectSettings.deleteConfirm')}</p>
                         <nav className={styles.confirmActions}>
-                          <button onClick={handleCancelDelete} className={styles.cancelDeleteBtn}>{t('projectSettings.keep')}</button>
-                          <button onClick={handleConfirmDelete} className={styles.confirmDeleteBtn} disabled={loading}>
+                          <button onClick={handleCancelDelete} className={styles.cancelDeleteBtn}>
+                            {t('projectSettings.keep')}
+                          </button>
+                          <button
+                            onClick={handleConfirmDelete}
+                            className={styles.confirmDeleteBtn}
+                            disabled={loading}
+                          >
                             {loading ? t('common.deleting') : t('projectSettings.confirmDelete')}
                           </button>
                         </nav>
                       </article>
                     ) : (
-                      <button onClick={handleDeleteClick} className={styles.deleteBtn} disabled={loading}>
+                      <button
+                        onClick={handleDeleteClick}
+                        className={styles.deleteBtn}
+                        disabled={loading}
+                      >
                         {t('projectSettings.deleteProject')}
                       </button>
                     )}
@@ -284,22 +320,26 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
                   <article className={styles.inviteForm}>
                     <input
                       id={`${uid}-invite`}
-                      type="email" 
-                      value={inviteEmail} 
-                      onChange={e => setInviteEmail(e.target.value)}
+                      type="email"
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
                       placeholder="user@example.com"
                       className={styles.input}
                     />
                     <select
                       aria-label={t('projectSettings.inviteRole')}
-                      value={inviteRole} 
-                      onChange={e => setInviteRole(e.target.value as any)}
+                      value={inviteRole}
+                      onChange={(e) => setInviteRole(e.target.value as any)}
                       className={styles.select}
                     >
                       <option value="VIEWER">{t('projectSettings.roleViewer')}</option>
                       <option value="EDITOR">{t('projectSettings.roleEditor')}</option>
                     </select>
-                    <button onClick={handleInvite} className={styles.inviteBtn} disabled={loading || !inviteEmail}>
+                    <button
+                      onClick={handleInvite}
+                      className={styles.inviteBtn}
+                      disabled={loading || !inviteEmail}
+                    >
                       {t('projectSettings.inviteButton')}
                     </button>
                   </article>
@@ -315,17 +355,25 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
                         {member.username ? member.username[0].toUpperCase() : 'U'}
                       </figure>
                       <article className={styles.memberDetails}>
-                        <span className={styles.memberName}>{member.username || t('projectSettings.unknownUser')}</span>
-                        <span className={styles.memberEmail}>{member.email || t('projectSettings.noEmail')}</span>
+                        <span className={styles.memberName}>
+                          {member.username || t('projectSettings.unknownUser')}
+                        </span>
+                        <span className={styles.memberEmail}>
+                          {member.email || t('projectSettings.noEmail')}
+                        </span>
                       </article>
                     </article>
                     <nav className={styles.memberActions}>
                       <span className={`${styles.roleBadge} ${styles[member.role]}`}>
-                        {member.role === 'OWNER' ? t('projectSettings.roleOwner') : member.role === 'EDITOR' ? t('projectSettings.roleEditor') : t('projectSettings.roleViewer')}
+                        {member.role === 'OWNER'
+                          ? t('projectSettings.roleOwner')
+                          : member.role === 'EDITOR'
+                            ? t('projectSettings.roleEditor')
+                            : t('projectSettings.roleViewer')}
                       </span>
                       {member.role !== 'OWNER' && member.userId !== currentUserId && !isViewer && (
-                        <button 
-                          onClick={() => handleRemoveMember(member.userId)} 
+                        <button
+                          onClick={() => handleRemoveMember(member.userId)}
                           className={styles.removeBtn}
                           title={t('projectSettings.removeMember')}
                           aria-label={`${t('projectSettings.removeMember')}: ${member.username || member.email || ''}`}
@@ -351,7 +399,9 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
         </section>
 
         <footer className={styles.footer}>
-          <button className={styles.cancelBtn} onClick={onClose}>{isViewer ? t('common.close') : t('common.cancel')}</button>
+          <button className={styles.cancelBtn} onClick={onClose}>
+            {isViewer ? t('common.close') : t('common.cancel')}
+          </button>
           {!isViewer && (
             <button className={styles.saveBtn} onClick={handleSaveGeneral} disabled={loading}>
               {loading ? t('common.saving') : t('common.saveChanges')}
@@ -360,7 +410,7 @@ const ProjectSettingsModal: React.FC<Props> = ({ isOpen, onClose, project, isVie
         </footer>
       </article>
     </Modal>
-  )
-}
+  );
+};
 
-export default ProjectSettingsModal
+export default ProjectSettingsModal;

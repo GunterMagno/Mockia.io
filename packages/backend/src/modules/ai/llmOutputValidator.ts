@@ -9,12 +9,12 @@ import { AppError } from '../../middlewares/errorHandler.js';
 
 /**
  * Validates that the parsed object is a valid MockAPIOutput
- * 
+ *
  * Checks for:
  * - Required fields (apiVersion, title, description, endpoints, dataModels)
  * - Valid endpoint structure (method, path, schemas)
  * - Proper types for all fields
- * 
+ *
  * @param data - The parsed object to validate
  * @returns The validated and typed MockAPIOutput
  * @throws AppError if validation fails
@@ -22,11 +22,7 @@ import { AppError } from '../../middlewares/errorHandler.js';
 export function validateGeneratedApi(data: unknown): MockAPIOutput {
   // Type guard - check basic object structure
   if (!data || typeof data !== 'object' || Array.isArray(data)) {
-    throw new AppError(
-      'Expected AI output to be a JSON object',
-      ErrorCode.VALIDATION_ERROR,
-      400
-    );
+    throw new AppError('Expected AI output to be a JSON object', ErrorCode.VALIDATION_ERROR, 400);
   }
 
   const obj = data as Record<string, unknown>;
@@ -45,44 +41,24 @@ export function validateGeneratedApi(data: unknown): MockAPIOutput {
 
   // Validate field types
   if (typeof obj.apiVersion !== 'string') {
-    throw new AppError(
-      'apiVersion must be a string',
-      ErrorCode.VALIDATION_ERROR,
-      400
-    );
+    throw new AppError('apiVersion must be a string', ErrorCode.VALIDATION_ERROR, 400);
   }
 
   if (typeof obj.title !== 'string') {
-    throw new AppError(
-      'title must be a string',
-      ErrorCode.VALIDATION_ERROR,
-      400
-    );
+    throw new AppError('title must be a string', ErrorCode.VALIDATION_ERROR, 400);
   }
 
   if (typeof obj.description !== 'string') {
-    throw new AppError(
-      'description must be a string',
-      ErrorCode.VALIDATION_ERROR,
-      400
-    );
+    throw new AppError('description must be a string', ErrorCode.VALIDATION_ERROR, 400);
   }
 
   // Validate endpoints array
   if (!Array.isArray(obj.endpoints)) {
-    throw new AppError(
-      'endpoints must be an array',
-      ErrorCode.VALIDATION_ERROR,
-      400
-    );
+    throw new AppError('endpoints must be an array', ErrorCode.VALIDATION_ERROR, 400);
   }
 
   if (obj.endpoints.length === 0) {
-    throw new AppError(
-      'endpoints array must not be empty',
-      ErrorCode.VALIDATION_ERROR,
-      400
-    );
+    throw new AppError('endpoints array must not be empty', ErrorCode.VALIDATION_ERROR, 400);
   }
 
   // Validate each endpoint
@@ -96,31 +72,19 @@ export function validateGeneratedApi(data: unknown): MockAPIOutput {
 
   // Validate dataModels array
   if (!Array.isArray(obj.dataModels)) {
-    throw new AppError(
-      'dataModels must be an array',
-      ErrorCode.VALIDATION_ERROR,
-      400
-    );
+    throw new AppError('dataModels must be an array', ErrorCode.VALIDATION_ERROR, 400);
   }
 
   // Validate each data model (optional but if present, should be valid)
   for (let i = 0; i < obj.dataModels.length; i++) {
     const model = obj.dataModels[i];
     if (!model || typeof model !== 'object') {
-      throw new AppError(
-        `dataModels[${i}] must be an object`,
-        ErrorCode.VALIDATION_ERROR,
-        400
-      );
+      throw new AppError(`dataModels[${i}] must be an object`, ErrorCode.VALIDATION_ERROR, 400);
     }
 
     const modelObj = model as Record<string, unknown>;
     if (typeof modelObj.name !== 'string') {
-      throw new AppError(
-        `dataModels[${i}].name must be a string`,
-        ErrorCode.VALIDATION_ERROR,
-        400
-      );
+      throw new AppError(`dataModels[${i}].name must be a string`, ErrorCode.VALIDATION_ERROR, 400);
     }
 
     if (!modelObj.schema || typeof modelObj.schema !== 'object') {
@@ -148,18 +112,14 @@ function exampleStatusCode(item: Record<string, unknown>): number | undefined {
 
 /**
  * Validates a single endpoint object
- * 
+ *
  * @param endpoint - The endpoint to validate
  * @param index - The index in the endpoints array (for error messages)
  * @returns null if valid, AppError if invalid
  */
 function validateEndpoint(endpoint: unknown, index: number): AppError | null {
   if (!endpoint || typeof endpoint !== 'object') {
-    return new AppError(
-      `endpoints[${index}] must be an object`,
-      ErrorCode.VALIDATION_ERROR,
-      400
-    );
+    return new AppError(`endpoints[${index}] must be an object`, ErrorCode.VALIDATION_ERROR, 400);
   }
 
   const ep = endpoint as Record<string, unknown>;
@@ -222,28 +182,28 @@ function validateEndpoint(endpoint: unknown, index: number): AppError | null {
       if (!item || typeof item !== 'object' || Array.isArray(item)) {
         return {
           request: {},
-          response: { value: item }
+          response: { value: item },
         };
       }
-      
+
       const hasRequest = 'request' in item && item.request && typeof item.request === 'object';
       const hasResponse = 'response' in item && item.response && typeof item.response === 'object';
-      
+
       if (hasRequest || hasResponse) {
         const healed: Record<string, unknown> = {
           request: hasRequest ? item.request : {},
-          response: hasResponse ? item.response : {}
+          response: hasResponse ? item.response : {},
         };
         // Keep the example's HTTP status (404, 401...): without it everything would be saved as 200
         const statusCode = exampleStatusCode(item);
         if (statusCode !== undefined) healed.statusCode = statusCode;
         return healed;
       }
-      
+
       // Flat mock response - wrap in response block
       return {
         request: {},
-        response: item
+        response: item,
       };
     });
   } else {
@@ -251,8 +211,8 @@ function validateEndpoint(endpoint: unknown, index: number): AppError | null {
     ep.examples = [
       {
         request: {},
-        response: {}
-      }
+        response: {},
+      },
     ];
   }
 

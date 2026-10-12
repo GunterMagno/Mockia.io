@@ -2,7 +2,11 @@ import { Types } from 'mongoose';
 import { ErrorCode } from '@mockia/shared';
 import type { Project as ProjectDTO } from '@mockia/shared';
 import { AppError } from '../../middlewares/errorHandler.js';
-import { DemoMockModel, type DemoEndpointDocument, type DemoMockDocument } from '../../models/DemoMock.js';
+import {
+  DemoMockModel,
+  type DemoEndpointDocument,
+  type DemoMockDocument,
+} from '../../models/DemoMock.js';
 import { EndpointConfigModel } from '../../models/EndpointConfig.js';
 import { EndpointModel, MockAPIModel, ResponseModel } from '../../models/MockAPI.js';
 import { describeError } from '../../utils/safeErrorLog.js';
@@ -32,17 +36,29 @@ const notFound = () => new AppError('This demo is no longer available.', ErrorCo
  */
 export function claimTitle(endpoints: Pick<DemoEndpointDocument, 'path'>[]): string {
   const segment = (endpoints[0]?.path ?? '').split('/').find((s) => s !== '' && !s.startsWith(':'));
-  const clean = (segment ?? '').replace(/[^A-Za-z0-9._~@-]/g, '').slice(0, CLAIM_TITLE_MAX - 'Demo - '.length);
+  const clean = (segment ?? '')
+    .replace(/[^A-Za-z0-9._~@-]/g, '')
+    .slice(0, CLAIM_TITLE_MAX - 'Demo - '.length);
   return clean ? `Demo - ${clean}` : 'Demo';
 }
 
 /** Writes the demo's endpoints under the project's MockAPI exactly like the AI pipeline does (Endpoint -> Response). */
-async function populate(projectId: string, endpoints: DemoEndpointDocument[], createdResponseIds: Types.ObjectId[]): Promise<void> {
+async function populate(
+  projectId: string,
+  endpoints: DemoEndpointDocument[],
+  createdResponseIds: Types.ObjectId[]
+): Promise<void> {
   const projectObjectId = new Types.ObjectId(projectId);
   // createProject makes it, but tolerates a failure of that secondary document
   let mockApi = await MockAPIModel.findOne({ projectId: projectObjectId });
   if (!mockApi) {
-    mockApi = await MockAPIModel.create({ projectId: projectObjectId, title: 'Demo', description: '', endpoints: [], apiVersion: '1.0.0' });
+    mockApi = await MockAPIModel.create({
+      projectId: projectObjectId,
+      title: 'Demo',
+      description: '',
+      endpoints: [],
+      apiVersion: '1.0.0',
+    });
   }
   const endpointIds: Types.ObjectId[] = [...(mockApi.endpoints as Types.ObjectId[])];
 
@@ -81,7 +97,9 @@ async function restore(demo: DemoMockDocument): Promise<void> {
   try {
     await DemoMockModel.replaceOne({ demoId: demo.demoId }, demo, { upsert: true });
   } catch (err) {
-    console.error(`[Demo] could not restore a demo mock after a failed claim (${describeError(err)})`);
+    console.error(
+      `[Demo] could not restore a demo mock after a failed claim (${describeError(err)})`
+    );
   }
 }
 
@@ -89,10 +107,17 @@ async function restore(demo: DemoMockDocument): Promise<void> {
  * Claims `demoId` for `userId`. The caller has already checked the session, the verified email and the plan's
  * project limit. Throws AppError 404 when there is nothing to claim, 500 when the copy failed (the demo is restored).
  */
-export async function claimDemoMock(userId: string, demoId: string, now: Date): Promise<ProjectDTO> {
+export async function claimDemoMock(
+  userId: string,
+  demoId: string,
+  now: Date
+): Promise<ProjectDTO> {
   if (!isDemoId(demoId)) throw notFound();
 
-  const demo = await DemoMockModel.findOneAndDelete({ demoId, expiresAt: { $gt: now } }).lean<DemoMockDocument>();
+  const demo = await DemoMockModel.findOneAndDelete({
+    demoId,
+    expiresAt: { $gt: now },
+  }).lean<DemoMockDocument>();
   if (!demo) throw notFound();
 
   let projectId: string | null = null;
@@ -106,12 +131,18 @@ export async function claimDemoMock(userId: string, demoId: string, now: Date): 
   } catch (err) {
     if (projectId) {
       await deleteProjectsCascade([projectId]).catch((cleanupErr: unknown) =>
-        console.error(`[Demo] could not remove the half-made project of a failed claim (${describeError(cleanupErr)})`),
+        console.error(
+          `[Demo] could not remove the half-made project of a failed claim (${describeError(cleanupErr)})`
+        )
       );
     }
     await ResponseModel.deleteMany({ _id: { $in: createdResponseIds } }).catch(() => undefined);
     await restore(demo);
     console.error(`[Demo] claim failed (${describeError(err)})`);
-    throw new AppError('The demo could not be saved as a project. Please try again.', ErrorCode.INTERNAL_SERVER_ERROR, 500);
+    throw new AppError(
+      'The demo could not be saved as a project. Please try again.',
+      ErrorCode.INTERNAL_SERVER_ERROR,
+      500
+    );
   }
 }

@@ -39,26 +39,38 @@ interface GitHubContextDocument extends Document {
 /**
  * File info subdocument schema
  */
-const interfaceSchema = new Schema({
-  name: { type: String, required: true },
-  properties: [{ type: String }],
-}, { _id: false });
+const interfaceSchema = new Schema(
+  {
+    name: { type: String, required: true },
+    properties: [{ type: String }],
+  },
+  { _id: false }
+);
 
-const functionSchema = new Schema({
-  name: { type: String, required: true },
-  params: [{ type: String }],
-  returnType: { type: String },
-}, { _id: false });
+const functionSchema = new Schema(
+  {
+    name: { type: String, required: true },
+    params: [{ type: String }],
+    returnType: { type: String },
+  },
+  { _id: false }
+);
 
-const enumSchema = new Schema({
-  name: { type: String, required: true },
-  members: [{ type: String }],
-}, { _id: false });
+const enumSchema = new Schema(
+  {
+    name: { type: String, required: true },
+    members: [{ type: String }],
+  },
+  { _id: false }
+);
 
-const typeAliasSchema = new Schema({
-  name: { type: String, required: true },
-  type: { type: String, required: true },
-}, { _id: false });
+const typeAliasSchema = new Schema(
+  {
+    name: { type: String, required: true },
+    type: { type: String, required: true },
+  },
+  { _id: false }
+);
 
 /**
  * File info subdocument schema
@@ -93,7 +105,7 @@ const fileInfoSchema = new Schema<FileInfoDocument>(
 /**
  * GitHub context schema
  * Stores parsed context from a GitHub repository linked to a project
- * 
+ *
  * Note: Documents are automatically deleted 30 days after creation via TTL index on createdAt
  */
 const githubContextSchema = new Schema<GitHubContextDocument>(

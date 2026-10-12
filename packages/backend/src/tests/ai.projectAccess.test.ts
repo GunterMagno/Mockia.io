@@ -63,10 +63,21 @@ describe('AI routes: project access control', () => {
   });
 
   beforeEach(async () => {
-    await Promise.all([UserModel, ProjectModel, MockAPIModel, EndpointModel, AiRateWindowModel].map((m) => (m as any).deleteMany({})));
-    log = ['log', 'warn', 'error'].map((k) => jest.spyOn(console, k as 'log').mockImplementation(() => undefined));
+    await Promise.all(
+      [UserModel, ProjectModel, MockAPIModel, EndpointModel, AiRateWindowModel].map((m) =>
+        (m as any).deleteMany({})
+      )
+    );
+    log = ['log', 'warn', 'error'].map((k) =>
+      jest.spyOn(console, k as 'log').mockImplementation(() => undefined)
+    );
     complete.mockReset();
-    complete.mockResolvedValue({ text: SPEC, provider: 'fake', model: 'm', usage: { inputTokens: 1, outputTokens: 2 } });
+    complete.mockResolvedValue({
+      text: SPEC,
+      provider: 'fake',
+      model: 'm',
+      usage: { inputTokens: 1, outputTokens: 2 },
+    });
     getLlmSpy = jest.spyOn(providers, 'getLlm').mockReturnValue({ name: 'fake', complete });
 
     owner = await createUser('own@example.com');
@@ -91,13 +102,19 @@ describe('AI routes: project access control', () => {
   });
 
   afterAll(async () => {
-    await Promise.all([UserModel, ProjectModel, MockAPIModel, EndpointModel, AiRateWindowModel].map((m) => (m as any).deleteMany({})));
+    await Promise.all(
+      [UserModel, ProjectModel, MockAPIModel, EndpointModel, AiRateWindowModel].map((m) =>
+        (m as any).deleteMany({})
+      )
+    );
     await disconnectDB();
   });
 
   const body = (ref: unknown) => ({ projectId: ref, requirement: 'members CRUD' });
-  const spec = (u: typeof owner, ref: unknown) => request(app).post('/api/ai/generate-mock-api-spec').set(u.auth).send(body(ref));
-  const save = (u: typeof owner, ref: unknown) => request(app).post('/api/ai/generate-and-save').set(u.auth).send(body(ref));
+  const spec = (u: typeof owner, ref: unknown) =>
+    request(app).post('/api/ai/generate-mock-api-spec').set(u.auth).send(body(ref));
+  const save = (u: typeof owner, ref: unknown) =>
+    request(app).post('/api/ai/generate-and-save').set(u.auth).send(body(ref));
 
   describe.each([
     ['generate-mock-api-spec', spec],
@@ -168,7 +185,10 @@ describe('AI routes: project access control', () => {
 
   // The routes without a project reference (generate-description, generate-mock-data) were removed: open LLM proxy
   it('the old routes without a project reference no longer exist (404, no model call)', async () => {
-    const d = await request(app).post('/api/ai/generate-description').set(stranger.auth).send({ prompt: 'p', userMessage: 'm' });
+    const d = await request(app)
+      .post('/api/ai/generate-description')
+      .set(stranger.auth)
+      .send({ prompt: 'p', userMessage: 'm' });
     expect(d.status).toBe(404);
     expect(complete).not.toHaveBeenCalled();
   });

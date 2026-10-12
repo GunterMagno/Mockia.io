@@ -1,11 +1,7 @@
 {
   "id": "es-restaurante-express",
   "description": "README and instruction in Spanish for a restaurant API (dishes and reservations).",
-  "tags": [
-    "es",
-    "express",
-    "path-params"
-  ],
+  "tags": ["es", "express", "path-params"],
   "input": {
     "projectTitle": "Restaurante La Plaza",
     "userInput": "Genera la API simulada del restaurante con los platos y las reservas.",
@@ -33,15 +29,11 @@
           "summary": "Rutas de platos",
           "routes": [
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/platos"
             },
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/platos/:id"
             }
           ]
@@ -52,15 +44,11 @@
           "summary": "Rutas de reservas",
           "routes": [
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/reservas"
             },
             {
-              "methods": [
-                "POST"
-              ],
+              "methods": ["POST"],
               "path": "/reservas"
             }
           ]
@@ -81,12 +69,7 @@
             },
             {
               "name": "Reserva",
-              "properties": [
-                "id: string",
-                "cliente: string",
-                "personas: number",
-                "fecha: string"
-              ]
+              "properties": ["id: string", "cliente: string", "personas: number", "fecha: string"]
             }
           ]
         }
@@ -124,12 +107,7 @@
               }
             }
           },
-          "required": [
-            "id",
-            "nombre",
-            "precio",
-            "alergenos"
-          ]
+          "required": ["id", "nombre", "precio", "alergenos"]
         }
       },
       "examples": [
@@ -140,9 +118,7 @@
               "id": "pl1",
               "nombre": "Tortilla de patatas",
               "precio": 9.5,
-              "alergenos": [
-                "huevo"
-              ]
+              "alergenos": ["huevo"]
             }
           ]
         }
@@ -176,12 +152,7 @@
             }
           }
         },
-        "required": [
-          "id",
-          "nombre",
-          "precio",
-          "alergenos"
-        ]
+        "required": ["id", "nombre", "precio", "alergenos"]
       },
       "examples": [
         {
@@ -190,9 +161,7 @@
             "id": "pl1",
             "nombre": "Tortilla de patatas",
             "precio": 9.5,
-            "alergenos": [
-              "huevo"
-            ]
+            "alergenos": ["huevo"]
           }
         },
         {
@@ -231,12 +200,7 @@
               "type": "string"
             }
           },
-          "required": [
-            "id",
-            "cliente",
-            "personas",
-            "fecha"
-          ]
+          "required": ["id", "cliente", "personas", "fecha"]
         }
       },
       "examples": [
@@ -270,11 +234,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "cliente",
-          "personas",
-          "fecha"
-        ]
+        "required": ["cliente", "personas", "fecha"]
       },
       "responseSchema": {
         "type": "object",
@@ -292,12 +252,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "cliente",
-          "personas",
-          "fecha"
-        ]
+        "required": ["id", "cliente", "personas", "fecha"]
       },
       "examples": [
         {

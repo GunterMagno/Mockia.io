@@ -1,7 +1,10 @@
 import express, { Router } from 'express';
 import type { BillingInterval, PaidPlan } from '@mockia/shared';
 import { asyncHandler } from '../../middlewares/errorHandler.js';
-import { authenticateToken, type AuthenticatedRequest } from '../../middlewares/authenticateToken.js';
+import {
+  authenticateToken,
+  type AuthenticatedRequest,
+} from '../../middlewares/authenticateToken.js';
 import { requireVerifiedEmail } from '../../middlewares/requireVerifiedEmail.js';
 import { UserModel } from '../../models/User.js';
 import { rateLimit } from '../../middlewares/rateLimit.js';
@@ -83,7 +86,9 @@ billingRouter.post(
     const result = await handleStripeEvent(event); // throws -> 500 -> Stripe retries
     if (result === 'retry') {
       // A young event for a customer no user is linked to yet (it overtook checkout.session.completed): Stripe delivers it again later
-      res.status(500).json(fail('BILLING_USER_NOT_LINKED', 'No user is linked to this Stripe customer yet'));
+      res
+        .status(500)
+        .json(fail('BILLING_USER_NOT_LINKED', 'No user is linked to this Stripe customer yet'));
       return;
     }
     res.status(200).json({ received: true, result });
@@ -120,7 +125,12 @@ billingRouter.post(
     if (!config) {
       res
         .status(501)
-        .json(fail('BILLING_NOT_CONFIGURED', `Stripe checkout is not configured for this plan and billing interval (missing ${missingCheckoutConfig(plan, interval).join(', ')})`));
+        .json(
+          fail(
+            'BILLING_NOT_CONFIGURED',
+            `Stripe checkout is not configured for this plan and billing interval (missing ${missingCheckoutConfig(plan, interval).join(', ')})`
+          )
+        );
       return;
     }
     const user = await UserModel.findById(req.user!.id)
@@ -132,7 +142,14 @@ billingRouter.post(
     }
     if (hasOpenSubscription(user)) {
       // A second Checkout would create a second subscription: switching plans or fixing a payment is done in the portal.
-      res.status(409).json(fail('ALREADY_SUBSCRIBED', 'You already have a subscription. Manage it from the billing portal.'));
+      res
+        .status(409)
+        .json(
+          fail(
+            'ALREADY_SUBSCRIBED',
+            'You already have a subscription. Manage it from the billing portal.'
+          )
+        );
       return;
     }
     const session = await createCheckoutSession({
@@ -161,12 +178,18 @@ billingRouter.post(
   asyncHandler(async (req: AuthenticatedRequest, res) => {
     const secretKey = process.env.STRIPE_SECRET_KEY;
     if (!secretKey) {
-      res.status(501).json(fail('BILLING_NOT_CONFIGURED', 'Stripe is not configured (STRIPE_SECRET_KEY)'));
+      res
+        .status(501)
+        .json(fail('BILLING_NOT_CONFIGURED', 'Stripe is not configured (STRIPE_SECRET_KEY)'));
       return;
     }
     const user = await UserModel.findById(req.user!.id).select('stripeCustomerId').lean();
     if (!user?.stripeCustomerId) {
-      res.status(409).json(fail('NO_BILLING_ACCOUNT', 'There is no billing account yet. Subscribe to a plan first.'));
+      res
+        .status(409)
+        .json(
+          fail('NO_BILLING_ACCOUNT', 'There is no billing account yet. Subscribe to a plan first.')
+        );
       return;
     }
     const session = await createPortalSession({ customerId: user.stripeCustomerId, secretKey });

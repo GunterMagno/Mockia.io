@@ -28,7 +28,9 @@ describe('verifyStripeSignature', () => {
 
   it('rejects a tampered body', () => {
     const header = `t=${NOW_S},v1=${sign(payload, NOW_S)}`;
-    expect(verifyStripeSignature(payload.replace('evt_1', 'evt_2'), header, SECRET, 300, NOW_MS)).toBe(false);
+    expect(
+      verifyStripeSignature(payload.replace('evt_1', 'evt_2'), header, SECRET, 300, NOW_MS)
+    ).toBe(false);
   });
 
   it('rejects a tampered timestamp even inside the tolerance window', () => {
@@ -38,14 +40,20 @@ describe('verifyStripeSignature', () => {
 
   it('rejects expired timestamps (older than 5 min) and far-future ones', () => {
     const old = NOW_S - 301;
-    expect(verifyStripeSignature(payload, `t=${old},v1=${sign(payload, old)}`, SECRET, 300, NOW_MS)).toBe(false);
+    expect(
+      verifyStripeSignature(payload, `t=${old},v1=${sign(payload, old)}`, SECRET, 300, NOW_MS)
+    ).toBe(false);
     const future = NOW_S + 301;
-    expect(verifyStripeSignature(payload, `t=${future},v1=${sign(payload, future)}`, SECRET, 300, NOW_MS)).toBe(false);
+    expect(
+      verifyStripeSignature(payload, `t=${future},v1=${sign(payload, future)}`, SECRET, 300, NOW_MS)
+    ).toBe(false);
   });
 
   it('accepts a timestamp exactly at the 5 min boundary', () => {
     const edge = NOW_S - 300;
-    expect(verifyStripeSignature(payload, `t=${edge},v1=${sign(payload, edge)}`, SECRET, 300, NOW_MS)).toBe(true);
+    expect(
+      verifyStripeSignature(payload, `t=${edge},v1=${sign(payload, edge)}`, SECRET, 300, NOW_MS)
+    ).toBe(true);
   });
 
   it.each([
@@ -57,7 +65,9 @@ describe('verifyStripeSignature', () => {
     ['non hex / short v1', `t=${NOW_S},v1=zzzz`],
     ['v0 scheme only', `t=${NOW_S},v0=${sign(payload, NOW_S)}`],
   ])('rejects malformed header: %s', (_name, header) => {
-    expect(verifyStripeSignature(payload, header as string | undefined, SECRET, 300, NOW_MS)).toBe(false);
+    expect(verifyStripeSignature(payload, header as string | undefined, SECRET, 300, NOW_MS)).toBe(
+      false
+    );
   });
 
   it('rejects when the secret is empty', () => {

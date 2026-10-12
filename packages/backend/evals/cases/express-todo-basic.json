@@ -1,10 +1,7 @@
 {
   "id": "express-todo-basic",
   "description": "Plain Express router for a todo list: full CRUD with an :id parameter.",
-  "tags": [
-    "express",
-    "path-params"
-  ],
+  "tags": ["express", "path-params"],
   "input": {
     "projectTitle": "Todo API",
     "projectDescription": "Simple todo list service",
@@ -33,33 +30,23 @@
           "summary": "Express router for todos",
           "routes": [
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/todos"
             },
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/todos/:id"
             },
             {
-              "methods": [
-                "POST"
-              ],
+              "methods": ["POST"],
               "path": "/todos"
             },
             {
-              "methods": [
-                "PUT"
-              ],
+              "methods": ["PUT"],
               "path": "/todos/:id"
             },
             {
-              "methods": [
-                "DELETE"
-              ],
+              "methods": ["DELETE"],
               "path": "/todos/:id"
             }
           ]
@@ -71,12 +58,7 @@
           "interfaces": [
             {
               "name": "Todo",
-              "properties": [
-                "id: string",
-                "title: string",
-                "done: boolean",
-                "dueDate: string"
-              ]
+              "properties": ["id: string", "title: string", "done: boolean", "dueDate: string"]
             }
           ]
         }
@@ -111,12 +93,7 @@
               "type": "string"
             }
           },
-          "required": [
-            "id",
-            "title",
-            "done",
-            "dueDate"
-          ]
+          "required": ["id", "title", "done", "dueDate"]
         }
       },
       "examples": [
@@ -158,12 +135,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "title",
-          "done",
-          "dueDate"
-        ]
+        "required": ["id", "title", "done", "dueDate"]
       },
       "examples": [
         {
@@ -198,10 +170,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "title",
-          "dueDate"
-        ]
+        "required": ["title", "dueDate"]
       },
       "responseSchema": {
         "type": "object",
@@ -219,12 +188,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "title",
-          "done",
-          "dueDate"
-        ]
+        "required": ["id", "title", "done", "dueDate"]
       },
       "examples": [
         {
@@ -255,10 +219,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "title",
-          "done"
-        ]
+        "required": ["title", "done"]
       },
       "responseSchema": {
         "type": "object",
@@ -276,12 +237,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "title",
-          "done",
-          "dueDate"
-        ]
+        "required": ["id", "title", "done", "dueDate"]
       },
       "examples": [
         {
@@ -317,10 +273,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "id",
-          "deleted"
-        ]
+        "required": ["id", "deleted"]
       },
       "examples": [
         {

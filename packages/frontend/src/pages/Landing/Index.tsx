@@ -1,45 +1,45 @@
-import React, { Suspense, lazy, useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { PATHS } from '../../routes/paths'
-import { useAuth } from '../../contexts/AuthContext'
-import { useRevealFallback } from '../../hooks/useRevealFallback'
-import { useDemoAvailable } from '../../hooks/useDemoAvailable'
-import { useI18n, type MessageKey } from '../../i18n/I18nProvider'
-import BuilderPreview from './BuilderPreview'
-import HowItWorks from './HowItWorks'
-import PricingPlans from '../../components/billing/PricingPlans/PricingPlans'
-import styles from './Index.module.scss'
+import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { PATHS } from '../../routes/paths';
+import { useAuth } from '../../contexts/AuthContext';
+import { useRevealFallback } from '../../hooks/useRevealFallback';
+import { useDemoAvailable } from '../../hooks/useDemoAvailable';
+import { useI18n, type MessageKey } from '../../i18n/I18nProvider';
+import BuilderPreview from './BuilderPreview';
+import HowItWorks from './HowItWorks';
+import PricingPlans from '../../components/billing/PricingPlans/PricingPlans';
+import styles from './Index.module.scss';
 
-import arrowRight from '../../assets/arrow-right.svg'
-import sparkles from '../../assets/sparkles.svg'
-import codeIcon from '../../assets/code-icon.svg'
-import shieldIcon from '../../assets/shield.svg'
+import arrowRight from '../../assets/arrow-right.svg';
+import sparkles from '../../assets/sparkles.svg';
+import codeIcon from '../../assets/code-icon.svg';
+import shieldIcon from '../../assets/shield.svg';
 
 // three.js solo se descarga cuando hay movimiento permitido y el navegador esta ocioso
-const HeroScene = lazy(() => import('./HeroScene'))
+const HeroScene = lazy(() => import('./HeroScene'));
 
 type IdleWindow = Window & {
-  requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number
-  cancelIdleCallback?: (id: number) => void
-}
+  requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number;
+  cancelIdleCallback?: (id: number) => void;
+};
 
 function useHeroScene(): boolean {
-  const [on, setOn] = useState(false)
+  const [on, setOn] = useState(false);
   useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    const w = window as IdleWindow
-    const start = () => setOn(true)
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const w = window as IdleWindow;
+    const start = () => setOn(true);
     if (w.requestIdleCallback) {
-      const id = w.requestIdleCallback(start, { timeout: 1500 })
-      return () => w.cancelIdleCallback?.(id)
+      const id = w.requestIdleCallback(start, { timeout: 1500 });
+      return () => w.cancelIdleCallback?.(id);
     }
-    const t = window.setTimeout(start, 400)
-    return () => window.clearTimeout(t)
-  }, [])
-  return on
+    const t = window.setTimeout(start, 400);
+    return () => window.clearTimeout(t);
+  }, []);
+  return on;
 }
 
-type DiffKind = 'ctx' | 'add' | 'del'
+type DiffKind = 'ctx' | 'add' | 'del';
 const DIFF: ReadonlyArray<readonly [DiffKind, string]> = [
   ['ctx', '{'],
   ['del', '  "name": "Lorem Ipsum",'],
@@ -49,23 +49,27 @@ const DIFF: ReadonlyArray<readonly [DiffKind, string]> = [
   ['del', '  "id": "0000",'],
   ['add', '  "id": "usr_9A2FK0",'],
   ['ctx', '}'],
-]
-const SIGN: Record<DiffKind, string> = { ctx: ' ', add: '+', del: '-' }
-const SR: Record<DiffKind, MessageKey | null> = { ctx: null, add: 'landing.story.added', del: 'landing.story.removed' }
+];
+const SIGN: Record<DiffKind, string> = { ctx: ' ', add: '+', del: '-' };
+const SR: Record<DiffKind, MessageKey | null> = {
+  ctx: null,
+  add: 'landing.story.added',
+  del: 'landing.story.removed',
+};
 
 const FEATURES = [
   { id: 'sync', icon: sparkles },
   { id: 'data', icon: codeIcon },
-] as const
+] as const;
 
 const Index: React.FC = () => {
-  const navigate = useNavigate()
-  const { isAuthenticated, isLoading } = useAuth()
-  const { t, rich } = useI18n()
-  const demoAvailable = useDemoAvailable() === true
-  const rootRef = useRef<HTMLElement>(null)
-  const sceneOn = useHeroScene()
-  useRevealFallback(rootRef)
+  const navigate = useNavigate();
+  const { isAuthenticated, isLoading } = useAuth();
+  const { t, rich } = useI18n();
+  const demoAvailable = useDemoAvailable() === true;
+  const rootRef = useRef<HTMLElement>(null);
+  const sceneOn = useHeroScene();
+  useRevealFallback(rootRef);
 
   return (
     <div className={styles.landing} ref={rootRef as React.RefObject<HTMLDivElement>}>
@@ -83,13 +87,23 @@ const Index: React.FC = () => {
         <div className={`${styles.container} ${styles.heroGrid}`}>
           <header className={styles.heroContent}>
             <h1 id="hero-title">
-              {rich('landing.hero.title', { em: (chunk) => <em className={styles.gradientText}>{chunk}</em> })}
+              {rich('landing.hero.title', {
+                em: (chunk) => <em className={styles.gradientText}>{chunk}</em>,
+              })}
             </h1>
             <p className={styles.heroDescription}>{t('landing.hero.description')}</p>
             {/* Anonimos (o aun sin saberlo): se reserva el hueco del boton secundario para que su llegada no mueva la pagina */}
-            <nav className={`${styles.heroActions} ${!isAuthenticated || isLoading ? styles.reserveDemo : ''}`} aria-label={t('landing.hero.actions')}>
-              <button className={styles.primaryBtn} onClick={() => navigate(isAuthenticated ? PATHS.dashboard : PATHS.signup)}>
-                <span>{isAuthenticated ? t('landing.hero.ctaDashboard') : t('landing.hero.ctaStart')}</span>
+            <nav
+              className={`${styles.heroActions} ${!isAuthenticated || isLoading ? styles.reserveDemo : ''}`}
+              aria-label={t('landing.hero.actions')}
+            >
+              <button
+                className={styles.primaryBtn}
+                onClick={() => navigate(isAuthenticated ? PATHS.dashboard : PATHS.signup)}
+              >
+                <span>
+                  {isAuthenticated ? t('landing.hero.ctaDashboard') : t('landing.hero.ctaStart')}
+                </span>
                 <img src={arrowRight} alt="" />
               </button>
               {/* Solo para visitantes anonimos y si el servidor dice que la demo esta disponible (fail closed) */}
@@ -103,25 +117,49 @@ const Index: React.FC = () => {
 
           <figure className={styles.codeWindow}>
             <figcaption className={styles.windowHeader}>
-              <span className={styles.dots} aria-hidden="true"><span /><span /><span /></span>
+              <span className={styles.dots} aria-hidden="true">
+                <span />
+                <span />
+                <span />
+              </span>
               <span className={styles.addressBar}>api.mockia.io/v1/projects/alpha/users</span>
             </figcaption>
             <div className={styles.windowContent}>
               <pre>
                 <code>
-                  <span className={styles.comment}>{'// GET /users/me'}</span>{'\n'}
-                  {'{'}{'\n'}
-                  {'  '}<span className={styles.key}>"status"</span>: <span className={styles.number}>200</span>,{'\n'}
-                  {'  '}<span className={styles.key}>"data"</span>: {'{'}{'\n'}
-                  {'    '}<span className={styles.key}>"id"</span>: <span className={styles.string}>"usr_9A2FK0"</span>,{'\n'}
-                  {'    '}<span className={styles.key}>"name"</span>: <span className={styles.string}>"Alex Rivers"</span>,{'\n'}
-                  {'    '}<span className={styles.key}>"role"</span>: <span className={styles.string}>"admin"</span>,{'\n'}
-                  {'    '}<span className={styles.key}>"permissions"</span>: [{'\n'}
-                  {'      '}<span className={styles.string}>"read:repo"</span>,{'\n'}
-                  {'      '}<span className={styles.string}>"write:mock"</span>{'\n'}
+                  <span className={styles.comment}>{'// GET /users/me'}</span>
+                  {'\n'}
+                  {'{'}
+                  {'\n'}
+                  {'  '}
+                  <span className={styles.key}>"status"</span>:{' '}
+                  <span className={styles.number}>200</span>,{'\n'}
+                  {'  '}
+                  <span className={styles.key}>"data"</span>: {'{'}
+                  {'\n'}
+                  {'    '}
+                  <span className={styles.key}>"id"</span>:{' '}
+                  <span className={styles.string}>"usr_9A2FK0"</span>,{'\n'}
+                  {'    '}
+                  <span className={styles.key}>"name"</span>:{' '}
+                  <span className={styles.string}>"Alex Rivers"</span>,{'\n'}
+                  {'    '}
+                  <span className={styles.key}>"role"</span>:{' '}
+                  <span className={styles.string}>"admin"</span>,{'\n'}
+                  {'    '}
+                  <span className={styles.key}>"permissions"</span>: [{'\n'}
+                  {'      '}
+                  <span className={styles.string}>"read:repo"</span>,{'\n'}
+                  {'      '}
+                  <span className={styles.string}>"write:mock"</span>
+                  {'\n'}
                   {'    '}]{'\n'}
-                  {'  '}{'}'},{'\n'}
-                  {'  '}<span className={styles.key}>"latency"</span>: <span className={styles.string}>"12ms"</span>{'\n'}
+                  {'  '}
+                  {'}'},{'\n'}
+                  {'  '}
+                  <span className={styles.key}>"latency"</span>:{' '}
+                  <span className={styles.string}>"12ms"</span>
+                  {'\n'}
                   {'}'}
                 </code>
               </pre>
@@ -149,8 +187,14 @@ const Index: React.FC = () => {
             <pre className={styles.diffBody}>
               <code>
                 {DIFF.map(([kind, text], i) => (
-                  <span key={i} className={`${styles.diffLine} ${styles[kind]}`} style={{ '--i': i } as React.CSSProperties}>
-                    <span className={styles.sign} aria-hidden="true">{SIGN[kind]}</span>
+                  <span
+                    key={i}
+                    className={`${styles.diffLine} ${styles[kind]}`}
+                    style={{ '--i': i } as React.CSSProperties}
+                  >
+                    <span className={styles.sign} aria-hidden="true">
+                      {SIGN[kind]}
+                    </span>
                     {SR[kind] && <span className="sr-only">{t(SR[kind]!)}</span>}
                     {text}
                   </span>
@@ -164,22 +208,50 @@ const Index: React.FC = () => {
       {/* Tarjetas request / response */}
       <section className={styles.flow} aria-labelledby="flow-title">
         <div className={styles.container}>
-          <h2 id="flow-title" data-reveal>{t('landing.flow.title')}</h2>
+          <h2 id="flow-title" data-reveal>
+            {t('landing.flow.title')}
+          </h2>
           <div className={styles.flowCards}>
-            <article className={`${styles.flowCard} ${styles.reqCard}`} tabIndex={0} aria-label={t('landing.flow.request')} data-reveal>
-              <h3><span className={styles.tag}>{t('landing.flow.request')}</span></h3>
-              <pre><code>
-                <span className={styles.ok}>GET</span> /v1/projects/alpha/users/me{'\n'}
-                <span className={styles.comment}>X-Mockia-API-Key</span>: mk_••••••••
-              </code></pre>
+            <article
+              className={`${styles.flowCard} ${styles.reqCard}`}
+              tabIndex={0}
+              aria-label={t('landing.flow.request')}
+              data-reveal
+            >
+              <h3>
+                <span className={styles.tag}>{t('landing.flow.request')}</span>
+              </h3>
+              <pre>
+                <code>
+                  <span className={styles.ok}>GET</span> /v1/projects/alpha/users/me{'\n'}
+                  <span className={styles.comment}>X-Mockia-API-Key</span>: mk_••••••••
+                </code>
+              </pre>
             </article>
-            <article className={`${styles.flowCard} ${styles.resCard}`} tabIndex={0} aria-label={t('landing.flow.response')} data-reveal>
-              <h3><span className={styles.tag}>{t('landing.flow.response')}</span> <span className={styles.ok}>200 OK</span> <span className={styles.comment}>12ms</span></h3>
-              <pre><code>
-                {'{ '}<span className={styles.key}>"id"</span>: <span className={styles.string}>"usr_9A2FK0"</span>,{'\n'}
-                {'  '}<span className={styles.key}>"name"</span>: <span className={styles.string}>"Alex Rivers"</span>,{'\n'}
-                {'  '}<span className={styles.key}>"role"</span>: <span className={styles.string}>"admin"</span> {'}'}
-              </code></pre>
+            <article
+              className={`${styles.flowCard} ${styles.resCard}`}
+              tabIndex={0}
+              aria-label={t('landing.flow.response')}
+              data-reveal
+            >
+              <h3>
+                <span className={styles.tag}>{t('landing.flow.response')}</span>{' '}
+                <span className={styles.ok}>200 OK</span>{' '}
+                <span className={styles.comment}>12ms</span>
+              </h3>
+              <pre>
+                <code>
+                  {'{ '}
+                  <span className={styles.key}>"id"</span>:{' '}
+                  <span className={styles.string}>"usr_9A2FK0"</span>,{'\n'}
+                  {'  '}
+                  <span className={styles.key}>"name"</span>:{' '}
+                  <span className={styles.string}>"Alex Rivers"</span>,{'\n'}
+                  {'  '}
+                  <span className={styles.key}>"role"</span>:{' '}
+                  <span className={styles.string}>"admin"</span> {'}'}
+                </code>
+              </pre>
             </article>
           </div>
         </div>
@@ -199,11 +271,15 @@ const Index: React.FC = () => {
       {/* Features */}
       <section className={styles.features} aria-labelledby="features-title">
         <div className={styles.container}>
-          <h2 id="features-title" data-reveal>{t('landing.features.title')}</h2>
+          <h2 id="features-title" data-reveal>
+            {t('landing.features.title')}
+          </h2>
           <ul className={styles.featureGrid}>
             {FEATURES.map((f) => (
               <li key={f.id} className={styles.featureCard} data-reveal>
-                <span className={styles.iconBox} aria-hidden="true"><img src={f.icon} alt="" /></span>
+                <span className={styles.iconBox} aria-hidden="true">
+                  <img src={f.icon} alt="" />
+                </span>
                 <h3>{t(`landing.features.${f.id}.title`)}</h3>
                 <p>{t(`landing.features.${f.id}.text`)}</p>
               </li>
@@ -217,7 +293,9 @@ const Index: React.FC = () => {
         <div className={styles.container}>
           <article className={styles.trustCard} data-reveal>
             <div className={styles.trustBody}>
-              <span className={styles.trustIcon} aria-hidden="true"><img src={shieldIcon} alt="" /></span>
+              <span className={styles.trustIcon} aria-hidden="true">
+                <img src={shieldIcon} alt="" />
+              </span>
               <h2 id="team-title">{t('landing.bento.teamTitle')}</h2>
               <p>{t('landing.bento.teamText')}</p>
             </div>
@@ -242,7 +320,7 @@ const Index: React.FC = () => {
         </div>
       </section>
     </div>
-  )
-}
+  );
+};
 
-export default Index
+export default Index;

@@ -1,6 +1,6 @@
-import React from 'react'
-import LegalDocument from './LegalDocument'
+import React from 'react';
+import LegalDocument from './LegalDocument';
 
-const LegalNotice: React.FC = () => <LegalDocument doc="legal" />
+const LegalNotice: React.FC = () => <LegalDocument doc="legal" />;
 
-export default LegalNotice
+export default LegalNotice;

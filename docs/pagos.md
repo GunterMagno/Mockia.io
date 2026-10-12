@@ -24,12 +24,13 @@ Por qué: el código solo habla con la cuenta cuyas claves le des. Mezclar clave
 - [ ] En cada producto, **dos precios recurrentes** en **USD** (los importes que muestra la web están en dólares: ver `PLAN_PRICE_USD` en `@mockia/shared`):
 
   | Producto | Mensual (`interval = month`) | Anual (`interval = year`) |
-  | --- | --- | --- |
-  | Starter | 5 USD | 50 USD |
-  | Pro | 29 USD | 290 USD |
-  | Team | 99 USD | 990 USD |
+  | -------- | ---------------------------- | ------------------------- |
+  | Starter  | 5 USD                        | 50 USD                    |
+  | Pro      | 29 USD                       | 290 USD                   |
+  | Team     | 99 USD                       | 990 USD                   |
 
   El anual es **10 veces el mensual** (dos meses gratis, un 17 % de ahorro): es lo que anuncia la web, calculado en `@mockia/shared` (`ANNUAL_MONTHS_CHARGED`, `ANNUAL_DISCOUNT_PERCENT`). Si cambias un importe en Stripe, cámbialo también en `PLAN_PRICE_USD` (`packages/shared/src/billing.ts`) y reconstruye `@mockia/shared`: Stripe cobra lo que tenga el Price, la web solo anuncia.
+
 - [ ] En **cada uno de los seis precios**, **Tax behavior = Exclusive** (el impuesto se suma al precio mostrado). Es lo que prometen los Términos ("los precios se indican sin impuestos").
 - [ ] En cada producto, **Tax code = `txcd_35000000`** (el código fiscal acordado para el software como servicio). Comprueba en el selector de códigos del producto que ese código sigue siendo el de SaaS que quieres (Stripe distingue algunos usos, p. ej. personal o empresarial) y confírmalo con la gestoría.
 - [ ] Copiar los seis identificadores `price_...` (no `prod_...`) a `STRIPE_PRICE_STARTER_MONTHLY`, `STRIPE_PRICE_STARTER_YEARLY`, `STRIPE_PRICE_PRO`, `STRIPE_PRICE_TEAM`, `STRIPE_PRICE_PRO_YEARLY` y `STRIPE_PRICE_TEAM_YEARLY` (paso 9).
@@ -73,10 +74,11 @@ Por qué: la interfaz envía al usuario al portal para cambiar de plan, cancelar
 
 ### 7. Reintentos de cobro (Smart Retries / dunning)
 
-- [ ] Dashboard → Configuración → Facturación → **Suscripciones y correos electrónicos** (Subscriptions and emails) → **Reintentos de pagos fallidos** (Manage failed payments): activar **Smart Retries** con una ventana de **2 o 3 semanas** (*retry … within 2 weeks* / *3 weeks*). **No elijas "1 semana"**: con esa ventana el último reintento cae entre el día 4 y el 7 y, como al agotarse los reintentos Stripe cancela la suscripción (siguiente punto), la cuenta pasaría a Free **antes** de que terminen los 7 días de gracia que prometen los Términos, y el cliente ya no podría arreglar la tarjeta a tiempo.
-- [ ] En **Si fallan todos los reintentos de pago de una factura** (*If all retries for a payment fail*) elegir **Cancelar la suscripción** (*Cancel the subscription*). No uses "marcar como impagada" ni "dejar vencida": con la suscripción cancelada Stripe deja de cobrar y envía `customer.subscription.deleted`, que deja la cuenta en Free y sin cobros pendientes.
+- [ ] Dashboard → Configuración → Facturación → **Suscripciones y correos electrónicos** (Subscriptions and emails) → **Reintentos de pagos fallidos** (Manage failed payments): activar **Smart Retries** con una ventana de **2 o 3 semanas** (_retry … within 2 weeks_ / _3 weeks_). **No elijas "1 semana"**: con esa ventana el último reintento cae entre el día 4 y el 7 y, como al agotarse los reintentos Stripe cancela la suscripción (siguiente punto), la cuenta pasaría a Free **antes** de que terminen los 7 días de gracia que prometen los Términos, y el cliente ya no podría arreglar la tarjeta a tiempo.
+- [ ] En **Si fallan todos los reintentos de pago de una factura** (_If all retries for a payment fail_) elegir **Cancelar la suscripción** (_Cancel the subscription_). No uses "marcar como impagada" ni "dejar vencida": con la suscripción cancelada Stripe deja de cobrar y envía `customer.subscription.deleted`, que deja la cuenta en Free y sin cobros pendientes.
 
 Cómo encajan las dos cosas (y es la configuración que suponen los Términos): el código degrada la cuenta a Free **al cumplirse 7 días** desde el primer fallo, mientras Stripe sigue reintentando hasta el final de la ventana (2-3 semanas). Si un reintento tardío tiene éxito (`invoice.paid` / `customer.subscription.updated(active)`), la cuenta recupera el plan de pago sola; si fallan todos, Stripe cancela la suscripción y la cuenta queda en Free/`canceled` sin cobros pendientes.
+
 - [ ] En la misma pantalla, activar los correos de "pago fallido" y "tarjeta a punto de caducar" al cliente (Stripe los envía además de los de Mockia).
 
 Por qué: los Términos prometen que, si un cobro falla, la suscripción pasa a `past_due`, se avisa por correo y en la aplicación, Stripe reintenta el cobro y hay **7 días de gracia** antes de pasar a Free. El código cumple su parte (`PAST_DUE_GRACE_DAYS = 7` en `@mockia/shared`); la parte de Stripe (seguir reintentando más allá de la gracia y cancelar al final) solo ocurre si lo configuras aquí con una ventana de al menos 2 semanas.
@@ -102,17 +104,17 @@ Por qué: es la única forma de que el plan del usuario cambie tras pagar, falla
 
 > Esta tabla refleja `handleStripeEvent` en `packages/backend/src/modules/billing/service.ts`. **Suscribe el endpoint a estos nueve eventos** (los de la columna izquierda); cualquier otro se recibe, se responde con 200 y se ignora.
 
-| Evento | Qué hace el código |
-| --- | --- |
-| `checkout.session.completed` | Activa el plan elegido, guarda cliente y suscripción de Stripe y cierra cualquier impago anterior. |
-| `customer.subscription.created` | Sincroniza estado, plan (por el precio) y fin del periodo. |
-| `customer.subscription.updated` | Igual; cubre cambios de plan, cancelación al final del periodo y cambios de estado: `past_due` abre la gracia (si no estaba abierta), `active`/`trialing` la cierra, `unpaid`/`incomplete`/`paused` quedan sin acceso y sin gracia. |
-| `customer.subscription.deleted` | Vuelve al plan Free (`canceled`) y cierra el impago. |
-| `invoice.payment_failed` | Pone `past_due` y abre la gracia de 7 días (solo a usuarios con plan de pago y salvo en la primera factura de la suscripción). Envía un correo (`payment_failed`, en el idioma del usuario, con la fecha límite y enlace a `<APP_URL>/billing`) y crea un aviso en la app, una sola vez por secuencia de impago. |
-| `invoice.paid` | Si el usuario está en `past_due`, vuelve a `active` y borra la gracia (no lo hace si la factura pagada es otra distinta de la que falló). |
-| `invoice.payment_succeeded` | Igual que `invoice.paid` (Stripe envía los dos; el segundo no cambia nada). |
-| `customer.subscription.trial_will_end` | Envía un correo (`trial_will_end`) y un aviso en la app con la fecha en que acaba la prueba. Hoy no hay pruebas configuradas: solo actúa si algún día se añaden. |
-| `charge.refunded` | Solo un aviso en la app con el importe reembolsado. No cambia el plan: si el reembolso acompaña a una cancelación, esta llega como `customer.subscription.deleted`. |
+| Evento                                 | Qué hace el código                                                                                                                                                                                                                                                                                               |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `checkout.session.completed`           | Activa el plan elegido, guarda cliente y suscripción de Stripe y cierra cualquier impago anterior.                                                                                                                                                                                                               |
+| `customer.subscription.created`        | Sincroniza estado, plan (por el precio) y fin del periodo.                                                                                                                                                                                                                                                       |
+| `customer.subscription.updated`        | Igual; cubre cambios de plan, cancelación al final del periodo y cambios de estado: `past_due` abre la gracia (si no estaba abierta), `active`/`trialing` la cierra, `unpaid`/`incomplete`/`paused` quedan sin acceso y sin gracia.                                                                              |
+| `customer.subscription.deleted`        | Vuelve al plan Free (`canceled`) y cierra el impago.                                                                                                                                                                                                                                                             |
+| `invoice.payment_failed`               | Pone `past_due` y abre la gracia de 7 días (solo a usuarios con plan de pago y salvo en la primera factura de la suscripción). Envía un correo (`payment_failed`, en el idioma del usuario, con la fecha límite y enlace a `<APP_URL>/billing`) y crea un aviso en la app, una sola vez por secuencia de impago. |
+| `invoice.paid`                         | Si el usuario está en `past_due`, vuelve a `active` y borra la gracia (no lo hace si la factura pagada es otra distinta de la que falló).                                                                                                                                                                        |
+| `invoice.payment_succeeded`            | Igual que `invoice.paid` (Stripe envía los dos; el segundo no cambia nada).                                                                                                                                                                                                                                      |
+| `customer.subscription.trial_will_end` | Envía un correo (`trial_will_end`) y un aviso en la app con la fecha en que acaba la prueba. Hoy no hay pruebas configuradas: solo actúa si algún día se añaden.                                                                                                                                                 |
+| `charge.refunded`                      | Solo un aviso en la app con el importe reembolsado. No cambia el plan: si el reembolso acompaña a una cancelación, esta llega como `customer.subscription.deleted`.                                                                                                                                              |
 
 Garantías comunes:
 
@@ -126,16 +128,16 @@ Garantías comunes:
 
 Se definen en `.env` (Docker/servidor propio) o en el panel de Render (`render.yaml` las declara con `sync: false`). Plantilla en `.env.example`:
 
-| Variable | Valor |
-| --- | --- |
-| `STRIPE_SECRET_KEY` | Clave secreta `sk_test_...` (prueba) o `sk_live_...` (real). Nunca en el frontend ni en Git. |
-| `STRIPE_WEBHOOK_SECRET` | `whsec_...` del paso 8. |
-| `STRIPE_PRICE_STARTER_MONTHLY` | `price_...` del precio mensual de Starter (5 USD). |
-| `STRIPE_PRICE_STARTER_YEARLY` | `price_...` del precio anual de Starter (50 USD). |
-| `STRIPE_PRICE_PRO` | `price_...` del precio mensual de Pro. |
-| `STRIPE_PRICE_TEAM` | `price_...` del precio mensual de Team. |
-| `STRIPE_PRICE_PRO_YEARLY` | `price_...` del precio anual de Pro (290 USD). |
-| `STRIPE_PRICE_TEAM_YEARLY` | `price_...` del precio anual de Team (990 USD). |
+| Variable                       | Valor                                                                                        |
+| ------------------------------ | -------------------------------------------------------------------------------------------- |
+| `STRIPE_SECRET_KEY`            | Clave secreta `sk_test_...` (prueba) o `sk_live_...` (real). Nunca en el frontend ni en Git. |
+| `STRIPE_WEBHOOK_SECRET`        | `whsec_...` del paso 8.                                                                      |
+| `STRIPE_PRICE_STARTER_MONTHLY` | `price_...` del precio mensual de Starter (5 USD).                                           |
+| `STRIPE_PRICE_STARTER_YEARLY`  | `price_...` del precio anual de Starter (50 USD).                                            |
+| `STRIPE_PRICE_PRO`             | `price_...` del precio mensual de Pro.                                                       |
+| `STRIPE_PRICE_TEAM`            | `price_...` del precio mensual de Team.                                                      |
+| `STRIPE_PRICE_PRO_YEARLY`      | `price_...` del precio anual de Pro (290 USD).                                               |
+| `STRIPE_PRICE_TEAM_YEARLY`     | `price_...` del precio anual de Team (990 USD).                                              |
 
 Una variable vacía cuenta como no configurada. Las tres variables `*_YEARLY` son opcionales: sin ellas el backend arranca y se puede contratar al mes, pero `POST /api/billing/checkout` con `interval: "year"` responde **501** nombrando la variable que falta y la web no ofrece comprar al año ese plan (`yearlyCheckoutAvailable` en `GET /api/billing/me`).
 
@@ -161,13 +163,14 @@ Con el interruptor de prueba activo y las claves `sk_test_...`:
    ```
 
    La CLI imprime un `whsec_...` temporal: ponlo como `STRIPE_WEBHOOK_SECRET` mientras pruebas (es distinto del secreto del endpoint real).
-3. En la web: registra un usuario, **verifica el correo** (el checkout lo exige), ve a *Plan y facturación*, elige **Mensual** o **Anual** con el selector y pulsa Starter, Pro o Team. En el Checkout el importe debe ser el del intervalo elegido; tras pagar, *Plan y facturación* indica "Facturación anual" o "mensual".
+
+3. En la web: registra un usuario, **verifica el correo** (el checkout lo exige), ve a _Plan y facturación_, elige **Mensual** o **Anual** con el selector y pulsa Starter, Pro o Team. En el Checkout el importe debe ser el del intervalo elegido; tras pagar, _Plan y facturación_ indica "Facturación anual" o "mensual".
 4. En el Checkout comprueba: dirección de facturación obligatoria, campo de **NIF-IVA**, casilla de aceptación de los Términos con el texto de acceso inmediato y pérdida del desistimiento, y la línea de **impuestos** calculada según el país.
 5. Tarjetas de prueba (cualquier fecha futura, CVC y código postal):
 
-   | Tarjeta | Resultado |
-   | --- | --- |
-   | `4242 4242 4242 4242` | El pago se completa. |
+   | Tarjeta               | Resultado                                                                                                                                                         |
+   | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+   | `4242 4242 4242 4242` | El pago se completa.                                                                                                                                              |
    | `4000 0000 0000 0341` | Se guarda la tarjeta, pero el cobro **falla**: sirve para probar `past_due`, los reintentos, los avisos y el fin de la gracia (ver "Probar un impago" más abajo). |
 
 6. Comprueba que el usuario pasa al plan elegido (página de facturación) y que `stripe listen` muestra los eventos con respuesta 200.
@@ -179,7 +182,7 @@ Con el interruptor de prueba activo y las claves `sk_test_...`:
 El Checkout no se puede completar con la tarjeta `4000 0000 0000 0341` (el primer cobro falla y la sesión no termina), así que el impago se provoca en una **renovación**:
 
 1. Suscríbete a Pro con `4242 4242 4242 4242` (paso 3 de arriba).
-2. Para controlar el tiempo, usa un **reloj de pruebas** (Dashboard → Facturación → Relojes de prueba / *Test clocks*): crea un reloj, crea en él un cliente con la tarjeta `4242...` y copia su `cus_...` en el campo `stripeCustomerId` del usuario en MongoDB **antes** de suscribirte en la web (el Checkout reutiliza el cliente del usuario). Un cliente creado por el propio Checkout no se puede enganchar a un reloj a posteriori.
+2. Para controlar el tiempo, usa un **reloj de pruebas** (Dashboard → Facturación → Relojes de prueba / _Test clocks_): crea un reloj, crea en él un cliente con la tarjeta `4242...` y copia su `cus_...` en el campo `stripeCustomerId` del usuario en MongoDB **antes** de suscribirte en la web (el Checkout reutiliza el cliente del usuario). Un cliente creado por el propio Checkout no se puede enganchar a un reloj a posteriori.
 3. Cambia el método de pago por defecto del cliente a `4000 0000 0000 0341` (Dashboard → Clientes → el cliente, o desde el portal).
 4. **Avanza el reloj** más de un mes. La renovación falla y debes ver: `invoice.payment_failed` con 200 en `stripe listen`; en la web, el aviso "No hemos podido cobrar tu tarjeta… sigue activo hasta <fecha>" (en Facturación y en el panel), el chip del plan marcado "Pago fallido", un aviso en la campana y un correo `payment_failed` (en desarrollo, el enlace sale en el log del backend; en E2E, en `GET /api/__test__/outbox`).
 5. Avanza el reloj **más de 7 días** más: el plan efectivo pasa a Free (el aviso cambia a "limitada al plan Free") y, al agotarse los reintentos, Stripe cancela la suscripción y llega `customer.subscription.deleted`.

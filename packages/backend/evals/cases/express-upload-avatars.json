@@ -1,11 +1,7 @@
 {
   "id": "express-upload-avatars",
   "description": "Avatar service with a multipart upload endpoint.",
-  "tags": [
-    "express",
-    "upload",
-    "path-params"
-  ],
+  "tags": ["express", "upload", "path-params"],
   "input": {
     "projectTitle": "Avatar Service",
     "userInput": "Mock the avatar endpoints, including the upload.",
@@ -33,21 +29,15 @@
           "summary": "Avatars router using multer",
           "routes": [
             {
-              "methods": [
-                "POST"
-              ],
+              "methods": ["POST"],
               "path": "/avatars"
             },
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/avatars/:userId"
             },
             {
-              "methods": [
-                "DELETE"
-              ],
+              "methods": ["DELETE"],
               "path": "/avatars/:userId"
             }
           ]
@@ -87,10 +77,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "file",
-          "userId"
-        ]
+        "required": ["file", "userId"]
       },
       "responseSchema": {
         "type": "object",
@@ -111,13 +98,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "userId",
-          "url",
-          "mimeType",
-          "sizeBytes",
-          "uploadedAt"
-        ]
+        "required": ["userId", "url", "mimeType", "sizeBytes", "uploadedAt"]
       },
       "examples": [
         {
@@ -170,13 +151,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "userId",
-          "url",
-          "mimeType",
-          "sizeBytes",
-          "uploadedAt"
-        ]
+        "required": ["userId", "url", "mimeType", "sizeBytes", "uploadedAt"]
       },
       "examples": [
         {
@@ -217,10 +192,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "userId",
-          "deleted"
-        ]
+        "required": ["userId", "deleted"]
       },
       "examples": [
         {

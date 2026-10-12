@@ -16,7 +16,9 @@ import { hashApiKey } from '../mock/mockAuth.js';
  */
 export async function migrateLegacyApiKeys(): Promise<number> {
   const collection = ProjectModel.collection;
-  const legacy = await collection.find({ apiKey: { $exists: true } }, { projection: { apiKey: 1 } }).toArray();
+  const legacy = await collection
+    .find({ apiKey: { $exists: true } }, { projection: { apiKey: 1 } })
+    .toArray();
   let migrated = 0;
   for (const doc of legacy) {
     const key = doc.apiKey;
@@ -24,7 +26,12 @@ export async function migrateLegacyApiKeys(): Promise<number> {
       const result = await collection.updateOne(
         { _id: doc._id, apiKey: key },
         {
-          $set: { apiKeyHash: hashApiKey(key), apiKeyPrefix: key.slice(0, 8), apiKeyCreatedAt: new Date(), visibility: 'key' },
+          $set: {
+            apiKeyHash: hashApiKey(key),
+            apiKeyPrefix: key.slice(0, 8),
+            apiKeyCreatedAt: new Date(),
+            visibility: 'key',
+          },
           $unset: { apiKey: '' },
         }
       );

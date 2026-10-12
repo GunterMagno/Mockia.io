@@ -35,13 +35,13 @@ describe('docs/demo.md', () => {
       read('.env.example')
         .split(/\r?\n/)
         .filter((l) => /^#?\s*DEMO_[A-Z0-9_]+=/.test(l))
-        .map((l) => l.replace(/^#?\s*/, '').split('=')[0]),
+        .map((l) => l.replace(/^#?\s*/, '').split('=')[0])
     );
     const inBackendEnvExample = unique(
       read('packages/backend/.env.example')
         .split(/\r?\n/)
         .filter((l) => /^#?\s*DEMO_[A-Z0-9_]+=/.test(l))
-        .map((l) => l.replace(/^#?\s*/, '').split('=')[0]),
+        .map((l) => l.replace(/^#?\s*/, '').split('=')[0])
     );
 
     it('las que cita el documento son exactamente las que lee getDemoConfig (ni de mas ni de menos)', () => {
@@ -55,7 +55,7 @@ describe('docs/demo.md', () => {
           'DEMO_PER_IP_GENERATIONS',
           'DEMO_PER_NET_GENERATIONS',
           'DEMO_POW_BITS',
-        ].sort(),
+        ].sort()
       );
       expect(inDoc).toEqual(inConfig);
     });
@@ -68,7 +68,9 @@ describe('docs/demo.md', () => {
     it('M3 (revision final): los dos .env.example avisan de que rotar DEMO_HMAC_SECRET tambien reinicia los cupos del dia', () => {
       for (const file of ['.env.example', 'packages/backend/.env.example']) {
         const text = read(file);
-        expect(text).toMatch(/rotating it invalidates pending challenges AND resets\s+#?\s*everybody's daily quotas/);
+        expect(text).toMatch(
+          /rotating it invalidates pending challenges AND resets\s+#?\s*everybody's daily quotas/
+        );
         expect(text).not.toMatch(/rotating it only invalidates/);
       }
     });
@@ -101,7 +103,9 @@ describe('docs/demo.md', () => {
       };
       for (const [name, value] of Object.entries(defaults)) {
         // la fila de la tabla de variables: la variable es la primera celda (otras tablas la citan en otras columnas)
-        const row = DOC.split(/\r?\n/).find((l) => l.trim().startsWith('|') && l.split('|')[1]?.trim() === `\`${name}\``);
+        const row = DOC.split(/\r?\n/).find(
+          (l) => l.trim().startsWith('|') && l.split('|')[1]?.trim() === `\`${name}\``
+        );
         expect(row).toBeDefined();
         const cells = row!.split('|').map((c) => c.trim());
         expect(cells[2]).toBe(`\`${value}\``);
@@ -125,11 +129,20 @@ describe('docs/demo.md', () => {
       ['el intento no se devuelve tras salir la peticion al proveedor', /no se devuelve/i],
       ['que mirar si hay abuso', /abuso/i],
       ['los logs del servidor guardan la IP en claro', /logs/i],
-      ['GET /api/demo/availability: anonimo, cacheable y fuera de los limitadores', /\/api\/demo\/availability[\s\S]*cach/],
-      ['/status responde 200 con available false cuando la demo esta apagada', /available:\s*false/],
+      [
+        'GET /api/demo/availability: anonimo, cacheable y fuera de los limitadores',
+        /\/api\/demo\/availability[\s\S]*cach/,
+      ],
+      [
+        '/status responde 200 con available false cuando la demo esta apagada',
+        /available:\s*false/,
+      ],
       ['limite a 0 de generaciones diarias', /DEMO_DAILY_GENERATIONS=0/],
       ['limite a 0 de generaciones por visitante', /DEMO_PER_IP_GENERATIONS=0/],
-      ['el seudonimo por si solo no permite seguirte pero los logs si tienen la IP', /seud[oó]nimo por s[ií] solo/],
+      [
+        'el seudonimo por si solo no permite seguirte pero los logs si tienen la IP',
+        /seud[oó]nimo por s[ií] solo/,
+      ],
       ['los textos legales son un borrador con marcadores [[REVISAR]]', /\[\[REVISAR/],
     ];
     it.each(must)('cubre: %s', (_label, re) => {
@@ -158,21 +171,24 @@ describe('docs/demo.md', () => {
         expect(line).toBeDefined();
         if (forwards) expect(line).toMatch(/S[ÍI] reenv[ií]a/);
         else expect(line).toMatch(/NO reenv[ií]a/);
-      },
+      }
     );
 
     it('un comentario que cita una variable no activa el cable trampa, una variable real si', () => {
       expect(FORWARDS['render.yaml'].test('  # DEMO_ENABLED se activa a mano\n')).toBe(false);
       expect(FORWARDS['render.yaml'].test('      - key: DEMO_ENABLED\n')).toBe(true);
       expect(FORWARDS['docker-compose.prod.yml'].test('      # DEMO_ENABLED: x\n')).toBe(false);
-      expect(FORWARDS['docker-compose.prod.yml'].test('      DEMO_ENABLED: ${DEMO_ENABLED:-}\n')).toBe(true);
+      expect(
+        FORWARDS['docker-compose.prod.yml'].test('      DEMO_ENABLED: ${DEMO_ENABLED:-}\n')
+      ).toBe(true);
     });
   });
 });
 
 describe('textos legales de la demo', () => {
   const LANGS = ['es', 'en', 'zh'] as const;
-  const legal = (lang: string): string => read(`packages/frontend/src/pages/Legal/legalContent/${lang}.ts`);
+  const legal = (lang: string): string =>
+    read(`packages/frontend/src/pages/Legal/legalContent/${lang}.ts`);
 
   it('los tres idiomas llevan el mismo numero de marcadores [[REVISAR]] y el de los logs esta en todos', () => {
     const counts = LANGS.map((l) => (legal(l).match(/\[\[REVISAR:/g) ?? []).length);
@@ -183,7 +199,8 @@ describe('textos legales de la demo', () => {
 
   // Las secciones con id 'demo' (Privacidad, Terminos, Cookies). Cada idioma ya tenia un "30 minutos" no relacionado
   // (el enlace de restablecimiento), asi que la caducidad se busca DENTRO de la seccion de la demo, no en el fichero.
-  const demoSections = (lang: string): string[] => legal(lang).match(/id: ['"]demo['"],[\s\S]*?\n {8}\},\n/g) ?? [];
+  const demoSections = (lang: string): string[] =>
+    legal(lang).match(/id: ['"]demo['"],[\s\S]*?\n {8}\},\n/g) ?? [];
 
   it('Privacidad, Terminos y Cookies tienen cada uno su seccion de la demo en los tres idiomas', () => {
     for (const l of LANGS) expect(demoSections(l)).toHaveLength(3);
@@ -218,9 +235,24 @@ describe('textos legales de la demo', () => {
 
   it('B6: Privacidad y Cookies declaran el id de la demo en el almacenamiento de sesion SOLO al decidir guardar el proyecto, en los tres idiomas', () => {
     const phrases: Record<string, RegExp[]> = {
-      es: [/Solo si decides guardar el proyecto/, /almacenamiento de sesión de esta pestaña/, /hasta que lo reclames o la cierres/, /estrictamente necesario/],
-      en: [/Only if you decide to save the project/, /session storage of this tab/, /until you claim it or close the tab/, /strictly necessary/],
-      zh: [/只有当你决定保存该项目时/, /此标签页的会话存储/, /直到你认领它或关闭该标签页/, /严格必要/],
+      es: [
+        /Solo si decides guardar el proyecto/,
+        /almacenamiento de sesión de esta pestaña/,
+        /hasta que lo reclames o la cierres/,
+        /estrictamente necesario/,
+      ],
+      en: [
+        /Only if you decide to save the project/,
+        /session storage of this tab/,
+        /until you claim it or close the tab/,
+        /strictly necessary/,
+      ],
+      zh: [
+        /只有当你决定保存该项目时/,
+        /此标签页的会话存储/,
+        /直到你认领它或关闭该标签页/,
+        /严格必要/,
+      ],
     };
     for (const l of LANGS) {
       const [privacy, , cookies] = demoSections(l);
@@ -255,7 +287,11 @@ describe('textos legales de la demo', () => {
   });
 
   it('I2 (revision final): Privacidad declara el segundo seudonimo del prefijo /48 (IPv6) en los tres idiomas', () => {
-    const phrase: Record<string, RegExp> = { es: /prefijo \/48/, en: /\/48 prefix/, zh: /\/48 前缀/ };
+    const phrase: Record<string, RegExp> = {
+      es: /prefijo \/48/,
+      en: /\/48 prefix/,
+      zh: /\/48 前缀/,
+    };
     for (const l of LANGS) expect(demoSections(l)[0]).toMatch(phrase[l]);
   });
 
@@ -266,13 +302,19 @@ describe('textos legales de la demo', () => {
       for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
         const full = path.join(dir, entry.name);
         if (entry.isDirectory()) walk(full);
-        else if (/\.(ts|tsx)$/.test(entry.name) && /sessionStorage\s*\.\s*(get|set|remove)Item/.test(fs.readFileSync(full, 'utf8'))) {
+        else if (
+          /\.(ts|tsx)$/.test(entry.name) &&
+          /sessionStorage\s*\.\s*(get|set|remove)Item/.test(fs.readFileSync(full, 'utf8'))
+        ) {
           hits.push(path.relative(root, full).split(path.sep).join('/'));
         }
       }
     };
     walk(root);
-    expect(hits.sort()).toEqual(['components/ui/EmailVerificationBanner/EmailVerificationBanner.tsx', 'services/demoPending.ts']);
+    expect(hits.sort()).toEqual([
+      'components/ui/EmailVerificationBanner/EmailVerificationBanner.tsx',
+      'services/demoPending.ts',
+    ]);
     // y el modulo solo escribe cuando se le pide guardar: la pagina de la demo lo llama unicamente desde el boton de guardar
     const demoPage = read('packages/frontend/src/pages/Demo/Demo.tsx');
     const writes = demoPage.match(/rememberPendingDemo\(/g) ?? [];

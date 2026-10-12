@@ -42,13 +42,21 @@ export async function eraseAiTrainingData(userId: string): Promise<void> {
  *  { granted: true, at } row, `at` is the grant time).
  * @throws AppError 404 when the account no longer exists
  */
-export async function setAiTrainingConsent(userId: string, granted: boolean): Promise<AiConsentState> {
+export async function setAiTrainingConsent(
+  userId: string,
+  granted: boolean
+): Promise<AiConsentState> {
   const user = await UserModel.findById(userId).select('aiTrainingConsent').lean();
   if (!user) throw new AppError('User not found', ErrorCode.NOT_FOUND, 404);
   const current = user.aiTrainingConsent;
 
   if (granted && current?.granted === true) {
-    return { granted: true, at: current.at, grantedAt: current.grantedAt ?? current.at, withdrawnAt: null };
+    return {
+      granted: true,
+      at: current.at,
+      grantedAt: current.grantedAt ?? current.at,
+      withdrawnAt: null,
+    };
   }
 
   const now = new Date();

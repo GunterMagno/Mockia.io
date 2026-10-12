@@ -1,10 +1,7 @@
 {
   "id": "openapi3-petstore-lite",
   "description": "OpenAPI 3.0 spec for a small pet store: paths with {petId} parameters.",
-  "tags": [
-    "openapi3",
-    "path-params"
-  ],
+  "tags": ["openapi3", "path-params"],
   "input": {
     "projectTitle": "Pet Store Lite",
     "userInput": "Generate the mock API from the OpenAPI spec.",
@@ -32,27 +29,19 @@
           "summary": "OpenAPI 3.0.3 \"Pet Store Lite\" v1.0.0. components.schemas.Pet = { id: integer, name: string, tag: string, status: \"available\"|\"sold\" }. NewPet = { name: string, tag: string }.",
           "routes": [
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/pets"
             },
             {
-              "methods": [
-                "POST"
-              ],
+              "methods": ["POST"],
               "path": "/pets"
             },
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/pets/{petId}"
             },
             {
-              "methods": [
-                "DELETE"
-              ],
+              "methods": ["DELETE"],
               "path": "/pets/{petId}"
             }
           ]
@@ -88,12 +77,7 @@
               "type": "string"
             }
           },
-          "required": [
-            "id",
-            "name",
-            "tag",
-            "status"
-          ]
+          "required": ["id", "name", "tag", "status"]
         }
       },
       "examples": [
@@ -124,10 +108,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "name",
-          "tag"
-        ]
+        "required": ["name", "tag"]
       },
       "responseSchema": {
         "type": "object",
@@ -145,12 +126,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "name",
-          "tag",
-          "status"
-        ]
+        "required": ["id", "name", "tag", "status"]
       },
       "examples": [
         {
@@ -192,12 +168,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "name",
-          "tag",
-          "status"
-        ]
+        "required": ["id", "name", "tag", "status"]
       },
       "examples": [
         {
@@ -237,10 +208,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "id",
-          "deleted"
-        ]
+        "required": ["id", "deleted"]
       },
       "examples": [
         {

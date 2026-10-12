@@ -25,7 +25,9 @@
   border-radius: var(--radius-lg);
   background: var(--color-surface-2);
 
-  .confirm { margin-top: var(--spacing-4); }
+  .confirm {
+    margin-top: var(--spacing-4);
+  }
 }
 
 .consentHead {
@@ -77,7 +79,9 @@
     border: 1px solid var(--color-border-strong);
     border-radius: 999px;
     background: var(--color-surface);
-    transition: background-color var(--transition-fast), border-color var(--transition-fast);
+    transition:
+      background-color var(--transition-fast),
+      border-color var(--transition-fast);
   }
 
   &[aria-checked='true']::before {
@@ -106,7 +110,9 @@
   transform: translateY(-50%);
   border-radius: 50%;
   background: var(--color-text);
-  transition: left var(--transition-fast), background-color var(--transition-fast);
+  transition:
+    left var(--transition-fast),
+    background-color var(--transition-fast);
 
   .switch[aria-checked='true'] & {
     left: calc(100% - 1.5rem);
@@ -116,7 +122,9 @@
 
 @media (prefers-reduced-motion: reduce) {
   .switch::before,
-  .switchThumb { transition: none; }
+  .switchThumb {
+    transition: none;
+  }
 }
 
 .row {
@@ -132,7 +140,10 @@
   font-size: var(--text-base);
   font-weight: 600;
   cursor: pointer;
-  transition: border-color var(--transition-fast), background-color var(--transition-fast), opacity var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    background-color var(--transition-fast),
+    opacity var(--transition-fast);
 
   &:focus-visible {
     outline: 2px solid var(--color-accent-text);
@@ -151,7 +162,9 @@
   border: 1px solid var(--color-border);
   color: var(--color-text);
 
-  &:hover:not(:disabled) { border-color: var(--color-border-strong); }
+  &:hover:not(:disabled) {
+    border-color: var(--color-border-strong);
+  }
 }
 
 .dangerOutlineBtn {
@@ -160,7 +173,9 @@
   border: 1px solid var(--color-danger);
   color: var(--color-danger);
 
-  &:hover:not(:disabled) { background: var(--color-danger-soft); }
+  &:hover:not(:disabled) {
+    background: var(--color-danger-soft);
+  }
 }
 
 .dangerBtn {
@@ -169,7 +184,9 @@
   border: 1px solid var(--color-danger-solid);
   color: var(--color-on-accent);
 
-  &:hover:not(:disabled) { opacity: 0.9; }
+  &:hover:not(:disabled) {
+    opacity: 0.9;
+  }
 }
 
 .cancelBtn {
@@ -178,7 +195,9 @@
   border: 1px solid transparent;
   color: var(--color-text);
 
-  &:hover:not(:disabled) { text-decoration: underline; }
+  &:hover:not(:disabled) {
+    text-decoration: underline;
+  }
 }
 
 .status,
@@ -188,11 +207,17 @@
   font-weight: 600;
   line-height: 1.5;
 
-  &:empty { display: none; }
+  &:empty {
+    display: none;
+  }
 }
 
-.status { color: var(--color-ok); }
-.error { color: var(--color-danger); }
+.status {
+  color: var(--color-ok);
+}
+.error {
+  color: var(--color-danger);
+}
 
 .confirm {
   display: flex;
@@ -230,7 +255,9 @@
     flex-direction: column-reverse;
   }
 
-  .row { flex-direction: column; }
+  .row {
+    flex-direction: column;
+  }
 
   .secondaryBtn,
   .dangerOutlineBtn,

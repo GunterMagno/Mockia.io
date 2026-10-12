@@ -20,7 +20,10 @@ interface Tokens {
 // The refresh token travels in the HttpOnly `mockia_rt` cookie (never in a JSON body): login/refresh hand it out in
 // Set-Cookie and refresh/logout read it from the Cookie header, guarded by the X-Requested-With CSRF header.
 async function login(): Promise<Tokens> {
-  const res = await request(app).post('/api/auth/login').set('User-Agent', 'jest-agent').send({ email: EMAIL, password: PASSWORD });
+  const res = await request(app)
+    .post('/api/auth/login')
+    .set('User-Agent', 'jest-agent')
+    .send({ email: EMAIL, password: PASSWORD });
   expect(res.status).toBe(200);
   return { accessToken: res.body.data.tokens.accessToken, refreshToken: refreshTokenOf(res)! };
 }
@@ -73,12 +76,22 @@ describe('Auth - sessions with rotated, revocable refresh tokens', () => {
     it('login issues a 15 min access token and a refresh token carrying sub + jti backed by a stored session', async () => {
       const { accessToken, refreshToken } = await login();
 
-      const access = jsonwebtoken.decode(accessToken) as { sub: string; iat: number; exp: number; jti?: string };
+      const access = jsonwebtoken.decode(accessToken) as {
+        sub: string;
+        iat: number;
+        exp: number;
+        jti?: string;
+      };
       expect(access.sub).toBe(userId);
       expect(access.exp - access.iat).toBe(15 * 60);
       expect(access.jti).toBeUndefined();
 
-      const refreshPayload = jsonwebtoken.decode(refreshToken) as { sub: string; jti: string; iat: number; exp: number };
+      const refreshPayload = jsonwebtoken.decode(refreshToken) as {
+        sub: string;
+        jti: string;
+        iat: number;
+        exp: number;
+      };
       expect(refreshPayload.sub).toBe(userId);
       expect(refreshPayload.jti).toEqual(expect.any(String));
       expect(refreshPayload.exp - refreshPayload.iat).toBe(7 * 24 * 3600);
@@ -111,7 +124,10 @@ describe('Auth - sessions with rotated, revocable refresh tokens', () => {
     });
 
     it('rejects a refresh JWT without jti (legacy token) and an access token used as refresh', async () => {
-      const legacy = jsonwebtoken.sign({ sub: userId }, process.env.JWT_REFRESH_SECRET!, { algorithm: 'HS256', expiresIn: '7d' });
+      const legacy = jsonwebtoken.sign({ sub: userId }, process.env.JWT_REFRESH_SECRET!, {
+        algorithm: 'HS256',
+        expiresIn: '7d',
+      });
       expect((await refresh(legacy)).status).toBe(401);
 
       const { accessToken } = await login();
@@ -146,7 +162,10 @@ describe('Auth - sessions with rotated, revocable refresh tokens', () => {
       const second = rotated(await refresh(first.refreshToken));
 
       // Make the first token "used" 11 s ago
-      await RefreshSessionModel.updateOne({ jti: jtiOf(first.refreshToken) }, { usedAt: new Date(Date.now() - 11_000) });
+      await RefreshSessionModel.updateOne(
+        { jti: jtiOf(first.refreshToken) },
+        { usedAt: new Date(Date.now() - 11_000) }
+      );
 
       const reuse = await refresh(first.refreshToken);
       expect(reuse.status).toBe(401);
@@ -179,27 +198,42 @@ describe('Auth - sessions with rotated, revocable refresh tokens', () => {
 
     it('two simultaneous refreshes with the same token both succeed with distinct children', async () => {
       const first = await login();
-      const [r1, r2] = await Promise.all([refresh(first.refreshToken), refresh(first.refreshToken)]);
+      const [r1, r2] = await Promise.all([
+        refresh(first.refreshToken),
+        refresh(first.refreshToken),
+      ]);
       expect(r1.status).toBe(200);
       expect(r2.status).toBe(200);
       expect(jtiOf(refreshTokenOf(r1)!)).not.toBe(jtiOf(refreshTokenOf(r2)!));
-      expect(await RefreshSessionModel.countDocuments({ userId, revokedAt: { $exists: true } })).toBe(0);
+      expect(
+        await RefreshSessionModel.countDocuments({ userId, revokedAt: { $exists: true } })
+      ).toBe(0);
     });
 
     it('rejects an unknown jti, an expired session and a revoked session with a generic 401', async () => {
       const first = await login();
       const refreshSecret = process.env.JWT_REFRESH_SECRET!;
 
-      const unknown = jsonwebtoken.sign({ sub: userId }, refreshSecret, { algorithm: 'HS256', expiresIn: '7d', jwtid: 'does-not-exist' });
+      const unknown = jsonwebtoken.sign({ sub: userId }, refreshSecret, {
+        algorithm: 'HS256',
+        expiresIn: '7d',
+        jwtid: 'does-not-exist',
+      });
       const unknownRes = await refresh(unknown);
       expect(unknownRes.status).toBe(401);
       expect(unknownRes.body.error).toHaveProperty('code', 'UNAUTHORIZED');
 
-      await RefreshSessionModel.updateOne({ jti: jtiOf(first.refreshToken) }, { expiresAt: new Date(Date.now() - 1000) });
+      await RefreshSessionModel.updateOne(
+        { jti: jtiOf(first.refreshToken) },
+        { expiresAt: new Date(Date.now() - 1000) }
+      );
       expect((await refresh(first.refreshToken)).status).toBe(401);
 
       const second = await login();
-      await RefreshSessionModel.updateOne({ jti: jtiOf(second.refreshToken) }, { revokedAt: new Date() });
+      await RefreshSessionModel.updateOne(
+        { jti: jtiOf(second.refreshToken) },
+        { revokedAt: new Date() }
+      );
       const revoked = await refresh(second.refreshToken);
       expect(revoked.status).toBe(401);
       expect(revoked.body.error.message).toBe(unknownRes.body.error.message);
@@ -223,21 +257,28 @@ describe('Auth - sessions with rotated, revocable refresh tokens', () => {
 
       await revokeFamily(familyId);
       await expect(rotateSession(child.jti)).rejects.toBeInstanceOf(AppError);
-      await expect(rotateSession(child.jti)).rejects.toMatchObject({ statusCode: 401, code: 'UNAUTHORIZED' });
+      await expect(rotateSession(child.jti)).rejects.toMatchObject({
+        statusCode: 401,
+        code: 'UNAUTHORIZED',
+      });
     });
 
     it('a revocation that lands between claiming the parent and inserting the child leaves no live token', async () => {
       const { jti, familyId } = await createSession(userId, {});
       // Simulate the race: the family is revoked right before the child is inserted, so the revocation cannot see it
       const realCreate = RefreshSessionModel.create.bind(RefreshSessionModel);
-      const spy = jest.spyOn(RefreshSessionModel, 'create').mockImplementationOnce((async (doc: object) => {
+      const spy = jest.spyOn(RefreshSessionModel, 'create').mockImplementationOnce((async (
+        doc: object
+      ) => {
         await RefreshSessionModel.updateMany({ familyId }, { revokedAt: new Date() });
         return realCreate(doc as never);
       }) as never);
       await expect(rotateSession(jti)).rejects.toMatchObject({ statusCode: 401 });
       spy.mockRestore();
       expect(await RefreshSessionModel.countDocuments({ familyId })).toBe(2);
-      expect(await RefreshSessionModel.countDocuments({ familyId, revokedAt: { $exists: false } })).toBe(0);
+      expect(
+        await RefreshSessionModel.countDocuments({ familyId, revokedAt: { $exists: false } })
+      ).toBe(0);
     });
   });
 
@@ -288,7 +329,9 @@ describe('Auth - sessions with rotated, revocable refresh tokens', () => {
       const rows = res.body.data as Array<Record<string, unknown>>;
       expect(rows).toHaveLength(2);
       const ids = rows.map((r) => r.id);
-      expect(ids).toEqual(expect.arrayContaining([jtiOf(b.refreshToken), jtiOf(rotatedA.refreshToken)]));
+      expect(ids).toEqual(
+        expect.arrayContaining([jtiOf(b.refreshToken), jtiOf(rotatedA.refreshToken)])
+      );
       expect(ids).not.toContain(jtiOf(a.refreshToken)); // used parent is not listed
       for (const row of rows) {
         expect(Object.keys(row).sort()).toEqual(['createdAt', 'current', 'id', 'ip', 'ua']);
@@ -301,8 +344,14 @@ describe('Auth - sessions with rotated, revocable refresh tokens', () => {
       const a = await login();
       const b = await login();
       const c = await login();
-      await RefreshSessionModel.updateOne({ jti: jtiOf(b.refreshToken) }, { revokedAt: new Date() });
-      await RefreshSessionModel.updateOne({ jti: jtiOf(c.refreshToken) }, { expiresAt: new Date(Date.now() - 1000) });
+      await RefreshSessionModel.updateOne(
+        { jti: jtiOf(b.refreshToken) },
+        { revokedAt: new Date() }
+      );
+      await RefreshSessionModel.updateOne(
+        { jti: jtiOf(c.refreshToken) },
+        { expiresAt: new Date(Date.now() - 1000) }
+      );
       await RefreshSessionModel.create({
         jti: 'other-user-session',
         familyId: 'other-family',
@@ -310,7 +359,9 @@ describe('Auth - sessions with rotated, revocable refresh tokens', () => {
         expiresAt: new Date(Date.now() + 60_000),
       });
 
-      const res = await request(app).get('/api/auth/sessions').set('Authorization', `Bearer ${a.accessToken}`);
+      const res = await request(app)
+        .get('/api/auth/sessions')
+        .set('Authorization', `Bearer ${a.accessToken}`);
       expect(res.body.data.map((r: { id: string }) => r.id)).toEqual([jtiOf(a.refreshToken)]);
     });
 
@@ -318,12 +369,16 @@ describe('Auth - sessions with rotated, revocable refresh tokens', () => {
       const a = await login();
       const b = await login();
 
-      const out = await request(app).post('/api/auth/logout-all').set('Authorization', `Bearer ${a.accessToken}`);
+      const out = await request(app)
+        .post('/api/auth/logout-all')
+        .set('Authorization', `Bearer ${a.accessToken}`);
       expect(out.status).toBe(204);
       expect((await refresh(a.refreshToken)).status).toBe(401);
       expect((await refresh(b.refreshToken)).status).toBe(401);
 
-      const list = await request(app).get('/api/auth/sessions').set('Authorization', `Bearer ${a.accessToken}`);
+      const list = await request(app)
+        .get('/api/auth/sessions')
+        .set('Authorization', `Bearer ${a.accessToken}`);
       expect(list.body.data).toEqual([]);
     });
   });
@@ -362,7 +417,9 @@ describe('Auth - sessions with rotated, revocable refresh tokens', () => {
       expect(newRefresh).toEqual(expect.any(String));
 
       // The new access token works and the new cookie renews the session
-      const me = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${res.body.data.accessToken}`);
+      const me = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${res.body.data.accessToken}`);
       expect(me.status).toBe(200);
       expect((await refresh(newRefresh!)).status).toBe(200);
       // The other device is out
@@ -370,7 +427,9 @@ describe('Auth - sessions with rotated, revocable refresh tokens', () => {
     });
 
     it('keeps the "remember me" choice of the caller when its cookie is sent', async () => {
-      const res0 = await request(app).post('/api/auth/login').send({ email: EMAIL, password: PASSWORD, remember: true });
+      const res0 = await request(app)
+        .post('/api/auth/login')
+        .send({ email: EMAIL, password: PASSWORD, remember: true });
       const res = await request(app)
         .post('/api/users/change-password')
         .set('Authorization', `Bearer ${res0.body.data.tokens.accessToken}`)

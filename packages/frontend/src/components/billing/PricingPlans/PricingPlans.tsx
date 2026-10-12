@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   ANNUAL_DISCOUNT_PERCENT,
   BILLING_INTERVALS,
@@ -11,59 +11,68 @@ import {
   type BillingOverview,
   type PaidPlan,
   type Plan,
-} from '@mockia/shared'
-import { useAuth } from '../../../contexts/AuthContext'
-import { htmlLangOf, useI18n } from '../../../i18n/I18nProvider'
-import { PATHS } from '../../../routes/paths'
-import { LEGAL_ENTITY } from '../../../pages/Legal/legalConfig'
-import styles from './PricingPlans.module.scss'
+} from '@mockia/shared';
+import { useAuth } from '../../../contexts/AuthContext';
+import { htmlLangOf, useI18n } from '../../../i18n/I18nProvider';
+import { PATHS } from '../../../routes/paths';
+import { LEGAL_ENTITY } from '../../../pages/Legal/legalConfig';
+import styles from './PricingPlans.module.scss';
 
-type Busy = Plan | 'portal' | null
+type Busy = Plan | 'portal' | null;
 
 type Props = {
   /** public: landing (lleva a registro / facturacion). app: pagina de facturacion (checkout o portal). */
-  mode: 'public' | 'app'
-  overview?: BillingOverview | null
+  mode: 'public' | 'app';
+  overview?: BillingOverview | null;
   /** Plan resaltado (p. ej. el elegido en la landing antes de registrarse). */
-  highlight?: PaidPlan | null
+  highlight?: PaidPlan | null;
   /** Intervalo preseleccionado (p. ej. el elegido en la landing); por defecto el que ya paga el usuario, o el mensual. */
-  initialInterval?: BillingInterval | null
-  busy?: Busy
-  onCheckout?: (plan: PaidPlan, interval: BillingInterval) => void
+  initialInterval?: BillingInterval | null;
+  busy?: Busy;
+  onCheckout?: (plan: PaidPlan, interval: BillingInterval) => void;
   /** Abre el portal de Stripe; recibe el plan de la tarjeta que lo pidio (para marcarla como ocupada). */
-  onPortal?: (from: Plan) => void
-}
+  onPortal?: (from: Plan) => void;
+};
 
-type Cta = { label: string; onClick?: () => void; disabled?: boolean; primary?: boolean }
+type Cta = { label: string; onClick?: () => void; disabled?: boolean; primary?: boolean };
 
 /**
  * Correo de contacto de Enterprise: el del titular del servicio (VITE_LEGAL_EMAIL). Sin el (desarrollo) se usa un marcador
  * con dominio `.invalid` (reservado: nunca entrega correo), igual que las paginas legales muestran un marcador visible.
  */
-export const ENTERPRISE_PLACEHOLDER_EMAIL = 'enterprise@mockia.invalid'
+export const ENTERPRISE_PLACEHOLDER_EMAIL = 'enterprise@mockia.invalid';
 
 /** Suscripcion viva o impagada: cambiar de plan se hace en el portal, no con otro checkout. */
-export const hasOpenSubscription = (o: BillingOverview) => o.subscribedPlan !== 'free' && o.billingStatus !== 'canceled'
+export const hasOpenSubscription = (o: BillingOverview) =>
+  o.subscribedPlan !== 'free' && o.billingStatus !== 'canceled';
 
 /** Sin decimales cuando el importe es entero ($29); con dos si no ($24.17). */
-const fractionDigits = (amount: number) => (Number.isInteger(amount) ? 0 : 2)
+const fractionDigits = (amount: number) => (Number.isInteger(amount) ? 0 : 2);
 
 /**
  * El plan de pago mas barato segun el catalogo (precio mensual), o null si hay empate: la etiqueta "Mas economico"
  * solo se pone cuando es verdad por precio, y sigue siendolo si cambia el catalogo.
  */
 export const cheapestPaidPlan = (): PaidPlan | null => {
-  const paid = PLANS.filter((plan): plan is PaidPlan => plan !== 'free')
-  const cheapest = Math.min(...paid.map((plan) => PLAN_PRICE_USD[plan].monthly))
-  const winners = paid.filter((plan) => PLAN_PRICE_USD[plan].monthly === cheapest)
-  return winners.length === 1 ? winners[0] : null
-}
+  const paid = PLANS.filter((plan): plan is PaidPlan => plan !== 'free');
+  const cheapest = Math.min(...paid.map((plan) => PLAN_PRICE_USD[plan].monthly));
+  const winners = paid.filter((plan) => PLAN_PRICE_USD[plan].monthly === cheapest);
+  return winners.length === 1 ? winners[0] : null;
+};
 
-export const PricingPlans: React.FC<Props> = ({ mode, overview, highlight, initialInterval, busy = null, onCheckout, onPortal }) => {
-  const { t, formatNumber, locale } = useI18n()
+export const PricingPlans: React.FC<Props> = ({
+  mode,
+  overview,
+  highlight,
+  initialInterval,
+  busy = null,
+  onCheckout,
+  onPortal,
+}) => {
+  const { t, formatNumber, locale } = useI18n();
   const [interval, setInterval] = useState<BillingInterval>(
     initialInterval ?? (mode === 'app' && overview?.interval ? overview.interval : 'month')
-  )
+  );
 
   const currency = (amount: number) =>
     new Intl.NumberFormat(htmlLangOf(locale), {
@@ -71,92 +80,149 @@ export const PricingPlans: React.FC<Props> = ({ mode, overview, highlight, initi
       currency: 'USD',
       minimumFractionDigits: fractionDigits(amount),
       maximumFractionDigits: fractionDigits(amount),
-    })
+    });
 
   // Importe grande y simbolo pequeno, en el orden de cada idioma ("$29", "29 US$", "US$29")
   const price = (amount: number) => {
-    const nodes: Array<{ kind: 'currency' | 'number'; value: string }> = []
+    const nodes: Array<{ kind: 'currency' | 'number'; value: string }> = [];
     for (const part of currency(amount).formatToParts(amount)) {
-      if (part.type === 'literal') continue // el hueco lo pone el gap del flex, no un espacio a tamano grande
-      const kind = part.type === 'currency' ? 'currency' : 'number'
-      const last = nodes[nodes.length - 1]
-      if (kind === 'number' && last?.kind === 'number') last.value += part.value // "24" + "." + "17" es un solo importe
-      else nodes.push({ kind, value: part.value })
+      if (part.type === 'literal') continue; // el hueco lo pone el gap del flex, no un espacio a tamano grande
+      const kind = part.type === 'currency' ? 'currency' : 'number';
+      const last = nodes[nodes.length - 1];
+      if (kind === 'number' && last?.kind === 'number')
+        last.value += part.value; // "24" + "." + "17" es un solo importe
+      else nodes.push({ kind, value: part.value });
     }
     return nodes.map((n, i) => (
       <span key={i} className={n.kind === 'currency' ? styles.currency : undefined}>
         {n.value}
       </span>
-    ))
-  }
-  const { isAuthenticated } = useAuth()
-  const navigate = useNavigate()
+    ));
+  };
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
 
-  const planName = (plan: Plan) => t(`pricing.plans.${plan}.name`)
-  const requests = (plan: Plan) => t('pricing.features.requests', { n: formatNumber(PLAN_LIMITS[plan].maxMonthlyRequests, { notation: 'compact' }) })
+  const planName = (plan: Plan) => t(`pricing.plans.${plan}.name`);
+  const requests = (plan: Plan) =>
+    t('pricing.features.requests', {
+      n: formatNumber(PLAN_LIMITS[plan].maxMonthlyRequests, { notation: 'compact' }),
+    });
   const projects = (plan: Plan) => {
-    const max = PLAN_LIMITS[plan].maxActiveProjects
-    return Number.isFinite(max) ? t('pricing.features.projects', { count: max }) : t('pricing.features.unlimitedProjects')
-  }
+    const max = PLAN_LIMITS[plan].maxActiveProjects;
+    return Number.isFinite(max)
+      ? t('pricing.features.projects', { count: max })
+      : t('pricing.features.unlimitedProjects');
+  };
 
   // Tope mensual de generaciones de IA: el unico coste variable del servicio, asi que cada plan lo anuncia
   const aiGenerations = (plan: Plan) => {
-    const max = PLAN_LIMITS[plan].maxMonthlyAiGenerations
-    return t('pricing.features.aiGenerations', { count: max, n: formatNumber(max) })
-  }
+    const max = PLAN_LIMITS[plan].maxMonthlyAiGenerations;
+    return t('pricing.features.aiGenerations', { count: max, n: formatNumber(max) });
+  };
 
   const features: Record<Plan, string[]> = {
     // Solo lo que existe. Sin linea de soporte en Free: los Terminos no prometen soporte para ese plan (ruling R15);
     // Starter no lista ninguna linea de soporte: no existe canal de comunidad, y ni correo ni soporte prioritario se prometen (regla de la copia honesta)
-    free: [projects('free'), requests('free'), aiGenerations('free'), t('pricing.features.githubImport')],
-    starter: [t('pricing.features.everythingFree'), projects('starter'), requests('starter'), aiGenerations('starter'), t('pricing.features.cancelAnytime')],
-    pro: [t('pricing.features.everythingFree'), projects('pro'), requests('pro'), aiGenerations('pro'), t('pricing.features.cancelAnytime')],
-    team: [t('pricing.features.everythingPro'), projects('team'), requests('team'), aiGenerations('team'), t('pricing.features.prioritySupport')],
-  }
-  const cheapest = cheapestPaidPlan()
+    free: [
+      projects('free'),
+      requests('free'),
+      aiGenerations('free'),
+      t('pricing.features.githubImport'),
+    ],
+    starter: [
+      t('pricing.features.everythingFree'),
+      projects('starter'),
+      requests('starter'),
+      aiGenerations('starter'),
+      t('pricing.features.cancelAnytime'),
+    ],
+    pro: [
+      t('pricing.features.everythingFree'),
+      projects('pro'),
+      requests('pro'),
+      aiGenerations('pro'),
+      t('pricing.features.cancelAnytime'),
+    ],
+    team: [
+      t('pricing.features.everythingPro'),
+      projects('team'),
+      requests('team'),
+      aiGenerations('team'),
+      t('pricing.features.prioritySupport'),
+    ],
+  };
+  const cheapest = cheapestPaidPlan();
 
   const publicCta = (plan: Plan): Cta => {
     if (plan === 'free') {
       return isAuthenticated
         ? { label: t('pricing.cta.dashboard'), onClick: () => navigate(PATHS.dashboard) }
-        : { label: t('pricing.cta.free'), onClick: () => navigate(PATHS.signup) }
+        : { label: t('pricing.cta.free'), onClick: () => navigate(PATHS.signup) };
     }
     // El intervalo elegido viaja con el plan: tras registrarse (o si ya hay sesion) la facturacion lo recibe y lo preselecciona
-    const target = { pathname: PATHS.billing, search: `?upgrade=${plan}${interval === 'year' ? '&interval=year' : ''}` }
+    const target = {
+      pathname: PATHS.billing,
+      search: `?upgrade=${plan}${interval === 'year' ? '&interval=year' : ''}`,
+    };
     return {
       label: t('pricing.cta.choose', { plan: planName(plan) }),
       primary: plan === 'pro',
       // Sin cuenta: registro y despues vuelve a facturacion con el plan elegido
-      onClick: () => (isAuthenticated ? navigate(target) : navigate(PATHS.signup, { state: { from: target } })),
-    }
-  }
+      onClick: () =>
+        isAuthenticated ? navigate(target) : navigate(PATHS.signup, { state: { from: target } }),
+    };
+  };
 
   const appCta = (plan: Plan, o: BillingOverview): Cta => {
-    const open = hasOpenSubscription(o)
+    const open = hasOpenSubscription(o);
     // Mismo plan pero otro intervalo del que paga: se cambia en el portal
-    if (open && o.interval && plan === o.subscribedPlan && plan !== 'free' && interval !== o.interval) {
+    if (
+      open &&
+      o.interval &&
+      plan === o.subscribedPlan &&
+      plan !== 'free' &&
+      interval !== o.interval
+    ) {
       return {
         label: t('pricing.cta.switchInterval', { interval: t(`pricing.interval.${interval}Adj`) }),
         onClick: () => onPortal?.(plan),
         disabled: !o.canManageBilling,
         primary: true,
-      }
+      };
     }
-    if (plan === o.plan && !(plan === 'free' && open)) return { label: t('pricing.cta.current'), disabled: true }
+    if (plan === o.plan && !(plan === 'free' && open))
+      return { label: t('pricing.cta.current'), disabled: true };
     if (plan === 'free') {
-      return { label: t('pricing.cta.downgrade'), onClick: () => onPortal?.(plan), disabled: !o.canManageBilling }
+      return {
+        label: t('pricing.cta.downgrade'),
+        onClick: () => onPortal?.(plan),
+        disabled: !o.canManageBilling,
+      };
     }
     if (open) {
-      return { label: t('pricing.cta.switchPlan', { plan: planName(plan) }), onClick: () => onPortal?.(plan), disabled: !o.canManageBilling, primary: true }
+      return {
+        label: t('pricing.cta.switchPlan', { plan: planName(plan) }),
+        onClick: () => onPortal?.(plan),
+        disabled: !o.canManageBilling,
+        primary: true,
+      };
     }
-    const available = interval === 'year' ? o.yearlyCheckoutAvailable[plan] : o.checkoutAvailable[plan]
-    if (!available) return { label: t('pricing.cta.unavailable'), disabled: true }
-    return { label: t('pricing.cta.upgrade', { plan: planName(plan) }), onClick: () => onCheckout?.(plan, interval), primary: true }
-  }
+    const available =
+      interval === 'year' ? o.yearlyCheckoutAvailable[plan] : o.checkoutAvailable[plan];
+    if (!available) return { label: t('pricing.cta.unavailable'), disabled: true };
+    return {
+      label: t('pricing.cta.upgrade', { plan: planName(plan) }),
+      onClick: () => onCheckout?.(plan, interval),
+      primary: true,
+    };
+  };
 
-  const contactEmail = LEGAL_ENTITY.email || ENTERPRISE_PLACEHOLDER_EMAIL
-  const enterpriseHref = `mailto:${contactEmail}?subject=${encodeURIComponent(t('pricing.enterprise.mailSubject'))}`
-  const savePercent = formatNumber(ANNUAL_DISCOUNT_PERCENT / 100, { style: 'percent', maximumFractionDigits: 0 })
+  const contactEmail = LEGAL_ENTITY.email || ENTERPRISE_PLACEHOLDER_EMAIL;
+  const enterpriseHref = `mailto:${contactEmail}?subject=${encodeURIComponent(t('pricing.enterprise.mailSubject'))}`;
+  const savePercent = formatNumber(ANNUAL_DISCOUNT_PERCENT / 100, {
+    style: 'percent',
+    maximumFractionDigits: 0,
+  });
 
   return (
     <div className={styles.wrap}>
@@ -170,18 +236,20 @@ export const PricingPlans: React.FC<Props> = ({ mode, overview, highlight, initi
             onClick={() => setInterval(value)}
           >
             {t(`pricing.interval.${value}`)}
-            {value === 'year' && <span className={styles.saveTag}>{t('pricing.save', { percent: savePercent })}</span>}
+            {value === 'year' && (
+              <span className={styles.saveTag}>{t('pricing.save', { percent: savePercent })}</span>
+            )}
           </button>
         ))}
       </div>
 
       <ul className={styles.grid}>
         {PLANS.map((plan) => {
-          const cta = mode === 'app' && overview ? appCta(plan, overview) : publicCta(plan)
-          const isBusy = busy === plan
-          const isCurrent = mode === 'app' && overview?.plan === plan
-          const yearly = interval === 'year' && plan !== 'free'
-          const shown = yearly ? annualMonthlyEquivalentUsd(plan) : PLAN_PRICE_USD[plan].monthly
+          const cta = mode === 'app' && overview ? appCta(plan, overview) : publicCta(plan);
+          const isBusy = busy === plan;
+          const isCurrent = mode === 'app' && overview?.plan === plan;
+          const yearly = interval === 'year' && plan !== 'free';
+          const shown = yearly ? annualMonthlyEquivalentUsd(plan) : PLAN_PRICE_USD[plan].monthly;
           return (
             <li
               key={plan}
@@ -210,9 +278,17 @@ export const PricingPlans: React.FC<Props> = ({ mode, overview, highlight, initi
                 {plan === 'free'
                   ? null
                   : yearly
-                    ? t('pricing.billedYearly', { amount: currency(PLAN_PRICE_USD[plan].annual).format(PLAN_PRICE_USD[plan].annual) })
+                    ? t('pricing.billedYearly', {
+                        amount: currency(PLAN_PRICE_USD[plan].annual).format(
+                          PLAN_PRICE_USD[plan].annual
+                        ),
+                      })
                     : t('pricing.billedMonthly')}
-                {yearly && <span className={styles.saveTag}>{t('pricing.save', { percent: savePercent })}</span>}
+                {yearly && (
+                  <span className={styles.saveTag}>
+                    {t('pricing.save', { percent: savePercent })}
+                  </span>
+                )}
               </p>
               <ul className={styles.features}>
                 {features[plan].map((f) => (
@@ -229,7 +305,7 @@ export const PricingPlans: React.FC<Props> = ({ mode, overview, highlight, initi
                 {isBusy ? t('billing.redirecting') : cta.label}
               </button>
             </li>
-          )
+          );
         })}
 
         {/* Enterprise: sin precio ni checkout, se habla con el titular */}
@@ -254,7 +330,7 @@ export const PricingPlans: React.FC<Props> = ({ mode, overview, highlight, initi
         </li>
       </ul>
     </div>
-  )
-}
+  );
+};
 
-export default PricingPlans
+export default PricingPlans;

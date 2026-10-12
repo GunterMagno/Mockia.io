@@ -72,7 +72,8 @@ async function seedProject(slug: string, opts: { archivedDaysAgo?: number } = {}
   return project;
 }
 
-const counts = async () => Promise.all(COLLECTIONS.map((model) => (model as any).countDocuments({})));
+const counts = async () =>
+  Promise.all(COLLECTIONS.map((model) => (model as any).countDocuments({})));
 
 describe('borrado en cascada de proyectos', () => {
   beforeAll(async () => {
@@ -167,7 +168,9 @@ describe('borrado en cascada de proyectos', () => {
     expect(await cleanupArchivedProjects()).toBe(2);
 
     expect(await counts()).toEqual([2, 2, 2, 2, 2, 2, 2]); // 'recent' y 'active' completos
-    expect(await MockAPIModel.countDocuments({ projectId: { $in: [recent._id, active._id] } })).toBe(2);
+    expect(
+      await MockAPIModel.countDocuments({ projectId: { $in: [recent._id, active._id] } })
+    ).toBe(2);
     expect(await ProjectModel.countDocuments({ slug: { $in: ['old-1', 'old-2'] } })).toBe(0);
   });
 });

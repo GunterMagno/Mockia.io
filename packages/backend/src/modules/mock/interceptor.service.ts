@@ -22,7 +22,8 @@ export type NormalizedConfigDto = {
  * a MAX_DELAY_MS, headers filtrados. Lanza 400 ante valores no numericos o fuera de rango.
  */
 export function normalizeConfigDto(dto: EndpointConfigDto): NormalizedConfigDto {
-  const bad = (field: string) => new AppError(`Invalid value for ${field}`, ErrorCode.VALIDATION_ERROR, 400);
+  const bad = (field: string) =>
+    new AppError(`Invalid value for ${field}`, ErrorCode.VALIDATION_ERROR, 400);
   const out: NormalizedConfigDto = {};
   if (dto.force_status_code !== undefined) {
     const n = dto.force_status_code === null ? 0 : Number(dto.force_status_code);
@@ -64,11 +65,19 @@ export async function setEndpointConfig(
     if (!endpointDoc) throw new AppError('Endpoint not found', ErrorCode.NOT_FOUND, 404);
     const api = await MockAPIModel.findById((endpointDoc as any).mockApiId);
     if (!api || api.projectId.toString() !== projectId) {
-      throw new AppError('Endpoint does not belong to the provided project', ErrorCode.FORBIDDEN, 403);
+      throw new AppError(
+        'Endpoint does not belong to the provided project',
+        ErrorCode.FORBIDDEN,
+        403
+      );
     }
   } else {
     if (mockApi.projectId.toString() !== projectId) {
-      throw new AppError('Endpoint does not belong to the provided project', ErrorCode.FORBIDDEN, 403);
+      throw new AppError(
+        'Endpoint does not belong to the provided project',
+        ErrorCode.FORBIDDEN,
+        403
+      );
     }
   }
 

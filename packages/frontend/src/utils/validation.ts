@@ -1,4 +1,4 @@
-import type { MessageKey } from '../i18n/I18nProvider'
+import type { MessageKey } from '../i18n/I18nProvider';
 
 /**
  * Frontend Validation Utilities

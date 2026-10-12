@@ -1,10 +1,14 @@
-import type { Locale as SharedLocale } from '@mockia/shared'
-import type { Locale } from '../i18n/I18nProvider'
-import { api } from './api'
+import type { Locale as SharedLocale } from '@mockia/shared';
+import type { Locale } from '../i18n/I18nProvider';
+import { api } from './api';
 
 // El idioma del frontend y el que acepta el backend son la misma union: si se desalinean, esto deja de compilar
-type SameLocales = [Locale] extends [SharedLocale] ? ([SharedLocale] extends [Locale] ? true : never) : never
-export const LOCALES_MATCH_BACKEND: SameLocales = true
+type SameLocales = [Locale] extends [SharedLocale]
+  ? [SharedLocale] extends [Locale]
+    ? true
+    : never
+  : never;
+export const LOCALES_MATCH_BACKEND: SameLocales = true;
 
 /**
  * Guarda el idioma preferido en la cuenta (PATCH /users/me/preferences).
@@ -15,5 +19,5 @@ export const LOCALES_MATCH_BACKEND: SameLocales = true
 export function saveLocalePreference(locale: Locale): void {
   api.patch('/users/me/preferences', { locale }).catch(() => {
     // ignorado a proposito
-  })
+  });
 }

@@ -26,7 +26,7 @@ export const parseGithubUrl = asyncHandler(
     const { url } = req.body;
 
     const parsed = parseGitHubUrl(url);
-    
+
     // Verify accessibility
     await checkRepoAccessibility(parsed.owner, parsed.repo);
 

@@ -35,17 +35,27 @@ export function loadCases(dir: string): EvalCase[] {
     .readdirSync(dir)
     .filter((file) => file.endsWith('.json'))
     .sort();
-  return files.map((file) => {
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(fs.readFileSync(path.join(dir, file), 'utf8'));
-    } catch (error) {
-      throw new Error(`Case file ${file} is not valid JSON: ${error instanceof Error ? error.message : String(error)}`);
-    }
-    const c = parsed as Partial<EvalCase>;
-    if (!c || typeof c.id !== 'string' || typeof c.description !== 'string' || !c.input || !Array.isArray(c.expected)) {
-      throw new Error(`Case file ${file} must have id, description, input and expected`);
-    }
-    return c as EvalCase;
-  }).sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  return files
+    .map((file) => {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(fs.readFileSync(path.join(dir, file), 'utf8'));
+      } catch (error) {
+        throw new Error(
+          `Case file ${file} is not valid JSON: ${error instanceof Error ? error.message : String(error)}`
+        );
+      }
+      const c = parsed as Partial<EvalCase>;
+      if (
+        !c ||
+        typeof c.id !== 'string' ||
+        typeof c.description !== 'string' ||
+        !c.input ||
+        !Array.isArray(c.expected)
+      ) {
+        throw new Error(`Case file ${file} must have id, description, input and expected`);
+      }
+      return c as EvalCase;
+    })
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 }

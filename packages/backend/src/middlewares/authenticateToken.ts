@@ -15,21 +15,21 @@ export interface AuthenticatedRequest extends Request {
 
 /**
  * Middleware to authenticate JWT tokens from the Authorization header
- * 
+ *
  * Expected header format: Authorization: Bearer <accessToken>
- * 
+ *
  * Flow:
  * 1. Extract the Authorization header
  * 2. Parse the Bearer token
  * 3. Verify the JWT with verifyAccessToken
  * 4. Attach user info to req.user
  * 5. Call next() to continue to the next middleware/controller
- * 
+ *
  * Errors:
  * - 401 if header is missing
  * - 401 if token format is invalid
  * - 401 if token is invalid or expired
- * 
+ *
  * @param req - Express request
  * @param res - Express response
  * @param next - Express next function
@@ -44,11 +44,7 @@ export function authenticateToken(
     const authHeader = req.headers.authorization;
 
     if (!authHeader) {
-      throw new AppError(
-        'Missing authorization header',
-        ErrorCode.UNAUTHORIZED,
-        401
-      );
+      throw new AppError('Missing authorization header', ErrorCode.UNAUTHORIZED, 401);
     }
 
     // 2. Parse the Bearer token
@@ -77,11 +73,7 @@ export function authenticateToken(
     if (error instanceof AppError) {
       next(error);
     } else {
-      const appError = new AppError(
-        'Invalid or expired token',
-        ErrorCode.UNAUTHORIZED,
-        401
-      );
+      const appError = new AppError('Invalid or expired token', ErrorCode.UNAUTHORIZED, 401);
       next(appError);
     }
   }

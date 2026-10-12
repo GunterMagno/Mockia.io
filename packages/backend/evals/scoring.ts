@@ -26,10 +26,12 @@ export interface Score {
 
 type Json = Record<string, unknown>;
 
-const isRecord = (value: unknown): value is Json => value !== null && typeof value === 'object' && !Array.isArray(value);
+const isRecord = (value: unknown): value is Json =>
+  value !== null && typeof value === 'object' && !Array.isArray(value);
 
 /** `:id`, `{id}` and `{userId}` are all "a path parameter". */
-const isParamSegment = (segment: string) => /^:[^/]+$/.test(segment) || /^\{[^/}]+\}$/.test(segment);
+const isParamSegment = (segment: string) =>
+  /^:[^/]+$/.test(segment) || /^\{[^/}]+\}$/.test(segment);
 
 /**
  * Canonical key of an endpoint: upper-case method plus a path with the host, query string, duplicate and trailing
@@ -78,7 +80,8 @@ interface EndpointLike {
 function endpointsOf(value: unknown): EndpointLike[] {
   if (!isRecord(value) || !Array.isArray(value.endpoints)) return [];
   return value.endpoints.filter(
-    (ep): ep is EndpointLike => isRecord(ep) && typeof ep.method === 'string' && typeof ep.path === 'string'
+    (ep): ep is EndpointLike =>
+      isRecord(ep) && typeof ep.method === 'string' && typeof ep.path === 'string'
   );
 }
 
@@ -106,7 +109,12 @@ function successBody(endpoint: EndpointLike): unknown {
   if (!Array.isArray(endpoint.examples)) return undefined;
   for (const example of endpoint.examples) {
     if (!isRecord(example)) continue;
-    const status = typeof example.statusCode === 'number' ? example.statusCode : typeof example.status === 'number' ? example.status : undefined;
+    const status =
+      typeof example.statusCode === 'number'
+        ? example.statusCode
+        : typeof example.status === 'number'
+          ? example.status
+          : undefined;
     if (status !== undefined && (status < 200 || status >= 300)) continue;
     return bodyOfExample(example);
   }
@@ -143,7 +151,9 @@ function coverage(expected: Map<string, EndpointLike>, actual: Map<string, Endpo
   }
   if (!anyFieldToCheck) return 1;
   if (checks.length === 0) return 0;
-  const shares = checks.map(({ wanted, found }) => wanted.filter((name) => found.has(name)).length / wanted.length);
+  const shares = checks.map(
+    ({ wanted, found }) => wanted.filter((name) => found.has(name)).length / wanted.length
+  );
   return shares.reduce((sum, share) => sum + share, 0) / shares.length;
 }
 
@@ -153,7 +163,8 @@ function coverage(expected: Map<string, EndpointLike>, actual: Map<string, Endpo
  */
 export function scoreOutput(expected: EndpointSpec[], actual: unknown): Score {
   const parsed = parseAnswer(actual);
-  if (parsed === undefined) return { validJson: false, schemaValid: false, methodPathF1: 0, fieldCoverage: 0 };
+  if (parsed === undefined)
+    return { validJson: false, schemaValid: false, methodPathF1: 0, fieldCoverage: 0 };
 
   const expectedByKey = indexByKey(endpointsOf({ endpoints: expected }));
   const actualByKey = indexByKey(endpointsOf(parsed));

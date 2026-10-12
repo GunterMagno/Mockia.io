@@ -8,12 +8,15 @@ html {
   text-size-adjust: 100%;
 }
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
 }
 
 /* clip (no hidden) evita scroll horizontal sin romper position: sticky */
-html, body {
+html,
+body {
   overflow-x: clip;
 }
 
@@ -27,7 +30,10 @@ body {
   color: var(--text);
 }
 
-img, svg, video, canvas {
+img,
+svg,
+video,
+canvas {
   max-width: 100%;
 }
 
@@ -40,7 +46,9 @@ pre {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;

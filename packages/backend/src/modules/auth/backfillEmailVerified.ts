@@ -9,6 +9,9 @@ import { UserModel } from '../../models/User.js';
  * @returns how many users were updated
  */
 export async function backfillEmailVerified(): Promise<number> {
-  const result = await UserModel.updateMany({ emailVerifiedAt: null }, { $set: { emailVerifiedAt: new Date() } });
+  const result = await UserModel.updateMany(
+    { emailVerifiedAt: null },
+    { $set: { emailVerifiedAt: new Date() } }
+  );
   return result.modifiedCount;
 }

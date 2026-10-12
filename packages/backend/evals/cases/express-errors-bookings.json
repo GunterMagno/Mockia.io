@@ -1,12 +1,7 @@
 {
   "id": "express-errors-bookings",
   "description": "Bookings API whose README documents the 400, 401 and 404 answers; the endpoints are what is scored.",
-  "tags": [
-    "express",
-    "errors",
-    "auth",
-    "path-params"
-  ],
+  "tags": ["express", "errors", "auth", "path-params"],
   "input": {
     "projectTitle": "Court Bookings",
     "userInput": "Mock the bookings API including its documented error answers.",
@@ -34,21 +29,15 @@
           "summary": "Bookings router",
           "routes": [
             {
-              "methods": [
-                "POST"
-              ],
+              "methods": ["POST"],
               "path": "/bookings"
             },
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/bookings/:id"
             },
             {
-              "methods": [
-                "DELETE"
-              ],
+              "methods": ["DELETE"],
               "path": "/bookings/:id"
             }
           ]
@@ -94,12 +83,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "court",
-          "startsAt",
-          "durationMinutes",
-          "player"
-        ]
+        "required": ["court", "startsAt", "durationMinutes", "player"]
       },
       "responseSchema": {
         "type": "object",
@@ -120,13 +104,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "court",
-          "startsAt",
-          "durationMinutes",
-          "player"
-        ]
+        "required": ["id", "court", "startsAt", "durationMinutes", "player"]
       },
       "examples": [
         {
@@ -188,13 +166,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "court",
-          "startsAt",
-          "durationMinutes",
-          "player"
-        ]
+        "required": ["id", "court", "startsAt", "durationMinutes", "player"]
       },
       "examples": [
         {
@@ -242,10 +214,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "id",
-          "cancelled"
-        ]
+        "required": ["id", "cancelled"]
       },
       "examples": [
         {

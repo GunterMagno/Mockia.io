@@ -14,7 +14,13 @@ const uniqueEmail = (prefix: string) => `${prefix}${Date.now()}${counter++}@exam
 const fakeGeneration = {
   success: true,
   data: {
-    specification: { apiVersion: '1.0.0', title: 'Gym API', description: 'd', endpoints: [], dataModels: [] },
+    specification: {
+      apiVersion: '1.0.0',
+      title: 'Gym API',
+      description: 'd',
+      endpoints: [],
+      dataModels: [],
+    },
     database: { mockApiId: 'x', endpointsCreated: 1, responsesCreated: 1 },
     usage: { totalTokens: 10 },
     generationId: GENERATION_ID,
@@ -45,12 +51,27 @@ describe('AI feedback: thumbs up / down under a result', () => {
   const title = `Feedback project ${Date.now()}`;
 
   before(() => {
-    cy.request('POST', '/api/auth/register', { email, password: PASSWORD, username: 'fbuser', locale: 'en' }).then(() => {
+    cy.request('POST', '/api/auth/register', {
+      email,
+      password: PASSWORD,
+      username: 'fbuser',
+      locale: 'en',
+    }).then(() => {
       cy.request('POST', '/api/auth/login', { email, password: PASSWORD }).then((res) => {
         const headers = { Authorization: `Bearer ${res.body.data.tokens.accessToken}` };
-        cy.request({ method: 'POST', url: '/api/projects', headers, body: { title, description: 'x' } });
+        cy.request({
+          method: 'POST',
+          url: '/api/projects',
+          headers,
+          body: { title, description: 'x' },
+        });
         // The rating is only offered to users who allowed their generations to be used (R14 drops other votes)
-        cy.request({ method: 'PUT', url: '/api/users/me/ai-consent', headers, body: { granted: true } });
+        cy.request({
+          method: 'PUT',
+          url: '/api/users/me/ai-consent',
+          headers,
+          body: { granted: true },
+        });
       });
     });
     cy.clearCookies();
@@ -58,7 +79,9 @@ describe('AI feedback: thumbs up / down under a result', () => {
 
   beforeEach(() => {
     cy.clearCookies();
-    cy.intercept('POST', '/api/ai/generate-and-save', { statusCode: 200, body: fakeGeneration }).as('generate');
+    cy.intercept('POST', '/api/ai/generate-and-save', { statusCode: 200, body: fakeGeneration }).as(
+      'generate'
+    );
     loginViaUi(email);
   });
 
@@ -77,19 +100,25 @@ describe('AI feedback: thumbs up / down under a result', () => {
     cy.contains('[role="dialog"] h3', 'Endpoints generated').should('be.visible');
     cy.get('[data-ai-feedback]').within(() => {
       cy.contains('Was this useful?').should('be.visible');
-      cy.get('[data-ai-feedback-good]').should('have.attr', 'aria-label', 'Yes, it was useful').and('have.attr', 'aria-pressed', 'false');
+      cy.get('[data-ai-feedback-good]')
+        .should('have.attr', 'aria-label', 'Yes, it was useful')
+        .and('have.attr', 'aria-pressed', 'false');
       cy.get('[data-ai-feedback-bad]').should('have.attr', 'aria-label', 'No, it was not useful');
       cy.get('[role="status"]').should('have.text', '');
     });
 
     cy.get('[data-ai-feedback-good]').click();
-    cy.wait('@feedback').its('request.body').should('deep.equal', { generationId: GENERATION_ID, verdict: 'good' });
+    cy.wait('@feedback')
+      .its('request.body')
+      .should('deep.equal', { generationId: GENERATION_ID, verdict: 'good' });
     cy.get('[data-ai-feedback] [role="status"]').should('have.text', 'Thanks for your feedback!');
     cy.get('[data-ai-feedback-good]').should('have.attr', 'aria-pressed', 'true');
 
     // changing your mind sends the new vote (the server keeps the latest one)
     cy.get('[data-ai-feedback-bad]').click();
-    cy.wait('@feedback').its('request.body').should('deep.equal', { generationId: GENERATION_ID, verdict: 'bad' });
+    cy.wait('@feedback')
+      .its('request.body')
+      .should('deep.equal', { generationId: GENERATION_ID, verdict: 'bad' });
     cy.get('[data-ai-feedback-bad]').should('have.attr', 'aria-pressed', 'true');
     cy.get('[data-ai-feedback-good]').should('have.attr', 'aria-pressed', 'false');
   });
@@ -105,12 +134,19 @@ describe('AI feedback: thumbs up / down under a result', () => {
   });
 
   it('a failed vote shows an alert and can be retried', () => {
-    cy.intercept('POST', '/api/ai/feedback', { statusCode: 500, body: { success: false } }).as('failing');
+    cy.intercept('POST', '/api/ai/feedback', { statusCode: 500, body: { success: false } }).as(
+      'failing'
+    );
     generateInEditor();
     cy.get('[data-ai-feedback-bad]').click();
     cy.wait('@failing');
-    cy.get('[data-ai-feedback] [role="alert"]').should('contain.text', 'could not send your feedback');
-    cy.get('[data-ai-feedback-bad]').should('have.attr', 'aria-pressed', 'false').and('not.be.disabled');
+    cy.get('[data-ai-feedback] [role="alert"]').should(
+      'contain.text',
+      'could not send your feedback'
+    );
+    cy.get('[data-ai-feedback-bad]')
+      .should('have.attr', 'aria-pressed', 'false')
+      .and('not.be.disabled');
 
     cy.intercept('POST', '/api/ai/feedback', { statusCode: 204 }).as('ok');
     cy.get('[data-ai-feedback-bad]').click();
@@ -138,7 +174,9 @@ describe('AI feedback: thumbs up / down under a result', () => {
     cy.wait('@generate');
     cy.contains('button', 'Go to editor').should('be.visible');
     cy.get('[data-ai-feedback-good]').click();
-    cy.wait('@feedback').its('request.body').should('deep.equal', { generationId: GENERATION_ID, verdict: 'good' });
+    cy.wait('@feedback')
+      .its('request.body')
+      .should('deep.equal', { generationId: GENERATION_ID, verdict: 'good' });
   });
 });
 
@@ -149,7 +187,12 @@ describe('AI feedback without consent', () => {
   const title = `No consent project ${Date.now()}`;
 
   before(() => {
-    cy.request('POST', '/api/auth/register', { email, password: PASSWORD, username: 'nofbuser', locale: 'en' }).then(() => {
+    cy.request('POST', '/api/auth/register', {
+      email,
+      password: PASSWORD,
+      username: 'nofbuser',
+      locale: 'en',
+    }).then(() => {
       cy.request('POST', '/api/auth/login', { email, password: PASSWORD }).then((res) => {
         cy.request({
           method: 'POST',
@@ -164,7 +207,9 @@ describe('AI feedback without consent', () => {
 
   it('shows no thumbs but a link to the consent setting, which opens Profile -> My data', () => {
     cy.clearCookies();
-    cy.intercept('POST', '/api/ai/generate-and-save', { statusCode: 200, body: fakeGeneration }).as('generate');
+    cy.intercept('POST', '/api/ai/generate-and-save', { statusCode: 200, body: fakeGeneration }).as(
+      'generate'
+    );
     cy.intercept('POST', '/api/ai/feedback').as('feedback');
     loginViaUi(email);
     cy.contains(title).click();
@@ -180,7 +225,10 @@ describe('AI feedback without consent', () => {
       .should('have.attr', 'href', '/dashboard?profile=data')
       .then(($a) => cy.visit($a.attr('href')!));
     cy.get('[role="dialog"]').should('be.visible');
-    cy.get('[data-ai-consent-switch]').scrollIntoView().should('be.visible').and('have.attr', 'aria-checked', 'false');
+    cy.get('[data-ai-consent-switch]')
+      .scrollIntoView()
+      .should('be.visible')
+      .and('have.attr', 'aria-checked', 'false');
     cy.location('search').should('eq', '');
     cy.get('@feedback.all').should('have.length', 0);
   });
@@ -194,20 +242,33 @@ describe('AI consent: optional, off by default, withdrawal asks first', () => {
 
   it('is off by default; turning it on and off calls the API, explains the deletion and announces the result', () => {
     const email = uniqueEmail('consent');
-    cy.request('POST', '/api/auth/register', { email, password: PASSWORD, username: 'consentuser', locale: 'en' });
+    cy.request('POST', '/api/auth/register', {
+      email,
+      password: PASSWORD,
+      username: 'consentuser',
+      locale: 'en',
+    });
     loginViaUi(email);
     cy.intercept('PUT', '/api/users/me/ai-consent').as('consent');
     openProfile();
 
-    cy.contains('[role="dialog"] h4', 'Help improve Mockia’s AI with my generations (optional)').scrollIntoView().should('be.visible');
+    cy.contains('[role="dialog"] h4', 'Help improve Mockia’s AI with my generations (optional)')
+      .scrollIntoView()
+      .should('be.visible');
     cy.get('[data-ai-consent-switch]')
       .should('have.attr', 'role', 'switch')
       .and('have.attr', 'aria-checked', 'false')
       .and('have.attr', 'aria-labelledby')
       .and('not.be.empty');
     // short explanation + link to the privacy section
-    cy.get('[data-ai-consent]').should('contain.text', 'off by default').and('contain.text', 'repository and project names').and('contain.text', 'not detected');
-    cy.get('[data-ai-consent] a[href="/privacy#ai-training"]').should('have.attr', 'target', '_blank').and('have.attr', 'rel').and('contain', 'noopener');
+    cy.get('[data-ai-consent]')
+      .should('contain.text', 'off by default')
+      .and('contain.text', 'repository and project names')
+      .and('contain.text', 'not detected');
+    cy.get('[data-ai-consent] a[href="/privacy#ai-training"]')
+      .should('have.attr', 'target', '_blank')
+      .and('have.attr', 'rel')
+      .and('contain', 'noopener');
 
     // on: immediate, announced
     cy.get('[data-ai-consent-switch]').click();
@@ -233,7 +294,9 @@ describe('AI consent: optional, off by default, withdrawal asks first', () => {
       .and('contain.text', 'cannot be undone');
     cy.contains('[data-ai-consent] button', 'Keep it on').should('be.focused').click();
     cy.get('[data-ai-consent] [role="group"]').should('not.exist');
-    cy.get('[data-ai-consent-switch]').should('have.attr', 'aria-checked', 'true').and('be.focused');
+    cy.get('[data-ai-consent-switch]')
+      .should('have.attr', 'aria-checked', 'true')
+      .and('be.focused');
 
     cy.get('[data-ai-consent-switch]').click();
     cy.get('[data-ai-consent-confirm]').click();
@@ -248,27 +311,44 @@ describe('AI consent: optional, off by default, withdrawal asks first', () => {
 
   it('a failed save keeps the switch where it was and shows an alert', () => {
     const email = uniqueEmail('consentfail');
-    cy.request('POST', '/api/auth/register', { email, password: PASSWORD, username: 'consentfail', locale: 'en' });
+    cy.request('POST', '/api/auth/register', {
+      email,
+      password: PASSWORD,
+      username: 'consentfail',
+      locale: 'en',
+    });
     loginViaUi(email);
-    cy.intercept('PUT', '/api/users/me/ai-consent', { statusCode: 500, body: { success: false, error: { message: 'boom' } } }).as('consent');
+    cy.intercept('PUT', '/api/users/me/ai-consent', {
+      statusCode: 500,
+      body: { success: false, error: { message: 'boom' } },
+    }).as('consent');
     openProfile();
     cy.get('[data-ai-consent-switch]').click();
     cy.wait('@consent');
     cy.get('[data-ai-consent] [role="alert"]').should('not.have.text', '');
-    cy.get('[data-ai-consent-switch]').should('have.attr', 'aria-checked', 'false').and('not.be.disabled');
+    cy.get('[data-ai-consent-switch]')
+      .should('have.attr', 'aria-checked', 'false')
+      .and('not.be.disabled');
   });
 
   it('works at 375 px without horizontal overflow and with a 44 px tap target', () => {
     cy.viewport(375, 812);
     const email = uniqueEmail('consentmobile');
-    cy.request('POST', '/api/auth/register', { email, password: PASSWORD, username: 'consentmobile', locale: 'en' });
+    cy.request('POST', '/api/auth/register', {
+      email,
+      password: PASSWORD,
+      username: 'consentmobile',
+      locale: 'en',
+    });
     loginViaUi(email);
     openProfile(true);
-    cy.get('[data-ai-consent-switch]').scrollIntoView().then(($el) => {
-      // layout size (offsetWidth/Height): getBoundingClientRect would include the modal's opening scale animation
-      expect($el[0].offsetHeight).to.be.at.least(44);
-      expect($el[0].offsetWidth).to.be.at.least(44);
-    });
+    cy.get('[data-ai-consent-switch]')
+      .scrollIntoView()
+      .then(($el) => {
+        // layout size (offsetWidth/Height): getBoundingClientRect would include the modal's opening scale animation
+        expect($el[0].offsetHeight).to.be.at.least(44);
+        expect($el[0].offsetWidth).to.be.at.least(44);
+      });
     cy.document().then((doc) => {
       expect(doc.documentElement.scrollWidth).to.be.at.most(doc.documentElement.clientWidth);
     });
@@ -277,7 +357,9 @@ describe('AI consent: optional, off by default, withdrawal asks first', () => {
 
 describe('Privacy page covers the optional AI training', () => {
   const visitIn = (lang: 'es' | 'en' | 'zh', hash = '') =>
-    cy.visit(`/privacy${hash}`, { onBeforeLoad: (win) => win.localStorage.setItem('mockia_locale', lang) });
+    cy.visit(`/privacy${hash}`, {
+      onBeforeLoad: (win) => win.localStorage.setItem('mockia_locale', lang),
+    });
 
   it('es: names the purpose, the legal basis (consentimiento, art. 6.1.a), retention, withdrawal and the untraining limit', () => {
     visitIn('es');
@@ -305,13 +387,22 @@ describe('Privacy page covers the optional AI training', () => {
 
   it('en and zh carry the same section', () => {
     visitIn('en');
-    cy.get('section#ai-training').should('contain.text', 'explicit consent').and('contain.text', '180 days').and('contain.text', 'untrain').and('contain.text', 'Not detected').and('contain.text', 'not stored at all');
+    cy.get('section#ai-training')
+      .should('contain.text', 'explicit consent')
+      .and('contain.text', '180 days')
+      .and('contain.text', 'untrain')
+      .and('contain.text', 'Not detected')
+      .and('contain.text', 'not stored at all');
     visitIn('zh');
     cy.get('section#ai-training').invoke('text').should('match', /同意/).and('match', /180/);
   });
 
   it('the old claim that no processing relies on consent is gone in all three languages', () => {
-    for (const [lang, old] of [['es', 'Hoy ningún tratamiento se basa en tu consentimiento'], ['en', 'Today no processing is based on your consent'], ['zh', '目前没有任何处理基于你的同意']] as const) {
+    for (const [lang, old] of [
+      ['es', 'Hoy ningún tratamiento se basa en tu consentimiento'],
+      ['en', 'Today no processing is based on your consent'],
+      ['zh', '目前没有任何处理基于你的同意'],
+    ] as const) {
       visitIn(lang);
       cy.get('article').invoke('text').should('not.contain', old);
     }

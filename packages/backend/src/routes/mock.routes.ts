@@ -4,7 +4,11 @@
  */
 
 import { Router } from 'express';
-import { resolveRouteHandler, getProjectEndpointsHandler, mockProxyHandler } from '../controllers/mock.controller.js';
+import {
+  resolveRouteHandler,
+  getProjectEndpointsHandler,
+  mockProxyHandler,
+} from '../controllers/mock.controller.js';
 import { authenticateToken } from '../middlewares/authenticateToken.js';
 import { authorizeRole } from '../middlewares/authorizeRole.js';
 import { validate } from '../middlewares/validateRequest.js';
@@ -137,7 +141,4 @@ mockRouter.get(
 // Catch-all route using regex - matches /:projectSlug and /:projectSlug/*
 // Group 1: projectSlug
 // Group 2: optional path
-mockRouter.all(
-  /^\/([^\/]+)(?:\/(.*))?$/,
-  mockProxyHandler
-);
+mockRouter.all(/^\/([^\/]+)(?:\/(.*))?$/, mockProxyHandler);

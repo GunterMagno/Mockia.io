@@ -51,7 +51,8 @@ const MAX_DEPTH = 8;
 /** Estados sin cuerpo: ni `content` en OpenAPI ni `HttpResponse.json` en MSW. */
 export const NO_BODY_STATUSES = new Set([204, 205, 304]);
 
-export const isPlainObject = (v: unknown): v is Json => typeof v === 'object' && v !== null && !Array.isArray(v);
+export const isPlainObject = (v: unknown): v is Json =>
+  typeof v === 'object' && v !== null && !Array.isArray(v);
 
 /** Segmentos de una ruta; `{id}` se acepta como alias de `:id`. */
 export function pathSegments(path: string): string[] {
@@ -68,7 +69,9 @@ const cleanParamName = (raw: string): string => raw.replace(/[{}/]/g, '_') || 'p
 
 /** `/users/:id` => `/users/{id}`. */
 export function toOpenApiPath(path: string): string {
-  const segs = pathSegments(path).map((s) => (s.startsWith(':') ? `{${cleanParamName(s.slice(1))}}` : s));
+  const segs = pathSegments(path).map((s) =>
+    s.startsWith(':') ? `{${cleanParamName(s.slice(1))}}` : s
+  );
   return `/${segs.join('/')}`;
 }
 
@@ -120,7 +123,9 @@ export function looksLikeSchema(value: unknown): value is Json {
   const typeOk =
     typeof type === 'string'
       ? SCHEMA_TYPES.has(type)
-      : Array.isArray(type) && type.length > 0 && type.every((t) => typeof t === 'string' && SCHEMA_TYPES.has(t));
+      : Array.isArray(type) &&
+        type.length > 0 &&
+        type.every((t) => typeof t === 'string' && SCHEMA_TYPES.has(t));
   if (!typeOk) return false;
   if (properties !== undefined && !isPlainObject(properties)) return false;
   if (items !== undefined && !isPlainObject(items)) return false;
@@ -160,13 +165,17 @@ export function exampleFromSchema(schema: unknown, depth = 0): unknown {
       return [exampleFromSchema(schema.items, depth + 1)];
     default: {
       const props = isPlainObject(schema.properties) ? schema.properties : {};
-      return Object.fromEntries(Object.entries(props).map(([k, v]) => [k, exampleFromSchema(v, depth + 1)]));
+      return Object.fromEntries(
+        Object.entries(props).map(([k, v]) => [k, exampleFromSchema(v, depth + 1)])
+      );
     }
   }
 }
 
 /** Cuerpo de peticion de un endpoint (para OpenAPI y Postman), o null si no hay. */
-export function requestBodyOf(endpoint: ExportEndpoint): { schema: unknown; example: unknown } | null {
+export function requestBodyOf(
+  endpoint: ExportEndpoint
+): { schema: unknown; example: unknown } | null {
   const raw = endpoint.requestSchema;
   if (!isPlainObject(raw) || Object.keys(raw).length === 0) return null;
   if (looksLikeSchema(raw)) {
@@ -177,13 +186,22 @@ export function requestBodyOf(endpoint: ExportEndpoint): { schema: unknown; exam
   return { schema: inferSchema(raw), example: raw };
 }
 
-const slugPart = (s: string): string => s.replace(/[^A-Za-z0-9]+/g, ' ').trim().split(' ').filter(Boolean).map((w) => w[0].toUpperCase() + w.slice(1)).join('');
+const slugPart = (s: string): string =>
+  s
+    .replace(/[^A-Za-z0-9]+/g, ' ')
+    .trim()
+    .split(' ')
+    .filter(Boolean)
+    .map((w) => w[0].toUpperCase() + w.slice(1))
+    .join('');
 
 /** Estados validos como clave de respuesta OpenAPI. */
 const validStatus = (n: number): boolean => Number.isInteger(n) && n >= 100 && n <= 599;
 
 const exampleKey = (resp: ExportResponse, index: number, used: Set<string>): string => {
-  const base = (resp.name ?? '').replace(/[^A-Za-z0-9._-]+/g, '_').replace(/^_+|_+$/g, '') || `example_${index + 1}`;
+  const base =
+    (resp.name ?? '').replace(/[^A-Za-z0-9._-]+/g, '_').replace(/^_+|_+$/g, '') ||
+    `example_${index + 1}`;
   let key = base;
   for (let n = 2; used.has(key); n++) key = `${base}_${n}`;
   used.add(key);
@@ -202,14 +220,19 @@ function buildResponses(endpoint: ExportEndpoint): Json {
   const out: Json = {};
   for (const [status, list] of byStatus) {
     const first = list[0];
-    const response: Json = { description: first.description?.trim() || first.name?.trim() || `HTTP ${status}` };
+    const response: Json = {
+      description: first.description?.trim() || first.name?.trim() || `HTTP ${status}`,
+    };
     if (!NO_BODY_STATUSES.has(status)) {
       const used = new Set<string>();
       response.content = {
         'application/json': {
           schema: inferSchema(first.body),
           examples: Object.fromEntries(
-            list.map((resp, i) => [exampleKey(resp, i, used), { ...(resp.name ? { summary: resp.name } : {}), value: resp.body }])
+            list.map((resp, i) => [
+              exampleKey(resp, i, used),
+              { ...(resp.name ? { summary: resp.name } : {}), value: resp.body },
+            ])
           ),
         },
       };
@@ -231,7 +254,8 @@ export function buildOpenApiDocument(project: ExportProject, serverUrl: string):
     if (paths[template][method]) continue; // el mismo metodo+ruta dos veces: OpenAPI solo admite una operacion
 
     let operationId = `${method}${slugPart(template) || 'Root'}`;
-    for (let n = 2; usedOperationIds.has(operationId); n++) operationId = `${method}${slugPart(template) || 'Root'}${n}`;
+    for (let n = 2; usedOperationIds.has(operationId); n++)
+      operationId = `${method}${slugPart(template) || 'Root'}${n}`;
     usedOperationIds.add(operationId);
 
     const operation: Json = { operationId };
@@ -239,7 +263,12 @@ export function buildOpenApiDocument(project: ExportProject, serverUrl: string):
 
     const names = pathParamNames(endpoint.path);
     if (names.length > 0) {
-      operation.parameters = names.map((name) => ({ name, in: 'path', required: true, schema: { type: 'string' } }));
+      operation.parameters = names.map((name) => ({
+        name,
+        in: 'path',
+        required: true,
+        schema: { type: 'string' },
+      }));
     }
 
     const body = requestBodyOf(endpoint);
@@ -253,7 +282,10 @@ export function buildOpenApiDocument(project: ExportProject, serverUrl: string):
     paths[template][method] = operation;
   }
 
-  const info: Json = { title: project.title || project.slug || 'Mockia API', version: project.apiVersion || '1.0.0' };
+  const info: Json = {
+    title: project.title || project.slug || 'Mockia API',
+    version: project.apiVersion || '1.0.0',
+  };
   if (project.description?.trim()) info.description = project.description.trim();
 
   const doc: Json = {

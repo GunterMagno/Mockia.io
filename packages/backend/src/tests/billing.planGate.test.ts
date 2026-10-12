@@ -2,17 +2,36 @@ import type { NextFunction, Request, Response } from 'express';
 
 jest.mock('../models/User.js', () => ({ UserModel: { findById: jest.fn() } }));
 jest.mock('../models/Project.js', () => ({ ProjectModel: { countDocuments: jest.fn() } }));
-jest.mock('../models/Usage.js', () => ({ UsageModel: { findOne: jest.fn(), findOneAndUpdate: jest.fn() } }));
+jest.mock('../models/Usage.js', () => ({
+  UsageModel: { findOne: jest.fn(), findOneAndUpdate: jest.fn() },
+}));
 jest.mock('../modules/mock/mockCache.service.js', () => ({ mockCache: { getProject: jest.fn() } }));
 
 import { UserModel } from '../models/User.js';
 import { ProjectModel } from '../models/Project.js';
 import { UsageModel } from '../models/Usage.js';
 import { mockCache } from '../modules/mock/mockCache.service.js';
-import { PLAN_LIMITS, effectivePlan, getUserPlan, graceEndsAt, invalidatePlanCache } from '../modules/billing/plans.js';
+import {
+  PLAN_LIMITS,
+  effectivePlan,
+  getUserPlan,
+  graceEndsAt,
+  invalidatePlanCache,
+} from '../modules/billing/plans.js';
 import { PAST_DUE_GRACE_DAYS } from '@mockia/shared';
-import { consumeQuota, flushUsage, getMonthlyUsage, periodOf, resetUsage } from '../modules/billing/usage.js';
-import { enforceProjectLimit, extractMockSlug, mockQuotaGate, recordMockRequest } from '../middlewares/planGate.js';
+import {
+  consumeQuota,
+  flushUsage,
+  getMonthlyUsage,
+  periodOf,
+  resetUsage,
+} from '../modules/billing/usage.js';
+import {
+  enforceProjectLimit,
+  extractMockSlug,
+  mockQuotaGate,
+  recordMockRequest,
+} from '../middlewares/planGate.js';
 import { hashApiKey } from '../modules/mock/mockAuth.js';
 
 const findById = UserModel.findById as unknown as jest.Mock;
@@ -31,7 +50,12 @@ const dbKey = (f: { ownerId: string; period: string }) => `${f.ownerId}:${f.peri
 const query = (value: unknown) => ({ select: () => ({ lean: () => Promise.resolve(value) }) });
 
 function makeRes() {
-  const res: any = { statusCode: 200, headers: {} as Record<string, string>, body: undefined, locals: {} };
+  const res: any = {
+    statusCode: 200,
+    headers: {} as Record<string, string>,
+    body: undefined,
+    locals: {},
+  };
   res.status = (c: number) => ((res.statusCode = c), res);
   res.json = (b: unknown) => ((res.body = b), res);
   res.setHeader = (k: string, v: string) => ((res.headers[k] = v), res);
@@ -50,7 +74,9 @@ beforeEach(() => {
   invalidatePlanCache();
   resetUsage();
   usageDb.clear();
-  usageFindOne.mockImplementation((f) => query(usageDb.has(dbKey(f)) ? { requests: usageDb.get(dbKey(f)) } : null));
+  usageFindOne.mockImplementation((f) =>
+    query(usageDb.has(dbKey(f)) ? { requests: usageDb.get(dbKey(f)) } : null)
+  );
   usageInc.mockImplementation((f, update) => {
     usageDb.set(dbKey(f), (usageDb.get(dbKey(f)) ?? 0) + update.$inc.requests);
     return query({ requests: usageDb.get(dbKey(f)) });
@@ -72,10 +98,26 @@ describe('effectivePlan', () => {
     expect(effectivePlan(null)).toBe('free');
   });
   it('matches the tiers of the monetization plan (shared catalog)', () => {
-    expect(PLAN_LIMITS.free).toEqual({ maxActiveProjects: 5, maxMonthlyRequests: 10_000, maxMonthlyAiGenerations: 5 });
-    expect(PLAN_LIMITS.pro).toEqual({ maxActiveProjects: 50, maxMonthlyRequests: 1_000_000, maxMonthlyAiGenerations: 300 });
-    expect(PLAN_LIMITS.team).toEqual({ maxActiveProjects: Infinity, maxMonthlyRequests: 10_000_000, maxMonthlyAiGenerations: 1500 });
-    expect(PLAN_LIMITS.starter).toEqual({ maxActiveProjects: 15, maxMonthlyRequests: 100_000, maxMonthlyAiGenerations: 40 });
+    expect(PLAN_LIMITS.free).toEqual({
+      maxActiveProjects: 5,
+      maxMonthlyRequests: 10_000,
+      maxMonthlyAiGenerations: 5,
+    });
+    expect(PLAN_LIMITS.pro).toEqual({
+      maxActiveProjects: 50,
+      maxMonthlyRequests: 1_000_000,
+      maxMonthlyAiGenerations: 300,
+    });
+    expect(PLAN_LIMITS.team).toEqual({
+      maxActiveProjects: Infinity,
+      maxMonthlyRequests: 10_000_000,
+      maxMonthlyAiGenerations: 1500,
+    });
+    expect(PLAN_LIMITS.starter).toEqual({
+      maxActiveProjects: 15,
+      maxMonthlyRequests: 100_000,
+      maxMonthlyAiGenerations: 40,
+    });
   });
 });
 
@@ -101,7 +143,9 @@ describe('effectivePlan: periodo de gracia del impago', () => {
 
   it('past_due without a known start (legacy rows) has no grace: free', () => {
     expect(effectivePlan({ plan: 'pro', billingStatus: 'past_due' }, at(0))).toBe('free');
-    expect(effectivePlan({ plan: 'pro', billingStatus: 'past_due', pastDueSince: null }, at(0))).toBe('free');
+    expect(
+      effectivePlan({ plan: 'pro', billingStatus: 'past_due', pastDueSince: null }, at(0))
+    ).toBe('free');
   });
 
   it('canceled is free even right after, active ignores pastDueSince', () => {
@@ -110,7 +154,11 @@ describe('effectivePlan: periodo de gracia del impago', () => {
   });
 
   it('defaults "now" to the current time', () => {
-    const recent = { plan: 'pro', billingStatus: 'past_due', pastDueSince: new Date(Date.now() - DAY) };
+    const recent = {
+      plan: 'pro',
+      billingStatus: 'past_due',
+      pastDueSince: new Date(Date.now() - DAY),
+    };
     expect(effectivePlan(recent)).toBe('pro');
     expect(effectivePlan({ ...recent, pastDueSince: new Date(Date.now() - 8 * DAY) })).toBe('free');
   });
@@ -128,7 +176,11 @@ describe('getUserPlan cache vs grace period', () => {
     const now = new Date('2026-10-08T00:00:00Z').getTime();
     const dateNow = jest.spyOn(Date, 'now').mockReturnValue(now);
     // 5 s of grace left, well under the 30 s TTL
-    userIs({ plan: 'pro', billingStatus: 'past_due', pastDueSince: new Date(now - 7 * DAY + 5_000) });
+    userIs({
+      plan: 'pro',
+      billingStatus: 'past_due',
+      pastDueSince: new Date(now - 7 * DAY + 5_000),
+    });
     expect(await getUserPlan('u-grace')).toBe('pro');
 
     dateNow.mockReturnValue(now + 4_000);
@@ -220,7 +272,8 @@ describe('consumeQuota (persistent monthly meter)', () => {
   const owner = '64b000000000000000000001';
 
   it('allows up to the limit, then rejects without counting the rejected calls', async () => {
-    for (let i = 1; i <= 3; i++) expect(await consumeQuota(owner, 3)).toEqual({ allowed: true, used: i });
+    for (let i = 1; i <= 3; i++)
+      expect(await consumeQuota(owner, 3)).toEqual({ allowed: true, used: i });
     expect(await consumeQuota(owner, 3)).toEqual({ allowed: false, used: 3 });
     expect((await consumeQuota(owner, 3)).used).toBe(3);
     expect((await consumeQuota('64b000000000000000000002', 3)).allowed).toBe(true); // other owner unaffected
@@ -245,7 +298,10 @@ describe('consumeQuota (persistent monthly meter)', () => {
 
   it('starts from the persisted total written by other instances', async () => {
     usageDb.set(`${owner}:2026-09`, 9);
-    expect(await consumeQuota(owner, 10, new Date('2026-09-20T00:00:00Z'))).toEqual({ allowed: true, used: 10 });
+    expect(await consumeQuota(owner, 10, new Date('2026-09-20T00:00:00Z'))).toEqual({
+      allowed: true,
+      used: 10,
+    });
     expect((await consumeQuota(owner, 10, new Date('2026-09-20T00:00:01Z'))).allowed).toBe(false);
   });
 
@@ -261,7 +317,9 @@ describe('consumeQuota (persistent monthly meter)', () => {
 
   it('fails open if Mongo cannot be read', async () => {
     jest.spyOn(console, 'error').mockImplementation(() => undefined);
-    usageFindOne.mockImplementation(() => ({ select: () => ({ lean: () => Promise.reject(new Error('down')) }) }));
+    usageFindOne.mockImplementation(() => ({
+      select: () => ({ lean: () => Promise.reject(new Error('down')) }),
+    }));
     expect((await consumeQuota(owner, 2)).allowed).toBe(true);
   });
 
@@ -269,7 +327,9 @@ describe('consumeQuota (persistent monthly meter)', () => {
     jest.spyOn(console, 'error').mockImplementation(() => undefined);
     const now = new Date('2026-09-15T10:00:00Z');
     await consumeQuota(owner, 10, now);
-    usageInc.mockImplementationOnce(() => ({ select: () => ({ lean: () => Promise.reject(new Error('down')) }) }));
+    usageInc.mockImplementationOnce(() => ({
+      select: () => ({ lean: () => Promise.reject(new Error('down')) }),
+    }));
     await flushUsage();
     expect(usageDb.size).toBe(0);
     await flushUsage();
@@ -306,9 +366,18 @@ describe('extractMockSlug', () => {
 
 describe('mockQuotaGate', () => {
   const ownerId = '64b0000000000000000000aa';
-  const project = { ownerId: { toString: () => ownerId }, visibility: 'key', apiKeyHash: hashApiKey('k1') };
+  const project = {
+    ownerId: { toString: () => ownerId },
+    visibility: 'key',
+    apiKeyHash: hashApiKey('k1'),
+  };
   const call = (over: Record<string, any> = {}) =>
-    run(mockQuotaGate, { method: 'GET', path: '/mock/p/users', headers: { 'x-mockia-api-key': 'k1' }, ...over });
+    run(mockQuotaGate, {
+      method: 'GET',
+      path: '/mock/p/users',
+      headers: { 'x-mockia-api-key': 'k1' },
+      ...over,
+    });
   /** The gate lets it through and the mock handler serves it: that is what counts. */
   const serve = async (over: Record<string, any> = {}) => {
     const out = await call(over);

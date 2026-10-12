@@ -15,7 +15,12 @@ import { tryConsumeDemoBudget } from '../modules/demo/budget.js';
  */
 
 const SECRET = 'demo-test-secret-with-more-than-32-chars!!';
-const KEYS = ['DEMO_ENABLED', 'DEMO_HMAC_SECRET', 'DEMO_DAILY_GENERATIONS', 'DEMO_PER_IP_GENERATIONS'] as const;
+const KEYS = [
+  'DEMO_ENABLED',
+  'DEMO_HMAC_SECRET',
+  'DEMO_DAILY_GENERATIONS',
+  'DEMO_PER_IP_GENERATIONS',
+] as const;
 const saved: Record<string, string | undefined> = {};
 
 describe('demo publica: disponibilidad (GET /api/demo/availability)', () => {
@@ -49,7 +54,8 @@ describe('demo publica: disponibilidad (GET /api/demo/availability)', () => {
     resetDemoApiLimits();
   });
 
-  const get = (ip = '203.0.113.9') => request(app).get('/api/demo/availability').set('X-Forwarded-For', ip);
+  const get = (ip = '203.0.113.9') =>
+    request(app).get('/api/demo/availability').set('X-Forwarded-For', ip);
 
   it('answers { available } and nothing else, publicly cacheable for a minute', async () => {
     const res = await get();
@@ -83,7 +89,7 @@ describe('demo publica: disponibilidad (GET /api/demo/availability)', () => {
     expect(await DemoBudgetModel.countDocuments({})).toBe(0);
   });
 
-  it('does not count against the demo flood guard: many calls from one address never take the visitor\'s own requests', async () => {
+  it("does not count against the demo flood guard: many calls from one address never take the visitor's own requests", async () => {
     const ip = '192.0.2.50';
     for (let i = 0; i < DEMO_API_FLOOD_MAX + 20; i += 1) {
       expect((await get(ip)).status).toBe(200);

@@ -19,7 +19,12 @@ import {
   type AiProviderName,
 } from '../../../config/ai.js';
 import { createOpenAiCompatibleProvider, createOpenRouterProvider } from './openaiCompatible.js';
-import { LlmResponseError, type LlmCompletion, type LlmProvider, type LlmRequest } from './types.js';
+import {
+  LlmResponseError,
+  type LlmCompletion,
+  type LlmProvider,
+  type LlmRequest,
+} from './types.js';
 import { providerOutcomeOf } from './outcome.js';
 
 export { providerOutcomeOf, type ProviderOutcome } from './outcome.js';
@@ -80,7 +85,8 @@ class CircuitBreaker {
   onFailure(): void {
     this.trialInFlight = false;
     this.failures += 1;
-    if (this.failures >= this.options.failureThreshold) this.openUntil = this.now() + this.options.cooldownMs;
+    if (this.failures >= this.options.failureThreshold)
+      this.openUntil = this.now() + this.options.cooldownMs;
   }
 
   /** The call ended for a reason that says nothing about the provider's health (caller abort). */
@@ -125,10 +131,21 @@ function deadlineError(): AppError {
 
 function toServiceError(err: unknown): AppError {
   if (err instanceof AppError) return err;
-  if (err instanceof LlmResponseError && (err.kind === 'invalid_output' || err.kind === 'truncated')) {
-    return new AppError('The AI returned an invalid answer. Please try again.', ErrorCode.EXTERNAL_SERVICE_ERROR, 502);
+  if (
+    err instanceof LlmResponseError &&
+    (err.kind === 'invalid_output' || err.kind === 'truncated')
+  ) {
+    return new AppError(
+      'The AI returned an invalid answer. Please try again.',
+      ErrorCode.EXTERNAL_SERVICE_ERROR,
+      502
+    );
   }
-  return new AppError('AI service temporarily unavailable. Please try again later.', ErrorCode.EXTERNAL_SERVICE_ERROR, 503);
+  return new AppError(
+    'AI service temporarily unavailable. Please try again later.',
+    ErrorCode.EXTERNAL_SERVICE_ERROR,
+    503
+  );
 }
 
 /** HTTP statuses that depend on the request itself (too large, rejected parameters), not on the server's health. */
@@ -153,8 +170,13 @@ async function completeValidated(provider: LlmProvider, req: LlmRequest): Promis
   if (!req.validate) return first;
   const reason = req.validate(first.text);
   if (reason === null) return first;
-  console.warn(`[AI] Provider "${provider.name}" returned an invalid answer (invalid_output); asking it once to repair it`);
-  const second = await callProvider(provider, { ...req, messages: [...req.messages, repairMessage(reason)] });
+  console.warn(
+    `[AI] Provider "${provider.name}" returned an invalid answer (invalid_output); asking it once to repair it`
+  );
+  const second = await callProvider(provider, {
+    ...req,
+    messages: [...req.messages, repairMessage(reason)],
+  });
   if (req.validate(second.text) !== null) throw new LlmResponseError('invalid_output');
   return second;
 }
@@ -172,7 +194,10 @@ async function callProvider(provider: LlmProvider, req: LlmRequest): Promise<Llm
   }
 }
 
-export function createFallbackLlm(entries: FallbackEntry[], options: FallbackOptions = {}): LlmProvider {
+export function createFallbackLlm(
+  entries: FallbackEntry[],
+  options: FallbackOptions = {}
+): LlmProvider {
   const now = options.now ?? Date.now;
   const totalTimeoutMs = options.totalTimeoutMs ?? getAiTotalTimeoutMs();
   const slots = entries.map((entry) => ({
@@ -193,7 +218,9 @@ export function createFallbackLlm(entries: FallbackEntry[], options: FallbackOpt
         if (req.signal?.aborted) throw abortReason(req.signal);
         if (deadline.aborted) throw deadlineError();
         if (breaker && !breaker.tryAcquire()) {
-          console.warn(`[AI] Provider "${provider.name}" skipped (circuit open after repeated failures)`);
+          console.warn(
+            `[AI] Provider "${provider.name}" skipped (circuit open after repeated failures)`
+          );
           continue;
         }
         try {
@@ -210,7 +237,9 @@ export function createFallbackLlm(entries: FallbackEntry[], options: FallbackOpt
           if (INPUT_DEPENDENT_FAILURES.has(classifyFailure(err))) breaker?.onAbandoned();
           else breaker?.onFailure();
           if (deadline.aborted) {
-            console.warn(`[AI] Provider "${provider.name}" cut by the overall deadline (${totalTimeoutMs} ms)`);
+            console.warn(
+              `[AI] Provider "${provider.name}" cut by the overall deadline (${totalTimeoutMs} ms)`
+            );
             throw deadlineError();
           }
           lastError = err;
@@ -256,7 +285,10 @@ export type LlmScope = 'users' | 'demo';
  * The configured provider chain. Cached (the circuit breaker's state must outlive a request) and rebuilt only when the
  * AI_* settings change. Throws if AI_PROVIDERS lists no valid provider.
  */
-export function getLlm(env: NodeJS.ProcessEnv = process.env, scope: LlmScope = 'users'): LlmProvider {
+export function getLlm(
+  env: NodeJS.ProcessEnv = process.env,
+  scope: LlmScope = 'users'
+): LlmProvider {
   const local = getLocalAiConfig(env);
   const totalTimeoutMs = getAiTotalTimeoutMs(env);
   const key = JSON.stringify([scope, env.AI_PROVIDERS ?? '', local, totalTimeoutMs]);

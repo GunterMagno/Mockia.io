@@ -11,7 +11,8 @@ class MemoryCache {
   private cache = new Map<string, CacheEntry<any>>();
   private ttlMs: number;
 
-  constructor(ttlMs = 15000) { // 15 seconds default TTL
+  constructor(ttlMs = 15000) {
+    // 15 seconds default TTL
     this.ttlMs = ttlMs;
   }
 
@@ -116,9 +117,10 @@ class MockCacheService {
     if (cached) return cached;
 
     const query = EndpointModel.find({ mockApiId });
-    const endpoints = typeof (query as any).populate === 'function'
-      ? await (query as any).populate('responses')
-      : await query;
+    const endpoints =
+      typeof (query as any).populate === 'function'
+        ? await (query as any).populate('responses')
+        : await query;
 
     this.cache.set(cacheKey, endpoints);
     return endpoints;

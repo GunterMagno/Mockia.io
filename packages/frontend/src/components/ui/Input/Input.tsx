@@ -25,18 +25,21 @@ export const Input: React.FC<InputProps> = ({ label, error, type, id, className,
 
   const content = (
     <article className={styles.inputWrapper}>
-      <input 
+      <input
         {...rest}
         id={inputId}
-        className={`${styles.input} ${isPassword ? styles.passwordInput : ''} ${className || ''}`} 
-        type={inputType} 
+        className={`${styles.input} ${isPassword ? styles.passwordInput : ''} ${className || ''}`}
+        type={inputType}
         aria-invalid={error ? true : undefined}
-        aria-describedby={[rest['aria-describedby'], error ? errorId : undefined].filter(Boolean).join(' ') || undefined}
+        aria-describedby={
+          [rest['aria-describedby'], error ? errorId : undefined].filter(Boolean).join(' ') ||
+          undefined
+        }
       />
       {isPassword && (
-        <button 
-          type="button" 
-          className={styles.toggleButton} 
+        <button
+          type="button"
+          className={styles.toggleButton}
           onClick={togglePassword}
           tabIndex={-1}
           aria-label={showPassword ? t('input.hidePassword') : t('input.showPassword')}
@@ -51,9 +54,15 @@ export const Input: React.FC<InputProps> = ({ label, error, type, id, className,
 
   return (
     <fieldset className={styles.field}>
-      <label className={styles.label} htmlFor={inputId}>{label}</label>
+      <label className={styles.label} htmlFor={inputId}>
+        {label}
+      </label>
       {content}
-      {error && <span id={errorId} className={styles.error}>{error}</span>}
+      {error && (
+        <span id={errorId} className={styles.error}>
+          {error}
+        </span>
+      )}
     </fieldset>
   );
 };

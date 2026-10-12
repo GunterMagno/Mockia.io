@@ -68,6 +68,9 @@ function rootSecret(env: NodeJS.ProcessEnv): string {
 }
 
 /** Key for one purpose ('demo-pow', 'demo-ip'): the two uses of the root secret never share a key. */
-export function demoKey(label: 'demo-pow' | 'demo-ip', env: NodeJS.ProcessEnv = process.env): Buffer {
+export function demoKey(
+  label: 'demo-pow' | 'demo-ip',
+  env: NodeJS.ProcessEnv = process.env
+): Buffer {
   return crypto.createHmac('sha256', rootSecret(env)).update(label).digest();
 }

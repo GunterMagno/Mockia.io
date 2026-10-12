@@ -17,7 +17,11 @@ const PASSWORD = 'export-test-password-1';
 const API_KEY = 'secret-export-api-key-abc123';
 
 async function createUser(email: string) {
-  return UserModel.create({ email, username: email.split('@')[0], passwordHash: await bcrypt.hash(PASSWORD, 10) });
+  return UserModel.create({
+    email,
+    username: email.split('@')[0],
+    passwordHash: await bcrypt.hash(PASSWORD, 10),
+  });
 }
 
 async function login(email: string) {
@@ -52,7 +56,11 @@ async function seedProject(
     apiKeyPrefix: 'mk_abcdef',
     ...extra,
   });
-  const mockApi = await MockAPIModel.create({ projectId: project._id, title: `Api ${slug}`, apiVersion: '2.3.0' });
+  const mockApi = await MockAPIModel.create({
+    projectId: project._id,
+    title: `Api ${slug}`,
+    apiVersion: '2.3.0',
+  });
   const ids: Types.ObjectId[] = [];
   for (const ep of endpoints) {
     const responseIds: Types.ObjectId[] = [];
@@ -103,7 +111,10 @@ const ROUTES: SeedEndpoint[] = [
     method: 'POST',
     path: '/users',
     description: 'Create a user',
-    requestSchema: { type: 'object', properties: { name: { type: 'string' }, age: { type: 'integer' } } },
+    requestSchema: {
+      type: 'object',
+      properties: { name: { type: 'string' }, age: { type: 'integer' } },
+    },
     responses: [{ statusCode: 201, schema: USER }],
   },
   {
@@ -123,13 +134,25 @@ const ROUTES: SeedEndpoint[] = [
   },
 ];
 
-const ROUTE_KEYS = ['GET /users', 'GET /users/:id', 'POST /users', 'DELETE /users/:id', 'GET /users/:userId/posts/:postId'];
+const ROUTE_KEYS = [
+  'GET /users',
+  'GET /users/:id',
+  'POST /users',
+  'DELETE /users/:id',
+  'GET /users/:userId/posts/:postId',
+];
 
 /** Transpila el TS generado a CommonJS y lo ejecuta contra un `msw` de pega que captura los handlers. */
 async function loadMswHandlers(code: string) {
-  const out = ts.transpileModule(code, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } });
+  const out = ts.transpileModule(code, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  });
   const delays: number[] = [];
-  const registered: Array<{ method: string; path: string; resolver: (info: unknown) => Promise<Response> | Response }> = [];
+  const registered: Array<{
+    method: string;
+    path: string;
+    resolver: (info: unknown) => Promise<Response> | Response;
+  }> = [];
   class HttpResponse extends Response {
     static json(body: unknown, init?: ResponseInit) {
       return Response.json(body, init);
@@ -140,23 +163,36 @@ async function loadMswHandlers(code: string) {
     return { method, path };
   };
   const fakeMsw = {
-    http: { get: mk('GET'), post: mk('POST'), put: mk('PUT'), delete: mk('DELETE'), patch: mk('PATCH') },
+    http: {
+      get: mk('GET'),
+      post: mk('POST'),
+      put: mk('PUT'),
+      delete: mk('DELETE'),
+      patch: mk('PATCH'),
+    },
     HttpResponse,
     delay: async (ms?: number) => {
       delays.push(ms ?? -1);
     },
   };
   const module = { exports: {} as Record<string, unknown> };
-  new Function('require', 'module', 'exports', out.outputText)((id: string) => {
-    if (id !== 'msw') throw new Error(`unexpected import ${id}`);
-    return fakeMsw;
-  }, module, module.exports);
+  new Function('require', 'module', 'exports', out.outputText)(
+    (id: string) => {
+      if (id !== 'msw') throw new Error(`unexpected import ${id}`);
+      return fakeMsw;
+    },
+    module,
+    module.exports
+  );
   expect(Array.isArray(module.exports.handlers)).toBe(true);
   return { registered, delays };
 }
 
 function syntaxErrors(code: string): string[] {
-  const out = ts.transpileModule(code, { reportDiagnostics: true, compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } });
+  const out = ts.transpileModule(code, {
+    reportDiagnostics: true,
+    compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
+  });
   return (out.diagnostics ?? []).map((d) => ts.flattenDiagnosticMessageText(d.messageText, '\n'));
 }
 
@@ -208,8 +244,15 @@ describe('Projects - export (OpenAPI / Postman / MSW)', () => {
         {
           method: 'POST',
           path: '/weird',
-          requestSchema: { $ref: '#/components/schemas/Missing', type: 'object', properties: { a: { $ref: '#/nope' } } },
-          responses: [{ statusCode: 201, schema: { ok: true } }, { statusCode: 400, schema: WEIRD_BODY }],
+          requestSchema: {
+            $ref: '#/components/schemas/Missing',
+            type: 'object',
+            properties: { a: { $ref: '#/nope' } },
+          },
+          responses: [
+            { statusCode: 201, schema: { ok: true } },
+            { statusCode: 400, schema: WEIRD_BODY },
+          ],
         },
       ],
       { title: WEIRD_TITLE, description: 'desc `${x}` </script>' }
@@ -230,16 +273,28 @@ describe('Projects - export (OpenAPI / Postman / MSW)', () => {
       await expect(SwaggerParser.validate(JSON.parse(JSON.stringify(doc)))).resolves.toBeDefined();
 
       expect(doc.openapi).toBe('3.1.0');
-      expect(doc.info).toMatchObject({ title: 'Project shop-api', version: '2.3.0', description: 'Description of shop-api' });
+      expect(doc.info).toMatchObject({
+        title: 'Project shop-api',
+        version: '2.3.0',
+        description: 'Description of shop-api',
+      });
       expect(doc.servers).toHaveLength(1);
       expect(doc.servers[0].url).toMatch(/^https?:\/\/[^/]+(:\d+)?\/api\/mock\/shop-api$/);
 
-      expect(Object.keys(doc.paths).sort()).toEqual(['/users', '/users/{id}', '/users/{userId}/posts/{postId}']);
+      expect(Object.keys(doc.paths).sort()).toEqual([
+        '/users',
+        '/users/{id}',
+        '/users/{userId}/posts/{postId}',
+      ]);
       expect(Object.keys(doc.paths['/users']).sort()).toEqual(['get', 'post']);
       expect(Object.keys(doc.paths['/users/{id}']).sort()).toEqual(['delete', 'get']);
 
-      expect(doc.paths['/users/{id}'].get.parameters).toEqual([{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }]);
-      expect(doc.paths['/users/{userId}/posts/{postId}'].get.parameters.map((p: any) => p.name)).toEqual(['userId', 'postId']);
+      expect(doc.paths['/users/{id}'].get.parameters).toEqual([
+        { name: 'id', in: 'path', required: true, schema: { type: 'string' } },
+      ]);
+      expect(
+        doc.paths['/users/{userId}/posts/{postId}'].get.parameters.map((p: any) => p.name)
+      ).toEqual(['userId', 'postId']);
       expect(doc.paths['/users'].get.parameters).toBeUndefined();
     });
 
@@ -248,23 +303,39 @@ describe('Projects - export (OpenAPI / Postman / MSW)', () => {
       const get = doc.paths['/users/{id}'].get.responses;
       expect(Object.keys(get).sort()).toEqual(['200', '404']);
       expect(get['200'].content['application/json'].examples.example_1.value).toEqual(USER);
-      expect(get['200'].content['application/json'].schema).toMatchObject({ type: 'object', properties: { id: { type: 'integer' }, name: { type: 'string' } } });
-      expect(get['404'].content['application/json'].examples.example_1.value).toEqual({ error: 'Not Found', message: 'No such user' });
+      expect(get['200'].content['application/json'].schema).toMatchObject({
+        type: 'object',
+        properties: { id: { type: 'integer' }, name: { type: 'string' } },
+      });
+      expect(get['404'].content['application/json'].examples.example_1.value).toEqual({
+        error: 'Not Found',
+        message: 'No such user',
+      });
 
       const del = doc.paths['/users/{id}'].delete.responses;
       expect(Object.keys(del).sort()).toEqual(['204', '404']);
       expect(del['204'].content).toBeUndefined();
       expect(del['204'].description).toBeTruthy();
 
-      expect(doc.paths['/users'].get.responses['200'].content['application/json'].schema).toMatchObject({ type: 'array' });
+      expect(
+        doc.paths['/users'].get.responses['200'].content['application/json'].schema
+      ).toMatchObject({ type: 'array' });
     });
 
     it('documents the request body of a POST and unique operationIds', async () => {
       const doc = (await exportOpenApi(project.id)) as any;
       const post = doc.paths['/users'].post;
-      expect(post.requestBody.content['application/json'].schema).toMatchObject({ type: 'object', properties: { age: { type: 'integer' } } });
-      expect(post.requestBody.content['application/json'].example).toEqual({ name: 'string', age: 0 });
-      const ids = Object.values(doc.paths).flatMap((p: any) => Object.values(p).map((op: any) => op.operationId));
+      expect(post.requestBody.content['application/json'].schema).toMatchObject({
+        type: 'object',
+        properties: { age: { type: 'integer' } },
+      });
+      expect(post.requestBody.content['application/json'].example).toEqual({
+        name: 'string',
+        age: 0,
+      });
+      const ids = Object.values(doc.paths).flatMap((p: any) =>
+        Object.values(p).map((op: any) => op.operationId)
+      );
       expect(new Set(ids).size).toBe(ids.length);
       expect(ids).toHaveLength(ROUTE_KEYS.length);
     });
@@ -273,7 +344,11 @@ describe('Projects - export (OpenAPI / Postman / MSW)', () => {
       const doc = await exportOpenApi(project.id);
       const text = JSON.stringify(doc);
       expect(text).not.toContain(API_KEY);
-      expect((doc as any).components.securitySchemes.MockiaApiKey).toEqual({ type: 'apiKey', in: 'header', name: 'X-Mockia-API-Key' });
+      expect((doc as any).components.securitySchemes.MockiaApiKey).toEqual({
+        type: 'apiKey',
+        in: 'header',
+        name: 'X-Mockia-API-Key',
+      });
     });
 
     it('exports a valid empty document for a project without endpoints', async () => {
@@ -285,7 +360,9 @@ describe('Projects - export (OpenAPI / Postman / MSW)', () => {
     it('exports a project that has no MockAPI at all', async () => {
       const owner = await UserModel.findOne({ email: 'owner-exp@example.com' });
       const bare = await ProjectModel.create({
-        title: 'Bare', slug: 'bare-api', ownerId: owner!._id,
+        title: 'Bare',
+        slug: 'bare-api',
+        ownerId: owner!._id,
         members: [{ userId: owner!._id, role: ProjectRoleEnum.OWNER, addedAt: new Date() }],
       });
       const doc = (await exportOpenApi(bare.id)) as any;
@@ -295,7 +372,9 @@ describe('Projects - export (OpenAPI / Postman / MSW)', () => {
     });
 
     it('rejects an unknown project', async () => {
-      await expect(exportOpenApi(new Types.ObjectId().toString())).rejects.toMatchObject({ statusCode: 404 });
+      await expect(exportOpenApi(new Types.ObjectId().toString())).rejects.toMatchObject({
+        statusCode: 404,
+      });
     });
 
     it('survives special characters in title, paths, bodies and a hostile requestSchema', async () => {
@@ -303,7 +382,9 @@ describe('Projects - export (OpenAPI / Postman / MSW)', () => {
       await expect(SwaggerParser.validate(JSON.parse(JSON.stringify(doc)))).resolves.toBeDefined();
       expect(doc.info.title).toBe(WEIRD_TITLE);
       expect(Object.keys(doc.paths)).toContain('/it\'s/"q"/`t`/${x}/{id}');
-      const body = doc.paths['/it\'s/"q"/`t`/${x}/{id}'].get.responses['200'].content['application/json'].examples.example_1.value;
+      const body =
+        doc.paths['/it\'s/"q"/`t`/${x}/{id}'].get.responses['200'].content['application/json']
+          .examples.example_1.value;
       expect(body).toEqual(WEIRD_BODY);
       expect(JSON.stringify(doc.paths['/weird'].post.requestBody)).not.toContain('$ref');
     });
@@ -312,7 +393,9 @@ describe('Projects - export (OpenAPI / Postman / MSW)', () => {
   describe('exportPostman', () => {
     it('is a v2.1 collection with every request, the baseUrl variable and example responses', async () => {
       const col = (await exportPostman(project.id)) as any;
-      expect(col.info.schema).toBe('https://schema.getpostman.com/json/collection/v2.1.0/collection.json');
+      expect(col.info.schema).toBe(
+        'https://schema.getpostman.com/json/collection/v2.1.0/collection.json'
+      );
       expect(col.info.name).toBe('Project shop-api');
       expect(col.info._postman_id).toMatch(/^[0-9a-f-]{36}$/);
 
@@ -323,11 +406,15 @@ describe('Projects - export (OpenAPI / Postman / MSW)', () => {
       const keys = col.item.map((i: any) => `${i.request.method} /${i.request.url.path.join('/')}`);
       expect(keys.sort()).toEqual([...ROUTE_KEYS].sort());
 
-      const getUser = col.item.find((i: any) => i.request.method === 'GET' && i.request.url.path.join('/') === 'users/:id');
+      const getUser = col.item.find(
+        (i: any) => i.request.method === 'GET' && i.request.url.path.join('/') === 'users/:id'
+      );
       expect(getUser.request.url.raw).toBe('{{baseUrl}}/users/:id');
       expect(getUser.request.url.host).toEqual(['{{baseUrl}}']);
       expect(getUser.request.url.variable).toEqual([expect.objectContaining({ key: 'id' })]);
-      expect(getUser.request.header).toEqual(expect.arrayContaining([{ key: 'X-Mockia-API-Key', value: '{{apiKey}}' }]));
+      expect(getUser.request.header).toEqual(
+        expect.arrayContaining([{ key: 'X-Mockia-API-Key', value: '{{apiKey}}' }])
+      );
       expect(getUser.response.map((r: any) => r.code)).toEqual([200, 404]);
       expect(JSON.parse(getUser.response[0].body)).toEqual(USER);
       expect(getUser.response[1].status).toBe('Not Found');
@@ -379,16 +466,42 @@ describe('Projects - export (OpenAPI / Postman / MSW)', () => {
       const original = host.getSourceFile.bind(host);
       host.getSourceFile = (name, lang, ...rest) =>
         name === file ? ts.createSourceFile(name, code, lang) : original(name, lang, ...rest);
-      host.fileExists = ((orig) => (n: string) => n === file || orig(n))(host.fileExists.bind(host));
-      host.readFile = ((orig) => (n: string) => (n === file ? code : orig(n)))(host.readFile.bind(host));
-      const program = ts.createProgram([file], { noEmit: true, strict: true, skipLibCheck: true, moduleResolution: ts.ModuleResolutionKind.Bundler, module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022, lib: ['lib.es2022.d.ts', 'lib.dom.d.ts'], baseUrl: mswDir.replace(/[\\/]msw[\\/]package\.json$/, '') }, host);
-      const diags = ts.getPreEmitDiagnostics(program).map((d) => ts.flattenDiagnosticMessageText(d.messageText, '\n'));
+      host.fileExists = (
+        (orig) => (n: string) =>
+          n === file || orig(n)
+      )(host.fileExists.bind(host));
+      host.readFile = ((orig) => (n: string) => (n === file ? code : orig(n)))(
+        host.readFile.bind(host)
+      );
+      const program = ts.createProgram(
+        [file],
+        {
+          noEmit: true,
+          strict: true,
+          skipLibCheck: true,
+          moduleResolution: ts.ModuleResolutionKind.Bundler,
+          module: ts.ModuleKind.ESNext,
+          target: ts.ScriptTarget.ES2022,
+          lib: ['lib.es2022.d.ts', 'lib.dom.d.ts'],
+          baseUrl: mswDir.replace(/[\\/]msw[\\/]package\.json$/, ''),
+        },
+        host
+      );
+      const diags = ts
+        .getPreEmitDiagnostics(program)
+        .map((d) => ts.flattenDiagnosticMessageText(d.messageText, '\n'));
       expect(diags).toEqual([]);
     });
 
     it('answers like the mock: default response, null body for 204, delay, headers and ?_status variants', async () => {
       const { registered, delays } = await loadMswHandlers(await exportMswHandlers(project.id));
-      const call = async (method: string, path: string, url: string, params: Record<string, string> = {}, headers: Record<string, string> = {}) => {
+      const call = async (
+        method: string,
+        path: string,
+        url: string,
+        params: Record<string, string> = {},
+        headers: Record<string, string> = {}
+      ) => {
         const h = registered.find((r) => r.method === method && r.path === path)!;
         return h.resolver({ request: new Request(url, { headers }), params });
       };
@@ -402,37 +515,77 @@ describe('Projects - export (OpenAPI / Postman / MSW)', () => {
       expect(one.status).toBe(200);
       expect(await one.json()).toEqual(USER);
 
-      const missing = await call('GET', '/users/:id', 'http://localhost/users/1?_status=404', { id: '1' });
+      const missing = await call('GET', '/users/:id', 'http://localhost/users/1?_status=404', {
+        id: '1',
+      });
       expect(missing.status).toBe(404);
       expect(await missing.json()).toEqual({ error: 'Not Found', message: 'No such user' });
-      const byHeader = await call('GET', '/users/:id', 'http://localhost/users/1', { id: '1' }, { 'x-mockia-response-status': '404' });
+      const byHeader = await call(
+        'GET',
+        '/users/:id',
+        'http://localhost/users/1',
+        { id: '1' },
+        { 'x-mockia-response-status': '404' }
+      );
       expect(byHeader.status).toBe(404);
 
       const del = await call('DELETE', '/users/:id', 'http://localhost/users/1', { id: '1' });
       expect(del.status).toBe(204);
       expect(await del.text()).toBe('');
-      const delMissing = await call('DELETE', '/users/:id', 'http://localhost/users/1?_status=404', { id: '1' });
+      const delMissing = await call(
+        'DELETE',
+        '/users/:id',
+        'http://localhost/users/1?_status=404',
+        { id: '1' }
+      );
       expect(delMissing.status).toBe(404);
 
       const created = await call('POST', '/users', 'http://localhost/users');
       expect(created.status).toBe(201);
 
-      const nested = await call('GET', '/users/:userId/posts/:postId', 'http://localhost/users/1/posts/7');
+      const nested = await call(
+        'GET',
+        '/users/:userId/posts/:postId',
+        'http://localhost/users/1/posts/7'
+      );
       expect(nested.headers.get('x-total-count')).toBe('42');
     });
 
     it('applies force_status_code, override_response and jitter of the endpoint config like the mock engine', async () => {
       const owner = await UserModel.findOne({ email: 'owner-exp@example.com' });
       const cfgProject = await seedProject(owner!._id as Types.ObjectId, 'cfg-api', [
-        { method: 'GET', path: '/forced', responses: [{ statusCode: 200, schema: { ok: true } }], config: { force_status_code: 500 } },
-        { method: 'GET', path: '/gone', responses: [{ statusCode: 200, schema: { ok: true } }], config: { force_status_code: 204 } },
-        { method: 'GET', path: '/over', responses: [{ statusCode: 200, schema: { ok: true } }], config: { override_response: { custom: 1 } } },
-        { method: 'GET', path: '/jit', responses: [{ statusCode: 200, schema: {} }], config: { delay_ms: 100, jitter_ms: 40 } },
+        {
+          method: 'GET',
+          path: '/forced',
+          responses: [{ statusCode: 200, schema: { ok: true } }],
+          config: { force_status_code: 500 },
+        },
+        {
+          method: 'GET',
+          path: '/gone',
+          responses: [{ statusCode: 200, schema: { ok: true } }],
+          config: { force_status_code: 204 },
+        },
+        {
+          method: 'GET',
+          path: '/over',
+          responses: [{ statusCode: 200, schema: { ok: true } }],
+          config: { override_response: { custom: 1 } },
+        },
+        {
+          method: 'GET',
+          path: '/jit',
+          responses: [{ statusCode: 200, schema: {} }],
+          config: { delay_ms: 100, jitter_ms: 40 },
+        },
       ]);
       const code = await exportMswHandlers(cfgProject.id);
       expect(syntaxErrors(code)).toEqual([]);
       const { registered, delays } = await loadMswHandlers(code);
-      const call = (path: string) => registered.find((r) => r.path === path)!.resolver({ request: new Request(`http://localhost${path}`), params: {} });
+      const call = (path: string) =>
+        registered
+          .find((r) => r.path === path)!
+          .resolver({ request: new Request(`http://localhost${path}`), params: {} });
       const forced = await call('/forced');
       expect(forced.status).toBe(500);
       expect(((await forced.json()) as { error: string }).error).toBe('Internal Server Error');
@@ -461,18 +614,26 @@ describe('Projects - export (OpenAPI / Postman / MSW)', () => {
       expect(code).not.toContain('</script>');
 
       const { registered } = await loadMswHandlers(code);
-      expect(registered.map((r) => `${r.method} ${r.path}`).sort()).toEqual(['GET /it\'s/"q"/`t`/${x}/:id', 'POST /weird']);
+      expect(registered.map((r) => `${r.method} ${r.path}`).sort()).toEqual([
+        'GET /it\'s/"q"/`t`/${x}/:id',
+        'POST /weird',
+      ]);
       const weird = registered.find((r) => r.method === 'GET')!;
       const res = await weird.resolver({ request: new Request('http://localhost/x'), params: {} });
       expect(await res.json()).toEqual(WEIRD_BODY);
-      const bad = await weird.resolver({ request: new Request('http://localhost/x?_status=200'), params: {} });
+      const bad = await weird.resolver({
+        request: new Request('http://localhost/x?_status=200'),
+        params: {},
+      });
       expect(bad.status).toBe(200);
     });
   });
 
   describe('GET /api/projects/:id/export', () => {
     const get = (id: string, format: string | undefined, auth?: { Authorization: string }) => {
-      const req = request(app).get(`/api/projects/${id}/export`).query(format === undefined ? {} : { format });
+      const req = request(app)
+        .get(`/api/projects/${id}/export`)
+        .query(format === undefined ? {} : { format });
       return auth ? req.set(auth) : req;
     };
 
@@ -496,7 +657,9 @@ describe('Projects - export (OpenAPI / Postman / MSW)', () => {
         const res = await get(project.id, 'openapi', auth);
         expect(res.status).toBe(200);
         expect(res.headers['content-type']).toMatch(/^application\/json/);
-        expect(res.headers['content-disposition']).toBe('attachment; filename="shop-api-openapi.json"');
+        expect(res.headers['content-disposition']).toBe(
+          'attachment; filename="shop-api-openapi.json"'
+        );
         expect(res.headers['cache-control']).toBe('no-store');
         const doc = JSON.parse(res.text);
         expect(doc.openapi).toBe('3.1.0');
@@ -508,13 +671,17 @@ describe('Projects - export (OpenAPI / Postman / MSW)', () => {
       const postman = await get(project.id, 'postman', viewerAuth);
       expect(postman.status).toBe(200);
       expect(postman.headers['content-type']).toMatch(/^application\/json/);
-      expect(postman.headers['content-disposition']).toBe('attachment; filename="shop-api.postman_collection.json"');
+      expect(postman.headers['content-disposition']).toBe(
+        'attachment; filename="shop-api.postman_collection.json"'
+      );
       expect(JSON.parse(postman.text).info.schema).toContain('v2.1.0');
 
       const msw = await get(project.id, 'msw', viewerAuth);
       expect(msw.status).toBe(200);
       expect(msw.headers['content-type']).toBe('text/plain; charset=utf-8');
-      expect(msw.headers['content-disposition']).toBe('attachment; filename="shop-api-handlers.ts"');
+      expect(msw.headers['content-disposition']).toBe(
+        'attachment; filename="shop-api-handlers.ts"'
+      );
       expect(msw.text).toContain('http.get');
     });
 
@@ -525,7 +692,14 @@ describe('Projects - export (OpenAPI / Postman / MSW)', () => {
 
     it('is not gated by email verification and is rate limited per user', async () => {
       const user = await createUser('limited-exp@example.com');
-      await ProjectModel.updateOne({ _id: project._id }, { $push: { members: { userId: user._id, role: ProjectRoleEnum.VIEWER, addedAt: new Date() } } });
+      await ProjectModel.updateOne(
+        { _id: project._id },
+        {
+          $push: {
+            members: { userId: user._id, role: ProjectRoleEnum.VIEWER, addedAt: new Date() },
+          },
+        }
+      );
       const auth = await login('limited-exp@example.com');
       let last = 0;
       for (let i = 0; i < 31; i++) last = (await get(project.id, 'msw', auth)).status;

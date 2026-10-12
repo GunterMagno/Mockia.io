@@ -19,7 +19,12 @@ export interface User {
    * `at` is when the current choice was made (ISO). `grantedAt` is when the consent was given (kept after a withdrawal)
    * and `withdrawnAt` when it was withdrawn (null while it stands). Withdrawing (granted false) erases the stored examples.
    */
-  aiTrainingConsent?: { granted: boolean; at: string; grantedAt?: string | null; withdrawnAt?: string | null };
+  aiTrainingConsent?: {
+    granted: boolean;
+    at: string;
+    grantedAt?: string | null;
+    withdrawnAt?: string | null;
+  };
   createdAt: string;
   updatedAt: string;
 }

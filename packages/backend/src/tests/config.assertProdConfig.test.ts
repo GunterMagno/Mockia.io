@@ -56,12 +56,19 @@ describe('assertProdConfig', () => {
       expect(() => assertProdConfig({ ...validProd(), [name]: value })).toThrow(new RegExp(name));
     });
 
-    it.each(['true', 'TRUE', '1', ' true '])('rejects E2E_EXPOSE_MAIL_OUTBOX=%p (it would expose password reset links)', (value) => {
-      expect(() => assertProdConfig({ ...validProd(), E2E_EXPOSE_MAIL_OUTBOX: value })).toThrow(/E2E_EXPOSE_MAIL_OUTBOX/);
-    });
+    it.each(['true', 'TRUE', '1', ' true '])(
+      'rejects E2E_EXPOSE_MAIL_OUTBOX=%p (it would expose password reset links)',
+      (value) => {
+        expect(() => assertProdConfig({ ...validProd(), E2E_EXPOSE_MAIL_OUTBOX: value })).toThrow(
+          /E2E_EXPOSE_MAIL_OUTBOX/
+        );
+      }
+    );
 
     it.each([undefined, '', 'false', '0'])('accepts E2E_EXPOSE_MAIL_OUTBOX=%p', (value) => {
-      expect(() => assertProdConfig({ ...validProd(), E2E_EXPOSE_MAIL_OUTBOX: value })).not.toThrow();
+      expect(() =>
+        assertProdConfig({ ...validProd(), E2E_EXPOSE_MAIL_OUTBOX: value })
+      ).not.toThrow();
     });
 
     it('rejects a short JWT secret', () => {

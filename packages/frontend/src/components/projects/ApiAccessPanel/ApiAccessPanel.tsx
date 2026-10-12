@@ -1,111 +1,117 @@
-import React, { useId, useRef, useState } from 'react'
-import type { IssuedApiKey, MockVisibility, Project } from '@mockia/shared'
-import { MOCK_API_KEY_HEADER } from '@mockia/shared'
-import { createApiKey, revokeApiKey, updateProject } from '../../../services/projectService'
-import { Icon } from '../../ui/Icon/Icon'
-import { useI18n } from '../../../i18n/I18nProvider'
-import { playErrorSound } from '../../../utils/audio'
-import copyIcon from '../../../assets/copy.svg'
-import checkIcon from '../../../assets/check.svg'
-import styles from './ApiAccessPanel.module.scss'
+import React, { useId, useRef, useState } from 'react';
+import type { IssuedApiKey, MockVisibility, Project } from '@mockia/shared';
+import { MOCK_API_KEY_HEADER } from '@mockia/shared';
+import { createApiKey, revokeApiKey, updateProject } from '../../../services/projectService';
+import { Icon } from '../../ui/Icon/Icon';
+import { useI18n } from '../../../i18n/I18nProvider';
+import { playErrorSound } from '../../../utils/audio';
+import copyIcon from '../../../assets/copy.svg';
+import checkIcon from '../../../assets/check.svg';
+import styles from './ApiAccessPanel.module.scss';
 
 type Props = {
-  project: Project
+  project: Project;
   /** Owner: can create, rotate and revoke the key. */
-  canManageKey: boolean
+  canManageKey: boolean;
   /** Owner or editor: can switch the visibility. */
-  canChangeVisibility: boolean
-  onUpdate: (project: Project) => void
-}
+  canChangeVisibility: boolean;
+  onUpdate: (project: Project) => void;
+};
 
-type Busy = 'visibility' | 'key' | 'revoke' | null
+type Busy = 'visibility' | 'key' | 'revoke' | null;
 
 /**
  * "API access" of a project: who can call the mock (public / API key) and the key itself.
  * The full key only exists in memory right after it is created or rotated; the server keeps just its hash.
  */
-export const ApiAccessPanel: React.FC<Props> = ({ project, canManageKey, canChangeVisibility, onUpdate }) => {
-  const { t } = useI18n()
-  const uid = useId()
-  const [busy, setBusy] = useState<Busy>(null)
-  const [issued, setIssued] = useState<IssuedApiKey | null>(null)
-  const [copied, setCopied] = useState(false)
-  const [confirmRevoke, setConfirmRevoke] = useState(false)
-  const [live, setLive] = useState('')
-  const [error, setError] = useState('')
-  const keyInput = useRef<HTMLInputElement>(null)
+export const ApiAccessPanel: React.FC<Props> = ({
+  project,
+  canManageKey,
+  canChangeVisibility,
+  onUpdate,
+}) => {
+  const { t } = useI18n();
+  const uid = useId();
+  const [busy, setBusy] = useState<Busy>(null);
+  const [issued, setIssued] = useState<IssuedApiKey | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [confirmRevoke, setConfirmRevoke] = useState(false);
+  const [live, setLive] = useState('');
+  const [error, setError] = useState('');
+  const keyInput = useRef<HTMLInputElement>(null);
 
-  const visibility: MockVisibility = project.visibility === 'key' ? 'key' : 'public'
-  const modeName = (v: MockVisibility) => (v === 'key' ? t('apiAccess.keyed') : t('apiAccess.public'))
-  const keyDisabled = !project.hasApiKey
+  const visibility: MockVisibility = project.visibility === 'key' ? 'key' : 'public';
+  const modeName = (v: MockVisibility) =>
+    v === 'key' ? t('apiAccess.keyed') : t('apiAccess.public');
+  const keyDisabled = !project.hasApiKey;
 
   const fail = (message: string) => {
-    setError(message)
-    setLive('')
-    playErrorSound()
-  }
+    setError(message);
+    setLive('');
+    playErrorSound();
+  };
 
   const changeVisibility = async (next: MockVisibility) => {
-    if (next === visibility || busy) return
-    setBusy('visibility')
-    setError('')
+    if (next === visibility || busy) return;
+    setBusy('visibility');
+    setError('');
     try {
-      const updated = await updateProject(project.id, { visibility: next })
-      onUpdate(updated)
-      setLive(t('apiAccess.visibilitySaved', { mode: modeName(next) }))
+      const updated = await updateProject(project.id, { visibility: next });
+      onUpdate(updated);
+      setLive(t('apiAccess.visibilitySaved', { mode: modeName(next) }));
     } catch {
-      fail(t('apiAccess.visibilityFailed'))
+      fail(t('apiAccess.visibilityFailed'));
     } finally {
-      setBusy(null)
+      setBusy(null);
     }
-  }
+  };
 
   const generate = async () => {
-    setBusy('key')
-    setError('')
-    setCopied(false)
-    setConfirmRevoke(false)
+    setBusy('key');
+    setError('');
+    setCopied(false);
+    setConfirmRevoke(false);
     try {
-      const key = await createApiKey(project.id)
-      setIssued(key)
-      setLive(t('apiAccess.newKeyLive'))
+      const key = await createApiKey(project.id);
+      setIssued(key);
+      setLive(t('apiAccess.newKeyLive'));
       // The project DTO only carries the prefix: refresh its flags without ever holding the key in it
-      onUpdate({ ...project, hasApiKey: true, apiKeyPrefix: key.prefix })
+      onUpdate({ ...project, hasApiKey: true, apiKeyPrefix: key.prefix });
     } catch {
-      fail(t('apiAccess.failed'))
+      fail(t('apiAccess.failed'));
     } finally {
-      setBusy(null)
+      setBusy(null);
     }
-  }
+  };
 
   const revoke = async () => {
-    setBusy('revoke')
-    setError('')
+    setBusy('revoke');
+    setError('');
     try {
-      const updated = await revokeApiKey(project.id)
-      setIssued(null)
-      setConfirmRevoke(false)
-      onUpdate(updated)
-      setLive(t('apiAccess.revokedLive'))
+      const updated = await revokeApiKey(project.id);
+      setIssued(null);
+      setConfirmRevoke(false);
+      onUpdate(updated);
+      setLive(t('apiAccess.revokedLive'));
     } catch {
-      fail(t('apiAccess.failed'))
+      fail(t('apiAccess.failed'));
     } finally {
-      setBusy(null)
+      setBusy(null);
     }
-  }
+  };
 
   const copy = async () => {
-    if (!issued) return
+    if (!issued) return;
     try {
-      await navigator.clipboard.writeText(issued.apiKey)
+      await navigator.clipboard.writeText(issued.apiKey);
     } catch {
-      keyInput.current?.select() // no clipboard permission: leave it selected so Ctrl+C works
-      return
+      keyInput.current?.select(); // no clipboard permission: leave it selected so Ctrl+C works
+      return;
     }
-    setCopied(true)
-    setLive(t('apiAccess.keyCopiedLive'))
-    window.setTimeout(() => setCopied(false), 2500)
-  }
+    setCopied(true);
+    setLive(t('apiAccess.keyCopiedLive'));
+    window.setTimeout(() => setCopied(false), 2500);
+  };
 
   return (
     <section className={styles.panel} aria-labelledby={`${uid}-title`}>
@@ -158,7 +164,12 @@ export const ApiAccessPanel: React.FC<Props> = ({ project, canManageKey, canChan
         <h4 id={`${uid}-key-title`}>{t('apiAccess.keyTitle')}</h4>
 
         {issued ? (
-          <article className={styles.reveal} data-testid="new-api-key" role="group" aria-labelledby={`${uid}-new-title`}>
+          <article
+            className={styles.reveal}
+            data-testid="new-api-key"
+            role="group"
+            aria-labelledby={`${uid}-new-title`}
+          >
             <strong id={`${uid}-new-title`}>{t('apiAccess.newKeyTitle')}</strong>
             <p className={styles.warning}>
               <span aria-hidden="true">!</span> {t('apiAccess.newKeyWarning')}
@@ -173,12 +184,22 @@ export const ApiAccessPanel: React.FC<Props> = ({ project, canManageKey, canChan
                 onFocus={(e) => e.currentTarget.select()}
                 data-testid="new-api-key-value"
               />
-              <button type="button" className={`${styles.copyBtn} ${copied ? styles.copied : ''}`} onClick={() => void copy()} data-testid="api-key-copy">
+              <button
+                type="button"
+                className={`${styles.copyBtn} ${copied ? styles.copied : ''}`}
+                onClick={() => void copy()}
+                data-testid="api-key-copy"
+              >
                 <Icon src={copied ? checkIcon : copyIcon} size={16} />
                 {copied ? t('common.copied') : t('apiAccess.copyKey')}
               </button>
             </div>
-            <button type="button" className={styles.secondaryBtn} onClick={() => setIssued(null)} data-testid="api-key-saved">
+            <button
+              type="button"
+              className={styles.secondaryBtn}
+              onClick={() => setIssued(null)}
+              data-testid="api-key-saved"
+            >
               {t('apiAccess.savedIt')}
             </button>
           </article>
@@ -198,24 +219,55 @@ export const ApiAccessPanel: React.FC<Props> = ({ project, canManageKey, canChan
 
         {canManageKey ? (
           <div className={styles.actions}>
-            <button type="button" className={styles.primaryBtn} onClick={() => void generate()} disabled={busy !== null} data-testid="api-key-generate">
-              {busy === 'key' ? t('apiAccess.working') : project.hasApiKey ? t('apiAccess.rotate') : t('apiAccess.generate')}
+            <button
+              type="button"
+              className={styles.primaryBtn}
+              onClick={() => void generate()}
+              disabled={busy !== null}
+              data-testid="api-key-generate"
+            >
+              {busy === 'key'
+                ? t('apiAccess.working')
+                : project.hasApiKey
+                  ? t('apiAccess.rotate')
+                  : t('apiAccess.generate')}
             </button>
             {project.hasApiKey && !confirmRevoke && (
-              <button type="button" className={styles.dangerBtn} onClick={() => setConfirmRevoke(true)} disabled={busy !== null} data-testid="api-key-revoke">
+              <button
+                type="button"
+                className={styles.dangerBtn}
+                onClick={() => setConfirmRevoke(true)}
+                disabled={busy !== null}
+                data-testid="api-key-revoke"
+              >
                 {t('apiAccess.revoke')}
               </button>
             )}
             {project.hasApiKey && <p className={styles.muted}>{t('apiAccess.rotateWarning')}</p>}
             {confirmRevoke && (
-              <div className={styles.confirm} role="group" aria-label={t('apiAccess.revokeConfirm')}>
+              <div
+                className={styles.confirm}
+                role="group"
+                aria-label={t('apiAccess.revokeConfirm')}
+              >
                 <span>
                   <strong>{t('apiAccess.revokeConfirm')}</strong> {t('apiAccess.revokeConfirmText')}
                 </span>
-                <button type="button" className={styles.dangerSolidBtn} onClick={() => void revoke()} disabled={busy !== null} data-testid="api-key-revoke-confirm">
+                <button
+                  type="button"
+                  className={styles.dangerSolidBtn}
+                  onClick={() => void revoke()}
+                  disabled={busy !== null}
+                  data-testid="api-key-revoke-confirm"
+                >
                   {busy === 'revoke' ? t('apiAccess.working') : t('apiAccess.revokeYes')}
                 </button>
-                <button type="button" className={styles.secondaryBtn} onClick={() => setConfirmRevoke(false)} disabled={busy !== null}>
+                <button
+                  type="button"
+                  className={styles.secondaryBtn}
+                  onClick={() => setConfirmRevoke(false)}
+                  disabled={busy !== null}
+                >
                   {t('common.cancel')}
                 </button>
               </div>
@@ -235,5 +287,5 @@ export const ApiAccessPanel: React.FC<Props> = ({ project, canManageKey, canChan
         </p>
       )}
     </section>
-  )
-}
+  );
+};

@@ -1,6 +1,14 @@
 import crypto from 'crypto';
-import { DemoMockModel, type DemoEndpointDocument, type DemoMockDocument } from '../../models/DemoMock.js';
-import { calculatePatternSpecificity, extractPathParams, hasWildcards } from '../mock/pathParams.util.js';
+import {
+  DemoMockModel,
+  type DemoEndpointDocument,
+  type DemoMockDocument,
+} from '../../models/DemoMock.js';
+import {
+  calculatePatternSpecificity,
+  extractPathParams,
+  hasWildcards,
+} from '../mock/pathParams.util.js';
 import { getDemoConfig } from './config.js';
 
 /**
@@ -80,10 +88,12 @@ function cleanEndpoint(raw: DemoEndpoint): DemoEndpointDocument {
   if (typeof rawPath !== 'string' || rawPath.length > MAX_PATH_LENGTH || !PATH.test(rawPath)) {
     throw new DemoMockError('invalid path');
   }
-  if (rawPath.split('/').some((s) => s === '..' || s === '.')) throw new DemoMockError('invalid path');
+  if (rawPath.split('/').some((s) => s === '..' || s === '.'))
+    throw new DemoMockError('invalid path');
 
   const statusCode = raw.statusCode;
-  if (!Number.isInteger(statusCode) || statusCode < 200 || statusCode > 599) throw new DemoMockError('invalid status code');
+  if (!Number.isInteger(statusCode) || statusCode < 200 || statusCode > 599)
+    throw new DemoMockError('invalid status code');
 
   let bodyJson: string | undefined;
   try {
@@ -92,7 +102,8 @@ function cleanEndpoint(raw: DemoEndpoint): DemoEndpointDocument {
     throw new DemoMockError('body is not JSON');
   }
   if (bodyJson === undefined) throw new DemoMockError('body is not JSON');
-  if (Buffer.byteLength(bodyJson, 'utf8') > MAX_BODY_BYTES) throw new DemoMockError('body is larger than 8 KB');
+  if (Buffer.byteLength(bodyJson, 'utf8') > MAX_BODY_BYTES)
+    throw new DemoMockError('body is larger than 8 KB');
   if (hasControlChars(JSON.parse(bodyJson))) throw new DemoMockError('body has control characters');
 
   const headers: Record<string, string> = {};
@@ -101,7 +112,8 @@ function cleanEndpoint(raw: DemoEndpoint): DemoEndpointDocument {
       const key = name.trim().toLowerCase();
       if (Object.keys(headers).length >= MAX_HEADERS) break;
       if (!ALLOWED_DEMO_HEADERS.has(key)) continue;
-      if (typeof value !== 'string' || value.length > MAX_HEADER_VALUE || !HEADER_VALUE.test(value)) continue;
+      if (typeof value !== 'string' || value.length > MAX_HEADER_VALUE || !HEADER_VALUE.test(value))
+        continue;
       headers[key] = value;
     }
   }
@@ -147,20 +159,30 @@ export const toPublicEndpoint = (e: DemoEndpointDocument): DemoEndpoint => ({
 export async function createDemoMock(
   ipHash: string,
   endpoints: DemoEndpoint[],
-  now: Date = new Date(),
+  now: Date = new Date()
 ): Promise<{ demoId: string; expiresAt: Date; endpoints: DemoEndpoint[] }> {
   const cfg = getDemoConfig();
   const clean = prepareDemoEndpoints(endpoints);
   const demoId = crypto.randomBytes(16).toString('hex');
   const expiresAt = new Date(now.getTime() + cfg.mockTtlMinutes * 60 * 1000);
-  await DemoMockModel.create({ demoId, ipHash, endpoints: clean, requestCount: 0, createdAt: now, expiresAt });
+  await DemoMockModel.create({
+    demoId,
+    ipHash,
+    endpoints: clean,
+    requestCount: 0,
+    createdAt: now,
+    expiresAt,
+  });
   return { demoId, expiresAt, endpoints: clean.map(toPublicEndpoint) };
 }
 
 export const isDemoId = (value: string): boolean => /^[0-9a-f]{32}$/.test(value);
 
 /** The demo mock if it exists and has not expired at `now` (null otherwise). */
-export async function findLiveDemoMock(demoId: string, now: Date): Promise<DemoMockDocument | null> {
+export async function findLiveDemoMock(
+  demoId: string,
+  now: Date
+): Promise<DemoMockDocument | null> {
   if (!isDemoId(demoId)) return null;
   return DemoMockModel.findOne({ demoId, expiresAt: { $gt: now } }).lean<DemoMockDocument>();
 }
@@ -169,7 +191,11 @@ export async function findLiveDemoMock(demoId: string, now: Date): Promise<DemoM
  * Endpoint answering `method path`: static routes first, then parameter routes, most specific first (the same
  * order as the project mocks, reusing their pattern helpers). Null when nothing matches.
  */
-export function matchDemoEndpoint(endpoints: DemoEndpointDocument[], method: string, path: string): DemoEndpointDocument | null {
+export function matchDemoEndpoint(
+  endpoints: DemoEndpointDocument[],
+  method: string,
+  path: string
+): DemoEndpointDocument | null {
   const wanted = normalizeDemoPath(path);
   const sameMethod = endpoints.filter((e) => e.method === method);
   const exact = sameMethod.filter((e) => !hasWildcards(e.path)).find((e) => e.path === wanted);
@@ -184,11 +210,17 @@ export function matchDemoEndpoint(endpoints: DemoEndpointDocument[], method: str
 
 /** Takes one of the mock's requests unless it already served `max`. Atomic: concurrent callers cannot exceed it. */
 export async function reserveDemoRequest(demoId: string, max: number): Promise<boolean> {
-  const res = await DemoMockModel.updateOne({ demoId, requestCount: { $lt: max } }, { $inc: { requestCount: 1 } });
+  const res = await DemoMockModel.updateOne(
+    { demoId, requestCount: { $lt: max } },
+    { $inc: { requestCount: 1 } }
+  );
   return res.modifiedCount === 1;
 }
 
 /** Gives a reserved request back (the visitor's own daily limit refused it after the mock's counter took it). */
 export async function releaseDemoRequest(demoId: string): Promise<void> {
-  await DemoMockModel.updateOne({ demoId, requestCount: { $gt: 0 } }, { $inc: { requestCount: -1 } }).catch(() => undefined);
+  await DemoMockModel.updateOne(
+    { demoId, requestCount: { $gt: 0 } },
+    { $inc: { requestCount: -1 } }
+  ).catch(() => undefined);
 }

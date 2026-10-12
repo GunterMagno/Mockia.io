@@ -96,8 +96,12 @@ describe('Cookie-based session (HttpOnly refresh cookie + in-memory access token
       for (const storage of [win.localStorage, win.sessionStorage]) {
         for (let i = 0; i < storage.length; i++) {
           const key = storage.key(i) as string;
-          expect(key.toLowerCase(), `storage key ${key}`).not.to.match(/token|refresh|session|user/);
-          expect(storage.getItem(key) as string, `storage value of ${key}`).not.to.match(/eyJ[\w-]+\.[\w-]+\./);
+          expect(key.toLowerCase(), `storage key ${key}`).not.to.match(
+            /token|refresh|session|user/
+          );
+          expect(storage.getItem(key) as string, `storage value of ${key}`).not.to.match(
+            /eyJ[\w-]+\.[\w-]+\./
+          );
         }
       }
       // (c) the refresh cookie exists for the browser but document.cookie cannot see it
@@ -166,8 +170,12 @@ describe('Cookie-based session (HttpOnly refresh cookie + in-memory access token
   });
 
   it('refresh and logout reject requests without the CSRF header', () => {
-    cy.request({ method: 'POST', url: '/api/auth/refresh', failOnStatusCode: false }).its('status').should('eq', 403);
-    cy.request({ method: 'POST', url: '/api/auth/logout', failOnStatusCode: false }).its('status').should('eq', 403);
+    cy.request({ method: 'POST', url: '/api/auth/refresh', failOnStatusCode: false })
+      .its('status')
+      .should('eq', 403);
+    cy.request({ method: 'POST', url: '/api/auth/logout', failOnStatusCode: false })
+      .its('status')
+      .should('eq', 403);
   });
 });
 
@@ -192,7 +200,9 @@ describe('Session renewal (access token of 15 min + rotating refresh cookie)', (
   /** Replaces the in-memory access token with an expired one (same module instance the app uses: vite dev server). */
   const expireAccessToken = () =>
     cy.window().then(async (win) => {
-      const { setAccessToken } = await new win.Function('return import("/src/services/session.ts")')();
+      const { setAccessToken } = await new win.Function(
+        'return import("/src/services/session.ts")'
+      )();
       setAccessToken('expired.invalid.token');
     });
 
@@ -209,13 +219,19 @@ describe('Session renewal (access token of 15 min + rotating refresh cookie)', (
     expireAccessToken();
     cy.window().then(async (win) => {
       const { api } = await new win.Function('return import("/src/services/api.ts")')();
-      const responses = await Promise.all([api.get('/auth/me'), api.get('/auth/me'), api.get('/auth/me')]);
+      const responses = await Promise.all([
+        api.get('/auth/me'),
+        api.get('/auth/me'),
+        api.get('/auth/me'),
+      ]);
       expect(responses.map((r: { status: number }) => r.status)).to.deep.equal([200, 200, 200]);
     });
     cy.get('@refresh.all').should('have.length', 1);
     cy.get('@refresh.all').its('0.response.statusCode').should('eq', 200);
     cy.getCookie('mockia_rt').then((c) => {
-      expect((c as Cypress.Cookie).value).to.be.a('string').and.not.equal(firstCookie);
+      expect((c as Cypress.Cookie).value)
+        .to.be.a('string')
+        .and.not.equal(firstCookie);
     });
 
     // The page keeps working afterwards
@@ -233,7 +249,11 @@ describe('Session renewal (access token of 15 min + rotating refresh cookie)', (
   it('stays logged in after changing the password (fresh session; older sessions are revoked server-side)', () => {
     const changer = `changepw${Date.now()}@example.com`;
     const newPassword = 'Changed-Password-456';
-    cy.request('POST', '/api/auth/register', { email: changer, password, username: 'ChangePwUser' });
+    cy.request('POST', '/api/auth/register', {
+      email: changer,
+      password,
+      username: 'ChangePwUser',
+    });
     cy.clearCookies();
     cy.visit('/login');
     cy.get('input[name="email"]').type(changer);
@@ -273,7 +293,11 @@ describe('Session renewal (access token of 15 min + rotating refresh cookie)', (
         success: true,
         data: {
           accessToken: 'attacker.access.token',
-          user: { id: '000000000000000000000bad', email: 'attacker@example.com', username: 'attacker' },
+          user: {
+            id: '000000000000000000000bad',
+            email: 'attacker@example.com',
+            username: 'attacker',
+          },
         },
       },
     }).as('foreignRefresh');

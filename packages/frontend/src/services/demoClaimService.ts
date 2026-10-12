@@ -1,6 +1,6 @@
-import axios from 'axios'
-import { api } from './api'
-import type { Project } from './projectService'
+import axios from 'axios';
+import { api } from './api';
+import type { Project } from './projectService';
 
 /**
  * Reclamar una demo: POST /demo/:demoId/claim con la sesion del usuario. Convierte el mock efimero en un proyecto de
@@ -16,27 +16,29 @@ export type ClaimOutcome =
   | { kind: 'gone' }
   /** 429: demasiados intentos. */
   | { kind: 'rateLimit' }
-  | { kind: 'error' }
+  | { kind: 'error' };
 
 export async function claimDemo(demoId: string): Promise<ClaimOutcome> {
   try {
-    const res = await api.post<{ data: Project }>(`/demo/${encodeURIComponent(demoId)}/claim`)
-    return { kind: 'done', project: res.data.data }
+    const res = await api.post<{ data: Project }>(`/demo/${encodeURIComponent(demoId)}/claim`);
+    return { kind: 'done', project: res.data.data };
   } catch (err) {
-    if (!axios.isAxiosError(err) || !err.response) return { kind: 'error' }
-    const { status, data } = err.response
-    const code = (data as { error?: { code?: string } } | undefined)?.error?.code
-    const details = (data as { error?: { details?: { plan?: unknown; limit?: unknown } } } | undefined)?.error?.details
+    if (!axios.isAxiosError(err) || !err.response) return { kind: 'error' };
+    const { status, data } = err.response;
+    const code = (data as { error?: { code?: string } } | undefined)?.error?.code;
+    const details = (
+      data as { error?: { details?: { plan?: unknown; limit?: unknown } } } | undefined
+    )?.error?.details;
     if (status === 402 && code === 'PLAN_LIMIT_REACHED') {
       return {
         kind: 'planLimit',
         plan: typeof details?.plan === 'string' ? details.plan : null,
         limit: typeof details?.limit === 'number' ? details.limit : null,
-      }
+      };
     }
-    if (status === 403 && code === 'EMAIL_NOT_VERIFIED') return { kind: 'verify' }
-    if (status === 404) return { kind: 'gone' }
-    if (status === 429) return { kind: 'rateLimit' }
-    return { kind: 'error' }
+    if (status === 403 && code === 'EMAIL_NOT_VERIFIED') return { kind: 'verify' };
+    if (status === 404) return { kind: 'gone' };
+    if (status === 429) return { kind: 'rateLimit' };
+    return { kind: 'error' };
   }
 }

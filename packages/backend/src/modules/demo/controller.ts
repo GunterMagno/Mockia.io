@@ -9,7 +9,13 @@ import { DEMO_TEMPLATE_IDS } from './templates.js';
 import { createFloodLimiter } from './floodLimit.js';
 import type { AuthenticatedRequest } from '../../middlewares/authenticateToken.js';
 import { claimDemoMock } from './claim.js';
-import { DemoRefusal, generateDemoMock, getDemoAvailability, getDemoStatus, type GenerateInput } from './service.js';
+import {
+  DemoRefusal,
+  generateDemoMock,
+  getDemoAvailability,
+  getDemoStatus,
+  type GenerateInput,
+} from './service.js';
 
 /** Longest text a visitor may paste (README, types, notes). */
 export const MAX_DEMO_TEXT_CHARS = 6000;
@@ -24,15 +30,19 @@ const generateSchema = Joi.object({
   nonce: Joi.string().min(1).max(64).required(),
   source: Joi.alternatives()
     .try(
-      Joi.object({ type: Joi.string().valid('template').required(), id: Joi.string().valid(...DEMO_TEMPLATE_IDS).required() }),
+      Joi.object({
+        type: Joi.string().valid('template').required(),
+        id: Joi.string()
+          .valid(...DEMO_TEMPLATE_IDS)
+          .required(),
+      }),
       Joi.object({
         type: Joi.string().valid('text').required(),
         text: Joi.string().max(MAX_DEMO_TEXT_CHARS).pattern(/\S/).required(),
-      }),
+      })
     )
     .required(),
-})
-  .options({ allowUnknown: false, convert: false, abortEarly: true });
+}).options({ allowUnknown: false, convert: false, abortEarly: true });
 
 /** 30 challenges per hour per pseudonymized address; in memory and bounded (see floodLimit.ts). */
 export const CHALLENGES_PER_HOUR = 30;
@@ -77,7 +87,7 @@ export async function challengeHandler(req: Request, res: Response): Promise<voi
       'Too many challenges requested. Please wait a while before trying again.',
       ErrorCode.DEMO_RATE_LIMIT,
       429,
-      verdict.retryAfterSeconds,
+      verdict.retryAfterSeconds
     );
   }
   res.json(envelope(issueChallenge(now)));
@@ -91,7 +101,7 @@ export async function generateHandler(req: Request, res: Response): Promise<void
     throw new DemoRefusal(
       'The request is not valid. Send a challenge, its nonce and either a template (shop, blog or users) or a text of at most 6000 characters.',
       ErrorCode.VALIDATION_ERROR,
-      400,
+      400
     );
   }
   const input: GenerateInput = { ip: req.ip || 'unknown', ...(value as Omit<GenerateInput, 'ip'>) };
@@ -103,7 +113,7 @@ export async function generateHandler(req: Request, res: Response): Promise<void
       endpoints: result.endpoints,
       expiresAt: result.expiresAt,
       remainingToday: result.remainingToday,
-    }),
+    })
   );
 }
 

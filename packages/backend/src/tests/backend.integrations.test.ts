@@ -50,9 +50,9 @@ describe('Backend Integration Tests', () => {
       .set('Authorization', `Bearer ${userToken}`)
       .send({
         title: 'Integration Project',
-        description: 'Test project'
+        description: 'Test project',
       });
-    
+
     expect(res.status).toBe(201);
     expect(res.body.data.title).toBe('Integration Project');
     projectId = res.body.data.id;
@@ -62,7 +62,7 @@ describe('Backend Integration Tests', () => {
     const res = await request(app)
       .get(`/api/projects/${projectId}`)
       .set('Authorization', `Bearer ${userToken}`);
-    
+
     expect(res.status).toBe(200);
     expect(res.body.data.title).toBe('Integration Project');
   });

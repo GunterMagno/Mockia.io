@@ -1,161 +1,173 @@
-import React, { useEffect, useState } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
-import Layout from '../../layouts/Layout'
-import EndpointTree from '../../components/editor/EndpointTree/EndpointTree'
-import JsonEditor from '../../components/editor/JsonEditor/JsonEditor'
-import EndpointInspector from '../../components/editor/EndpointInspector/EndpointInspector'
-import { Button } from '../../components/ui/Button/Button'
-import { Modal } from '../../components/ui/Modal/Modal'
-import { getEndpoints, updateEndpoint, createEndpoint, deleteEndpoint } from '../../services/endpointService'
-import { getProjectById, type Project } from '../../services/projectService'
-import { MOCK_API_KEY_HEADER } from '@mockia/shared'
-import { generateAndSaveEndpoints, MAX_AI_REQUIREMENT_CHARS } from '../../services/aiService'
-import AiFeedback from '../../components/ui/AiFeedback/AiFeedback'
-import type { EndpointData } from '../../services/endpointService'
+import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import Layout from '../../layouts/Layout';
+import EndpointTree from '../../components/editor/EndpointTree/EndpointTree';
+import JsonEditor from '../../components/editor/JsonEditor/JsonEditor';
+import EndpointInspector from '../../components/editor/EndpointInspector/EndpointInspector';
+import { Button } from '../../components/ui/Button/Button';
+import { Modal } from '../../components/ui/Modal/Modal';
+import {
+  getEndpoints,
+  updateEndpoint,
+  createEndpoint,
+  deleteEndpoint,
+} from '../../services/endpointService';
+import { getProjectById, type Project } from '../../services/projectService';
+import { MOCK_API_KEY_HEADER } from '@mockia/shared';
+import { generateAndSaveEndpoints, MAX_AI_REQUIREMENT_CHARS } from '../../services/aiService';
+import AiFeedback from '../../components/ui/AiFeedback/AiFeedback';
+import type { EndpointData } from '../../services/endpointService';
 
-import { Icon } from '../../components/ui/Icon/Icon'
-import aiSparkleIcon from '../../assets/ai-sparkle.svg'
-import copyIcon from '../../assets/copy.svg'
-import checkIcon from '../../assets/check.svg'
-import { ExportMenu } from '../../components/projects/ExportMenu'
+import { Icon } from '../../components/ui/Icon/Icon';
+import aiSparkleIcon from '../../assets/ai-sparkle.svg';
+import copyIcon from '../../assets/copy.svg';
+import checkIcon from '../../assets/check.svg';
+import { ExportMenu } from '../../components/projects/ExportMenu';
 
-import styles from './MockEditor.module.scss'
-import ProjectSettingsModal from '../../components/projects/ProjectSettingsModal'
-import { getBackendErrorCode, getBackendErrorMessage } from '../../utils/error'
-import ModalErrorAlert from '../../components/ui/ModalErrorAlert/ModalErrorAlert'
-import { PATHS } from '../../routes/paths'
-import { useI18n } from '../../i18n/I18nProvider'
-import { useAuth } from '../../contexts/AuthContext'
+import styles from './MockEditor.module.scss';
+import ProjectSettingsModal from '../../components/projects/ProjectSettingsModal';
+import { getBackendErrorCode, getBackendErrorMessage } from '../../utils/error';
+import ModalErrorAlert from '../../components/ui/ModalErrorAlert/ModalErrorAlert';
+import { PATHS } from '../../routes/paths';
+import { useI18n } from '../../i18n/I18nProvider';
+import { useAuth } from '../../contexts/AuthContext';
 
 const MockEditor: React.FC = () => {
-  const { id } = useParams<{ id: string }>()
-  const navigate = useNavigate()
-  const { t, tl } = useI18n()
-  
-  const [endpoints, setEndpoints] = useState<EndpointData[]>([])
-  const [project, setProject] = useState<Project | null>(null)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { t, tl } = useI18n();
+
+  const [endpoints, setEndpoints] = useState<EndpointData[]>([]);
+  const [project, setProject] = useState<Project | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
   // To track the working copy of the selected endpoint
-  const [activeEndpoint, setActiveEndpoint] = useState<EndpointData | null>(null)
-  const [jsonContent, setJsonContent] = useState<string>('{}')
-  
+  const [activeEndpoint, setActiveEndpoint] = useState<EndpointData | null>(null);
+  const [jsonContent, setJsonContent] = useState<string>('{}');
+
   // State for changes
-  const [isDirty, setIsDirty] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
-  const [isDeleting, setIsDeleting] = useState(false)
+  const [isDirty, setIsDirty] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // AI Generation State
-  const [showAiModal, setShowAiModal] = useState(false)
-  const [copiedUrl, setCopiedUrl] = useState(false)
-  const [showSettingsModal, setShowSettingsModal] = useState(false)
-  const [aiRequirement, setAiRequirement] = useState('')
-  const [isAiGenerating, setIsAiGenerating] = useState(false)
-  const [aiStatusMessage, setAiStatusMessage] = useState('')
+  const [showAiModal, setShowAiModal] = useState(false);
+  const [copiedUrl, setCopiedUrl] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [aiRequirement, setAiRequirement] = useState('');
+  const [isAiGenerating, setIsAiGenerating] = useState(false);
+  const [aiStatusMessage, setAiStatusMessage] = useState('');
   // Failure of the last generation, shown inside the panel (quota: with a link to the plans, which an alert() cannot hold)
-  const [aiError, setAiError] = useState<{ message: string; quota: boolean } | null>(null)
+  const [aiError, setAiError] = useState<{ message: string; quota: boolean } | null>(null);
   // Set once a generation succeeded: the modal then shows the rating instead of the form
-  const [aiDone, setAiDone] = useState<{ generationId?: string } | null>(null)
-  const currentUserId = useAuth().user?.id ?? null
-  const [endpointToDelete, setEndpointToDelete] = useState<string | null>(null)
+  const [aiDone, setAiDone] = useState<{ generationId?: string } | null>(null);
+  const currentUserId = useAuth().user?.id ?? null;
+  const [endpointToDelete, setEndpointToDelete] = useState<string | null>(null);
 
-  const userRole = project?.members?.find(m => String(m.userId) === String(currentUserId))?.role
-  const isViewer = userRole === 'VIEWER'
+  const userRole = project?.members?.find((m) => String(m.userId) === String(currentUserId))?.role;
+  const isViewer = userRole === 'VIEWER';
 
-  const apiBaseUrl = import.meta.env.VITE_API_URL && (import.meta.env.VITE_API_URL.startsWith('http') || import.meta.env.VITE_API_URL.startsWith('//'))
-    ? import.meta.env.VITE_API_URL
-    : window.location.origin + '/api';
+  const apiBaseUrl =
+    import.meta.env.VITE_API_URL &&
+    (import.meta.env.VITE_API_URL.startsWith('http') ||
+      import.meta.env.VITE_API_URL.startsWith('//'))
+      ? import.meta.env.VITE_API_URL
+      : window.location.origin + '/api';
   const cleanedApiBaseUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
   const mockBaseUrl = project?.slug ? `${cleanedApiBaseUrl}/mock/${project.slug}` : '...';
 
   const fetchEndpoints = (silent = false) => {
     if (id) {
       getEndpoints(id)
-        .then(data => {
-          setEndpoints(data)
-          
+        .then((data) => {
+          setEndpoints(data);
+
           // If we have an active endpoint and it's NOT dirty, update it if server version changed
           if (activeEndpoint && !isDirty && !isSaving) {
-            const serverEp = data.find(e => e.id === activeEndpoint.id)
+            const serverEp = data.find((e) => e.id === activeEndpoint.id);
             if (serverEp) {
-              const serverSchema = serverEp.responses?.[0]?.schema || {}
-              const activeSchema = activeEndpoint.responses?.[0]?.schema || {}
-              
-              const serverJson = JSON.stringify(serverSchema, null, 2)
-              const currentJson = JSON.stringify(activeSchema, null, 2)
-              
-              if (serverJson !== currentJson || serverEp.path !== activeEndpoint.path || serverEp.method !== activeEndpoint.method) {
-                console.log("Syncing active endpoint with server changes...")
-                setActiveEndpoint(serverEp)
-                setJsonContent(serverJson)
+              const serverSchema = serverEp.responses?.[0]?.schema || {};
+              const activeSchema = activeEndpoint.responses?.[0]?.schema || {};
+
+              const serverJson = JSON.stringify(serverSchema, null, 2);
+              const currentJson = JSON.stringify(activeSchema, null, 2);
+
+              if (
+                serverJson !== currentJson ||
+                serverEp.path !== activeEndpoint.path ||
+                serverEp.method !== activeEndpoint.method
+              ) {
+                console.log('Syncing active endpoint with server changes...');
+                setActiveEndpoint(serverEp);
+                setJsonContent(serverJson);
               }
             }
           }
 
           if (data.length > 0 && !selectedId && !silent) {
-            handleSelectEndpoint(data[0])
+            handleSelectEndpoint(data[0]);
           }
         })
-        .catch(err => console.error("Error fetching endpoints:", err))
+        .catch((err) => console.error('Error fetching endpoints:', err));
     }
-  }
+  };
 
   // Polling so that collaborators' changes show up (every 5 s, and not at all while the tab is hidden: each poll is two
   // requests that count toward the per-IP API limiter)
   useEffect(() => {
     const interval = setInterval(() => {
-      if (document.visibilityState === 'hidden') return
+      if (document.visibilityState === 'hidden') return;
       // Refresh project to check for membership/access changes and update members list dynamically
       if (id) {
         getProjectById(id)
           .then(setProject)
-          .catch(err => {
-            console.error("Access lost or project deleted:", err);
+          .catch((err) => {
+            console.error('Access lost or project deleted:', err);
             navigate('/dashboard');
           });
       }
 
       // ONLY refresh endpoints if user is NOT editing anything to avoid losing state
       if (!isDirty && !isSaving && !isAiGenerating && !isDeleting) {
-        fetchEndpoints(true)
+        fetchEndpoints(true);
       }
-    }, 5000)
+    }, 5000);
 
-    return () => clearInterval(interval)
-  }, [id, isDirty, isSaving, isAiGenerating, isDeleting, activeEndpoint])
+    return () => clearInterval(interval);
+  }, [id, isDirty, isSaving, isAiGenerating, isDeleting, activeEndpoint]);
 
   // AUTO-SAVE logic
   useEffect(() => {
-    if (!isDirty || isSaving || isAiGenerating || isViewer || isDeleting) return
+    if (!isDirty || isSaving || isAiGenerating || isViewer || isDeleting) return;
 
     const timer = setTimeout(() => {
-      console.log("Auto-saving changes...")
-      handleSave()
-    }, 1500) // Save after 1.5s of inactivity
+      console.log('Auto-saving changes...');
+      handleSave();
+    }, 1500); // Save after 1.5s of inactivity
 
-    return () => clearTimeout(timer)
-  }, [activeEndpoint, jsonContent, isDirty, isSaving, isAiGenerating, isViewer, isDeleting])
+    return () => clearTimeout(timer);
+  }, [activeEndpoint, jsonContent, isDirty, isSaving, isAiGenerating, isViewer, isDeleting]);
 
   useEffect(() => {
-    fetchEndpoints()
+    fetchEndpoints();
     if (id) {
       getProjectById(id)
         .then((p) => {
-          setProject(p)
+          setProject(p);
           try {
-            const lastVisited = JSON.parse(localStorage.getItem('mockia_last_visited') || '{}')
-            lastVisited[p.id] = Date.now()
-            localStorage.setItem('mockia_last_visited', JSON.stringify(lastVisited))
+            const lastVisited = JSON.parse(localStorage.getItem('mockia_last_visited') || '{}');
+            lastVisited[p.id] = Date.now();
+            localStorage.setItem('mockia_last_visited', JSON.stringify(lastVisited));
           } catch (e) {
-            console.error("Error saving last visited project:", e)
+            console.error('Error saving last visited project:', e);
           }
         })
-        .catch(err => {
-          console.error("Error fetching project:", err);
+        .catch((err) => {
+          console.error('Error fetching project:', err);
           navigate('/dashboard');
-        })
+        });
     }
-  }, [id])
+  }, [id]);
 
   // Dispatch event to set project name in the Header
   useEffect(() => {
@@ -170,133 +182,133 @@ const MockEditor: React.FC = () => {
 
   const handleSelectEndpoint = (ep: EndpointData) => {
     if (isDirty) {
-      const confirm = window.confirm(t('editor.confirmDiscard'))
-      if (!confirm) return
+      const confirm = window.confirm(t('editor.confirmDiscard'));
+      if (!confirm) return;
     }
-    
-    setSelectedId(ep.id)
-    setActiveEndpoint({ ...ep })
-    
+
+    setSelectedId(ep.id);
+    setActiveEndpoint({ ...ep });
+
     // We get the response schema from the first response
-    const schema = ep.responses && ep.responses.length > 0 ? ep.responses[0].schema : {}
-    setJsonContent(JSON.stringify(schema, null, 2))
-    setIsDirty(false)
-  }
+    const schema = ep.responses && ep.responses.length > 0 ? ep.responses[0].schema : {};
+    setJsonContent(JSON.stringify(schema, null, 2));
+    setIsDirty(false);
+  };
 
   const handleAddEndpoint = async () => {
     if (isDirty) {
-      const confirm = window.confirm(t('editor.confirmDiscard'))
-      if (!confirm) return
+      const confirm = window.confirm(t('editor.confirmDiscard'));
+      if (!confirm) return;
     }
-    if (!id) return
+    if (!id) return;
 
     try {
       const newEp = await createEndpoint(id, {
         path: '/new-endpoint',
         method: 'GET',
-        description: t('editor.newEndpointDescription')
-      })
-      setEndpoints(prev => [...prev, newEp])
-      handleSelectEndpoint(newEp)
+        description: t('editor.newEndpointDescription'),
+      });
+      setEndpoints((prev) => [...prev, newEp]);
+      handleSelectEndpoint(newEp);
     } catch (error) {
-      console.error("Error creating endpoint:", error)
-      alert(t('editor.createFailed'))
+      console.error('Error creating endpoint:', error);
+      alert(t('editor.createFailed'));
     }
-  }
+  };
 
   const handleDeleteEndpoint = async (endpointId: string) => {
-    if (isViewer) return
-    
-    setIsDeleting(true)
+    if (isViewer) return;
+
+    setIsDeleting(true);
     try {
-      await deleteEndpoint(endpointId)
-      
+      await deleteEndpoint(endpointId);
+
       // Update local state
-      setEndpoints(prev => prev.filter(ep => ep.id !== endpointId))
-      
+      setEndpoints((prev) => prev.filter((ep) => ep.id !== endpointId));
+
       // If the deleted endpoint was selected, select another one or none
       if (selectedId === endpointId) {
-        setSelectedId(null)
-        setActiveEndpoint(null)
-        setJsonContent('{}')
-        setIsDirty(false)
+        setSelectedId(null);
+        setActiveEndpoint(null);
+        setJsonContent('{}');
+        setIsDirty(false);
       }
-      setEndpointToDelete(null)
+      setEndpointToDelete(null);
     } catch (error) {
-      console.error("Error deleting endpoint:", error)
-      alert(t('editor.deleteFailed'))
+      console.error('Error deleting endpoint:', error);
+      alert(t('editor.deleteFailed'));
     } finally {
-      setIsDeleting(false)
+      setIsDeleting(false);
     }
-  }
+  };
 
   const closeAiModal = () => {
-    setShowAiModal(false)
-    setAiDone(null)
-    setAiError(null)
-  }
+    setShowAiModal(false);
+    setAiDone(null);
+    setAiError(null);
+  };
 
   const handleAiGenerate = async () => {
-    if (!id || !aiRequirement) return
-    setIsAiGenerating(true)
-    setAiError(null)
-    
-    const messages = tl('editor.aiProgress')
-    
-    let currentIdx = 0
-    setAiStatusMessage(messages[0])
-    
+    if (!id || !aiRequirement) return;
+    setIsAiGenerating(true);
+    setAiError(null);
+
+    const messages = tl('editor.aiProgress');
+
+    let currentIdx = 0;
+    setAiStatusMessage(messages[0]);
+
     const interval = setInterval(() => {
-      currentIdx = (currentIdx + 1) % messages.length
-      setAiStatusMessage(messages[currentIdx])
-    }, 3000)
+      currentIdx = (currentIdx + 1) % messages.length;
+      setAiStatusMessage(messages[currentIdx]);
+    }, 3000);
 
     try {
       // Pass project.id instead of slug/id to backend
-      const generated = await generateAndSaveEndpoints(project!.id, aiRequirement)
-      clearInterval(interval)
-      console.log("AI Generation successful, fetching endpoints...")
-      await fetchEndpoints()
-      setAiRequirement('')
-      setAiDone({ generationId: generated.generationId })
+      const generated = await generateAndSaveEndpoints(project!.id, aiRequirement);
+      clearInterval(interval);
+      console.log('AI Generation successful, fetching endpoints...');
+      await fetchEndpoints();
+      setAiRequirement('');
+      setAiDone({ generationId: generated.generationId });
     } catch (error: any) {
-      clearInterval(interval)
-      console.error("AI Generation failed:", error)
-      const quota = getBackendErrorCode(error) === 'AI_QUOTA_EXCEEDED'
-      const message = getBackendErrorMessage(error, t)
+      clearInterval(interval);
+      console.error('AI Generation failed:', error);
+      const quota = getBackendErrorCode(error) === 'AI_QUOTA_EXCEEDED';
+      const message = getBackendErrorMessage(error, t);
       // The quota message already says what happened and when it resets: it is not wrapped in "AI generation failed: ..."
-      setAiError({ message: quota ? message : t('editor.aiFailed', { message }), quota })
+      setAiError({ message: quota ? message : t('editor.aiFailed', { message }), quota });
     } finally {
-      setIsAiGenerating(false)
+      setIsAiGenerating(false);
     }
-  }
+  };
 
   const handleMetaChange = (updates: Partial<EndpointData>) => {
-    if (!activeEndpoint || isViewer) return
-    setActiveEndpoint({ ...activeEndpoint, ...updates })
-    setIsDirty(true)
-  }
+    if (!activeEndpoint || isViewer) return;
+    setActiveEndpoint({ ...activeEndpoint, ...updates });
+    setIsDirty(true);
+  };
 
   const handleJsonChange = (val: string) => {
-    if (isViewer) return
-    setJsonContent(val)
-    setIsDirty(true)
-  }
+    if (isViewer) return;
+    setJsonContent(val);
+    setIsDirty(true);
+  };
 
   const handleSave = async () => {
-    if (!activeEndpoint) return
-    setIsSaving(true)
+    if (!activeEndpoint) return;
+    setIsSaving(true);
     try {
-      let parsedJson = {}
+      let parsedJson = {};
       try {
-        parsedJson = JSON.parse(jsonContent)
+        parsedJson = JSON.parse(jsonContent);
       } catch (e) {
-        alert(t('editor.invalidJson'))
-        setIsSaving(false)
-        return
+        alert(t('editor.invalidJson'));
+        setIsSaving(false);
+        return;
       }
 
-      const statusCode = activeEndpoint.responses?.[0]?.statusCode || 200
+      const statusCode = activeEndpoint.responses?.[0]?.statusCode || 200;
 
       const payload = {
         path: activeEndpoint.path,
@@ -305,23 +317,23 @@ const MockEditor: React.FC = () => {
         responseBody: parsedJson,
         statusCode,
         delay_ms: activeEndpoint.delay_ms || 0,
-        force_status_code: activeEndpoint.force_status_code || 0
-      }
-      
+        force_status_code: activeEndpoint.force_status_code || 0,
+      };
+
       // Update endpoint on backend
-      const updatedEp = await updateEndpoint(activeEndpoint.id, payload)
-      
+      const updatedEp = await updateEndpoint(activeEndpoint.id, payload);
+
       // Update local state list
-      setEndpoints(prev => prev.map(ep => ep.id === activeEndpoint.id ? updatedEp : ep))
-      setActiveEndpoint(updatedEp)
-      setIsDirty(false)
+      setEndpoints((prev) => prev.map((ep) => (ep.id === activeEndpoint.id ? updatedEp : ep)));
+      setActiveEndpoint(updatedEp);
+      setIsDirty(false);
     } catch (err) {
-      console.error("Save failed:", err)
-      alert(t('editor.saveFailed'))
+      console.error('Save failed:', err);
+      alert(t('editor.saveFailed'));
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   return (
     <Layout onOpenProjectSettings={() => setShowSettingsModal(true)}>
@@ -329,12 +341,10 @@ const MockEditor: React.FC = () => {
         <section className={styles.leftHeader}>
           <article className={styles.urlSection}>
             <span className={styles.urlLabel}>{t('editor.mockBaseUrl')}:</span>
-            <code className={styles.urlDisplay}>
-              {mockBaseUrl}
-            </code>
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <code className={styles.urlDisplay}>{mockBaseUrl}</code>
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => {
                 if (project?.slug) {
                   navigator.clipboard.writeText(mockBaseUrl);
@@ -361,14 +371,18 @@ const MockEditor: React.FC = () => {
               <span className={styles.authLabel}>{t('editor.publicMock')}</span>
             )}
           </article>
-          {isDirty && <span className={styles.unsaved} role="status">• {t('editor.unsaved')}</span>}
+          {isDirty && (
+            <span className={styles.unsaved} role="status">
+              • {t('editor.unsaved')}
+            </span>
+          )}
         </section>
         <section className={styles.rightHeader}>
           <ExportMenu projectId={project?.id} />
           {!isViewer && (
             <>
-              <Button 
-                variant="secondary" 
+              <Button
+                variant="secondary"
                 onClick={() => setShowAiModal(true)}
                 className={styles.aiBtn}
               >
@@ -386,13 +400,13 @@ const MockEditor: React.FC = () => {
       <section className={styles.editorLayout}>
         {/* Left Sidebar: Endpoint Tree */}
         <aside className={styles.treeSidebar}>
-          <EndpointTree 
-            endpoints={endpoints} 
-            selectedId={selectedId} 
+          <EndpointTree
+            endpoints={endpoints}
+            selectedId={selectedId}
             onSelect={(id) => {
-              const ep = endpoints.find(e => e.id === id)
-              if (ep) handleSelectEndpoint(ep)
-            }} 
+              const ep = endpoints.find((e) => e.id === id);
+              if (ep) handleSelectEndpoint(ep);
+            }}
             onAdd={isViewer ? undefined : handleAddEndpoint}
             onDelete={isViewer ? undefined : (id) => setEndpointToDelete(id)}
           />
@@ -408,18 +422,16 @@ const MockEditor: React.FC = () => {
               <JsonEditor value={jsonContent} onChange={handleJsonChange} readOnly={isViewer} />
             </>
           ) : (
-            <article className={styles.emptyState}>
-              {t('editor.selectEndpoint')}
-            </article>
+            <article className={styles.emptyState}>{t('editor.selectEndpoint')}</article>
           )}
         </section>
 
         {/* Right Sidebar: Inspector */}
         <aside className={styles.inspectorSidebar}>
           {activeEndpoint && (
-            <EndpointInspector 
-              endpoint={activeEndpoint} 
-              onChangeMeta={handleMetaChange} 
+            <EndpointInspector
+              endpoint={activeEndpoint}
+              onChangeMeta={handleMetaChange}
               readOnly={isViewer}
               mockBaseUrl={mockBaseUrl}
               apiKeyRequired={project?.visibility === 'key'}
@@ -440,44 +452,50 @@ const MockEditor: React.FC = () => {
             </nav>
           </article>
         ) : (
-        <article className={styles.aiModalContent}>
-          <h3>{t('editor.aiModalTitle')}</h3>
-          <p>{t('editor.aiModalText')}</p>
-          <textarea
-            value={aiRequirement}
-            onChange={(e) => setAiRequirement(e.target.value)}
-            maxLength={MAX_AI_REQUIREMENT_CHARS}
-            placeholder={t('editor.aiModalPlaceholder')}
-            aria-label={t('editor.aiModalTitle')}
-            className={styles.aiTextarea}
-          />
-          <ModalErrorAlert message={aiError?.message} className={styles.aiError} />
-          {aiError?.quota && (
-            <Link to={PATHS.billing} className={styles.upgradeLink}>
-              {t('billing.viewPlans')} →
-            </Link>
-          )}
-          <nav className={styles.modalActions}>
-            <Button variant="ghost" onClick={closeAiModal} disabled={isAiGenerating}>{t('common.cancel')}</Button>
-            <Button onClick={handleAiGenerate} isLoading={isAiGenerating} disabled={!aiRequirement || isAiGenerating}>
-              {isAiGenerating ? aiStatusMessage : t('editor.generate')}
-            </Button>
-          </nav>
-        </article>
+          <article className={styles.aiModalContent}>
+            <h3>{t('editor.aiModalTitle')}</h3>
+            <p>{t('editor.aiModalText')}</p>
+            <textarea
+              value={aiRequirement}
+              onChange={(e) => setAiRequirement(e.target.value)}
+              maxLength={MAX_AI_REQUIREMENT_CHARS}
+              placeholder={t('editor.aiModalPlaceholder')}
+              aria-label={t('editor.aiModalTitle')}
+              className={styles.aiTextarea}
+            />
+            <ModalErrorAlert message={aiError?.message} className={styles.aiError} />
+            {aiError?.quota && (
+              <Link to={PATHS.billing} className={styles.upgradeLink}>
+                {t('billing.viewPlans')} →
+              </Link>
+            )}
+            <nav className={styles.modalActions}>
+              <Button variant="ghost" onClick={closeAiModal} disabled={isAiGenerating}>
+                {t('common.cancel')}
+              </Button>
+              <Button
+                onClick={handleAiGenerate}
+                isLoading={isAiGenerating}
+                disabled={!aiRequirement || isAiGenerating}
+              >
+                {isAiGenerating ? aiStatusMessage : t('editor.generate')}
+              </Button>
+            </nav>
+          </article>
         )}
       </Modal>
       {/* Project Settings Modal */}
       {project && (
-        <ProjectSettingsModal 
+        <ProjectSettingsModal
           isOpen={showSettingsModal}
           onClose={() => setShowSettingsModal(false)}
           project={project}
           isViewer={isViewer}
           onUpdate={(updated) => {
-            setProject(updated)
+            setProject(updated);
             // If slug changed, we need to update the URL
             if (updated.slug !== project.slug) {
-              navigate(PATHS.editor(updated.slug), { replace: true })
+              navigate(PATHS.editor(updated.slug), { replace: true });
             }
           }}
           onDelete={() => navigate(PATHS.dashboard)}
@@ -489,16 +507,22 @@ const MockEditor: React.FC = () => {
           <h3>{t('editor.confirmDeleteTitle')}</h3>
           <p>{t('editor.confirmDeleteText')}</p>
           <nav className={styles.modalActions}>
-            <Button variant="ghost" onClick={() => setEndpointToDelete(null)} disabled={isDeleting}>{t('common.cancel')}</Button>
-            <Button variant="danger" onClick={() => endpointToDelete && handleDeleteEndpoint(endpointToDelete)} isLoading={isDeleting} disabled={isDeleting}>
+            <Button variant="ghost" onClick={() => setEndpointToDelete(null)} disabled={isDeleting}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => endpointToDelete && handleDeleteEndpoint(endpointToDelete)}
+              isLoading={isDeleting}
+              disabled={isDeleting}
+            >
               {isDeleting ? t('common.deleting') : t('common.delete')}
             </Button>
           </nav>
         </article>
       </Modal>
     </Layout>
-  )
-}
+  );
+};
 
-export default MockEditor
-
+export default MockEditor;

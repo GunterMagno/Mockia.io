@@ -15,12 +15,14 @@ export const useNotifications = () => {
   const fetchNotifications = async () => {
     try {
       const data = await getNotifications();
-      
+
       if (isFirstFetchRef.current) {
         isFirstFetchRef.current = false;
       } else {
-        const prevUnreadIds = new Set(prevNotificationsRef.current.filter(n => !n.isRead).map(n => n.id));
-        const newUnread = data.find(n => !n.isRead && !prevUnreadIds.has(n.id));
+        const prevUnreadIds = new Set(
+          prevNotificationsRef.current.filter((n) => !n.isRead).map((n) => n.id)
+        );
+        const newUnread = data.find((n) => !n.isRead && !prevUnreadIds.has(n.id));
 
         if (newUnread) {
           setActiveToast(newUnread);
@@ -66,13 +68,13 @@ export const useNotifications = () => {
     };
   }, []);
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   return {
     notifications,
     activeToast,
     unreadCount,
     fetchNotifications,
-    clearToast: () => setActiveToast(null)
+    clearToast: () => setActiveToast(null),
   };
 };

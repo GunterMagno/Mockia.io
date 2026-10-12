@@ -1,9 +1,7 @@
 {
   "id": "express-settings-put-patch",
   "description": "Singleton resources updated with PUT and PATCH (no list, no :id).",
-  "tags": [
-    "express"
-  ],
+  "tags": ["express"],
   "input": {
     "projectTitle": "Account Settings",
     "userInput": "Mock the profile and notification settings endpoints.",
@@ -31,27 +29,19 @@
           "summary": "Settings router",
           "routes": [
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/profile"
             },
             {
-              "methods": [
-                "PUT"
-              ],
+              "methods": ["PUT"],
               "path": "/profile"
             },
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/notifications"
             },
             {
-              "methods": [
-                "PATCH"
-              ],
+              "methods": ["PATCH"],
               "path": "/notifications"
             }
           ]
@@ -63,19 +53,11 @@
           "interfaces": [
             {
               "name": "Profile",
-              "properties": [
-                "name: string",
-                "bio: string",
-                "timezone: string"
-              ]
+              "properties": ["name: string", "bio: string", "timezone: string"]
             },
             {
               "name": "NotificationPrefs",
-              "properties": [
-                "email: boolean",
-                "push: boolean",
-                "digest: string"
-              ]
+              "properties": ["email: boolean", "push: boolean", "digest: string"]
             }
           ]
         }
@@ -105,11 +87,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "name",
-          "bio",
-          "timezone"
-        ]
+        "required": ["name", "bio", "timezone"]
       },
       "examples": [
         {
@@ -139,11 +117,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "name",
-          "bio",
-          "timezone"
-        ]
+        "required": ["name", "bio", "timezone"]
       },
       "responseSchema": {
         "type": "object",
@@ -158,11 +132,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "name",
-          "bio",
-          "timezone"
-        ]
+        "required": ["name", "bio", "timezone"]
       },
       "examples": [
         {
@@ -201,11 +171,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "email",
-          "push",
-          "digest"
-        ]
+        "required": ["email", "push", "digest"]
       },
       "examples": [
         {
@@ -229,9 +195,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "push"
-        ]
+        "required": ["push"]
       },
       "responseSchema": {
         "type": "object",
@@ -246,11 +210,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "email",
-          "push",
-          "digest"
-        ]
+        "required": ["email", "push", "digest"]
       },
       "examples": [
         {

@@ -14,7 +14,11 @@ const spec = (endpoints: Array<{ path: string; method: string }>) => ({
   apiVersion: '1.0.0',
   title: 'Gym API',
   description: 'd',
-  endpoints: endpoints.map((e) => ({ ...e, description: 'x', examples: [{ request: {}, response: { id: 1 } }] })),
+  endpoints: endpoints.map((e) => ({
+    ...e,
+    description: 'x',
+    examples: [{ request: {}, response: { id: 1 } }],
+  })),
   dataModels: [],
 });
 const line = (endpoints: Array<{ path: string; method: string }>, user = 'Make an API') =>
@@ -28,7 +32,17 @@ const line = (endpoints: Array<{ path: string; method: string }>, user = 'Make a
 
 describe('casesFromJsonl', () => {
   it('turns each line into a case: messages without the target, expected from the target', () => {
-    const text = [line([{ path: '/members', method: 'GET' }], 'u1'), line([{ path: '/classes', method: 'POST' }, { path: '/classes/:id', method: 'GET' }], 'u2')].join('\n') + '\n';
+    const text =
+      [
+        line([{ path: '/members', method: 'GET' }], 'u1'),
+        line(
+          [
+            { path: '/classes', method: 'POST' },
+            { path: '/classes/:id', method: 'GET' },
+          ],
+          'u2'
+        ),
+      ].join('\n') + '\n';
     const cases = casesFromJsonl(text);
     expect(cases.map((c) => c.id)).toEqual(['val-0001', 'val-0002']);
     expect(cases[0].messages).toEqual([
@@ -51,7 +65,9 @@ describe('casesFromJsonl', () => {
 
   it('rejects a malformed line naming the line number but never quoting its content', () => {
     const secret = 'PRIVATE-CONTENT-123';
-    expect(() => casesFromJsonl(`${line([{ path: '/a', method: 'GET' }])}\n{"messages": [${secret}`)).toThrow(/line 2/);
+    expect(() =>
+      casesFromJsonl(`${line([{ path: '/a', method: 'GET' }])}\n{"messages": [${secret}`)
+    ).toThrow(/line 2/);
     try {
       casesFromJsonl(`{"messages": [${secret}`);
     } catch (e) {
@@ -61,10 +77,36 @@ describe('casesFromJsonl', () => {
 
   it.each([
     ['no messages', JSON.stringify({ nope: 1 })],
-    ['last message not the assistant', JSON.stringify({ messages: [{ role: 'user', content: 'x' }] })],
-    ['assistant content not JSON', JSON.stringify({ messages: [{ role: 'user', content: 'x' }, { role: 'assistant', content: 'plain text' }] })],
-    ['assistant JSON without endpoints', JSON.stringify({ messages: [{ role: 'user', content: 'x' }, { role: 'assistant', content: '{"a":1}' }] })],
-    ['no prompt before the target', JSON.stringify({ messages: [{ role: 'assistant', content: JSON.stringify(spec([{ path: '/a', method: 'GET' }])) }] })],
+    [
+      'last message not the assistant',
+      JSON.stringify({ messages: [{ role: 'user', content: 'x' }] }),
+    ],
+    [
+      'assistant content not JSON',
+      JSON.stringify({
+        messages: [
+          { role: 'user', content: 'x' },
+          { role: 'assistant', content: 'plain text' },
+        ],
+      }),
+    ],
+    [
+      'assistant JSON without endpoints',
+      JSON.stringify({
+        messages: [
+          { role: 'user', content: 'x' },
+          { role: 'assistant', content: '{"a":1}' },
+        ],
+      }),
+    ],
+    [
+      'no prompt before the target',
+      JSON.stringify({
+        messages: [
+          { role: 'assistant', content: JSON.stringify(spec([{ path: '/a', method: 'GET' }])) },
+        ],
+      }),
+    ],
   ])('rejects: %s', (_name, bad) => {
     expect(() => casesFromJsonl(bad)).toThrow(/line 1/);
   });
@@ -80,7 +122,9 @@ describe('writeValCases + the bench', () => {
   });
 
   it('writes one JSON file per case that loadCases reads back', () => {
-    const cases = casesFromJsonl([line([{ path: '/a', method: 'GET' }]), line([{ path: '/b', method: 'GET' }])].join('\n'));
+    const cases = casesFromJsonl(
+      [line([{ path: '/a', method: 'GET' }]), line([{ path: '/b', method: 'GET' }])].join('\n')
+    );
     const out = path.join(dir, 'cases');
     expect(writeValCases(cases, out)).toBe(2);
     expect(fs.readdirSync(out).sort()).toEqual(['val-0001.json', 'val-0002.json']);
@@ -89,16 +133,22 @@ describe('writeValCases + the bench', () => {
     expect(loaded[0].messages).toHaveLength(2);
   });
 
-  (process.platform === 'win32' ? it.skip : it)('the files are 0600 (they derive from user data) and the directory 0700', () => {
-    const out = path.join(dir, 'cases');
-    writeValCases(casesFromJsonl(line([{ path: '/a', method: 'GET' }])), out);
-    expect(fs.statSync(path.join(out, 'val-0001.json')).mode & 0o777).toBe(0o600);
-    expect(fs.statSync(out).mode & 0o777).toBe(0o700);
-  });
+  (process.platform === 'win32' ? it.skip : it)(
+    'the files are 0600 (they derive from user data) and the directory 0700',
+    () => {
+      const out = path.join(dir, 'cases');
+      writeValCases(casesFromJsonl(line([{ path: '/a', method: 'GET' }])), out);
+      expect(fs.statSync(path.join(out, 'val-0001.json')).mode & 0o777).toBe(0o600);
+      expect(fs.statSync(out).mode & 0o777).toBe(0o700);
+    }
+  );
 
   it('the runner sends exactly the stored messages to the model and scores against the target', async () => {
     const out = path.join(dir, 'cases');
-    writeValCases(casesFromJsonl(line([{ path: '/members', method: 'GET' }], 'held-out prompt')), out);
+    writeValCases(
+      casesFromJsonl(line([{ path: '/members', method: 'GET' }], 'held-out prompt')),
+      out
+    );
     const seen: unknown[] = [];
     const logs: string[] = [];
     const { result } = await runEval({
@@ -110,14 +160,20 @@ describe('writeValCases + the bench', () => {
         name: 'probe',
         async complete(req) {
           seen.push(req.messages);
-          return { text: JSON.stringify(spec([{ path: '/members', method: 'GET' }])), provider: 'probe', model: 'm' };
+          return {
+            text: JSON.stringify(spec([{ path: '/members', method: 'GET' }])),
+            provider: 'probe',
+            model: 'm',
+          };
         },
       }),
     });
-    expect(seen).toEqual([[
-      { role: 'system', content: 'You generate mock APIs.' },
-      { role: 'user', content: 'held-out prompt' },
-    ]]);
+    expect(seen).toEqual([
+      [
+        { role: 'system', content: 'You generate mock APIs.' },
+        { role: 'user', content: 'held-out prompt' },
+      ],
+    ]);
     expect(result.summary.meanMethodPathF1).toBe(1);
     expect(result.summary.schemaValidPct).toBe(100);
   });
@@ -133,7 +189,11 @@ describe('writeValCases + the bench', () => {
       providerFactory: () => ({
         name: 'probe',
         async complete() {
-          return { text: JSON.stringify(spec([{ path: '/other', method: 'DELETE' }])), provider: 'probe', model: 'm' };
+          return {
+            text: JSON.stringify(spec([{ path: '/other', method: 'DELETE' }])),
+            provider: 'probe',
+            model: 'm',
+          };
         },
       }),
     });
@@ -143,7 +203,9 @@ describe('writeValCases + the bench', () => {
 
 describe('--cases flag', () => {
   it('parseArgs accepts --cases=<dir>', () => {
-    expect(parseArgs(['--provider=fake-perfect', '--cases=./ai-datasets/val-cases']).cases).toBe('./ai-datasets/val-cases');
+    expect(parseArgs(['--provider=fake-perfect', '--cases=./ai-datasets/val-cases']).cases).toBe(
+      './ai-datasets/val-cases'
+    );
     expect(parseArgs(['--provider=fake-perfect']).cases).toBeUndefined();
   });
 
@@ -155,9 +217,16 @@ describe('--cases flag', () => {
     const spy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
     const err = jest.spyOn(console, 'error').mockImplementation(() => undefined);
     try {
-      expect(await cli(['--provider=fake-perfect', `--cases=${out}`, `--out=${results}`], dir)).toBe(0);
+      expect(
+        await cli(['--provider=fake-perfect', `--cases=${out}`, `--out=${results}`], dir)
+      ).toBe(0);
       expect(fs.readdirSync(results)).toHaveLength(1);
-      expect(await cli(['--provider=fake-perfect', `--cases=${path.join(dir, 'missing')}`, `--out=${results}`], dir)).toBe(2);
+      expect(
+        await cli(
+          ['--provider=fake-perfect', `--cases=${path.join(dir, 'missing')}`, `--out=${results}`],
+          dir
+        )
+      ).toBe(2);
     } finally {
       spy.mockRestore();
       err.mockRestore();

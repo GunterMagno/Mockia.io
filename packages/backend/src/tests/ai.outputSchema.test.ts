@@ -61,7 +61,9 @@ describe('MOCK_SPEC_JSON_SCHEMA', () => {
 
   it('accepts all five HTTP methods, several endpoints and no data models', () => {
     const sample = api({
-      endpoints: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'].map((method) => endpoint({ method, path: `/api/${method.toLowerCase()}` })),
+      endpoints: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'].map((method) =>
+        endpoint({ method, path: `/api/${method.toLowerCase()}` })
+      ),
       dataModels: [],
     });
     expect(validatorAccepts(sample)).toBe(true);
@@ -69,7 +71,11 @@ describe('MOCK_SPEC_JSON_SCHEMA', () => {
   });
 
   it('accepts endpoints without requestSchema/responseSchema (optional for the validator)', () => {
-    const bare = api({ endpoints: [{ path: '/x', method: 'GET', description: 'd', examples: [{ request: {}, response: {} }] }] });
+    const bare = api({
+      endpoints: [
+        { path: '/x', method: 'GET', description: 'd', examples: [{ request: {}, response: {} }] },
+      ],
+    });
     expect(validatorAccepts(bare)).toBe(true);
     expect(schemaAccepts(bare)).toBe(true);
   });
@@ -118,8 +124,20 @@ describe('MOCK_SPEC_JSON_SCHEMA', () => {
 
   it('declares exactly the properties and requirements the validator reads', () => {
     const schema = MOCK_SPEC_JSON_SCHEMA as any;
-    expect(Object.keys(schema.properties).sort()).toEqual(['apiVersion', 'dataModels', 'description', 'endpoints', 'title']);
-    expect([...schema.required].sort()).toEqual(['apiVersion', 'dataModels', 'description', 'endpoints', 'title']);
+    expect(Object.keys(schema.properties).sort()).toEqual([
+      'apiVersion',
+      'dataModels',
+      'description',
+      'endpoints',
+      'title',
+    ]);
+    expect([...schema.required].sort()).toEqual([
+      'apiVersion',
+      'dataModels',
+      'description',
+      'endpoints',
+      'title',
+    ]);
     const item = schema.properties.endpoints.items;
     expect([...item.required].sort()).toEqual(['description', 'method', 'path']);
     expect(item.properties.method.enum).toEqual(['GET', 'POST', 'PUT', 'DELETE', 'PATCH']);
@@ -132,8 +150,14 @@ describe('MOCK_SPEC_JSON_SCHEMA: example bodies and status codes', () => {
 
   it.each([
     ['object request and object response', { request: {}, response: { id: 'm1' } }],
-    ['object request and array response (list endpoint)', { request: {}, response: [{ id: 'm1' }] }],
-    ['array request (bulk create) and array response', { request: [{ name: 'a' }], response: [{ id: 'm1' }] }],
+    [
+      'object request and array response (list endpoint)',
+      { request: {}, response: [{ id: 'm1' }] },
+    ],
+    [
+      'array request (bulk create) and array response',
+      { request: [{ name: 'a' }], response: [{ id: 'm1' }] },
+    ],
     ['empty array response', { request: {}, response: [] }],
   ])('accepts, like the validator: %s', (_name, example) => {
     expect(validatorAccepts(withExample(example))).toBe(true);

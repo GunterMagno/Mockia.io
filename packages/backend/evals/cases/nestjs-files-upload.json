@@ -1,11 +1,7 @@
 {
   "id": "nestjs-files-upload",
   "description": "NestJS files controller with an upload (FileInterceptor) and a download.",
-  "tags": [
-    "nestjs",
-    "upload",
-    "path-params"
-  ],
+  "tags": ["nestjs", "upload", "path-params"],
   "input": {
     "projectTitle": "Document Vault",
     "userInput": "Mock the file upload and download endpoints.",
@@ -33,21 +29,15 @@
           "summary": "@Controller(\"files\"): @Post(\"upload\") with @UseInterceptors(FileInterceptor(\"file\")), @Get(\":id/download\")",
           "routes": [
             {
-              "methods": [
-                "POST"
-              ],
+              "methods": ["POST"],
               "path": "/files/upload"
             },
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/files/:id/download"
             },
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/files/:id"
             }
           ]
@@ -83,9 +73,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "file"
-        ]
+        "required": ["file"]
       },
       "responseSchema": {
         "type": "object",
@@ -103,12 +91,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "id",
-          "originalName",
-          "mimeType",
-          "sizeBytes"
-        ]
+        "required": ["id", "originalName", "mimeType", "sizeBytes"]
       },
       "examples": [
         {
@@ -149,12 +132,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "id",
-          "originalName",
-          "mimeType",
-          "sizeBytes"
-        ]
+        "required": ["id", "originalName", "mimeType", "sizeBytes"]
       },
       "examples": [
         {
@@ -193,12 +171,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "id",
-          "originalName",
-          "mimeType",
-          "sizeBytes"
-        ]
+        "required": ["id", "originalName", "mimeType", "sizeBytes"]
       },
       "examples": [
         {

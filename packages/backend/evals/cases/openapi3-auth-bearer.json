@@ -1,12 +1,7 @@
 {
   "id": "openapi3-auth-bearer",
   "description": "OpenAPI 3 notes API where every operation but login is secured with a bearer token.",
-  "tags": [
-    "openapi3",
-    "auth",
-    "errors",
-    "path-params"
-  ],
+  "tags": ["openapi3", "auth", "errors", "path-params"],
   "input": {
     "projectTitle": "Secure Notes",
     "userInput": "Generate the mock API for the secured notes service.",
@@ -29,27 +24,19 @@
           "summary": "OpenAPI 3.0.0. POST /login is public and returns { token: string, expiresAt: string }. All other operations require bearerAuth. Note = { id: string, text: string, pinned: boolean }.",
           "routes": [
             {
-              "methods": [
-                "POST"
-              ],
+              "methods": ["POST"],
               "path": "/login"
             },
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/notes"
             },
             {
-              "methods": [
-                "POST"
-              ],
+              "methods": ["POST"],
               "path": "/notes"
             },
             {
-              "methods": [
-                "PUT"
-              ],
+              "methods": ["PUT"],
               "path": "/notes/{noteId}"
             }
           ]
@@ -72,10 +59,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "username",
-          "password"
-        ]
+        "required": ["username", "password"]
       },
       "responseSchema": {
         "type": "object",
@@ -87,10 +71,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "token",
-          "expiresAt"
-        ]
+        "required": ["token", "expiresAt"]
       },
       "examples": [
         {
@@ -136,11 +117,7 @@
               "type": "boolean"
             }
           },
-          "required": [
-            "id",
-            "text",
-            "pinned"
-          ]
+          "required": ["id", "text", "pinned"]
         }
       },
       "examples": [
@@ -174,9 +151,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "text"
-        ]
+        "required": ["text"]
       },
       "responseSchema": {
         "type": "object",
@@ -191,11 +166,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "id",
-          "text",
-          "pinned"
-        ]
+        "required": ["id", "text", "pinned"]
       },
       "examples": [
         {
@@ -231,10 +202,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "text",
-          "pinned"
-        ]
+        "required": ["text", "pinned"]
       },
       "responseSchema": {
         "type": "object",
@@ -249,11 +217,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "id",
-          "text",
-          "pinned"
-        ]
+        "required": ["id", "text", "pinned"]
       },
       "examples": [
         {

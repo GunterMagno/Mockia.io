@@ -1,10 +1,7 @@
 {
   "id": "swagger2-weather-stations",
   "description": "Swagger 2.0 document (paths + definitions) for weather stations.",
-  "tags": [
-    "swagger2",
-    "path-params"
-  ],
+  "tags": ["swagger2", "path-params"],
   "input": {
     "projectTitle": "Weather Stations",
     "userInput": "Mock the Swagger 2 API.",
@@ -27,21 +24,15 @@
           "summary": "Swagger 2.0, basePath \"/\". definitions.Station = { id: string, name: string, altitudeM: integer }; definitions.Reading = { stationId: string, temperatureC: number, takenAt: string }.",
           "routes": [
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/stations"
             },
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/stations/{id}"
             },
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/stations/{id}/readings"
             }
           ]
@@ -74,11 +65,7 @@
               "type": "integer"
             }
           },
-          "required": [
-            "id",
-            "name",
-            "altitudeM"
-          ]
+          "required": ["id", "name", "altitudeM"]
         }
       },
       "examples": [
@@ -116,11 +103,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "id",
-          "name",
-          "altitudeM"
-        ]
+        "required": ["id", "name", "altitudeM"]
       },
       "examples": [
         {
@@ -164,11 +147,7 @@
               "type": "string"
             }
           },
-          "required": [
-            "stationId",
-            "temperatureC",
-            "takenAt"
-          ]
+          "required": ["stationId", "temperatureC", "takenAt"]
         }
       },
       "examples": [

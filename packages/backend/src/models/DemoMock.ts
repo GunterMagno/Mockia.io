@@ -37,7 +37,7 @@ const endpointSchema = new Schema<DemoEndpointDocument>(
     bodyJson: { type: String, required: true },
     headers: { type: Schema.Types.Mixed, default: {} },
   },
-  { _id: false, minimize: false },
+  { _id: false, minimize: false }
 );
 
 const demoMockSchema = new Schema<DemoMockDocument>(
@@ -49,7 +49,7 @@ const demoMockSchema = new Schema<DemoMockDocument>(
     createdAt: { type: Date, required: true },
     expiresAt: { type: Date, required: true },
   },
-  { minimize: false },
+  { minimize: false }
 );
 
 demoMockSchema.index({ demoId: 1 }, { unique: true });

@@ -153,7 +153,7 @@ export async function callOpenRouterWithRetry(
                 `[OpenRouter] ⚠ Credit limit reached. Adjusting max_tokens to ${affordableTokens} and retrying...`
               );
               payload.max_tokens = affordableTokens;
-              // Reset attempt counter or just continue? 
+              // Reset attempt counter or just continue?
               // Continuing is safer to prevent infinite loops if something goes wrong.
               continue;
             }
@@ -163,13 +163,19 @@ export async function callOpenRouterWithRetry(
         // Non-retryable error, throw immediately
         // Only the status/code: the raw AxiosError holds the prompt (config.data), the API key and the response body
         console.error(`[OpenRouter] ✗ Non-retryable error (${describeError(error)})`);
-        throw withProviderOutcome(transformOpenRouterError(error), mayHaveBeenBilled ? 'uncertain' : 'refused');
+        throw withProviderOutcome(
+          transformOpenRouterError(error),
+          mayHaveBeenBilled ? 'uncertain' : 'refused'
+        );
       }
 
       // Retryable error, but check if it's the last attempt
       if (attempt === retryConfig.maxRetries - 1) {
         console.error('[OpenRouter] ✗ Max retries exceeded');
-        throw withProviderOutcome(transformOpenRouterError(error), mayHaveBeenBilled ? 'uncertain' : 'refused');
+        throw withProviderOutcome(
+          transformOpenRouterError(error),
+          mayHaveBeenBilled ? 'uncertain' : 'refused'
+        );
       }
 
       // Calculate backoff delay and retry
@@ -192,7 +198,11 @@ export async function callOpenRouterWithRetry(
 
   // This should not be reached due to the throw in the loop, but for type safety
   throw withProviderOutcome(
-    new AppError('OpenRouter API call failed after all retries', ErrorCode.EXTERNAL_SERVICE_ERROR, 503),
+    new AppError(
+      'OpenRouter API call failed after all retries',
+      ErrorCode.EXTERNAL_SERVICE_ERROR,
+      503
+    ),
     'uncertain'
   );
 }
@@ -250,11 +260,7 @@ function transformOpenRouterError(error: unknown): AppError {
     );
   }
 
-  return new AppError(
-    'OpenRouter API error: Unknown error',
-    ErrorCode.EXTERNAL_SERVICE_ERROR,
-    500
-  );
+  return new AppError('OpenRouter API error: Unknown error', ErrorCode.EXTERNAL_SERVICE_ERROR, 500);
 }
 
 /**
@@ -285,9 +291,5 @@ export async function generateWithOpenRouter(
     }
   }
 
-  throw new AppError(
-    'No response received from OpenRouter',
-    ErrorCode.EXTERNAL_SERVICE_ERROR,
-    500
-  );
+  throw new AppError('No response received from OpenRouter', ErrorCode.EXTERNAL_SERVICE_ERROR, 500);
 }

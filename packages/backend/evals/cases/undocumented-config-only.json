@@ -1,9 +1,7 @@
 {
   "id": "undocumented-config-only",
   "description": "Repository with only build files and no types or routes; the user lists the endpoints they need.",
-  "tags": [
-    "undocumented"
-  ],
+  "tags": ["undocumented"],
   "input": {
     "projectTitle": "Notes App",
     "userInput": "A notes app: I need GET /notes, GET /notes/:id and POST /notes. A note has id, title and content.",
@@ -63,11 +61,7 @@
               "type": "string"
             }
           },
-          "required": [
-            "id",
-            "title",
-            "content"
-          ]
+          "required": ["id", "title", "content"]
         }
       },
       "examples": [
@@ -105,11 +99,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "title",
-          "content"
-        ]
+        "required": ["id", "title", "content"]
       },
       "examples": [
         {
@@ -136,10 +126,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "title",
-          "content"
-        ]
+        "required": ["title", "content"]
       },
       "responseSchema": {
         "type": "object",
@@ -154,11 +141,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "title",
-          "content"
-        ]
+        "required": ["id", "title", "content"]
       },
       "examples": [
         {

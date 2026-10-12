@@ -1,10 +1,7 @@
 {
   "id": "ts-types-gym",
   "description": "Interfaces for members, trainers and classes; the user asks for members and classes only.",
-  "tags": [
-    "typescript-types",
-    "path-params"
-  ],
+  "tags": ["typescript-types", "path-params"],
   "input": {
     "projectTitle": "Gym Tracker",
     "userInput": "I only need the members and classes endpoints (list, get by id and create).",
@@ -33,20 +30,11 @@
           "interfaces": [
             {
               "name": "Member",
-              "properties": [
-                "id: string",
-                "name: string",
-                "plan: string",
-                "joinedAt: string"
-              ]
+              "properties": ["id: string", "name: string", "plan: string", "joinedAt: string"]
             },
             {
               "name": "Trainer",
-              "properties": [
-                "id: string",
-                "name: string",
-                "speciality: string"
-              ]
+              "properties": ["id: string", "name: string", "speciality: string"]
             },
             {
               "name": "GymClass",
@@ -62,10 +50,7 @@
           "enums": [
             {
               "name": "Plan",
-              "members": [
-                "BASIC",
-                "PREMIUM"
-              ]
+              "members": ["BASIC", "PREMIUM"]
             }
           ]
         }
@@ -100,12 +85,7 @@
               "type": "string"
             }
           },
-          "required": [
-            "id",
-            "name",
-            "plan",
-            "joinedAt"
-          ]
+          "required": ["id", "name", "plan", "joinedAt"]
         }
       },
       "examples": [
@@ -147,12 +127,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "name",
-          "plan",
-          "joinedAt"
-        ]
+        "required": ["id", "name", "plan", "joinedAt"]
       },
       "examples": [
         {
@@ -180,10 +155,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "name",
-          "plan"
-        ]
+        "required": ["name", "plan"]
       },
       "responseSchema": {
         "type": "object",
@@ -201,12 +173,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "name",
-          "plan",
-          "joinedAt"
-        ]
+        "required": ["id", "name", "plan", "joinedAt"]
       },
       "examples": [
         {
@@ -253,13 +220,7 @@
               "type": "integer"
             }
           },
-          "required": [
-            "id",
-            "title",
-            "trainerId",
-            "startsAt",
-            "capacity"
-          ]
+          "required": ["id", "title", "trainerId", "startsAt", "capacity"]
         }
       },
       "examples": [
@@ -305,13 +266,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "id",
-          "title",
-          "trainerId",
-          "startsAt",
-          "capacity"
-        ]
+        "required": ["id", "title", "trainerId", "startsAt", "capacity"]
       },
       "examples": [
         {
@@ -346,12 +301,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "title",
-          "trainerId",
-          "startsAt",
-          "capacity"
-        ]
+        "required": ["title", "trainerId", "startsAt", "capacity"]
       },
       "responseSchema": {
         "type": "object",
@@ -372,13 +322,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "id",
-          "title",
-          "trainerId",
-          "startsAt",
-          "capacity"
-        ]
+        "required": ["id", "title", "trainerId", "startsAt", "capacity"]
       },
       "examples": [
         {

@@ -13,7 +13,9 @@ import { casesFromJsonl, writeValCases } from './valCases.js';
 
 const [input, outDir = './ai-datasets/val-cases'] = process.argv.slice(2);
 if (!input) {
-  console.error('Usage: npm run ai:val-to-cases -w @mockia/backend -- <val.jsonl> [outDir=./ai-datasets/val-cases]');
+  console.error(
+    'Usage: npm run ai:val-to-cases -w @mockia/backend -- <val.jsonl> [outDir=./ai-datasets/val-cases]'
+  );
   process.exit(2);
 }
 try {

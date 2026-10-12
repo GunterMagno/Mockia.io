@@ -10,12 +10,12 @@ import { revokeAllForUser } from '../auth/sessions.js';
 /**
  * Get user profile by ID
  * Returns public user data without sensitive information
- * 
+ *
  * @throws {AppError} If user is not found
  */
 export async function getUserProfile(userId: string): Promise<UserDTO> {
   const user = await UserModel.findById(userId).exec();
-  
+
   if (!user) {
     throw new AppError('User not found', ErrorCode.NOT_FOUND, 404);
   }
@@ -26,7 +26,7 @@ export async function getUserProfile(userId: string): Promise<UserDTO> {
 /**
  * Update user profile
  * Only allows updating non-sensitive fields like username
- * 
+ *
  * @throws {AppError} If user is not found
  */
 export async function updateUserProfile(
@@ -34,7 +34,7 @@ export async function updateUserProfile(
   updateData: { username?: string }
 ): Promise<UserDTO> {
   const user = await UserModel.findById(userId).exec();
-  
+
   if (!user) {
     throw new AppError('User not found', ErrorCode.NOT_FOUND, 404);
   }
@@ -52,7 +52,7 @@ export async function updateUserProfile(
 /**
  * Change user password
  * Verifies current password before allowing change
- * 
+ *
  * @throws {AppError} If user not found or current password is invalid
  */
 export async function changeUserPassword(
@@ -61,7 +61,7 @@ export async function changeUserPassword(
   newPassword: string
 ): Promise<void> {
   const user = await UserModel.findById(userId).exec();
-  
+
   if (!user) {
     throw new AppError('User not found', ErrorCode.NOT_FOUND, 404);
   }
@@ -86,8 +86,15 @@ export async function changeUserPassword(
  *
  * @throws {AppError} If user is not found
  */
-export async function updateUserLocale(userId: string, locale: Locale): Promise<{ locale: Locale }> {
-  const user = await UserModel.findByIdAndUpdate(userId, { locale }, { new: true, runValidators: true }).exec();
+export async function updateUserLocale(
+  userId: string,
+  locale: Locale
+): Promise<{ locale: Locale }> {
+  const user = await UserModel.findByIdAndUpdate(
+    userId,
+    { locale },
+    { new: true, runValidators: true }
+  ).exec();
 
   if (!user || !user.locale) {
     throw new AppError('User not found', ErrorCode.NOT_FOUND, 404);

@@ -2,13 +2,19 @@ import type { User as UserDTO } from '@mockia/shared';
 import type { UserDocument } from '../../models/User.js';
 
 type StoredConsent = NonNullable<UserDocument['aiTrainingConsent']>;
-const isoOrNull = (d: Date | null | undefined): string | null => (d ? new Date(d).toISOString() : null);
+const isoOrNull = (d: Date | null | undefined): string | null =>
+  d ? new Date(d).toISOString() : null;
 
 /**
  * Public shape of the AI training consent. `at` = when the current choice was made; `grantedAt` / `withdrawnAt` keep
  * both moments (a legacy granted row has only `at`, which is its grant time).
  */
-export function consentDTO(c: StoredConsent): { granted: boolean; at: string; grantedAt: string | null; withdrawnAt: string | null } {
+export function consentDTO(c: StoredConsent): {
+  granted: boolean;
+  at: string;
+  grantedAt: string | null;
+  withdrawnAt: string | null;
+} {
   return {
     granted: c.granted,
     at: new Date(c.at).toISOString(),

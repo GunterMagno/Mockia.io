@@ -36,25 +36,17 @@ function verifyPermissions(project: any, userId: string, errorMessage: string): 
   const userRole = member?.role?.toUpperCase();
 
   if (userRole !== 'OWNER' && userRole !== 'EDITOR') {
-    throw new AppError(
-      errorMessage,
-      ErrorCode.FORBIDDEN,
-      403
-    );
+    throw new AppError(errorMessage, ErrorCode.FORBIDDEN, 403);
   }
 }
 
 /**
  * Update an existing endpoint configuration and its default response
  */
-export async function updateEndpoint(
-  endpointId: string,
-  userId: string,
-  data: UpdateEndpointData
-) {
+export async function updateEndpoint(endpointId: string, userId: string, data: UpdateEndpointData) {
   const endpoint = await EndpointModel.findById(endpointId).populate({
     path: 'mockApiId',
-    populate: { path: 'projectId' }
+    populate: { path: 'projectId' },
   });
 
   if (!endpoint) {
@@ -80,7 +72,7 @@ export async function updateEndpoint(
       mockApiId: endpoint.mockApiId,
       path: targetPath,
       method: targetMethod,
-      _id: { $ne: endpointId }
+      _id: { $ne: endpointId },
     });
 
     if (duplicate) {
@@ -110,7 +102,7 @@ export async function updateEndpoint(
       responseDoc = new ResponseModel({
         statusCode: data.statusCode || 200,
         description: 'Default response',
-        schema: data.responseBody || {}
+        schema: data.responseBody || {},
       });
       await responseDoc.save();
       endpoint.responses = [responseDoc._id as any];
@@ -189,7 +181,7 @@ export async function createEndpoint(
       title: project.title,
       description: project.description || 'Mock API',
       apiVersion: '1.0.0',
-      endpoints: []
+      endpoints: [],
     });
     await mockAPI.save();
   }
@@ -198,7 +190,7 @@ export async function createEndpoint(
   const responseDoc = new ResponseModel({
     statusCode: 200,
     description: 'Default response',
-    schema: {}
+    schema: {},
   });
   await responseDoc.save();
 
@@ -209,10 +201,10 @@ export async function createEndpoint(
 
   const existingEndpoints = await EndpointModel.find({
     mockApiId: mockAPI._id,
-    method: defaultMethod
+    method: defaultMethod,
   });
 
-  const paths = existingEndpoints.map(e => e.path);
+  const paths = existingEndpoints.map((e) => e.path);
 
   if (paths.includes(uniquePath)) {
     let counter = 1;
@@ -230,7 +222,7 @@ export async function createEndpoint(
     description: data.description || '',
     requestSchema: {},
     responses: [responseDoc._id],
-    mockApiId: mockAPI._id
+    mockApiId: mockAPI._id,
   });
   await endpoint.save();
 
@@ -258,13 +250,10 @@ export async function createEndpoint(
 /**
  * Delete a specific endpoint and all its associated responses
  */
-export async function deleteEndpoint(
-  endpointId: string,
-  userId: string
-) {
+export async function deleteEndpoint(endpointId: string, userId: string) {
   const endpoint = await EndpointModel.findById(endpointId).populate({
     path: 'mockApiId',
-    populate: { path: 'projectId' }
+    populate: { path: 'projectId' },
   });
 
   if (!endpoint) {

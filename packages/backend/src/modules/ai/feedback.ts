@@ -32,7 +32,9 @@ export async function recordFeedback(
   correctedOutput?: unknown
 ): Promise<void> {
   const uid = new Types.ObjectId(userId);
-  const generation = await AiGenerationModel.findOne({ generationId }).select('userId provider model expiresAt').lean();
+  const generation = await AiGenerationModel.findOne({ generationId })
+    .select('userId provider model expiresAt')
+    .lean();
   if (generation && generation.userId.toString() !== userId) {
     // Not theirs: nothing is written and nothing about it is revealed
     throw new AppError('Generation not found', ErrorCode.NOT_FOUND, 404);
@@ -40,7 +42,8 @@ export async function recordFeedback(
 
   // R14: no consent, no trace (and nothing to reveal: the answer is the same success)
   if (!(await hasAiTrainingConsent(userId))) return;
-  const keepContent = Boolean(generation) && correctedOutput !== undefined && correctedOutput !== null;
+  const keepContent =
+    Boolean(generation) && correctedOutput !== undefined && correctedOutput !== null;
 
   let validated: unknown;
   if (keepContent) {
@@ -49,7 +52,11 @@ export async function recordFeedback(
       validated = JSON.parse(JSON.stringify(correctedOutput));
       validateGeneratedApi(JSON.parse(JSON.stringify(correctedOutput)));
     } catch {
-      throw new AppError('correctedOutput is not a valid API specification', ErrorCode.VALIDATION_ERROR, 400);
+      throw new AppError(
+        'correctedOutput is not a valid API specification',
+        ErrorCode.VALIDATION_ERROR,
+        400
+      );
     }
   }
 
@@ -68,7 +75,10 @@ export async function recordFeedback(
   if (keepContent) set.correctedOutput = validated;
   else update.$unset = { correctedOutput: '' };
 
-  await AiFeedbackModel.findOneAndUpdate({ userId: uid, generationId }, update, { upsert: true, setDefaultsOnInsert: true });
+  await AiFeedbackModel.findOneAndUpdate({ userId: uid, generationId }, update, {
+    upsert: true,
+    setDefaultsOnInsert: true,
+  });
 
   // The user may have withdrawn while this was being written: do not leave anything behind
   if (!(await hasAiTrainingConsent(userId))) {

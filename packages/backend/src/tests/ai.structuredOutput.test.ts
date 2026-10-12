@@ -23,7 +23,14 @@ const SPEC = JSON.stringify({
   apiVersion: '1.0.0',
   title: 'Gym API',
   description: 'd',
-  endpoints: [{ path: '/members', method: 'GET', description: 'List members', examples: [{ request: {}, response: { id: 1 } }] }],
+  endpoints: [
+    {
+      path: '/members',
+      method: 'GET',
+      description: 'List members',
+      examples: [{ request: {}, response: { id: 1 } }],
+    },
+  ],
   dataModels: [],
 });
 
@@ -39,10 +46,21 @@ describe('AI generation passes the output schema', () => {
   });
 
   beforeEach(async () => {
-    await Promise.all([UserModel, ProjectModel, MockAPIModel, EndpointModel, AiRateWindowModel].map((m) => (m as any).deleteMany({})));
-    log = ['log', 'warn', 'error'].map((k) => jest.spyOn(console, k as 'log').mockImplementation(() => undefined));
+    await Promise.all(
+      [UserModel, ProjectModel, MockAPIModel, EndpointModel, AiRateWindowModel].map((m) =>
+        (m as any).deleteMany({})
+      )
+    );
+    log = ['log', 'warn', 'error'].map((k) =>
+      jest.spyOn(console, k as 'log').mockImplementation(() => undefined)
+    );
     complete.mockReset();
-    complete.mockResolvedValue({ text: SPEC, provider: 'fake', model: 'm', usage: { inputTokens: 1, outputTokens: 2 } });
+    complete.mockResolvedValue({
+      text: SPEC,
+      provider: 'fake',
+      model: 'm',
+      usage: { inputTokens: 1, outputTokens: 2 },
+    });
     getLlmSpy = jest.spyOn(providers, 'getLlm').mockReturnValue({ name: 'fake', complete });
 
     const user = await UserModel.create({
@@ -51,9 +69,16 @@ describe('AI generation passes the output schema', () => {
       passwordHash: await bcrypt.hash(PASSWORD, 4),
       emailVerifiedAt: new Date(),
     });
-    const login = await request(app).post('/api/auth/login').send({ email: 'schema@example.com', password: PASSWORD });
+    const login = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'schema@example.com', password: PASSWORD });
     auth = { Authorization: `Bearer ${login.body.data.tokens.accessToken as string}` };
-    const project = await ProjectModel.create({ title: 'Gym', slug: 'gym-schema', ownerId: user._id, members: [{ userId: user._id, role: 'owner' }] });
+    const project = await ProjectModel.create({
+      title: 'Gym',
+      slug: 'gym-schema',
+      ownerId: user._id,
+      members: [{ userId: user._id, role: 'owner' }],
+    });
     projectId = project._id.toString();
   });
 
@@ -63,12 +88,19 @@ describe('AI generation passes the output schema', () => {
   });
 
   afterAll(async () => {
-    await Promise.all([UserModel, ProjectModel, MockAPIModel, EndpointModel, AiRateWindowModel].map((m) => (m as any).deleteMany({})));
+    await Promise.all(
+      [UserModel, ProjectModel, MockAPIModel, EndpointModel, AiRateWindowModel].map((m) =>
+        (m as any).deleteMany({})
+      )
+    );
     await disconnectDB();
   });
 
   it('generate-mock-api-spec calls the provider with jsonSchema = MOCK_SPEC_JSON_SCHEMA', async () => {
-    const res = await request(app).post('/api/ai/generate-mock-api-spec').set(auth).send({ projectId, requirement: 'members CRUD' });
+    const res = await request(app)
+      .post('/api/ai/generate-mock-api-spec')
+      .set(auth)
+      .send({ projectId, requirement: 'members CRUD' });
     expect(res.status).toBe(200);
     expect(complete).toHaveBeenCalledTimes(1);
     const req = complete.mock.calls[0][0];
@@ -80,7 +112,10 @@ describe('AI generation passes the output schema', () => {
   });
 
   it('generate-and-save calls the provider with jsonSchema = MOCK_SPEC_JSON_SCHEMA and still saves', async () => {
-    const res = await request(app).post('/api/ai/generate-and-save').set(auth).send({ projectId, requirement: 'members CRUD' });
+    const res = await request(app)
+      .post('/api/ai/generate-and-save')
+      .set(auth)
+      .send({ projectId, requirement: 'members CRUD' });
     expect(res.status).toBe(200);
     expect(res.body.data.database.endpointsCreated).toBe(1);
     expect(complete.mock.calls[0][0].jsonSchema).toBe(MOCK_SPEC_JSON_SCHEMA);
@@ -89,8 +124,22 @@ describe('AI generation passes the output schema', () => {
   // The plain-request call sites (generate-description, generate-mock-data) were removed: every remaining generation
   // route sends the schema
   it('the removed plain-request routes answer 404 and call no model', async () => {
-    expect((await request(app).post('/api/ai/generate-description').set(auth).send({ prompt: 'p', userMessage: 'u' })).status).toBe(404);
-    expect((await request(app).post('/api/ai/generate-mock-data').set(auth).send({ schema: { a: 'number' } })).status).toBe(404);
+    expect(
+      (
+        await request(app)
+          .post('/api/ai/generate-description')
+          .set(auth)
+          .send({ prompt: 'p', userMessage: 'u' })
+      ).status
+    ).toBe(404);
+    expect(
+      (
+        await request(app)
+          .post('/api/ai/generate-mock-data')
+          .set(auth)
+          .send({ schema: { a: 'number' } })
+      ).status
+    ).toBe(404);
     expect(complete).not.toHaveBeenCalled();
   });
 });
@@ -109,7 +158,13 @@ describe('OpenRouter provider with a schema', () => {
       req.on('end', () => {
         seen.push(JSON.parse(raw));
         res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ model: 'or-model', choices: [{ message: { content: '{"ok":true}' } }], usage: { prompt_tokens: 3, completion_tokens: 2 } }));
+        res.end(
+          JSON.stringify({
+            model: 'or-model',
+            choices: [{ message: { content: '{"ok":true}' } }],
+            usage: { prompt_tokens: 3, completion_tokens: 2 },
+          })
+        );
       });
     });
     await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
@@ -128,7 +183,10 @@ describe('OpenRouter provider with a schema', () => {
   const SCHEMA = { type: 'object', properties: { ok: { type: 'boolean' } }, required: ['ok'] };
 
   it('downgrades to json_object by default (the chosen model may not support strict json_schema), keeping the structured temperature', async () => {
-    const out = await createOpenRouterProvider().complete({ messages: [{ role: 'user', content: 'x' }], jsonSchema: SCHEMA });
+    const out = await createOpenRouterProvider().complete({
+      messages: [{ role: 'user', content: 'x' }],
+      jsonSchema: SCHEMA,
+    });
     expect(out.text).toBe('{"ok":true}');
     expect(seen[0].response_format).toEqual({ type: 'json_object' });
     expect(seen[0].temperature).toBe(0.2);
@@ -136,14 +194,24 @@ describe('OpenRouter provider with a schema', () => {
   });
 
   it('an explicit caller temperature still wins', async () => {
-    await createOpenRouterProvider().complete({ messages: [{ role: 'user', content: 'x' }], jsonSchema: SCHEMA, temperature: 0.85 });
+    await createOpenRouterProvider().complete({
+      messages: [{ role: 'user', content: 'x' }],
+      jsonSchema: SCHEMA,
+      temperature: 0.85,
+    });
     expect(seen[0].temperature).toBe(0.85);
   });
 
   it('OPENROUTER_JSON_SCHEMA=1 opts in to strict json_schema for models that support it', async () => {
     process.env.OPENROUTER_JSON_SCHEMA = '1';
-    await createOpenRouterProvider().complete({ messages: [{ role: 'user', content: 'x' }], jsonSchema: SCHEMA });
-    expect(seen[0].response_format).toEqual({ type: 'json_schema', json_schema: { name: 'mockia_output', strict: true, schema: SCHEMA } });
+    await createOpenRouterProvider().complete({
+      messages: [{ role: 'user', content: 'x' }],
+      jsonSchema: SCHEMA,
+    });
+    expect(seen[0].response_format).toEqual({
+      type: 'json_schema',
+      json_schema: { name: 'mockia_output', strict: true, schema: SCHEMA },
+    });
   });
 
   it('without a schema nothing changes (json:true -> json_object, plain -> no response_format)', async () => {

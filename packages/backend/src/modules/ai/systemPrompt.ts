@@ -1,6 +1,6 @@
 /**
  * System Prompt for Mockia AI Mock API Generator
- * 
+ *
  * This prompt instructs the AI to generate mock API specifications
  * in a strict JSON format based on GitHub repository context.
  */

@@ -20,7 +20,16 @@ export const updateEndpointHandler = asyncHandler(
     }
 
     const { id } = req.params;
-    const { path, method, description, requestSchema, responseBody, statusCode, delay_ms, force_status_code } = req.body;
+    const {
+      path,
+      method,
+      description,
+      requestSchema,
+      responseBody,
+      statusCode,
+      delay_ms,
+      force_status_code,
+    } = req.body;
 
     const endpoint = await endpointService.updateEndpoint(id, userId, {
       path,
@@ -30,7 +39,7 @@ export const updateEndpointHandler = asyncHandler(
       responseBody,
       statusCode,
       delay_ms,
-      force_status_code
+      force_status_code,
     });
 
     res.status(200).json({
@@ -57,7 +66,7 @@ export const createEndpointHandler = asyncHandler(
     const endpoint = await endpointService.createEndpoint(projectSlug, userId, {
       path,
       method,
-      description
+      description,
     });
 
     res.status(201).json({
@@ -84,7 +93,7 @@ export const deleteEndpointHandler = asyncHandler(
 
     res.status(200).json({
       success: true,
-      message: 'Endpoint deleted successfully'
+      message: 'Endpoint deleted successfully',
     });
   }
 );

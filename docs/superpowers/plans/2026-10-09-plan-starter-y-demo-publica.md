@@ -53,10 +53,12 @@ Entradas/condiciones que ninguna tarea prueba por sí sola y que más probableme
 ### Task A1: Catálogo y facturación con el plan Starter
 
 **Files:**
+
 - Modify: `packages/shared/src/billing.ts`, `packages/backend/src/models/User.ts`, `packages/backend/src/modules/billing/{prices,plans,service,routes}.ts`, `packages/backend/src/modules/billing/validation` (el Joi de `/checkout`), `.env.example`, `packages/backend/.env.example`, `render.yaml`, `docker-compose.prod.yml`, `docs/pagos.md`
 - Test: `packages/backend/src/tests/billing.starter.test.ts` (+ adaptar los tests de catálogo existentes sin debilitarlos)
 
 **Interfaces:**
+
 - Produces (shared): `Plan = 'free' | 'starter' | 'pro' | 'team'`; `PaidPlan = 'starter' | 'pro' | 'team'`; `PLANS`; `PLAN_LIMITS.starter = { maxActiveProjects: 15, maxMonthlyRequests: 100_000, maxMonthlyAiGenerations: 40 }`; `PLAN_PRICE_USD.starter = priceOf(5)` (anual 50); `PlanLimits.maxMonthlyAiGenerations: number` y `PlanLimitsDTO.maxMonthlyAiGenerations: number | null` (los cuatro planes con los valores de la decisión D2; el campo lo consume A2).
 - Produces (backend): env `STRIPE_PRICE_STARTER_MONTHLY` y `STRIPE_PRICE_STARTER_YEARLY`; `planAndIntervalOfPrice(priceId)` resuelve los 6 price ids; `POST /billing/checkout {plan:'starter'|'pro'|'team', interval}`; `BillingOverview.checkoutAvailable` y `yearlyCheckoutAvailable` incluyen `starter`.
 
@@ -70,11 +72,13 @@ Entradas/condiciones que ninguna tarea prueba por sí sola y que más probableme
 ### Task A2: Cuota mensual de generaciones de IA por plan
 
 **Files:**
+
 - Create: `packages/backend/src/modules/billing/aiQuota.ts`
 - Modify: `packages/backend/src/modules/billing/usage.ts` (contador `aiGenerations` en el documento mensual de `usages`), `packages/backend/src/routes/ai.routes.ts`, `packages/backend/src/controllers/ai.controller.ts`, `packages/backend/src/modules/billing/routes.ts` (`GET /billing/me`), `packages/shared/src/types/error.ts`, `packages/backend/src/modules/users/gdpr.ts` (exportar el contador)
 - Test: `packages/backend/src/tests/billing.aiQuota.test.ts`
 
 **Interfaces:**
+
 - Consumes: A1 (`PLAN_LIMITS[plan].maxMonthlyAiGenerations`), `getUserPlan(userId)` (cache 30 s), el mes UTC de `usage.ts`.
 - Produces:
   - `reserveAiGeneration(userId: string, now?: Date): Promise<{ ok: true; release: () => Promise<void> } | { ok: false; used: number; limit: number; resetsAt: Date }>` — reserva atómica con un único `findOneAndUpdate` condicionado (`aiGenerations < límite`) y `$inc`; `release()` devuelve la reserva si la generación falla (error del LLM, validación, deadline, 4xx del proveedor); no se devuelve si el usuario cancela la petición después de que el modelo respondiera.
@@ -91,10 +95,12 @@ Entradas/condiciones que ninguna tarea prueba por sí sola y que más probableme
 ### Task A3: Interfaz de planes con Starter y medidor de IA
 
 **Files:**
+
 - Modify: `packages/frontend/src/components/billing/PricingPlans/*`, `packages/frontend/src/pages/Billing/*`, `packages/frontend/src/pages/Landing/Index.tsx` (+ scss), `packages/frontend/src/utils/error.ts` (texto del error `AI_QUOTA_EXCEEDED`), el componente del resultado de IA / modal de crear proyecto que muestra errores de generación, locales `en/es/zh`, `packages/frontend/src/pages/Legal/legalContent/{es,en,zh}.ts` (menciones de los planes)
 - Test: `packages/frontend/cypress/e2e/billing.cy.ts` (ampliar)
 
 **Interfaces:**
+
 - Consumes: A1/A2 (`BillingOverview` ampliado, `PLAN_PRICE_USD`, `planPriceUsd`, `annualMonthlyEquivalentUsd`, `PLAN_LIMITS`).
 - Produces: componente de tarjetas con 5 opciones (Free, Starter, Pro, Team, Enterprise) y medidor "Generaciones de IA este mes: X de Y (se reinicia el …)" en Billing; cuando la API devuelve `AI_QUOTA_EXCEEDED` se muestra un aviso con enlace a /billing y la fecha de reinicio.
 
@@ -108,11 +114,13 @@ Entradas/condiciones que ninguna tarea prueba por sí sola y que más probableme
 ### Task A4: Documentar el coste real y fijar los límites con datos
 
 **Files:**
+
 - Create: `docs/economia-planes.md`
 - Modify: `docs/pagos.md` (enlace), `packages/backend/evals/README.md` (cómo obtener tokens por generación)
 - Test: `packages/backend/src/tests/docs.economics.test.ts` (comprueba que los números de la tabla del documento coinciden con `PLAN_LIMITS`/`PLAN_PRICE_USD`)
 
 **Interfaces:**
+
 - Produces: tabla "plan → precio → límites → margen estimado" generada a mano pero **verificada por test** contra el catálogo compartido, con la fórmula `margen = precio − comisión Stripe − (generaciones × coste por generación) − hosting prorrateado`, instrucciones para medir `coste por generación` (tokens de entrada/salida de `npm run eval` × precio por token del modelo elegido en OpenRouter, o coste de la máquina si es local) y la regla para elegir `maxMonthlyAiGenerations` de modo que el peor caso (usuario que gasta todo el cupo) siga dejando margen ≥ 0 con el plan Starter. Sin cifras de coste inventadas: las celdas de coste real quedan "pendiente de medir por el titular".
 
 - [ ] **Step 1: Test (RED)**: parsear la tabla de `docs/economia-planes.md` y comprobar que precio mensual/anual y límites de cada plan coinciden con el catálogo; que existen las filas de los 4 planes; que ninguna celda de coste real contiene un número.
@@ -127,11 +135,13 @@ Entradas/condiciones que ninguna tarea prueba por sí sola y que más probableme
 ### Task B1: Primitivas anti-abuso (IP pseudonimizada, reto de prueba de trabajo, presupuesto)
 
 **Files:**
+
 - Create: `packages/backend/src/modules/demo/{config,ipHash,pow,budget}.ts`, `packages/backend/src/models/{DemoBudget,DemoSpentChallenge}.ts`
 - Modify: `packages/backend/src/config/assertProdConfig.ts`, `.env.example` (ambos)
 - Test: `packages/backend/src/tests/demo.primitives.test.ts`
 
 **Interfaces:**
+
 - Produces:
   - `getDemoConfig(env = process.env): { enabled: boolean; dailyGenerations: number; perIpGenerationsPerDay: number; maxConcurrent: number; maxConcurrentPerIp: number; powBits: number; mockTtlMinutes: number; mockMaxRequests: number; ipMockRequestsPerDay: number; maxEndpoints: number }` con los defectos de las decisiones (`enabled=false`, 150, 2, 4, 1, 18 bits, 30, 150, 300, 5) y variables `DEMO_ENABLED`, `DEMO_DAILY_GENERATIONS`, `DEMO_PER_IP_GENERATIONS`, `DEMO_MAX_CONCURRENT`, `DEMO_POW_BITS`, `DEMO_MOCK_TTL_MINUTES`, `DEMO_HMAC_SECRET`.
   - `pseudonymizeIp(ip: string, now?: Date): string` — IPv4 completa, IPv6 truncada a /64 (se normaliza antes: `::ffff:1.2.3.4` = IPv4), `HMAC-SHA256(secret, utcDate + '|' + normalized)` en hex; cambia al cambiar el día UTC.
@@ -147,11 +157,13 @@ Entradas/condiciones que ninguna tarea prueba por sí sola y que más probableme
 ### Task B2: Mocks efímeros de la demo y su router
 
 **Files:**
+
 - Create: `packages/backend/src/models/DemoMock.ts`, `packages/backend/src/modules/demo/{mockStore,mockRouter}.ts`
 - Modify: `packages/backend/src/index.ts` (montar `/api/demo-mock`), `packages/backend/src/modules/billing/usage.ts` solo si hace falta aislar (la demo NO cuenta contra ningún usuario)
 - Test: `packages/backend/src/tests/demo.mockRouter.test.ts`
 
 **Interfaces:**
+
 - Consumes: B1 (`getDemoConfig`, `tryConsumeDemoBudget`, `pseudonymizeIp`).
 - Produces:
   - `DemoMock { demoId (128-bit hex, único), ipHash, endpoints: DemoEndpoint[], requestCount, createdAt, expiresAt (índice TTL) }` con `DemoEndpoint { method, path, statusCode, body (JSON), headers? }`; sin referencias a usuarios ni proyectos.
@@ -166,11 +178,13 @@ Entradas/condiciones que ninguna tarea prueba por sí sola y que más probableme
 ### Task B3: Endpoints de la demo (reto y generación con IA)
 
 **Files:**
+
 - Create: `packages/backend/src/modules/demo/{routes,controller,service,templates}.ts`
 - Modify: `packages/backend/src/index.ts` (montar `/api/demo`), `packages/backend/src/config/ai.ts` (`AI_DEMO_PROVIDERS` opcional), `packages/shared/src/types/error.ts` (`DEMO_UNAVAILABLE`, `DEMO_LIMIT_REACHED`, `DEMO_CHALLENGE_INVALID`), `docs/` (se documenta en B7)
 - Test: `packages/backend/src/tests/demo.generate.test.ts`
 
 **Interfaces:**
+
 - Consumes: B1, B2, `getLlm()` (cadena local→OpenRouter con `validate` y reparación), `buildPromptFromInput`, `MOCK_SPEC_JSON_SCHEMA`, `validateGeneratedApi`.
 - Produces:
   - `GET /api/demo/status` → `{ available: boolean, remainingToday: number | null, maxEndpoints, ttlMinutes }` (no revela contadores globales: solo `available`).
@@ -188,11 +202,13 @@ Entradas/condiciones que ninguna tarea prueba por sí sola y que más probableme
 ### Task B4: Página `/demo` en el frontend
 
 **Files:**
+
 - Create: `packages/frontend/src/pages/Demo/{Demo.tsx,Demo.module.scss}`, `packages/frontend/src/services/demoService.ts`, `packages/frontend/src/workers/powWorker.ts`
 - Modify: `packages/frontend/src/App.tsx`, `routes/paths.ts` (ruta pública `/demo`), `components/ui/Header` (enlace "Probar gratis"), `pages/Landing/Index.tsx` (botón secundario "Probar sin registro" junto al principal), locales `en/es/zh`
 - Test: `packages/frontend/cypress/e2e/demo.cy.ts`
 
 **Interfaces:**
+
 - Consumes: B3 (`/api/demo/status|challenge|generate`, `DEMO_*` códigos), `/api/demo-mock/:id/*`.
 - Produces: flujo en una sola pantalla — (1) elegir plantilla (tienda/blog/usuarios) o pegar texto, contador de caracteres hasta 6 000; (2) pulsar "Generar" resuelve el reto en un Web Worker (`powWorker.ts`: recibe `{challenge, bits}`, devuelve `{nonce}`; barra de progreso indeterminada con `aria-live`, cancelable) y envía la petición; (3) resultado: lista de endpoints y un panel "Probar" que hace la llamada real a `/api/demo-mock/:id/…` y muestra estado, cabeceras clave y JSON; (4) cabecera permanente con intentos restantes de hoy y cuenta atrás de caducidad (30 min); (5) CTA "Guarda este proyecto: crea tu cuenta gratis" (enlaza a registro y, si B6 está hecho, conserva el `demoId`). Estados: demo no disponible (503) con enlace a registrarse, límite alcanzado (429) con hora aproximada de vuelta, reto inválido (reintento automático una vez), error genérico.
 
@@ -205,11 +221,13 @@ Entradas/condiciones que ninguna tarea prueba por sí sola y que más probableme
 ### Task B5: Textos legales y operación de la demo
 
 **Files:**
+
 - Modify: `packages/frontend/src/pages/Legal/legalContent/{es,en,zh}.ts` (Privacidad, Términos, Cookies), `packages/frontend/cypress/e2e/legal.cy.ts`
 - Create: `docs/demo.md`
 - Test: `legal.cy.ts` (ampliar) y `packages/backend/src/tests/demo.docs.test.ts`
 
 **Interfaces:**
+
 - Produces: Privacidad — finalidad "ofrecer una demo sin registro y evitar abusos", base interés legítimo (art. 6.1.f), qué se trata (texto enviado, IP **pseudonimizada con HMAC de sal diaria**, nunca la IP en claro; contadores 48 h; el texto y los mocks se borran a los 30 min), destinatario (proveedor de IA que recibe el texto), no hay cookies ni almacenamiento nuevo, derecho de oposición. Términos — uso aceptable de la demo (sin abuso, sin automatizar, sin datos personales reales ni secretos en el texto), sin garantías, límites, que el titular puede apagarla. Cookies — la demo no usa cookies ni almacenamiento local. `docs/demo.md` — variables, cómo activarla (`DEMO_ENABLED=true` + secreto), cómo apagarla, cómo ajustar `DEMO_POW_BITS` (más bits = más coste para bots y más espera para todos; calibrar con un móvil de gama baja), qué mirar si hay abuso, fórmula de coste diario máximo = `DEMO_DAILY_GENERATIONS × coste por generación` y el aviso de que con varias instancias el tope de concurrencia es por proceso.
 
 - [ ] **Step 1: Tests (RED)**: `legal.cy.ts` — en es/en/zh la Privacidad contiene la finalidad de la demo y la expresión que declara que la IP se guarda pseudonimizada (cadena concreta por idioma) y no contiene "dirección IP en claro" como lo que se guarda; la página de Cookies sigue sin listar cookies nuevas; `demo.docs.test.ts` — las variables `DEMO_*` citadas en `docs/demo.md` existen en `getDemoConfig`/`.env.example` y viceversa.
@@ -218,10 +236,12 @@ Entradas/condiciones que ninguna tarea prueba por sí sola y que más probableme
 ### Task B6 (opcional, recomendada): Conservar la demo al registrarse
 
 **Files:**
+
 - Modify: `packages/backend/src/modules/demo/{routes,service}.ts`, `packages/backend/src/modules/projects/service.ts` (creación desde endpoints), `packages/frontend/src/pages/Demo/Demo.tsx`, `pages/Auth/Signup.tsx`
 - Test: `packages/backend/src/tests/demo.claim.test.ts`, `packages/frontend/cypress/e2e/demo.cy.ts` (ampliar)
 
 **Interfaces:**
+
 - Consumes: B2/B3, el límite de proyectos activos del plan, `deleteProjectsCascade` no se toca.
 - Produces: `POST /api/demo/:demoId/claim` (autenticado + email verificado, limitado) → crea un proyecto real con los endpoints del mock (respetando `maxActiveProjects` y sin consumir cuota de IA) y borra el `DemoMock`; 404 si venció, 403/409 si ya fue reclamado o la cuenta está en su límite de proyectos (mensaje con enlace a planes). El `demoId` viaja en `sessionStorage` (no en la URL) y se limpia tras reclamar o al caducar.
 
@@ -231,10 +251,12 @@ Entradas/condiciones que ninguna tarea prueba por sí sola y que más probableme
 ### Task B7: Revisión de abuso y cierre
 
 **Files:**
+
 - Create: `packages/backend/src/tests/demo.abuse.test.ts`
 - Modify: `docs/demo.md` (resultado de las pruebas)
 
 **Interfaces:**
+
 - Consumes: B1-B6.
 
 - [ ] **Step 1: Tests (RED→GREEN, sin tocar producción salvo hallazgos)** de escenarios adversos de extremo a extremo con LLM falso: (a) un atacante con 200 IPv6 dentro del mismo /64 → un solo cupo; (b) rotar `User-Agent`, cookies y cabeceras `X-Forwarded-For` falsas desde un cliente directo no cambia la IP efectiva (`req.ip` con `trust proxy` configurado; se prueba la configuración de test equivalente a producción); (c) 1 000 retos pedidos sin resolver no llenan la base (límite del endpoint de reto y TTL); (d) un reto resuelto en paralelo 20 veces → una sola generación; (e) cuerpo JSON de 2 MB y de 10 000 claves → rechazado por tamaño antes de procesar; (f) el coste máximo diario de LLM queda acotado por `DEMO_DAILY_GENERATIONS` (contar llamadas al LLM falso tras 500 intentos con todos los ataques anteriores); (g) la demo no permite llegar a ningún dato de usuarios ni de proyectos reales (rutas y colecciones).
@@ -246,13 +268,13 @@ Entradas/condiciones que ninguna tarea prueba por sí sola y que más probableme
 
 ## Orden recomendado
 
-| Orden | Tareas | Por qué |
-|-------|--------|---------|
-| 1 | Prerrequisitos (fusionar la pasada final de arreglos; medir `req.ip` en Render) | La demo depende de identificar bien la IP. |
-| 2 | A1 → A2 → A4 → A3 | Plan y cuota de IA primero: sin tope de IA ningún plan barato es rentable; A4 fija los números con datos. |
-| 3 | B1 → B2 → B3 → B7 (parcial) | Backend de la demo con sus tests de abuso antes de exponer ninguna UI. |
-| 4 | B4 → B5 | Interfaz y textos legales; activar `DEMO_ENABLED` solo tras B5. |
-| 5 | B6 | Conversión a registro (opcional). |
+| Orden | Tareas                                                                          | Por qué                                                                                                   |
+| ----- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| 1     | Prerrequisitos (fusionar la pasada final de arreglos; medir `req.ip` en Render) | La demo depende de identificar bien la IP.                                                                |
+| 2     | A1 → A2 → A4 → A3                                                               | Plan y cuota de IA primero: sin tope de IA ningún plan barato es rentable; A4 fija los números con datos. |
+| 3     | B1 → B2 → B3 → B7 (parcial)                                                     | Backend de la demo con sus tests de abuso antes de exponer ninguna UI.                                    |
+| 4     | B4 → B5                                                                         | Interfaz y textos legales; activar `DEMO_ENABLED` solo tras B5.                                           |
+| 5     | B6                                                                              | Conversión a registro (opcional).                                                                         |
 
 ## Lo que solo puedes hacer tú
 

@@ -24,12 +24,7 @@ export async function parseTypeScriptFile(filePath: string): Promise<ParsedTypeS
   }
 
   const sourceCode = fs.readFileSync(absolutePath, 'utf-8');
-  const sourceFile = ts.createSourceFile(
-    absolutePath,
-    sourceCode,
-    ts.ScriptTarget.Latest,
-    true
-  );
+  const sourceFile = ts.createSourceFile(absolutePath, sourceCode, ts.ScriptTarget.Latest, true);
 
   const interfaces: InterfaceInfo[] = [];
   const typeAliases: TypeAliasInfo[] = [];
@@ -83,9 +78,7 @@ function extractInterface(node: ts.InterfaceDeclaration): InterfaceInfo {
 
   node.members.forEach((member) => {
     if (ts.isPropertySignature(member) && member.name) {
-      const propertyName = typeof member.name === 'string'
-        ? member.name
-        : member.name.getText();
+      const propertyName = typeof member.name === 'string' ? member.name : member.name.getText();
 
       const type = member.type ? member.type.getText() : 'unknown';
       const optional = member.questionToken !== undefined;
@@ -124,13 +117,12 @@ function extractTypeAlias(node: ts.TypeAliasDeclaration): TypeAliasInfo {
  * Extract enum information
  */
 function extractEnum(node: ts.EnumDeclaration): EnumInfo {
-  const members = node.members
-    .map((member) => {
-      if (ts.isEnumMember(member)) {
-        return member.name?.getText() || 'Unknown';
-      }
-      return 'Unknown';
-    });
+  const members = node.members.map((member) => {
+    if (ts.isEnumMember(member)) {
+      return member.name?.getText() || 'Unknown';
+    }
+    return 'Unknown';
+  });
 
   const isExported = node.modifiers?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword) || false;
 

@@ -74,11 +74,21 @@
   font-weight: bold;
   min-width: 40px;
 
-  &.get { color: var(--color-accent-text); }
-  &.post { color: var(--color-ok); }
-  &.put { color: var(--color-warn); }
-  &.delete { color: var(--color-danger); }
-  &.patch { color: var(--color-warn); }
+  &.get {
+    color: var(--color-accent-text);
+  }
+  &.post {
+    color: var(--color-ok);
+  }
+  &.put {
+    color: var(--color-warn);
+  }
+  &.delete {
+    color: var(--color-danger);
+  }
+  &.patch {
+    color: var(--color-warn);
+  }
 }
 
 .path {
@@ -110,7 +120,7 @@
     min-width: 0; // Allow truncation
     background: transparent;
     color: var(--color-text-muted);
-    
+
     &:hover {
       background: transparent; // Wrapper handles hover
     }

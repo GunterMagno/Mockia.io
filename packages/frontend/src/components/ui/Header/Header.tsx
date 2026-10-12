@@ -20,7 +20,7 @@ const Header: React.FC = () => {
   const { t } = useI18n();
   const demoAvailable = useDemoAvailable() === true;
   const path = location.pathname;
-  
+
   // Determine variant based on path
   const isProjectPage = path.startsWith('/editor/') && isKnownPath(path);
   const is404 = !isKnownPath(path);
@@ -45,7 +45,10 @@ const Header: React.FC = () => {
     setIsProfileOpen(true);
     params.delete('profile');
     const search = params.toString();
-    navigate({ pathname: location.pathname, search: search ? `?${search}` : '' }, { replace: true });
+    navigate(
+      { pathname: location.pathname, search: search ? `?${search}` : '' },
+      { replace: true }
+    );
   }, [location.search, location.pathname, isLoading, isAuthenticated, navigate]);
 
   // Listen for project name updates
@@ -54,12 +57,12 @@ const Header: React.FC = () => {
       setProjectName(e.detail);
     };
     document.addEventListener('set-project-name', handleSetProjectName);
-    
+
     // Clear project name if we leave the project page
     if (!isProjectPage) {
       setProjectName(null);
     }
-    
+
     return () => {
       document.removeEventListener('set-project-name', handleSetProjectName);
     };
@@ -80,13 +83,20 @@ const Header: React.FC = () => {
   const Logo = () => (
     <Link to={PATHS.home} className={styles.logo} aria-label={t('nav.home')}>
       <img src={logoMockia} alt="" className={styles.logoImg} />
-      <span className={styles.logoText}>Mock<span className={styles.highlight}>IA</span></span>
+      <span className={styles.logoText}>
+        Mock<span className={styles.highlight}>IA</span>
+      </span>
     </Link>
   );
 
   const ProfileAndBellDesktop = () => (
     <nav className={`${styles.rightContent} ${styles.desktopOnly}`}>
-      <Link to={PATHS.dashboard} className={styles.iconButton} title={t('nav.dashboard')} aria-label={t('nav.dashboard')}>
+      <Link
+        to={PATHS.dashboard}
+        className={styles.iconButton}
+        title={t('nav.dashboard')}
+        aria-label={t('nav.dashboard')}
+      >
         <article className={styles.actionItem}>
           <Icon src={gridIcon} size={24} />
           <span className={styles.actionLabel}>{t('nav.dashboard')}</span>
@@ -96,7 +106,15 @@ const Header: React.FC = () => {
         <NotificationBell />
         <span className={styles.actionLabel}>{t('nav.notifications')}</span>
       </article>
-      <button className={styles.iconButton} onClick={() => { setIsProfileOpen(true); setIsMenuOpen(false); }} title={t('nav.profile')} aria-label={t('nav.profile')}>
+      <button
+        className={styles.iconButton}
+        onClick={() => {
+          setIsProfileOpen(true);
+          setIsMenuOpen(false);
+        }}
+        title={t('nav.profile')}
+        aria-label={t('nav.profile')}
+      >
         <article className={styles.actionItem}>
           <Icon src={userIcon} size={28} className={styles.profileIcon} />
           <span className={styles.actionLabel}>{t('nav.profile')}</span>
@@ -106,8 +124,8 @@ const Header: React.FC = () => {
   );
 
   const HamburgerBtn = () => (
-    <button 
-      className={`${styles.hamburgerBtn} ${isMenuOpen ? styles.menuOpen : ''}`} 
+    <button
+      className={`${styles.hamburgerBtn} ${isMenuOpen ? styles.menuOpen : ''}`}
       onClick={() => setIsMenuOpen(!isMenuOpen)}
       aria-label={t('nav.toggleMenu')}
       aria-controls="site-nav"
@@ -141,7 +159,12 @@ const Header: React.FC = () => {
           {isProjectPage && projectName && (
             <article className={styles.centerSection}>
               <span className={styles.projectName}>{projectName}</span>
-              <button onClick={openSettings} className={styles.settingsIconBtn} title={t('nav.projectSettings')} aria-label={t('nav.projectSettings')}>
+              <button
+                onClick={openSettings}
+                className={styles.settingsIconBtn}
+                title={t('nav.projectSettings')}
+                aria-label={t('nav.projectSettings')}
+              >
                 <Icon src={settingsIcon} size={20} className={styles.settingsIcon} />
               </button>
             </article>
@@ -149,21 +172,33 @@ const Header: React.FC = () => {
 
           <HamburgerBtn />
 
-          {isMenuOpen && <article className={styles.menuBackdrop} onClick={() => setIsMenuOpen(false)} />}
+          {isMenuOpen && (
+            <article className={styles.menuBackdrop} onClick={() => setIsMenuOpen(false)} />
+          )}
 
           {isLanding && !isAuthenticated && (
             <nav className={styles.navCenter} aria-label={t('nav.sections')}>
               {sectionLinks.map((s) => (
-                <a key={s.href} href={s.href} className={styles.navLink}>{s.label}</a>
+                <a key={s.href} href={s.href} className={styles.navLink}>
+                  {s.label}
+                </a>
               ))}
             </nav>
           )}
 
-          <nav id="site-nav" className={`${styles.navActions} ${isMenuOpen ? styles.menuOpen : ''}`}>
+          <nav
+            id="site-nav"
+            className={`${styles.navActions} ${isMenuOpen ? styles.menuOpen : ''}`}
+          >
             {isLanding && !isAuthenticated && (
               <nav className={styles.mobileOnlyLinks} aria-label={t('nav.sections')}>
                 {sectionLinks.map((s) => (
-                  <a key={s.href} href={s.href} className={styles.mobileNavLink} onClick={() => setIsMenuOpen(false)}>
+                  <a
+                    key={s.href}
+                    href={s.href}
+                    className={styles.mobileNavLink}
+                    onClick={() => setIsMenuOpen(false)}
+                  >
                     {s.label}
                   </a>
                 ))}
@@ -181,12 +216,16 @@ const Header: React.FC = () => {
                     </button>
                   </article>
                 )}
-                <Link to={PATHS.dashboard} onClick={() => setIsMenuOpen(false)} className={styles.mobileNavLink}>
+                <Link
+                  to={PATHS.dashboard}
+                  onClick={() => setIsMenuOpen(false)}
+                  className={styles.mobileNavLink}
+                >
                   <Icon src={gridIcon} size={20} className={styles.mobileNavIcon} />
                   {t('nav.dashboard')}
                 </Link>
-                
-                <article 
+
+                <article
                   className={`${styles.mobileNavLink} ${styles.mobileNotificationItem}`}
                   onClick={(e) => {
                     // Only trigger if clicking the empty space or the text, NOT the dropdown panel
@@ -203,7 +242,13 @@ const Header: React.FC = () => {
                   <span className={styles.mobileNavText}>{t('nav.notifications')}</span>
                 </article>
 
-                <button onClick={() => { setIsProfileOpen(true); setIsMenuOpen(false); }} className={styles.mobileNavLink}>
+                <button
+                  onClick={() => {
+                    setIsProfileOpen(true);
+                    setIsMenuOpen(false);
+                  }}
+                  className={styles.mobileNavLink}
+                >
                   <Icon src={userIcon} size={20} className={styles.mobileNavIcon} />
                   {t('nav.profile')}
                 </button>
@@ -214,12 +259,22 @@ const Header: React.FC = () => {
 
             {isAuthenticated ? (
               <ProfileAndBellDesktop />
-            ) : !isLoading && (
-              <nav className={styles.authButtons}>
-                {demoAvailable && <Link to={PATHS.demo} className={styles.demoLink}>{t('nav.tryFree')}</Link>}
-                <Link to={PATHS.login} className={styles.loginBtn}>{t('nav.logIn')}</Link>
-                <Link to={PATHS.signup} className={styles.signupBtn}>{t('nav.signUp')}</Link>
-              </nav>
+            ) : (
+              !isLoading && (
+                <nav className={styles.authButtons}>
+                  {demoAvailable && (
+                    <Link to={PATHS.demo} className={styles.demoLink}>
+                      {t('nav.tryFree')}
+                    </Link>
+                  )}
+                  <Link to={PATHS.login} className={styles.loginBtn}>
+                    {t('nav.logIn')}
+                  </Link>
+                  <Link to={PATHS.signup} className={styles.signupBtn}>
+                    {t('nav.signUp')}
+                  </Link>
+                </nav>
+              )
             )}
           </nav>
         </section>
@@ -230,4 +285,3 @@ const Header: React.FC = () => {
 };
 
 export default Header;
-

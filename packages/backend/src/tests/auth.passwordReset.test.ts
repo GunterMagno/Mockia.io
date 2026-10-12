@@ -54,7 +54,9 @@ describe('Auth - password reset (POST /api/auth/forgot, /api/auth/reset)', () =>
 
   describe('POST /forgot', () => {
     it('unknown email: 202, the same body as a known email, and no email is sent', async () => {
-      const unknown = await request(app).post('/api/auth/forgot').send({ email: 'nobody@example.com' });
+      const unknown = await request(app)
+        .post('/api/auth/forgot')
+        .send({ email: 'nobody@example.com' });
       const known = await request(app).post('/api/auth/forgot').send({ email: EMAIL });
 
       expect(unknown.status).toBe(202);
@@ -113,35 +115,54 @@ describe('Auth - password reset (POST /api/auth/forgot, /api/auth/reset)', () =>
 
     it('rejects a body without a valid email with 400', async () => {
       expect((await request(app).post('/api/auth/forgot').send({})).status).toBe(400);
-      expect((await request(app).post('/api/auth/forgot').send({ email: 'nope' })).status).toBe(400);
+      expect((await request(app).post('/api/auth/forgot').send({ email: 'nope' })).status).toBe(
+        400
+      );
     });
   });
 
   describe('POST /reset', () => {
     it('sets the new password, revokes every session, and the old refresh cookie stops working', async () => {
-      const loginRes = await request(app).post('/api/auth/login').send({ email: EMAIL, password: OLD_PASSWORD });
+      const loginRes = await request(app)
+        .post('/api/auth/login')
+        .send({ email: EMAIL, password: OLD_PASSWORD });
       expect(loginRes.status).toBe(200);
       const oldRefresh = refreshTokenOf(loginRes)!;
       const refresh = (token: string) =>
-        request(app).post('/api/auth/refresh').set(CSRF_HEADERS).set('Cookie', `${RT_COOKIE}=${token}`);
+        request(app)
+          .post('/api/auth/refresh')
+          .set(CSRF_HEADERS)
+          .set('Cookie', `${RT_COOKIE}=${token}`);
 
-      const secondLogin = await request(app).post('/api/auth/login').send({ email: EMAIL, password: OLD_PASSWORD });
+      const secondLogin = await request(app)
+        .post('/api/auth/login')
+        .send({ email: EMAIL, password: OLD_PASSWORD });
       const otherDevice = refreshTokenOf(secondLogin)!;
 
       await request(app).post('/api/auth/forgot').send({ email: EMAIL });
       const token = tokenFromOutbox(EMAIL);
-      const res = await request(app).post('/api/auth/reset').send({ token, password: NEW_PASSWORD });
+      const res = await request(app)
+        .post('/api/auth/reset')
+        .send({ token, password: NEW_PASSWORD });
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
 
       // Every session of the user is gone
-      expect(await RefreshSessionModel.countDocuments({ userId, revokedAt: { $exists: false } })).toBe(0);
+      expect(
+        await RefreshSessionModel.countDocuments({ userId, revokedAt: { $exists: false } })
+      ).toBe(0);
       expect((await refresh(oldRefresh)).status).toBe(401);
       expect((await refresh(otherDevice)).status).toBe(401);
 
       // New password works, old one does not
-      expect((await request(app).post('/api/auth/login').send({ email: EMAIL, password: OLD_PASSWORD })).status).toBe(401);
-      expect((await request(app).post('/api/auth/login').send({ email: EMAIL, password: NEW_PASSWORD })).status).toBe(200);
+      expect(
+        (await request(app).post('/api/auth/login').send({ email: EMAIL, password: OLD_PASSWORD }))
+          .status
+      ).toBe(401);
+      expect(
+        (await request(app).post('/api/auth/login').send({ email: EMAIL, password: NEW_PASSWORD }))
+          .status
+      ).toBe(200);
     });
 
     it('stores the new password with bcrypt cost 12', async () => {
@@ -162,23 +183,38 @@ describe('Auth - password reset (POST /api/auth/forgot, /api/auth/reset)', () =>
     it('an expired token (older than its 30 minutes) fails and leaves the password alone', async () => {
       const token = await createAuthToken(userId, 'reset', 30);
       // Thirty-one minutes later
-      await AuthTokenModel.updateOne({ userId }, { $set: { expiresAt: new Date(Date.now() - 60_000) } });
+      await AuthTokenModel.updateOne(
+        { userId },
+        { $set: { expiresAt: new Date(Date.now() - 60_000) } }
+      );
 
-      const res = await request(app).post('/api/auth/reset').send({ token, password: NEW_PASSWORD });
+      const res = await request(app)
+        .post('/api/auth/reset')
+        .send({ token, password: NEW_PASSWORD });
       expect(res.status).toBe(400);
       expect(res.body.error.message).toBe('Invalid or expired token');
-      expect((await request(app).post('/api/auth/login').send({ email: EMAIL, password: OLD_PASSWORD })).status).toBe(200);
+      expect(
+        (await request(app).post('/api/auth/login').send({ email: EMAIL, password: OLD_PASSWORD }))
+          .status
+      ).toBe(200);
     });
 
     it('a token cannot be used twice', async () => {
       const token = await createAuthToken(userId, 'reset', 30);
-      const first = await request(app).post('/api/auth/reset').send({ token, password: NEW_PASSWORD });
+      const first = await request(app)
+        .post('/api/auth/reset')
+        .send({ token, password: NEW_PASSWORD });
       expect(first.status).toBe(200);
-      const second = await request(app).post('/api/auth/reset').send({ token, password: 'another-password-789' });
+      const second = await request(app)
+        .post('/api/auth/reset')
+        .send({ token, password: 'another-password-789' });
       expect(second.status).toBe(400);
       expect(second.body.error.message).toBe('Invalid or expired token');
       // The first password is still the current one
-      expect((await request(app).post('/api/auth/login').send({ email: EMAIL, password: NEW_PASSWORD })).status).toBe(200);
+      expect(
+        (await request(app).post('/api/auth/login').send({ email: EMAIL, password: NEW_PASSWORD }))
+          .status
+      ).toBe(200);
     });
 
     it('two simultaneous uses of one token: exactly one wins', async () => {
@@ -191,14 +227,18 @@ describe('Auth - password reset (POST /api/auth/forgot, /api/auth/reset)', () =>
     });
 
     it('an unknown token gives the same generic 400', async () => {
-      const res = await request(app).post('/api/auth/reset').send({ token: 'x'.repeat(43), password: NEW_PASSWORD });
+      const res = await request(app)
+        .post('/api/auth/reset')
+        .send({ token: 'x'.repeat(43), password: NEW_PASSWORD });
       expect(res.status).toBe(400);
       expect(res.body.error.message).toBe('Invalid or expired token');
     });
 
     it('a verification token cannot reset a password', async () => {
       const token = await createAuthToken(userId, 'verify', 60);
-      const res = await request(app).post('/api/auth/reset').send({ token, password: NEW_PASSWORD });
+      const res = await request(app)
+        .post('/api/auth/reset')
+        .send({ token, password: NEW_PASSWORD });
       expect(res.status).toBe(400);
     });
 
@@ -213,12 +253,26 @@ describe('Auth - password reset (POST /api/auth/forgot, /api/auth/reset)', () =>
 
     it('accepts 128 characters and rejects 129', async () => {
       const t1 = await createAuthToken(userId, 'reset', 30);
-      expect((await request(app).post('/api/auth/reset').send({ token: t1, password: 'a'.repeat(129) })).status).toBe(400);
-      expect((await request(app).post('/api/auth/reset').send({ token: t1, password: 'a'.repeat(128) })).status).toBe(200);
+      expect(
+        (
+          await request(app)
+            .post('/api/auth/reset')
+            .send({ token: t1, password: 'a'.repeat(129) })
+        ).status
+      ).toBe(400);
+      expect(
+        (
+          await request(app)
+            .post('/api/auth/reset')
+            .send({ token: t1, password: 'a'.repeat(128) })
+        ).status
+      ).toBe(200);
     });
 
     it('requires both token and password', async () => {
-      expect((await request(app).post('/api/auth/reset').send({ password: NEW_PASSWORD })).status).toBe(400);
+      expect(
+        (await request(app).post('/api/auth/reset').send({ password: NEW_PASSWORD })).status
+      ).toBe(400);
       expect((await request(app).post('/api/auth/reset').send({ token: 'abc' })).status).toBe(400);
     });
   });

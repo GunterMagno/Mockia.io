@@ -5,7 +5,11 @@ import { scoreOutput, normalizeMethodPath, type EndpointSpec } from '../../evals
  * SAME tolerant parser production uses) or an already parsed value.
  */
 
-function endpoint(method: EndpointSpec['method'], path: string, body: Record<string, unknown> = { id: '1', name: 'x' }): EndpointSpec {
+function endpoint(
+  method: EndpointSpec['method'],
+  path: string,
+  body: Record<string, unknown> = { id: '1', name: 'x' }
+): EndpointSpec {
   return {
     method,
     path,
@@ -47,7 +51,9 @@ describe('scoreOutput', () => {
 
   it('does not mutate the expected endpoints nor the parsed actual (the production validator heals in place)', () => {
     const expected = JSON.parse(JSON.stringify(EXPECTED)) as EndpointSpec[];
-    const actual = api([{ method: 'GET', path: '/users', description: 'd', examples: [{ id: '1' }] }]);
+    const actual = api([
+      { method: 'GET', path: '/users', description: 'd', examples: [{ id: '1' }] },
+    ]);
     const before = JSON.stringify([expected, actual]);
     scoreOutput(expected, actual);
     expect(JSON.stringify([expected, actual])).toBe(before);
@@ -108,7 +114,11 @@ describe('scoreOutput', () => {
     });
 
     it('a method in the wrong case still matches', () => {
-      const actual = api([endpoint('get' as never, '/users'), endpoint('Get' as never, '/users/:id'), endpoint('post' as never, '/users')]);
+      const actual = api([
+        endpoint('get' as never, '/users'),
+        endpoint('Get' as never, '/users/:id'),
+        endpoint('post' as never, '/users'),
+      ]);
       expect(scoreOutput(EXPECTED, actual).methodPathF1).toBe(1);
     });
 
@@ -134,7 +144,15 @@ describe('scoreOutput', () => {
     });
 
     it('plain prose, an empty string and non-string non-object values are not valid JSON', () => {
-      for (const actual of ['Sorry, I cannot help with that.', '', '   ', undefined, null, 42, true]) {
+      for (const actual of [
+        'Sorry, I cannot help with that.',
+        '',
+        '   ',
+        undefined,
+        null,
+        42,
+        true,
+      ]) {
         const score = scoreOutput(EXPECTED, actual);
         expect(score.validJson).toBe(false);
         expect(score.methodPathF1).toBe(0);
@@ -143,12 +161,20 @@ describe('scoreOutput', () => {
 
     it('markdown fenced JSON parses exactly as in production', () => {
       const text = '```json\n' + JSON.stringify(api(EXPECTED), null, 2) + '\n```';
-      expect(scoreOutput(EXPECTED, text)).toMatchObject({ validJson: true, schemaValid: true, methodPathF1: 1 });
+      expect(scoreOutput(EXPECTED, text)).toMatchObject({
+        validJson: true,
+        schemaValid: true,
+        methodPathF1: 1,
+      });
     });
 
     it('JSON wrapped in prose parses exactly as in production', () => {
       const text = `Sure! Here is the API you asked for:\n${JSON.stringify(api(EXPECTED))}\nHope it helps.`;
-      expect(scoreOutput(EXPECTED, text)).toMatchObject({ validJson: true, schemaValid: true, methodPathF1: 1 });
+      expect(scoreOutput(EXPECTED, text)).toMatchObject({
+        validJson: true,
+        schemaValid: true,
+        methodPathF1: 1,
+      });
     });
 
     it('parseable but schema-invalid (required fields missing): validJson true, schemaValid false', () => {
@@ -172,7 +198,9 @@ describe('scoreOutput', () => {
   });
 
   describe('fieldCoverage', () => {
-    const expected = [endpoint('GET', '/users', { id: '1', name: 'Ada', email: 'a@b.c', role: 'admin' })];
+    const expected = [
+      endpoint('GET', '/users', { id: '1', name: 'Ada', email: 'a@b.c', role: 'admin' }),
+    ];
 
     it('is the fraction of expected top-level response fields present in the actual example', () => {
       const actual = api([endpoint('GET', '/users', { id: '9', name: 'Bob' })]);
@@ -180,7 +208,16 @@ describe('scoreOutput', () => {
     });
 
     it('extra fields in the answer do not raise or lower it', () => {
-      const actual = api([endpoint('GET', '/users', { id: '9', name: 'Bob', email: 'e', role: 'r', extra: 1, more: 2 })]);
+      const actual = api([
+        endpoint('GET', '/users', {
+          id: '9',
+          name: 'Bob',
+          email: 'e',
+          role: 'r',
+          extra: 1,
+          more: 2,
+        }),
+      ]);
       expect(scoreOutput(expected, actual).fieldCoverage).toBe(1);
     });
 
@@ -195,13 +232,22 @@ describe('scoreOutput', () => {
     });
 
     it('is 0 when nothing matched', () => {
-      expect(scoreOutput(expected, api([endpoint('GET', '/other', { id: 1, name: 2, email: 3, role: 4 })])).fieldCoverage).toBe(0);
+      expect(
+        scoreOutput(
+          expected,
+          api([endpoint('GET', '/other', { id: 1, name: 2, email: 3, role: 4 })])
+        ).fieldCoverage
+      ).toBe(0);
     });
 
     it('is 1 when the expected answer has no response fields to check', () => {
       const noFields = [endpoint('DELETE', '/users/:id', {})];
-      expect(scoreOutput(noFields, api([endpoint('DELETE', '/users/:id', {})])).fieldCoverage).toBe(1);
-      expect(scoreOutput(noFields, api([endpoint('GET', '/else', { a: 1 })])).fieldCoverage).toBe(1);
+      expect(scoreOutput(noFields, api([endpoint('DELETE', '/users/:id', {})])).fieldCoverage).toBe(
+        1
+      );
+      expect(scoreOutput(noFields, api([endpoint('GET', '/else', { a: 1 })])).fieldCoverage).toBe(
+        1
+      );
     });
 
     it('reads the 2xx example, skipping an error example listed first', () => {
@@ -217,13 +263,23 @@ describe('scoreOutput', () => {
       const good = api([endpoint('GET', '/users/{id}', { id: '2', name: 'Bob' })]);
       expect(scoreOutput(exp, good).fieldCoverage).toBe(1);
       const onlyError = api([
-        { ...endpoint('GET', '/users/:id'), examples: [{ request: {}, response: { error: 'x' }, statusCode: 404 }] },
+        {
+          ...endpoint('GET', '/users/:id'),
+          examples: [{ request: {}, response: { error: 'x' }, statusCode: 404 }],
+        },
       ]);
       expect(scoreOutput(exp, onlyError).fieldCoverage).toBe(0);
     });
 
     it('accepts a flat example (response fields without request/response wrapper), like the production validator', () => {
-      const flat = api([{ method: 'GET', path: '/users', description: 'd', examples: [{ id: '1', name: 'Ada', email: 'e', role: 'r' }] }]);
+      const flat = api([
+        {
+          method: 'GET',
+          path: '/users',
+          description: 'd',
+          examples: [{ id: '1', name: 'Ada', email: 'e', role: 'r' }],
+        },
+      ]);
       expect(scoreOutput(expected, flat).fieldCoverage).toBe(1);
     });
 

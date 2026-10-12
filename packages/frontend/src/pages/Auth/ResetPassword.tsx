@@ -1,70 +1,70 @@
-import React, { useEffect, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
-import { Input } from '../../components/ui/Input/Input'
-import { Button } from '../../components/ui/Button/Button'
-import ModalErrorAlert from '../../components/ui/ModalErrorAlert/ModalErrorAlert'
-import { useAuth } from '../../contexts/AuthContext'
-import { resetPassword } from '../../services/authService'
-import { getBackendErrorMessage } from '../../utils/error'
-import { validateNewPassword } from '../../utils/validation'
-import { playErrorSound } from '../../utils/audio'
-import { PATHS } from '../../routes/paths'
-import { useI18n } from '../../i18n/I18nProvider'
+import React, { useEffect, useRef, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { Input } from '../../components/ui/Input/Input';
+import { Button } from '../../components/ui/Button/Button';
+import ModalErrorAlert from '../../components/ui/ModalErrorAlert/ModalErrorAlert';
+import { useAuth } from '../../contexts/AuthContext';
+import { resetPassword } from '../../services/authService';
+import { getBackendErrorMessage } from '../../utils/error';
+import { validateNewPassword } from '../../utils/validation';
+import { playErrorSound } from '../../utils/audio';
+import { PATHS } from '../../routes/paths';
+import { useI18n } from '../../i18n/I18nProvider';
 
-import styles from './Auth.module.scss'
+import styles from './Auth.module.scss';
 
 const ResetPassword: React.FC = () => {
-  const { t } = useI18n()
-  const { user, logout } = useAuth()
-  const [searchParams, setSearchParams] = useSearchParams()
+  const { t } = useI18n();
+  const { user, logout } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   // El token se guarda en estado y se quita de la URL: asi no queda en el historial ni viaja en un Referer
-  const [token] = useState(() => searchParams.get('token') ?? '')
-  const [password, setPassword] = useState('')
-  const [confirm, setConfirm] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [done, setDone] = useState(false)
-  const noticeRef = useRef<HTMLParagraphElement>(null)
+  const [token] = useState(() => searchParams.get('token') ?? '');
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+  const noticeRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
-    if (searchParams.has('token')) setSearchParams({}, { replace: true })
+    if (searchParams.has('token')) setSearchParams({}, { replace: true });
     // solo al montar: el token ya esta en el estado
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, []);
 
   useEffect(() => {
-    if (done) noticeRef.current?.focus()
-  }, [done])
+    if (done) noticeRef.current?.focus();
+  }, [done]);
 
   const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
-    const passwordError = validateNewPassword(password)
+    const passwordError = validateNewPassword(password);
     if (passwordError) {
-      setError(t(passwordError))
-      playErrorSound()
-      return
+      setError(t(passwordError));
+      playErrorSound();
+      return;
     }
     if (password !== confirm) {
-      setError(t('validation.passwordMismatch'))
-      playErrorSound()
-      return
+      setError(t('validation.passwordMismatch'));
+      playErrorSound();
+      return;
     }
 
-    setLoading(true)
-    setError(null)
+    setLoading(true);
+    setError(null);
     try {
-      await resetPassword(token, password)
+      await resetPassword(token, password);
       // El servidor ya cerro todas las sesiones: si este navegador tenia una abierta, se limpia tambien aqui
-      if (user) void logout()
-      setDone(true)
+      if (user) void logout();
+      setDone(true);
     } catch (err: any) {
-      setError(getBackendErrorMessage(err, t))
-      playErrorSound()
+      setError(getBackendErrorMessage(err, t));
+      playErrorSound();
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const invalidLinkActions = (
     <div className={styles.actions}>
@@ -72,7 +72,7 @@ const ResetPassword: React.FC = () => {
         {t('auth.requestNewLink')}
       </Link>
     </div>
-  )
+  );
 
   return (
     <main className={styles.wrapper}>
@@ -145,7 +145,7 @@ const ResetPassword: React.FC = () => {
         </article>
       </section>
     </main>
-  )
-}
+  );
+};
 
-export default ResetPassword
+export default ResetPassword;

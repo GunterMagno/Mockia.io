@@ -79,7 +79,10 @@ const DEFAULT_AI_TOTAL_TIMEOUT_MS = 240_000;
  * duplicates collapse to their first position and unknown names are returned in `ignored` for the caller to warn about.
  * `providers` is empty only when the variable lists nothing valid; getLlm() turns that into an error.
  */
-export function parseAiProviders(raw: string | undefined): { providers: AiProviderName[]; ignored: string[] } {
+export function parseAiProviders(raw: string | undefined): {
+  providers: AiProviderName[];
+  ignored: string[];
+} {
   if (raw === undefined || raw.trim() === '') return { providers: ['openrouter'], ignored: [] };
   const providers: AiProviderName[] = [];
   const ignored: string[] = [];
@@ -162,7 +165,9 @@ export function getAiGenerationRetentionDays(env: NodeJS.ProcessEnv = process.en
   const raw = (env.AI_GENERATION_RETENTION_DAYS ?? '').trim();
   if (!/^\d{1,5}$/.test(raw)) return DEFAULT_AI_GENERATION_RETENTION_DAYS;
   const n = Number.parseInt(raw, 10);
-  return n > 0 ? Math.min(n, MAX_AI_GENERATION_RETENTION_DAYS) : DEFAULT_AI_GENERATION_RETENTION_DAYS;
+  return n > 0
+    ? Math.min(n, MAX_AI_GENERATION_RETENTION_DAYS)
+    : DEFAULT_AI_GENERATION_RETENTION_DAYS;
 }
 
 /**
@@ -170,10 +175,16 @@ export function getAiGenerationRetentionDays(env: NodeJS.ProcessEnv = process.en
  * (a huge max_tokens could keep the local model busy and its breaker open for everyone). AI_SPEC_TEMPERATURE lets the
  * owner tune the temperature after running the evaluation bench (a number from 0 to 2; empty or invalid keeps 0.85).
  */
-export function getSpecGenerationSampling(env: NodeJS.ProcessEnv = process.env): { temperature: number; maxTokens: number } {
+export function getSpecGenerationSampling(env: NodeJS.ProcessEnv = process.env): {
+  temperature: number;
+  maxTokens: number;
+} {
   const raw = (env.AI_SPEC_TEMPERATURE ?? '').trim();
   const value = raw === '' ? Number.NaN : Number(raw);
-  const temperature = Number.isFinite(value) && value >= 0 && value <= 2 ? value : SPEC_GENERATION_DEFAULTS.temperature;
+  const temperature =
+    Number.isFinite(value) && value >= 0 && value <= 2
+      ? value
+      : SPEC_GENERATION_DEFAULTS.temperature;
   return { temperature, maxTokens: SPEC_GENERATION_DEFAULTS.maxTokens };
 }
 

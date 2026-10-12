@@ -12,19 +12,19 @@ describe('Editor Flow', () => {
     cy.request('POST', 'http://localhost:3000/api/auth/register', {
       username: 'EditorUser',
       email: randomEmail,
-      password: password
+      password: password,
     }).then(() => {
       // Login via API to get access token
       cy.request('POST', 'http://localhost:3000/api/auth/login', {
         email: randomEmail,
-        password: password
+        password: password,
       }).then((loginRes) => {
         const token = loginRes.body.data.tokens.accessToken;
         cy.request({
           method: 'POST',
           url: 'http://localhost:3000/api/projects',
           headers: { Authorization: `Bearer ${token}` },
-          body: { title: 'Editor Test Project', description: 'Test' }
+          body: { title: 'Editor Test Project', description: 'Test' },
         }).then((projRes) => {
           projectId = projRes.body.data.id;
           projectSlug = projRes.body.data.slug;
@@ -45,10 +45,10 @@ describe('Editor Flow', () => {
   it('Should open editor and display Mock API setup area', () => {
     // Navigate to project
     cy.contains('Editor Test Project').click();
-    
+
     // Should be in the editor view (routes by slug)
     cy.url().should('include', `/editor/${projectSlug}`);
-    
+
     // Check if the sidebar or main panels are visible
     cy.contains('Endpoints').should('be.visible');
   });
@@ -56,25 +56,25 @@ describe('Editor Flow', () => {
   it('Should create and configure a new Mock Endpoint', () => {
     // Go to project editor
     cy.contains('Editor Test Project').click();
-    
+
     // Click on New Endpoint button in the sidebar
     cy.contains('button', '+ New endpoint').click();
-    
+
     // Check that default endpoint is rendered
     cy.contains('/new-endpoint').should('be.visible');
-    
+
     // Update path using custom input wrapper selector
     cy.contains('fieldset', 'Path').find('input').clear().type('/hello');
-    
+
     // Update HTTP method
     cy.contains('article', 'HTTP method').find('select').select('POST');
-    
+
     // Update status code using Force HTTP Status to 201 Created
     cy.contains('article', 'Force HTTP status').find('select').select('201');
-    
+
     // Save changes
     cy.contains('button', 'Save changes').click();
-    
+
     // Assert that the unsaved changes dot is no longer present
     cy.contains('• Unsaved changes').should('not.exist');
     cy.contains('POST').should('be.visible');
@@ -86,7 +86,7 @@ describe('Editor Flow', () => {
     cy.request({
       method: 'POST',
       url: `http://localhost:3000/api/mock/${projectSlug}/hello`,
-      failOnStatusCode: false
+      failOnStatusCode: false,
     }).then((response) => {
       // Validate that the Mock Engine resolved the route and returned correct status
       expect(response.status).to.eq(201);

@@ -25,7 +25,11 @@ describe('Auth - credential endpoints only accept JSON (login CSRF)', () => {
   beforeEach(async () => {
     await UserModel.deleteMany({});
     await RefreshSessionModel.deleteMany({});
-    await UserModel.create({ email: EMAIL, username: 'csrfuser', passwordHash: await bcrypt.hash(PASSWORD, 10) });
+    await UserModel.create({
+      email: EMAIL,
+      username: 'csrfuser',
+      passwordHash: await bcrypt.hash(PASSWORD, 10),
+    });
   });
 
   afterAll(async () => {
@@ -36,7 +40,10 @@ describe('Auth - credential endpoints only accept JSON (login CSRF)', () => {
   });
 
   it('rejects an urlencoded login with 415 and sets no cookie', async () => {
-    const res = await request(app).post('/api/auth/login').type('form').send({ email: EMAIL, password: PASSWORD });
+    const res = await request(app)
+      .post('/api/auth/login')
+      .type('form')
+      .send({ email: EMAIL, password: PASSWORD });
     expect(res.status).toBe(415);
     expect(refreshSetCookie(res)).toBeUndefined();
     expect(res.body.data?.tokens).toBeUndefined();
@@ -64,12 +71,17 @@ describe('Auth - credential endpoints only accept JSON (login CSRF)', () => {
     const forgot = await request(app).post('/api/auth/forgot').type('form').send({ email: EMAIL });
     expect(forgot.status).toBe(415);
 
-    const reset = await request(app).post('/api/auth/reset').type('form').send({ token: 'x', password: 'whatever12345' });
+    const reset = await request(app)
+      .post('/api/auth/reset')
+      .type('form')
+      .send({ token: 'x', password: 'whatever12345' });
     expect(reset.status).toBe(415);
   });
 
   it('still accepts a JSON login (200 + refresh cookie)', async () => {
-    const res = await request(app).post('/api/auth/login').send({ email: EMAIL, password: PASSWORD });
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: EMAIL, password: PASSWORD });
     expect(res.status).toBe(200);
     expect(refreshSetCookie(res)).toBeDefined();
   });

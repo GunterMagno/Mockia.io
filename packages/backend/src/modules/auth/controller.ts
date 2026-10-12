@@ -1,12 +1,24 @@
 import { Request, Response, NextFunction } from 'express';
-import { registerUser, loginUser, refreshTokens, logoutSession, refreshTokenJti, type IssuedSession } from './service.js';
+import {
+  registerUser,
+  loginUser,
+  refreshTokens,
+  logoutSession,
+  refreshTokenJti,
+  type IssuedSession,
+} from './service.js';
 import { revokeAllForUser, listActiveSessions, type SessionMeta } from './sessions.js';
-import { requestPasswordReset, resetPassword, verifyEmail, resendVerification } from './passwordReset.js';
+import {
+  requestPasswordReset,
+  resetPassword,
+  verifyEmail,
+  resendVerification,
+} from './passwordReset.js';
 import { setRefreshCookie, clearRefreshCookie, readRefreshCookie } from './cookie.js';
 import type { AuthenticatedRequest } from '../../middlewares/authenticateToken.js';
-import type { 
+import type {
   CreateUserRequest,
-  LoginRequest, 
+  LoginRequest,
   LoginResponse,
   RefreshTokensResponse,
   ForgotPasswordRequest,
@@ -75,7 +87,10 @@ export const login = asyncHandler(
   async (req: Request<{}, {}, LoginRequest>, res: Response, next: NextFunction) => {
     const loginRequest: LoginRequest = req.body;
 
-    const { user, accessToken, refreshToken, persistent } = await loginUser(loginRequest, sessionMeta(req));
+    const { user, accessToken, refreshToken, persistent } = await loginUser(
+      loginRequest,
+      sessionMeta(req)
+    );
     setRefreshCookie(res, refreshToken, persistent);
 
     // The refresh token must never reach the body (page scripts can read bodies, not HttpOnly cookies)
@@ -98,27 +113,25 @@ export const login = asyncHandler(
  * @throws 401 if the cookie is missing, invalid, expired, revoked or reused (the cookie is cleared)
  * @throws 403 if the CSRF header is missing
  */
-export const refresh = asyncHandler(
-  async (req: Request, res: Response, next: NextFunction) => {
-    let issued: IssuedSession;
-    try {
-      issued = await refreshTokens(readRefreshCookie(req), sessionMeta(req));
-    } catch (err) {
-      // The session is gone (no/invalid/expired/revoked/reused token): drop the dead cookie. A server error
-      // (e.g. database down) keeps it, since the user may still hold a perfectly valid session.
-      if (err instanceof AppError && err.statusCode === 401) clearRefreshCookie(res);
-      throw err;
-    }
-    setRefreshCookie(res, issued.refreshToken, issued.persistent);
-
-    const data: RefreshTokensResponse = { accessToken: issued.accessToken, user: issued.user };
-    res.status(200).json({
-      success: true,
-      data,
-      timestamp: new Date().toISOString(),
-    });
+export const refresh = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+  let issued: IssuedSession;
+  try {
+    issued = await refreshTokens(readRefreshCookie(req), sessionMeta(req));
+  } catch (err) {
+    // The session is gone (no/invalid/expired/revoked/reused token): drop the dead cookie. A server error
+    // (e.g. database down) keeps it, since the user may still hold a perfectly valid session.
+    if (err instanceof AppError && err.statusCode === 401) clearRefreshCookie(res);
+    throw err;
   }
-);
+  setRefreshCookie(res, issued.refreshToken, issued.persistent);
+
+  const data: RefreshTokensResponse = { accessToken: issued.accessToken, user: issued.user };
+  res.status(200).json({
+    success: true,
+    data,
+    timestamp: new Date().toISOString(),
+  });
+});
 
 /**
  * POST /api/auth/logout
@@ -126,14 +139,12 @@ export const refresh = asyncHandler(
  * Idempotent: always 204, even for an unknown, expired or missing cookie.
  * Requires the `X-Requested-With: mockia` header (403 otherwise; nothing is revoked or cleared).
  */
-export const logout = asyncHandler(
-  async (req: Request, res: Response, next: NextFunction) => {
-    // Cleared first: even if revoking fails the browser stops holding the credential
-    clearRefreshCookie(res);
-    await logoutSession(readRefreshCookie(req));
-    res.status(204).send();
-  }
-);
+export const logout = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+  // Cleared first: even if revoking fails the browser stops holding the credential
+  clearRefreshCookie(res);
+  await logoutSession(readRefreshCookie(req));
+  res.status(204).send();
+});
 
 /**
  * POST /api/auth/logout-all
@@ -178,7 +189,10 @@ export const forgot = asyncHandler(
       await requestPasswordReset(email, locale);
     } catch (err) {
       // Even a database hiccup must look like any other request: the caller learns nothing
-      console.error('[Auth] Password reset request failed:', err instanceof Error ? err.message : err);
+      console.error(
+        '[Auth] Password reset request failed:',
+        err instanceof Error ? err.message : err
+      );
     }
     res.status(202).json({
       success: true,
@@ -244,21 +258,19 @@ import { getUserProfile } from '../users/service.js';
  * GET /api/auth/me
  * Gets current user info
  */
-export const me = asyncHandler(
-  async (req: Request, res: Response) => {
-    const authReq = req as import('../../middlewares/authenticateToken.js').AuthenticatedRequest;
-    const userId = authReq.user?.id;
+export const me = asyncHandler(async (req: Request, res: Response) => {
+  const authReq = req as import('../../middlewares/authenticateToken.js').AuthenticatedRequest;
+  const userId = authReq.user?.id;
 
-    if (!userId) {
-      res.status(401).json({ success: false, error: { message: 'Not authenticated' } });
-      return;
-    }
-    
-    const user = await getUserProfile(userId);
-
-    res.status(200).json({
-      success: true,
-      user
-    });
+  if (!userId) {
+    res.status(401).json({ success: false, error: { message: 'Not authenticated' } });
+    return;
   }
-);
+
+  const user = await getUserProfile(userId);
+
+  res.status(200).json({
+    success: true,
+    user,
+  });
+});

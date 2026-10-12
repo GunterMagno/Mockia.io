@@ -28,12 +28,16 @@ export function formatNoticeDate(date: Date, locale: MailLocale): string {
 
 /** "$29.00" in the user's language; zero-decimal currencies (JPY) are handled by the currency's own fraction digits. */
 function formatMoney(amountMinor: number, currency: string, locale: MailLocale): string {
-  const fmt = new Intl.NumberFormat(locale, { style: 'currency', currency: currency.toUpperCase() });
+  const fmt = new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency: currency.toUpperCase(),
+  });
   const digits = fmt.resolvedOptions().maximumFractionDigits ?? 2;
   return fmt.format(amountMinor / 10 ** digits);
 }
 
-const planLabel = (plan?: string | null) => (plan === 'team' ? 'Team' : plan === 'pro' ? 'Pro' : plan === 'starter' ? 'Starter' : 'Mockia');
+const planLabel = (plan?: string | null) =>
+  plan === 'team' ? 'Team' : plan === 'pro' ? 'Pro' : plan === 'starter' ? 'Starter' : 'Mockia';
 
 const TEXT = {
   paymentFailed: {
@@ -88,19 +92,31 @@ async function deliver(label: string, tasks: Array<Promise<unknown>>): Promise<v
       // Only the class and code: an SMTP message usually quotes the recipient's address (personal data)
       const reason = r.reason as { name?: unknown; code?: unknown } | undefined;
       const kind = r.reason instanceof Error ? r.reason.name : 'unknown error';
-      const code = typeof reason?.code === 'string' || typeof reason?.code === 'number' ? ` (${reason.code})` : '';
+      const code =
+        typeof reason?.code === 'string' || typeof reason?.code === 'number'
+          ? ` (${reason.code})`
+          : '';
       console.error(`[Billing] ${label} notice failed: ${kind}${code}`);
     }
   }
 }
 
 const inApp = (user: NoticeUser, title: string, message: string) =>
-  createNotification({ userId: user._id.toString(), type: NotificationType.BILLING, title, message, link: BILLING_PATH });
+  createNotification({
+    userId: user._id.toString(),
+    type: NotificationType.BILLING,
+    title,
+    message,
+    link: BILLING_PATH,
+  });
 
 /** First payment failure of a sequence: email + in-app notice with the end of the grace period. */
 export async function notifyPaymentFailed(user: NoticeUser, pastDueSince: Date): Promise<void> {
   const locale = resolveMailLocale(user.locale ?? undefined);
-  const date = formatNoticeDate(new Date(pastDueSince.getTime() + PAST_DUE_GRACE_DAYS * DAY_MS), locale);
+  const date = formatNoticeDate(
+    new Date(pastDueSince.getTime() + PAST_DUE_GRACE_DAYS * DAY_MS),
+    locale
+  );
   const text = TEXT.paymentFailed[locale](planLabel(user.plan), date);
   await deliver('payment-failed', [
     sendMail(user.email, 'payment_failed', {
@@ -130,10 +146,17 @@ export async function notifyTrialWillEnd(user: NoticeUser, trialEnd: Date): Prom
 }
 
 /** Refund issued: in-app notice only (the plan does not change; a cancellation arrives as its own event). */
-export async function notifyRefund(user: NoticeUser, refund: { amount?: unknown; currency?: unknown }): Promise<void> {
+export async function notifyRefund(
+  user: NoticeUser,
+  refund: { amount?: unknown; currency?: unknown }
+): Promise<void> {
   const locale = resolveMailLocale(user.locale ?? undefined);
   let amount: string | null = null;
-  if (typeof refund.amount === 'number' && refund.amount > 0 && typeof refund.currency === 'string') {
+  if (
+    typeof refund.amount === 'number' &&
+    refund.amount > 0 &&
+    typeof refund.currency === 'string'
+  ) {
     try {
       amount = formatMoney(refund.amount, refund.currency, locale);
     } catch {

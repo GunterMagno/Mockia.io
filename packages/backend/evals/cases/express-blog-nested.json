@@ -1,11 +1,7 @@
 {
   "id": "express-blog-nested",
   "description": "Blog with posts and comments nested under a post (two path parameters).",
-  "tags": [
-    "express",
-    "nested-resources",
-    "path-params"
-  ],
+  "tags": ["express", "nested-resources", "path-params"],
   "input": {
     "projectTitle": "Blog Engine",
     "projectDescription": "Multi-author blog backend",
@@ -34,33 +30,23 @@
           "summary": "Posts router",
           "routes": [
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/posts"
             },
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/posts/:postId"
             },
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/posts/:postId/comments"
             },
             {
-              "methods": [
-                "POST"
-              ],
+              "methods": ["POST"],
               "path": "/posts/:postId/comments"
             },
             {
-              "methods": [
-                "DELETE"
-              ],
+              "methods": ["DELETE"],
               "path": "/posts/:postId/comments/:commentId"
             }
           ]
@@ -126,13 +112,7 @@
               "type": "string"
             }
           },
-          "required": [
-            "id",
-            "title",
-            "body",
-            "authorName",
-            "publishedAt"
-          ]
+          "required": ["id", "title", "body", "authorName", "publishedAt"]
         }
       },
       "examples": [
@@ -178,13 +158,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "title",
-          "body",
-          "authorName",
-          "publishedAt"
-        ]
+        "required": ["id", "title", "body", "authorName", "publishedAt"]
       },
       "examples": [
         {
@@ -236,13 +210,7 @@
               "type": "string"
             }
           },
-          "required": [
-            "id",
-            "postId",
-            "author",
-            "text",
-            "createdAt"
-          ]
+          "required": ["id", "postId", "author", "text", "createdAt"]
         }
       },
       "examples": [
@@ -274,10 +242,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "author",
-          "text"
-        ]
+        "required": ["author", "text"]
       },
       "responseSchema": {
         "type": "object",
@@ -298,13 +263,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "postId",
-          "author",
-          "text",
-          "createdAt"
-        ]
+        "required": ["id", "postId", "author", "text", "createdAt"]
       },
       "examples": [
         {
@@ -341,10 +300,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "id",
-          "deleted"
-        ]
+        "required": ["id", "deleted"]
       },
       "examples": [
         {

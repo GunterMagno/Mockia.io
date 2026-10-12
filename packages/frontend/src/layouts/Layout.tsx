@@ -1,12 +1,15 @@
-import React from 'react'
-import { Footer } from '../components/ui/Footer/Footer'
-import styles from './Layout.module.scss'
+import React from 'react';
+import { Footer } from '../components/ui/Footer/Footer';
+import styles from './Layout.module.scss';
 
 interface LayoutProps {
   onOpenProjectSettings?: () => void;
 }
 
-const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({ children, onOpenProjectSettings }) => {
+const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({
+  children,
+  onOpenProjectSettings,
+}) => {
   React.useEffect(() => {
     const handleOpenSettings = () => {
       if (onOpenProjectSettings) onOpenProjectSettings();
@@ -33,7 +36,7 @@ const Layout: React.FC<React.PropsWithChildren<LayoutProps>> = ({ children, onOp
         <Footer />
       </footer>
     </section>
-  )
-}
+  );
+};
 
-export default Layout
+export default Layout;

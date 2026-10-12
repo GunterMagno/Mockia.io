@@ -1,52 +1,52 @@
-import React, { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Input } from '../../components/ui/Input/Input'
-import { Button } from '../../components/ui/Button/Button'
-import ModalErrorAlert from '../../components/ui/ModalErrorAlert/ModalErrorAlert'
-import { requestPasswordReset } from '../../services/authService'
-import { getBackendErrorMessage } from '../../utils/error'
-import { validateEmail } from '../../utils/validation'
-import { playErrorSound } from '../../utils/audio'
-import { PATHS } from '../../routes/paths'
-import { useI18n } from '../../i18n/I18nProvider'
+import React, { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Input } from '../../components/ui/Input/Input';
+import { Button } from '../../components/ui/Button/Button';
+import ModalErrorAlert from '../../components/ui/ModalErrorAlert/ModalErrorAlert';
+import { requestPasswordReset } from '../../services/authService';
+import { getBackendErrorMessage } from '../../utils/error';
+import { validateEmail } from '../../utils/validation';
+import { playErrorSound } from '../../utils/audio';
+import { PATHS } from '../../routes/paths';
+import { useI18n } from '../../i18n/I18nProvider';
 
-import styles from './Auth.module.scss'
+import styles from './Auth.module.scss';
 
 const ForgotPassword: React.FC = () => {
-  const { t, locale } = useI18n()
-  const [email, setEmail] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [sent, setSent] = useState(false)
-  const noticeRef = useRef<HTMLParagraphElement>(null)
+  const { t, locale } = useI18n();
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
+  const noticeRef = useRef<HTMLParagraphElement>(null);
 
   // Al enviarse, el foco pasa al aviso: un lector de pantalla lo anuncia y el teclado no queda en un boton que ya no existe
   useEffect(() => {
-    if (sent) noticeRef.current?.focus()
-  }, [sent])
+    if (sent) noticeRef.current?.focus();
+  }, [sent]);
 
   const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
-    const emailError = validateEmail(email)
+    const emailError = validateEmail(email);
     if (emailError) {
-      setError(t(emailError))
-      playErrorSound()
-      return
+      setError(t(emailError));
+      playErrorSound();
+      return;
     }
 
-    setLoading(true)
-    setError(null)
+    setLoading(true);
+    setError(null);
     try {
-      await requestPasswordReset(email.trim(), locale)
-      setSent(true)
+      await requestPasswordReset(email.trim(), locale);
+      setSent(true);
     } catch (err: any) {
-      setError(getBackendErrorMessage(err, t))
-      playErrorSound()
+      setError(getBackendErrorMessage(err, t));
+      playErrorSound();
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <main className={styles.wrapper}>
@@ -99,7 +99,7 @@ const ForgotPassword: React.FC = () => {
         </article>
       </section>
     </main>
-  )
-}
+  );
+};
 
-export default ForgotPassword
+export default ForgotPassword;

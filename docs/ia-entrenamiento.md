@@ -42,11 +42,11 @@ train.jsonl + val.jsonl (sin email, userId ni generationId)  →  entrenamiento 
 
 Dónde vive cada cosa:
 
-| Dato | Colección | Se borra | En la exportación RGPD |
-|---|---|---|---|
-| Consentimiento y sus fechas (`grantedAt` se conserva al retirarlo y se añade `withdrawnAt`; `at` = última elección, por compatibilidad) | `users.aiTrainingConsent` | con la cuenta | sí (`account.aiTrainingConsent`) |
-| Prompts, respuesta, proveedor, modelo | `aigenerations` | al retirar el consentimiento, al borrar la cuenta, a los 180 días | sí (`aiGenerations`) |
-| Voto, corrección (solo usuarios que consintieron) | `aifeedbacks` | igual (los votos sin contenido también) | sí (`aiFeedback`) |
+| Dato                                                                                                                                    | Colección                 | Se borra                                                          | En la exportación RGPD           |
+| --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | ----------------------------------------------------------------- | -------------------------------- |
+| Consentimiento y sus fechas (`grantedAt` se conserva al retirarlo y se añade `withdrawnAt`; `at` = última elección, por compatibilidad) | `users.aiTrainingConsent` | con la cuenta                                                     | sí (`account.aiTrainingConsent`) |
+| Prompts, respuesta, proveedor, modelo                                                                                                   | `aigenerations`           | al retirar el consentimiento, al borrar la cuenta, a los 180 días | sí (`aiGenerations`)             |
+| Voto, corrección (solo usuarios que consintieron)                                                                                       | `aifeedbacks`             | igual (los votos sin contenido también)                           | sí (`aiFeedback`)                |
 
 Los prompts pueden incluir **fragmentos del README y de los tipos del repositorio del usuario**: es dato personal potencial y se trata como tal. Nunca se escribe en registros (los `console.*` solo llevan clases de error y recuentos).
 
@@ -72,7 +72,13 @@ npm run ai:export-dataset -w @mockia/backend -- --confirm-consent-checked --out 
 - **Imprime solo recuentos** (incluidos, train/val, duplicados, excluidos por motivo). Nunca contenido.
 - **Salida** en `--out` (por defecto `./ai-datasets`, ya en `.gitignore` junto con `*.jsonl`): `train.jsonl` y `val.jsonl`, con modo **0600** (carpeta 0700 si la crea él). Un ejemplo por línea:
   ```json
-  {"messages":[{"role":"system","content":"..."},{"role":"user","content":"..."},{"role":"assistant","content":"{\"apiVersion\":...}"}]}
+  {
+    "messages": [
+      { "role": "system", "content": "..." },
+      { "role": "user", "content": "..." },
+      { "role": "assistant", "content": "{\"apiVersion\":...}" }
+    ]
+  }
   ```
 - **Qué entra**: usuarios cuyo consentimiento está concedido **ahora** (se vuelve a comprobar en la exportación, de modo que quien lo retiró desde la última vez queda fuera aunque su valoración existiera); generaciones no caducadas con valoración `good` o con corrección. **Objetivo** del ejemplo: la corrección del usuario si la hay; si no, la respuesta del modelo cuando el voto es `good` y se parsea y valida con el validador de producción (se guarda el JSON limpio, sin vallas de markdown ni prosa). Un `bad` sin corrección, una corrección que ya no valida, una respuesta que no parsea o una generación sin voto **no entran**.
 - **Redacción de los prompts** (`modules/ai/redact.ts`, función pura e idempotente; estricta, porque llevan contenido real del usuario), con marcadores estables `[REDACTED_KEY]` y `[REDACTED_EMAIL]`: claves de Stripe (`sk_live_…`, `sk_test_…`, `pk_…`), `sk-…` (OpenAI/OpenRouter/Anthropic), GitHub (`ghp_`, `gho_`, `github_pat_`…), AWS (`AKIA…`), Google (`AIza…`), Slack (`xox[baprs]-…`), JWT, `Bearer <token>`, bloques PEM de clave (también truncados), URLs con credenciales (`mongodb(+srv)://usuario:clave@…`), asignaciones `password|secret|token|api_key = valor` y direcciones de correo. No toca tipos ni lectura de entorno (`password: string`, `process.env.JWT_SECRET`) para no estropear los ejemplos.
@@ -105,6 +111,7 @@ npm run ai:export-dataset -w @mockia/backend -- --confirm-consent-checked --out 
 3. **Prepara el entorno** siguiendo la instalación oficial de Unsloth para esa imagen, y sube `train.jsonl` por `scp`. **No subas `val.jsonl`**: no hace falta para entrenar y mantenerlo fuera evita contaminarlo.
 4. **Reserva una porción de `train.jsonl` para parar el entrenamiento** (por ejemplo el 5 % por hash): sirve para vigilar la pérdida y decidir cuándo parar. **No uses `val.jsonl` para eso** (apartado 8).
 5. **Esqueleto de entrenamiento** (orientativo):
+
    ```python
    from unsloth import FastLanguageModel
    from trl import SFTTrainer, SFTConfig
@@ -147,7 +154,9 @@ npm run ai:export-dataset -w @mockia/backend -- --confirm-consent-checked --out 
    model.save_pretrained("adapter")      # solo el adaptador LoRA
    tokenizer.save_pretrained("adapter")
    ```
+
    Hiperparámetros marcados como **punto de partida**: rango/alfa del adaptador, tasa de aprendizaje, épocas, lote efectivo y longitud máxima se ajustan mirando la pérdida de la porción reservada. Para parar: si esa pérdida sube mientras la de entrenamiento baja, estás sobreajustando; usa menos épocas o menos rango.
+
 6. **Trae el adaptador** (`adapter/`, unos pocos cientos de MB como mucho) y **destruye la instancia con su disco**. Anota la revisión del modelo base, la versión de Unsloth/TRL y el hash del dataset.
 
 ## 7. Servir el adaptador
@@ -160,9 +169,11 @@ El modelo base y el adaptador deben ser **exactamente los mismos** con los que s
 FROM qwen2.5-coder:7b-instruct
 ADAPTER /ruta/al/adapter
 ```
+
 ```bash
 docker compose -f docker-compose.prod.yml -f docker-compose.ai.yml exec -T llm ollama create mockia-spec -f /ruta/Modelfile
 ```
+
 Y en el `.env`: `AI_LOCAL_MODEL=mockia-spec`. **Verifica en la documentación vigente de Ollama** que la arquitectura de tu modelo admite adaptadores en `safetensors` y que `FROM` apunta a la misma base. Si no, fusiona el adaptador con el modelo y exporta a GGUF (Unsloth ofrece guardado a GGUF; consulta su documentación) y crea el modelo con `FROM ./modelo.gguf`. Monta el directorio del adaptador en el contenedor `llm` (un volumen de solo lectura).
 
 ### vLLM (`--enable-lora`)
@@ -188,10 +199,11 @@ services:
       - --lora-modules
       - mockia-spec=/adapters/mockia-spec
       - --max-lora-rank
-      - '16'        # igual o mayor que el rango (r) del entrenamiento
+      - '16' # igual o mayor que el rango (r) del entrenamiento
     volumes:
       - ./adapters:/adapters:ro
 ```
+
 Después `AI_LOCAL_MODEL=mockia-spec` (el nombre del módulo). **Comprueba los nombres de las opciones en la versión de vLLM fijada** (`VLLM_IMAGE`).
 
 En ambos casos el modelo ajustado es una opción más del proveedor `local`: la reserva a OpenRouter, el cortacircuitos y el plazo total no cambian, y desactivarlo es volver a poner el modelo base en `AI_LOCAL_MODEL` o `AI_PROVIDERS=openrouter`.
@@ -216,6 +228,7 @@ npm run ai:val-to-cases -w @mockia/backend -- ./ai-datasets/val.jsonl ./ai-datas
 npm run eval -w @mockia/backend -- --provider=local --model=<base>       --cases=./ai-datasets/val-cases --no-fail
 npm run eval -w @mockia/backend -- --provider=local --model=mockia-spec --cases=./ai-datasets/val-cases --no-fail --compare=<resultado-base-val.json>
 ```
+
 (`docs/ia-local.md` apartado 6 y `packages/backend/evals/README.md` detallan las variables y las columnas.)
 
 **Se promociona solo si** el modelo ajustado, en **ambos** conjuntos: (a) **supera a la línea base** en `schemaValid` y en F1 medio, (b) **no empeora la latencia p95** respecto a la base (un adaptador añade poco, pero mídelo), y (c) cumple igualmente la regla de decisión absoluta de la Tarea 14 (`schemaValid` ≥ 95 %, F1 ≥ 0,85, p95 ≤ 60 s). La línea base es el **mismo modelo sin adaptador** en el mismo hardware y, si existe, también `evals/baseline.json` (OpenRouter; sigue pendiente de generar, ver `docs/ia-local.md`).
@@ -235,17 +248,20 @@ Cuando un usuario retira el consentimiento, el servidor borra sus generaciones y
 ## 10. Listas de comprobación
 
 **Antes de exportar**
+
 - [ ] Hay una razón (la Tarea 14 falló y hay ≥ ~500 ejemplos esperables).
 - [ ] La carpeta de destino está cifrada y fuera de cualquier repositorio.
 - [ ] Anotas fecha y recuentos que imprime el exportador.
 
 **Antes de subir a la GPU**
+
 - [ ] Pasaste un detector de secretos y revisaste una muestra.
 - [ ] Solo subes `train.jsonl` (no `val.jsonl`).
 - [ ] Comprobaste que ningún ejemplo coincide con los casos de la Tarea 13.
 - [ ] Revisaste la licencia del modelo base.
 
 **Al terminar**
+
 - [ ] Adaptador descargado; instancia y disco destruidos; ficheros de dataset borrados de la GPU y locales.
 - [ ] Registro: dataset (fecha, recuentos, hash), base (revisión), librerías, hiperparámetros, adaptador.
 - [ ] Evaluación en los dos conjuntos reservados, comparada con la base; decisión por escrito.

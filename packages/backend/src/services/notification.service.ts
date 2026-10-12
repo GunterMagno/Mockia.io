@@ -61,7 +61,10 @@ export async function createNotification(data: {
 /**
  * Marks notifications as read
  */
-export async function markNotificationsAsRead(userId: string, notificationIds: string[]): Promise<void> {
+export async function markNotificationsAsRead(
+  userId: string,
+  notificationIds: string[]
+): Promise<void> {
   try {
     await NotificationModel.updateMany(
       { _id: { $in: notificationIds }, userId },

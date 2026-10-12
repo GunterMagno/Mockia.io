@@ -1,13 +1,13 @@
-import React from 'react'
-import Editor from '@monaco-editor/react'
+import React from 'react';
+import Editor from '@monaco-editor/react';
 
 export interface JsonEditorProps {
-  value: string
-  onChange: (value: string) => void
-  readOnly?: boolean
+  value: string;
+  onChange: (value: string) => void;
+  readOnly?: boolean;
 }
 
-import styles from './JsonEditor.module.scss'
+import styles from './JsonEditor.module.scss';
 
 export const JsonEditor: React.FC<JsonEditorProps> = ({ value, onChange, readOnly }) => {
   return (
@@ -24,25 +24,25 @@ export const JsonEditor: React.FC<JsonEditorProps> = ({ value, onChange, readOnl
           formatOnType: true,
           scrollBeyondLastLine: false,
           tabSize: 2,
-          automaticLayout: true
+          automaticLayout: true,
         }}
         onMount={(editor) => {
           // Force layout calculations once the Monaco editor is fully mounted
           setTimeout(() => {
-            editor.layout()
-          }, 100)
+            editor.layout();
+          }, 100);
           setTimeout(() => {
-            editor.layout()
-          }, 500)
+            editor.layout();
+          }, 500);
         }}
         onChange={(val) => {
           if (val !== undefined) {
-            onChange(val)
+            onChange(val);
           }
         }}
       />
     </section>
-  )
-}
+  );
+};
 
-export default JsonEditor
+export default JsonEditor;

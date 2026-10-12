@@ -25,15 +25,25 @@ export function bcryptCostOf(hash: string): number | undefined {
  *
  * @returns true when the hash was upgraded
  */
-export async function rehashIfOutdated(userId: string, plain: string, currentHash: string): Promise<boolean> {
+export async function rehashIfOutdated(
+  userId: string,
+  plain: string,
+  currentHash: string
+): Promise<boolean> {
   const cost = bcryptCostOf(currentHash);
   if (cost === undefined || cost >= BCRYPT_COST) return false;
   try {
     const upgraded = await hashPassword(plain);
-    const res = await UserModel.updateOne({ _id: userId, passwordHash: currentHash }, { $set: { passwordHash: upgraded } });
+    const res = await UserModel.updateOne(
+      { _id: userId, passwordHash: currentHash },
+      { $set: { passwordHash: upgraded } }
+    );
     return res.modifiedCount === 1;
   } catch (err) {
-    console.error('[Auth] Could not upgrade the password hash:', err instanceof Error ? err.message : err);
+    console.error(
+      '[Auth] Could not upgrade the password hash:',
+      err instanceof Error ? err.message : err
+    );
     return false;
   }
 }

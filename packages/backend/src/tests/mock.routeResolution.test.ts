@@ -7,7 +7,7 @@ import { mockCache } from '../modules/mock/mockCache.service.js';
 jest.mock('../models/Project');
 jest.mock('../models/MockAPI', () => ({
   MockAPIModel: { findOne: jest.fn() },
-  EndpointModel: { find: jest.fn() }
+  EndpointModel: { find: jest.fn() },
 }));
 
 describe('Route Resolution Service', () => {
@@ -22,11 +22,11 @@ describe('Route Resolution Service', () => {
 
     it('should resolve a static route', async () => {
       const mockEndpoints = [
-        { 
-          path: '/users', 
-          method: 'GET'
+        {
+          path: '/users',
+          method: 'GET',
         },
-        { path: '/users/:id', method: 'GET' }
+        { path: '/users/:id', method: 'GET' },
       ];
 
       (ProjectModel.findOne as jest.Mock).mockResolvedValue(mockProject);
@@ -75,7 +75,7 @@ describe('Route Resolution Service', () => {
     it('should sort wildcard routes by specificity', async () => {
       const mockEndpoints = [
         { path: '/users/:id/posts/:postId', method: 'GET' },
-        { path: '/users/:id', method: 'GET' }
+        { path: '/users/:id', method: 'GET' },
       ];
 
       (ProjectModel.findOne as jest.Mock).mockResolvedValue(mockProject);
@@ -89,7 +89,7 @@ describe('Route Resolution Service', () => {
     it('should sort static routes by specificity', async () => {
       const mockEndpoints = [
         { path: '/a/b', method: 'GET' },
-        { path: '/a/b/c', method: 'GET' }
+        { path: '/a/b/c', method: 'GET' },
       ];
       (ProjectModel.findOne as jest.Mock).mockResolvedValue(mockProject);
       (MockAPIModel.findOne as jest.Mock).mockResolvedValue(mockApi);
@@ -101,7 +101,9 @@ describe('Route Resolution Service', () => {
 
     it('should handle generic errors', async () => {
       (ProjectModel.findOne as jest.Mock).mockRejectedValue(new Error('DB Error'));
-      await expect(resolveRoute('my-project', 'GET', '/')).rejects.toThrow('Failed to resolve route');
+      await expect(resolveRoute('my-project', 'GET', '/')).rejects.toThrow(
+        'Failed to resolve route'
+      );
     });
   });
 
@@ -113,10 +115,10 @@ describe('Route Resolution Service', () => {
       const id = '123456789012345678901234';
       (ProjectModel.findById as jest.Mock).mockResolvedValue(mockProject);
       (MockAPIModel.findOne as jest.Mock).mockResolvedValue(mockApi);
-      
+
       const mockFind = {
         sort: jest.fn().mockReturnThis(),
-        populate: jest.fn().mockResolvedValue([{ path: '/test', method: 'GET' }])
+        populate: jest.fn().mockResolvedValue([{ path: '/test', method: 'GET' }]),
       };
       (EndpointModel.find as jest.Mock).mockReturnValue(mockFind);
 
@@ -127,10 +129,10 @@ describe('Route Resolution Service', () => {
     it('should filter by method in getProjectEndpoints', async () => {
       (ProjectModel.findOne as jest.Mock).mockResolvedValue(mockProject);
       (MockAPIModel.findOne as jest.Mock).mockResolvedValue(mockApi);
-      
+
       const mockFind = {
         sort: jest.fn().mockReturnThis(),
-        populate: jest.fn().mockResolvedValue([])
+        populate: jest.fn().mockResolvedValue([]),
       };
       (EndpointModel.find as jest.Mock).mockReturnValue(mockFind);
 

@@ -41,17 +41,26 @@ describe('Stripe webhook: same-second events in any order', () => {
         customer: 'cus_race',
         status,
         metadata: { plan: 'pro', userId },
-        items: { data: [{ price: { id: 'price_pro_race' }, current_period_end: SECOND + 30 * 86400 }] },
+        items: {
+          data: [{ price: { id: 'price_pro_race' }, current_period_end: SECOND + 30 * 86400 }],
+        },
         cancel_at_period_end: false,
       },
     },
   });
-  const createdIncomplete = () => subscription('customer.subscription.created', 'evt_created', 'incomplete');
-  const updatedActive = () => subscription('customer.subscription.updated', 'evt_updated', 'active');
+  const createdIncomplete = () =>
+    subscription('customer.subscription.created', 'evt_created', 'incomplete');
+  const updatedActive = () =>
+    subscription('customer.subscription.updated', 'evt_updated', 'active');
 
   const state = async () => {
     const user = await UserModel.findById(userId).lean();
-    return { plan: user?.plan, billingStatus: user?.billingStatus, pastDueSince: user?.pastDueSince ?? null, effective: effectivePlan(user) };
+    return {
+      plan: user?.plan,
+      billingStatus: user?.billingStatus,
+      pastDueSince: user?.pastDueSince ?? null,
+      effective: effectivePlan(user),
+    };
   };
 
   beforeAll(async () => {
@@ -62,7 +71,11 @@ describe('Stripe webhook: same-second events in any order', () => {
   beforeEach(async () => {
     process.env.STRIPE_PRICE_PRO = 'price_pro_race';
     await UserModel.deleteMany({ email: 'race@example.com' });
-    const user = await UserModel.create({ email: 'race@example.com', username: 'raceuser', passwordHash: await bcrypt.hash('x', 4) });
+    const user = await UserModel.create({
+      email: 'race@example.com',
+      username: 'raceuser',
+      passwordHash: await bcrypt.hash('x', 4),
+    });
     userId = user._id.toString();
     invalidatePlanCache(userId);
   });
@@ -75,18 +88,36 @@ describe('Stripe webhook: same-second events in any order', () => {
   });
 
   it('checkout.completed -> updated(active) -> created(incomplete), same second: active Pro', async () => {
-    for (const event of [checkoutCompleted(), updatedActive(), createdIncomplete()]) await handleStripeEvent(event);
-    expect(await state()).toEqual({ plan: 'pro', billingStatus: 'active', pastDueSince: null, effective: 'pro' });
+    for (const event of [checkoutCompleted(), updatedActive(), createdIncomplete()])
+      await handleStripeEvent(event);
+    expect(await state()).toEqual({
+      plan: 'pro',
+      billingStatus: 'active',
+      pastDueSince: null,
+      effective: 'pro',
+    });
   });
 
   it('reverse order created(incomplete) -> updated(active) -> checkout.completed: active Pro', async () => {
-    for (const event of [createdIncomplete(), updatedActive(), checkoutCompleted()]) await handleStripeEvent(event);
-    expect(await state()).toEqual({ plan: 'pro', billingStatus: 'active', pastDueSince: null, effective: 'pro' });
+    for (const event of [createdIncomplete(), updatedActive(), checkoutCompleted()])
+      await handleStripeEvent(event);
+    expect(await state()).toEqual({
+      plan: 'pro',
+      billingStatus: 'active',
+      pastDueSince: null,
+      effective: 'pro',
+    });
   });
 
   it('updated(active) -> created(incomplete) -> checkout.completed: active Pro', async () => {
-    for (const event of [updatedActive(), createdIncomplete(), checkoutCompleted()]) await handleStripeEvent(event);
-    expect(await state()).toEqual({ plan: 'pro', billingStatus: 'active', pastDueSince: null, effective: 'pro' });
+    for (const event of [updatedActive(), createdIncomplete(), checkoutCompleted()])
+      await handleStripeEvent(event);
+    expect(await state()).toEqual({
+      plan: 'pro',
+      billingStatus: 'active',
+      pastDueSince: null,
+      effective: 'pro',
+    });
   });
 
   it('created(incomplete) alone grants nothing and degrades nothing (it still links the subscription)', async () => {
@@ -99,13 +130,18 @@ describe('Stripe webhook: same-second events in any order', () => {
 
   it('on equal timestamps a past_due update does not override an active user', async () => {
     for (const event of [checkoutCompleted(), updatedActive()]) await handleStripeEvent(event);
-    await handleStripeEvent(subscription('customer.subscription.updated', 'evt_pastdue_same', 'past_due'));
+    await handleStripeEvent(
+      subscription('customer.subscription.updated', 'evt_pastdue_same', 'past_due')
+    );
     expect((await state()).billingStatus).toBe('active');
   });
 
   it('a LATER past_due update still applies (the grace period starts)', async () => {
     for (const event of [checkoutCompleted(), updatedActive()]) await handleStripeEvent(event);
-    await handleStripeEvent({ ...subscription('customer.subscription.updated', 'evt_pastdue_later', 'past_due'), created: SECOND + 60 });
+    await handleStripeEvent({
+      ...subscription('customer.subscription.updated', 'evt_pastdue_later', 'past_due'),
+      created: SECOND + 60,
+    });
     const s = await state();
     expect(s.billingStatus).toBe('past_due');
     expect(s.pastDueSince).toEqual(new Date((SECOND + 60) * 1000));
@@ -113,7 +149,12 @@ describe('Stripe webhook: same-second events in any order', () => {
 
   it('subscription.deleted in the same second as updated(active) still cancels (canceled is terminal)', async () => {
     for (const event of [checkoutCompleted(), updatedActive()]) await handleStripeEvent(event);
-    await handleStripeEvent({ id: 'evt_deleted', type: 'customer.subscription.deleted', created: SECOND, data: { object: { id: 'sub_race', customer: 'cus_race', metadata: { userId } } } });
+    await handleStripeEvent({
+      id: 'evt_deleted',
+      type: 'customer.subscription.deleted',
+      created: SECOND,
+      data: { object: { id: 'sub_race', customer: 'cus_race', metadata: { userId } } },
+    });
     expect(await state()).toMatchObject({ plan: 'free', billingStatus: 'canceled' });
   });
 });

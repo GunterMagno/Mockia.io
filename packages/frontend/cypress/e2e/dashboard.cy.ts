@@ -10,7 +10,7 @@ describe('Dashboard Flow', () => {
     cy.request('POST', 'http://localhost:3000/api/auth/register', {
       username: 'DashUser',
       email: randomEmail,
-      password: password
+      password: password,
     }).then(() => {
       // Login via UI to set local storage / cookies properly
       cy.visit('/login');
@@ -23,29 +23,31 @@ describe('Dashboard Flow', () => {
 
   it('Should create a new project', () => {
     const projectName = `New Project ${Date.now()}`;
-    
+
     // Click on create project button
     cy.contains('button', 'New project').click();
-    
+
     // Step 1: Select Empty Project card
     cy.contains('Empty project').click();
-    
+
     // Step 2: Fill Details (using placeholder selectors as name attribute is not present)
     cy.get('input[placeholder="My awesome API"]').type(projectName);
-    cy.get('input[placeholder="A short description of what this API does…"]').type('E2E Test Project');
-    
+    cy.get('input[placeholder="A short description of what this API does…"]').type(
+      'E2E Test Project'
+    );
+
     // Click Continue
     cy.contains('button', 'Continue').click();
-    
+
     // Step 3: Skip AI generation for fast testing
     cy.get('#shouldGenerate').uncheck({ force: true });
-    
+
     // Click Create Project
     cy.contains('button', 'Create project').click();
-    
+
     // Step 4: Click Go to Editor on success screen
     cy.contains('button', 'Go to editor').click();
-    
+
     // Should be redirected to the editor view
     cy.url().should('include', '/editor/');
   });

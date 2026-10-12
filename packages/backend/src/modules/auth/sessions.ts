@@ -72,7 +72,11 @@ async function insertSession(
  *
  * @param persistent - the user ticked "remember me": the cookie will outlive the browser session (see cookie.ts)
  */
-export async function createSession(userId: string, meta: SessionMeta, persistent = false): Promise<SessionRef> {
+export async function createSession(
+  userId: string,
+  meta: SessionMeta,
+  persistent = false
+): Promise<SessionRef> {
   return insertSession(userId, randomUUID(), meta, persistent);
 }
 
@@ -125,7 +129,10 @@ export async function rotateSession(jti: string, meta: SessionMeta = {}): Promis
 
 /** Revokes every session of one login chain. Idempotent. */
 export async function revokeFamily(familyId: string): Promise<void> {
-  await RefreshSessionModel.updateMany({ familyId, revokedAt: null }, { $set: { revokedAt: new Date() } });
+  await RefreshSessionModel.updateMany(
+    { familyId, revokedAt: null },
+    { $set: { revokedAt: new Date() } }
+  );
 }
 
 /** Revokes the family a refresh token belongs to, found by its jti. Unknown jti is a no-op. */
@@ -136,7 +143,10 @@ export async function revokeFamilyByJti(jti: string): Promise<void> {
 
 /** Revokes every session of the user (logout everywhere, password change/reset). Idempotent. */
 export async function revokeAllForUser(userId: string): Promise<void> {
-  await RefreshSessionModel.updateMany({ userId, revokedAt: null }, { $set: { revokedAt: new Date() } });
+  await RefreshSessionModel.updateMany(
+    { userId, revokedAt: null },
+    { $set: { revokedAt: new Date() } }
+  );
 }
 
 /**
@@ -146,7 +156,10 @@ export async function revokeAllForUser(userId: string): Promise<void> {
  * @param currentJti - jti of the refresh token the calling browser holds (its cookie): the login that token belongs
  *   to is flagged `current`. A token of another user's session never matches.
  */
-export async function listActiveSessions(userId: string, currentJti?: string): Promise<ActiveSessionInfo[]> {
+export async function listActiveSessions(
+  userId: string,
+  currentJti?: string
+): Promise<ActiveSessionInfo[]> {
   const currentFamilyId = currentJti
     ? (await RefreshSessionModel.findOne({ jti: currentJti, userId }).select('familyId'))?.familyId
     : undefined;

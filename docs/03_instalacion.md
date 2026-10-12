@@ -5,6 +5,7 @@ Este apartado detalla el procedimiento paso a paso para clonar, configurar e ins
 ## 3.1 Requisitos del Sistema
 
 Para el correcto funcionamiento del entorno de desarrollo de Mockia.io, es necesario contar con:
+
 - **Node.js:** Versión 20 o superior LTS (se recomienda Node.js 22).
 - **npm:** Versión 10 o superior (gestor de dependencias por defecto).
 - **Docker Desktop:** Requerido para la contenerización en Windows (incluye Docker Compose v2).
@@ -15,6 +16,7 @@ Para el correcto funcionamiento del entorno de desarrollo de Mockia.io, es neces
 ## 3.2 Clonación e Instalación de Dependencias
 
 1. **Clonar el repositorio git:**
+
    ```bash
    git clone https://github.com/GunterMagno/Mockia.io.git
    cd Mockia.io
@@ -34,11 +36,15 @@ Para el correcto funcionamiento del entorno de desarrollo de Mockia.io, es neces
 Tanto el backend como el frontend requieren variables de entorno específicas para enlazarse de forma adecuada.
 
 ### Backend (`packages/backend/.env`)
+
 Copie el archivo de ejemplo e introduzca sus configuraciones:
+
 ```bash
 cp packages/backend/.env.example packages/backend/.env
 ```
+
 Campos del archivo `.env` del backend:
+
 - `NODE_ENV`: Entorno (`development`, `production` o `test`).
 - `BACKEND_PORT`: Puerto de escucha del servidor (por defecto `3000`).
 - `MONGODB_URI`: Cadena de conexión a MongoDB. Para ejecución local nativa: `mongodb://localhost:27017/mockia`.
@@ -49,7 +55,9 @@ Campos del archivo `.env` del backend:
 - `OPENROUTER_API_KEY`: API Key para consumir la Inteligencia Artificial de OpenRouter.
 
 ### Frontend (`packages/frontend/.env`)
+
 El frontend cuenta con las siguientes variables configuradas automáticamente para Vite:
+
 - `VITE_API_URL`: Prefijo para las llamadas a la API (generalmente `/api`).
 - `VITE_BACKEND_URL`: URL base del backend, por defecto `http://localhost:3000`.
 
@@ -60,6 +68,7 @@ El frontend cuenta con las siguientes variables configuradas automáticamente pa
 El Monorepo de Mockia.io está diseñado para simplificar el arranque de desarrollo mediante Docker Compose o de manera nativa.
 
 ### Opción A: Levantar con Docker (Recomendado)
+
 Docker Compose compila, configura e instala las dependencias de los servicios automáticamente y los une en una red interna dedicada, levantando también una base de datos aislada.
 
 ```bash
@@ -72,20 +81,25 @@ npm run docker:logs
 # 3. Detener y remover los contenedores
 npm run docker:down
 ```
+
 Acceso a la aplicación:
+
 - **Frontend UI:** [http://localhost:5173](http://localhost:5173)
 - **Backend API & Health:** [http://localhost:3000/api/health](http://localhost:3000/api/health)
 - **Swagger Docs:** [http://localhost:3000/api/docs](http://localhost:3000/api/docs)
 
 ### Opción B: Ejecución Nativa (Sin Docker)
+
 Si prefiere trabajar directamente sobre los ejecutables locales y tiene un servicio de MongoDB local activo en el puerto 27017:
 
 1. **Compilar el paquete Shared (Obligatorio para que backend/frontend carguen los tipos):**
+
    ```bash
    npm run build -w @mockia/shared
    ```
 
 2. **Arrancar Backend (en una terminal):**
+
    ```bash
    cd packages/backend
    npm run dev

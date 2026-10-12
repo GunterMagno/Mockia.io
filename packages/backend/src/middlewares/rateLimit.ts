@@ -25,12 +25,15 @@ export function rateLimit(opts: RateLimitOptions) {
   const keyFn = opts.keyFn ?? ((req: Request) => req.ip || req.socket?.remoteAddress || 'unknown');
 
   // Purge idle keys so the map cannot grow without bound.
-  const sweep = setInterval(() => {
-    const cutoff = now() - opts.windowMs;
-    for (const [key, stamps] of hits) {
-      if (stamps[stamps.length - 1] <= cutoff) hits.delete(key);
-    }
-  }, Math.max(opts.windowMs, 1000));
+  const sweep = setInterval(
+    () => {
+      const cutoff = now() - opts.windowMs;
+      for (const [key, stamps] of hits) {
+        if (stamps[stamps.length - 1] <= cutoff) hits.delete(key);
+      }
+    },
+    Math.max(opts.windowMs, 1000)
+  );
   sweep.unref();
 
   return (req: Request, res: Response, next: NextFunction): void => {
@@ -43,7 +46,9 @@ export function rateLimit(opts: RateLimitOptions) {
       hits.set(key, stamps);
       const retryAfter = Math.max(1, Math.ceil((stamps[0] + opts.windowMs - t) / 1000));
       res.setHeader('Retry-After', String(retryAfter));
-      return next(new AppError('Too many requests. Try again later.', ErrorCode.RATE_LIMIT_ERROR, 429));
+      return next(
+        new AppError('Too many requests. Try again later.', ErrorCode.RATE_LIMIT_ERROR, 429)
+      );
     }
 
     stamps.push(t);

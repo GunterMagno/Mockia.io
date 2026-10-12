@@ -41,7 +41,7 @@ async function handleMock(req: Request, res: Response, next: NextFunction) {
 
   // 1. Authenticate with API Key (only projects with visibility 'key' ask for it)
   const project = await mockCache.getProject(projectSlug);
-  
+
   if (!project) {
     return res.status(404).json({
       success: false,
@@ -64,18 +64,20 @@ async function handleMock(req: Request, res: Response, next: NextFunction) {
   }
 
   // Get responses from the cached resolved endpoint (fully populated), falling back to DB if needed
-  const responses = (resolved.endpoint.responses &&
+  const responses =
+    resolved.endpoint.responses &&
     resolved.endpoint.responses.length > 0 &&
-    typeof resolved.endpoint.responses[0] === 'object')
-    ? (resolved.endpoint.responses as any[])
-    : (await EndpointModel.findById(resolved.endpoint._id).populate('responses'))?.responses as any[] || [];
+    typeof resolved.endpoint.responses[0] === 'object'
+      ? (resolved.endpoint.responses as any[])
+      : ((await EndpointModel.findById(resolved.endpoint._id).populate('responses'))
+          ?.responses as any[]) || [];
 
   if (responses.length === 0) {
     return next();
   }
 
   // Find the default response in memory (0ms DB calls)
-  const defaultResp = responses.find(r => r.is_default === true) ?? responses[0] ?? null;
+  const defaultResp = responses.find((r) => r.is_default === true) ?? responses[0] ?? null;
   if (!defaultResp) {
     return next();
   }
@@ -83,9 +85,10 @@ async function handleMock(req: Request, res: Response, next: NextFunction) {
   // The request is accepted from here on: it counts against the owner's monthly quota (before any configured delay)
   recordMockRequest(res);
 
-  let body = Array.isArray(defaultResp.examples) && defaultResp.examples.length > 0
-    ? defaultResp.examples[0]
-    : (defaultResp as any).body ?? {};
+  let body =
+    Array.isArray(defaultResp.examples) && defaultResp.examples.length > 0
+      ? defaultResp.examples[0]
+      : ((defaultResp as any).body ?? {});
   let statusCode = clampStatus((defaultResp as any).statusCode, 200);
 
   // Apply interceptors if configured (using Cache)
@@ -94,7 +97,7 @@ async function handleMock(req: Request, res: Response, next: NextFunction) {
     if (cfg.force_status_code) {
       statusCode = clampStatus(cfg.force_status_code, statusCode);
       // Get all responses to check for an explicit match (in memory)
-      const matchingResponse = responses.find(r => r.statusCode === statusCode);
+      const matchingResponse = responses.find((r) => r.statusCode === statusCode);
       if (matchingResponse) {
         body = matchingResponse.schema || matchingResponse.examples?.[0] || {};
       } else if (statusCode === 204) {

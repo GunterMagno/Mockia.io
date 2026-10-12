@@ -48,14 +48,11 @@ describe('Auth - Registration (POST /api/auth/register)', () => {
 
   it('should return 409 when email already exists', async () => {
     // First registration
-    await request(app)
-      .post('/api/auth/register')
-      .set('Content-Type', 'application/json')
-      .send({
-        email: 'duplicate@example.com',
-        password: 'password123',
-        username: 'user1',
-      });
+    await request(app).post('/api/auth/register').set('Content-Type', 'application/json').send({
+      email: 'duplicate@example.com',
+      password: 'password123',
+      username: 'user1',
+    });
 
     // Second attempt with same email
     const response = await request(app)

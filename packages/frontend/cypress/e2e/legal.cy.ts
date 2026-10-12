@@ -18,7 +18,9 @@ describe('Legal: las cuatro paginas existen y estan completas', () => {
         cy.get('article[data-legal]').should('have.attr', 'lang', HTML_LANG[lang]);
         cy.get('article h1').should('have.length', 1).and('not.be.empty');
         cy.get('[data-legal-updated]').should('contain.text', '2026');
-        cy.get('article').invoke('text').should('not.match', /encrypted at rest/i);
+        cy.get('article')
+          .invoke('text')
+          .should('not.match', /encrypted at rest/i);
         // el aviso "solo en ingles" ya no existe
         cy.get('[role="note"]').should('not.exist');
       });
@@ -30,8 +32,12 @@ describe('Legal: contenido segun el idioma', () => {
   it('en espanol los textos estan en espanol y sin el aviso de "solo ingles"', () => {
     for (const path of PAGES) {
       visitIn(path, 'es');
-      cy.get('article h1').invoke('text').should('match', /Aviso Legal|Política de Privacidad|Términos|Cookies/);
-      cy.get('article').invoke('text').should('not.match', /solo está disponible en inglés|available in English only/i);
+      cy.get('article h1')
+        .invoke('text')
+        .should('match', /Aviso Legal|Política de Privacidad|Términos|Cookies/);
+      cy.get('article')
+        .invoke('text')
+        .should('not.match', /solo está disponible en inglés|available in English only/i);
     }
     visitIn('/privacy', 'es');
     cy.contains('article h2', /derechos/i).should('exist');
@@ -41,8 +47,12 @@ describe('Legal: contenido segun el idioma', () => {
   it('en chino renderiza texto no latino en todas las paginas', () => {
     for (const path of PAGES) {
       visitIn(path, 'zh');
-      cy.get('article h1').invoke('text').should('match', /[一-鿿]/);
-      cy.get('article').invoke('text').should('match', /[一-鿿]{20,}/);
+      cy.get('article h1')
+        .invoke('text')
+        .should('match', /[一-鿿]/);
+      cy.get('article')
+        .invoke('text')
+        .should('match', /[一-鿿]{20,}/);
     }
   });
 
@@ -67,13 +77,20 @@ describe('Legal: contenido segun el idioma', () => {
 
   it('Privacidad dice que no se almacenan tokens de GitHub (se clonan repositorios publicos)', () => {
     visitIn('/privacy', 'en');
-    cy.get('article').invoke('text').should('match', /public repositor/i);
+    cy.get('article')
+      .invoke('text')
+      .should('match', /public repositor/i);
   });
 
   it('mientras falten los datos del titular se ven marcadores visibles y el aviso de borrador', () => {
     visitIn('/legal', 'es');
-    cy.get('[data-legal-draft]').should('be.visible').and('contain.text', 'Borrador pendiente de revisión jurídica');
-    cy.get('[data-legal-placeholder]').should('have.length.at.least', 1).first().should('contain.text', 'pendiente');
+    cy.get('[data-legal-draft]')
+      .should('be.visible')
+      .and('contain.text', 'Borrador pendiente de revisión jurídica');
+    cy.get('[data-legal-placeholder]')
+      .should('have.length.at.least', 1)
+      .first()
+      .should('contain.text', 'pendiente');
     visitIn('/legal', 'en');
     cy.get('[data-legal-draft]').should('contain.text', 'Draft pending legal review');
   });
@@ -103,16 +120,20 @@ describe('Legal: enlaces desde el footer y el registro', () => {
     visitIn('/signup', 'en');
     cy.get('[data-signup-legal]').should('contain.text', 'By signing up you accept');
     visitIn('/signup', 'zh');
-    cy.get('[data-signup-legal]').invoke('text').should('match', /[一-鿿]/);
+    cy.get('[data-signup-legal]')
+      .invoke('text')
+      .should('match', /[一-鿿]/);
   });
 });
 
 describe('Legal: la web no carga recursos de terceros que los textos no mencionen', () => {
   it('la animacion "como funciona" se sirve con GSAP propio y sin Google Fonts ni CDNs', () => {
-    cy.request('/como-funciona/index.html').its('body').then((html: string) => {
-      expect(html).to.not.match(/fonts\.googleapis|fonts\.gstatic|cdnjs|jsdelivr|unpkg/i);
-      expect(html).to.include('vendor/gsap.min.js');
-    });
+    cy.request('/como-funciona/index.html')
+      .its('body')
+      .then((html: string) => {
+        expect(html).to.not.match(/fonts\.googleapis|fonts\.gstatic|cdnjs|jsdelivr|unpkg/i);
+        expect(html).to.include('vendor/gsap.min.js');
+      });
     cy.request('/como-funciona/vendor/gsap.min.js').its('body').should('include', 'GSAP 3.15.0');
   });
 
@@ -120,7 +141,9 @@ describe('Legal: la web no carga recursos de terceros que los textos no mencione
     for (const lang of ['es', 'en', 'zh'] as Lang[]) {
       for (const path of ['/privacy', '/cookies']) {
         visitIn(path, lang);
-        cy.get('article').invoke('text').should('not.match', /google/i);
+        cy.get('article')
+          .invoke('text')
+          .should('not.match', /google/i);
       }
     }
   });
@@ -142,13 +165,24 @@ describe('Legal: lo que promete la web coincide con los Terminos y la Privacidad
   // Los Terminos no comprometen soporte para Free (ruling R15) y la sincronizacion es por sondeo, no en tiempo real
   it('la tarjeta Free no promete soporte por correo y la portada no habla de tiempo real', () => {
     const copy: Record<Lang, { support: RegExp; realtime: RegExp; sync: string }> = {
-      en: { support: /Email support/, realtime: /Real-time sync/i, sync: 'Changes sync automatically' },
-      es: { support: /Soporte por correo/, realtime: /tiempo real/i, sync: 'Los cambios se sincronizan solos' },
+      en: {
+        support: /Email support/,
+        realtime: /Real-time sync/i,
+        sync: 'Changes sync automatically',
+      },
+      es: {
+        support: /Soporte por correo/,
+        realtime: /tiempo real/i,
+        sync: 'Los cambios se sincronizan solos',
+      },
       zh: { support: /邮件支持/, realtime: /实时同步/, sync: '更改会自动同步' },
     };
     for (const lang of ['es', 'en', 'zh'] as Lang[]) {
       visitIn('/', lang);
-      cy.get('body').invoke('text').should('not.match', copy[lang].support).and('not.match', copy[lang].realtime);
+      cy.get('body')
+        .invoke('text')
+        .should('not.match', copy[lang].support)
+        .and('not.match', copy[lang].realtime);
       cy.contains(copy[lang].sync).should('exist');
     }
   });
@@ -200,7 +234,11 @@ interface Round2Copy {
 
 const ROUND2: Record<Lang, Round2Copy> = {
   es: {
-    weighing: [/la base de datos de la demo solo guarda datos seudonimizados/, /registros de acceso generales del servidor/, /sin perfilado ni cookies/],
+    weighing: [
+      /la base de datos de la demo solo guarda datos seudonimizados/,
+      /registros de acceso generales del servidor/,
+      /sin perfilado ni cookies/,
+    ],
     falseClaims: [/solo se tratan datos seudonimizados/, /limitándose a datos seudonimizados/],
     reproduces: /[Pp]uede reproducir fragmentos de lo que pegas/,
     alone: /el seudónimo por sí solo no permite/,
@@ -209,8 +247,15 @@ const ROUND2: Record<Lang, Round2Copy> = {
     mockRow: /Demo pública: la API simulada generada/,
   },
   en: {
-    weighing: [/the demo's database only holds pseudonymized/, /general server access logs/, /no profiling or cookies/],
-    falseClaims: [/only pseudonymized[^.]{0,40}data is processed/, /limited to pseudonymized, short-lived data/],
+    weighing: [
+      /the demo's database only holds pseudonymized/,
+      /general server access logs/,
+      /no profiling or cookies/,
+    ],
+    falseClaims: [
+      /only pseudonymized[^.]{0,40}data is processed/,
+      /limited to pseudonymized, short-lived data/,
+    ],
     reproduces: /may reproduce fragments of what you paste/,
     alone: /the pseudonym alone does not/,
     purposeRow: /Offering a demo without registration/,
@@ -234,11 +279,24 @@ const DEMO_PRIVACY: Record<Lang, DemoPrivacyCopy> = {
     basis: /interés legítimo \(art\. 6\.1\.f\)/i,
     hmac: [/HMAC-SHA256/, /sal que cambia cada día UTC/, /prefijo \/64/],
     noStoredText: /No guardamos ese texto/,
-    sentToProvider: [/se envía al proveedor de IA/, /OpenRouter/, /modelo alojado en nuestra propia infraestructura/],
-    logsDeclared: [/registros de acceso del servidor/i, /dirección IP en claro/i, /no incluyen el texto que pegas/i],
+    sentToProvider: [
+      /se envía al proveedor de IA/,
+      /OpenRouter/,
+      /modelo alojado en nuestra propia infraestructura/,
+    ],
+    logsDeclared: [
+      /registros de acceso del servidor/i,
+      /dirección IP en claro/i,
+      /no incluyen el texto que pegas/i,
+    ],
     ttl: [/48 horas/, /30 minutos/],
     noClientStorage: [/no usa cookies/i, /almacenamiento local/i],
-    sessionClaim: [/Solo si decides guardar el proyecto/, /almacenamiento de sesión de esta pestaña/, /hasta que lo reclames o la cierres/, /estrictamente necesario/],
+    sessionClaim: [
+      /Solo si decides guardar el proyecto/,
+      /almacenamiento de sesión de esta pestaña/,
+      /hasta que lo reclames o la cierres/,
+      /estrictamente necesario/,
+    ],
     objection: /derecho de oposición/i,
     forbidden: [/se guarda la dirección IP en claro/i, /guardamos tu dirección IP en claro/i],
   },
@@ -247,11 +305,24 @@ const DEMO_PRIVACY: Record<Lang, DemoPrivacyCopy> = {
     basis: /legitimate interest \(art\. 6\.1\.f\)/i,
     hmac: [/HMAC-SHA256/, /salt that changes every UTC day/, /\/64 prefix/],
     noStoredText: /We do not store that text/,
-    sentToProvider: [/sent to the AI provider/, /OpenRouter/, /model hosted on our own infrastructure/],
-    logsDeclared: [/server access logs/i, /IP address in clear text/i, /do not include the text you paste/i],
+    sentToProvider: [
+      /sent to the AI provider/,
+      /OpenRouter/,
+      /model hosted on our own infrastructure/,
+    ],
+    logsDeclared: [
+      /server access logs/i,
+      /IP address in clear text/i,
+      /do not include the text you paste/i,
+    ],
     ttl: [/48 hours/, /30 minutes/],
     noClientStorage: [/does not use cookies/i, /local storage/i],
-    sessionClaim: [/Only if you decide to save the project/, /session storage of this tab/, /until you claim it or close the tab/, /strictly necessary/],
+    sessionClaim: [
+      /Only if you decide to save the project/,
+      /session storage of this tab/,
+      /until you claim it or close the tab/,
+      /strictly necessary/,
+    ],
     objection: /right to object/i,
     forbidden: [/IP address is stored in clear/i, /we store your IP address in clear/i],
   },
@@ -264,7 +335,12 @@ const DEMO_PRIVACY: Record<Lang, DemoPrivacyCopy> = {
     logsDeclared: [/服务器访问日志/, /明文的 IP 地址/, /不包含你粘贴的文本/],
     ttl: [/48 小时/, /30 分钟/],
     noClientStorage: [/不使用 Cookie/, /本地存储/],
-    sessionClaim: [/只有当你决定保存该项目时/, /此标签页的会话存储/, /直到你认领它或关闭该标签页/, /严格必要/],
+    sessionClaim: [
+      /只有当你决定保存该项目时/,
+      /此标签页的会话存储/,
+      /直到你认领它或关闭该标签页/,
+      /严格必要/,
+    ],
     objection: /反对权/,
     forbidden: [/以明文保存 IP 地址/, /明文保存你的 IP/],
   },
@@ -276,42 +352,53 @@ describe('Legal: la demo publica sin registro (Privacidad)', () => {
 
     it(`Privacidad (${lang}): seccion de la demo con finalidad, base juridica y derecho de oposicion`, () => {
       visitIn('/privacy', lang);
-      cy.get('section#demo').should('exist').invoke('text').then((text) => {
-        expect(text).to.match(copy.purpose);
-        expect(text).to.match(copy.basis);
-        expect(text).to.match(copy.objection);
-      });
+      cy.get('section#demo')
+        .should('exist')
+        .invoke('text')
+        .then((text) => {
+          expect(text).to.match(copy.purpose);
+          expect(text).to.match(copy.basis);
+          expect(text).to.match(copy.objection);
+        });
     });
 
     it(`Privacidad (${lang}): la IP se guarda pseudonimizada (HMAC con sal diaria) y nunca en claro en la base de la demo`, () => {
       visitIn('/privacy', lang);
-      cy.get('section#demo').invoke('text').then((text) => {
-        for (const re of copy.hmac) expect(text, String(re)).to.match(re);
-        for (const re of copy.forbidden) expect(text, String(re)).to.not.match(re);
-      });
+      cy.get('section#demo')
+        .invoke('text')
+        .then((text) => {
+          for (const re of copy.hmac) expect(text, String(re)).to.match(re);
+          for (const re of copy.forbidden) expect(text, String(re)).to.not.match(re);
+        });
     });
 
     it(`Privacidad (${lang}): el texto no se guarda pero si se envia al proveedor de IA (OpenRouter o modelo propio)`, () => {
       visitIn('/privacy', lang);
-      cy.get('section#demo').invoke('text').then((text) => {
-        expect(text).to.match(copy.noStoredText);
-        for (const re of copy.sentToProvider) expect(text, String(re)).to.match(re);
-      });
+      cy.get('section#demo')
+        .invoke('text')
+        .then((text) => {
+          expect(text).to.match(copy.noStoredText);
+          for (const re of copy.sentToProvider) expect(text, String(re)).to.match(re);
+        });
     });
 
     it(`Privacidad (${lang}): declara los logs del servidor con la IP en claro y deja la retencion como pendiente del titular`, () => {
       visitIn('/privacy', lang);
-      cy.get('section#demo').invoke('text').then((text) => {
-        for (const re of copy.logsDeclared) expect(text, String(re)).to.match(re);
-      });
+      cy.get('section#demo')
+        .invoke('text')
+        .then((text) => {
+          for (const re of copy.logsDeclared) expect(text, String(re)).to.match(re);
+        });
       cy.get('article').should('contain.text', REVIEW_MARKER);
     });
 
     it(`Privacidad (${lang}): plazos de la demo (contadores 48 h, mock y contenido generado 30 min) tambien en la tabla de plazos`, () => {
       visitIn('/privacy', lang);
-      cy.get('section#demo').invoke('text').then((text) => {
-        for (const re of copy.ttl) expect(text, String(re)).to.match(re);
-      });
+      cy.get('section#demo')
+        .invoke('text')
+        .then((text) => {
+          for (const re of copy.ttl) expect(text, String(re)).to.match(re);
+        });
       // las filas de la demo estan en la tabla de "cuanto tiempo conservamos" (se buscan por su primera celda: la
       // fila preexistente "24 horas y 30 minutos" de los enlaces de restablecimiento no cuenta)
       cy.contains('tr', ROUND2[lang].counterRow).invoke('text').should('match', copy.ttl[0]);
@@ -320,22 +407,29 @@ describe('Legal: la demo publica sin registro (Privacidad)', () => {
 
     it(`Privacidad (${lang}): la demo no usa cookies ni almacenamiento local`, () => {
       visitIn('/privacy', lang);
-      cy.get('section#demo').invoke('text').then((text) => {
-        for (const re of copy.noClientStorage) expect(text, String(re)).to.match(re);
-      });
+      cy.get('section#demo')
+        .invoke('text')
+        .then((text) => {
+          for (const re of copy.noClientStorage) expect(text, String(re)).to.match(re);
+        });
     });
 
     it(`Privacidad (${lang}): el id de la demo solo va al almacenamiento de sesion si el visitante decide guardar el proyecto`, () => {
       visitIn('/privacy', lang);
-      cy.get('section#demo').invoke('text').then((text) => {
-        for (const re of copy.sessionClaim) expect(text, String(re)).to.match(re);
-      });
+      cy.get('section#demo')
+        .invoke('text')
+        .then((text) => {
+          for (const re of copy.sessionClaim) expect(text, String(re)).to.match(re);
+        });
     });
   }
 });
 
 describe('Legal: la demo publica sin registro (Terminos)', () => {
-  const TERMS: Record<Lang, { acceptable: RegExp[]; noWarranty: RegExp; limits: RegExp[]; switchOff: RegExp }> = {
+  const TERMS: Record<
+    Lang,
+    { acceptable: RegExp[]; noWarranty: RegExp; limits: RegExp[]; switchOff: RegExp }
+  > = {
     es: {
       acceptable: [/sin automatizar/i, /datos personales reales/i, /secretos/i, /abuso/i],
       noWarranty: /sin ninguna garantía/i,
@@ -359,29 +453,53 @@ describe('Legal: la demo publica sin registro (Terminos)', () => {
   for (const lang of ['es', 'en', 'zh'] as Lang[]) {
     it(`Terminos (${lang}): uso aceptable de la demo, sin garantias, limites y que el titular puede apagarla`, () => {
       visitIn('/terms', lang);
-      cy.get('section#demo').should('exist').invoke('text').then((text) => {
-        const c = TERMS[lang];
-        for (const re of [...c.acceptable, ...c.limits]) expect(text, String(re)).to.match(re);
-        expect(text).to.match(c.noWarranty);
-        expect(text).to.match(c.switchOff);
-      });
+      cy.get('section#demo')
+        .should('exist')
+        .invoke('text')
+        .then((text) => {
+          const c = TERMS[lang];
+          for (const re of [...c.acceptable, ...c.limits]) expect(text, String(re)).to.match(re);
+          expect(text).to.match(c.noWarranty);
+          expect(text).to.match(c.switchOff);
+        });
     });
   }
 });
 
 describe('Legal: la demo publica sin registro (Cookies)', () => {
   const COOKIE_DEMO: Record<Lang, RegExp[]> = {
-    es: [/La demo pública no usa cookies ni almacenamiento local/, /Solo si decides guardar el proyecto/, /almacenamiento de sesión de esta pestaña/, /hasta que lo reclames o la cierres/, /estrictamente necesario/],
-    en: [/The public demo does not use cookies or local storage/, /Only if you decide to save the project/, /session storage of this tab/, /until you claim it or close the tab/, /strictly necessary/],
-    zh: [/公开演示不使用 Cookie，也不使用本地存储/, /只有当你决定保存该项目时/, /此标签页的会话存储/, /直到你认领它或关闭该标签页/, /严格必要/],
+    es: [
+      /La demo pública no usa cookies ni almacenamiento local/,
+      /Solo si decides guardar el proyecto/,
+      /almacenamiento de sesión de esta pestaña/,
+      /hasta que lo reclames o la cierres/,
+      /estrictamente necesario/,
+    ],
+    en: [
+      /The public demo does not use cookies or local storage/,
+      /Only if you decide to save the project/,
+      /session storage of this tab/,
+      /until you claim it or close the tab/,
+      /strictly necessary/,
+    ],
+    zh: [
+      /公开演示不使用 Cookie，也不使用本地存储/,
+      /只有当你决定保存该项目时/,
+      /此标签页的会话存储/,
+      /直到你认领它或关闭该标签页/,
+      /严格必要/,
+    ],
   };
 
   for (const lang of ['es', 'en', 'zh'] as Lang[]) {
     it(`Cookies (${lang}): la demo declara que no usa cookies ni almacenamiento local, salvo el id de sesion al guardar el proyecto`, () => {
       visitIn('/cookies', lang);
-      cy.get('section#demo').should('exist').invoke('text').then((text) => {
-        for (const re of COOKIE_DEMO[lang]) expect(text, String(re)).to.match(re);
-      });
+      cy.get('section#demo')
+        .should('exist')
+        .invoke('text')
+        .then((text) => {
+          for (const re of COOKIE_DEMO[lang]) expect(text, String(re)).to.match(re);
+        });
     });
 
     it(`Cookies (${lang}): la tabla sigue listando exactamente las 5 entradas de siempre, ninguna nueva por la demo`, () => {
@@ -405,7 +523,9 @@ describe('Legal: la demo publica sin registro (Cookies)', () => {
     for (const lang of ['es', 'en', 'zh'] as Lang[]) {
       for (const path of ['/cookies', '/privacy']) {
         visitIn(path, lang);
-        cy.get('article').invoke('text').should('not.match', /turnstile|recaptcha|hcaptcha|altcha/i);
+        cy.get('article')
+          .invoke('text')
+          .should('not.match', /turnstile|recaptcha|hcaptcha|altcha/i);
       }
     }
   });
@@ -417,42 +537,54 @@ describe('Legal: ronda de arreglos de la demo (ponderacion, API generada, seudon
 
     it(`Privacidad (${lang}): la ponderacion del interes legitimo distingue la base de datos seudonimizada de los logs con la IP`, () => {
       visitIn('/privacy', lang);
-      cy.get('section#demo').invoke('text').then((text) => {
-        for (const re of r.weighing) expect(text, String(re)).to.match(re);
-      });
+      cy.get('section#demo')
+        .invoke('text')
+        .then((text) => {
+          for (const re of r.weighing) expect(text, String(re)).to.match(re);
+        });
       // y la fila de finalidades de la tabla dice lo mismo
-      cy.contains('tr', r.purposeRow).invoke('text').then((text) => {
-        for (const re of r.weighing) expect(text, String(re)).to.match(re);
-      });
-      cy.get('article').invoke('text').then((text) => {
-        for (const re of r.falseClaims) expect(text, String(re)).to.not.match(re);
-      });
+      cy.contains('tr', r.purposeRow)
+        .invoke('text')
+        .then((text) => {
+          for (const re of r.weighing) expect(text, String(re)).to.match(re);
+        });
+      cy.get('article')
+        .invoke('text')
+        .then((text) => {
+          for (const re of r.falseClaims) expect(text, String(re)).to.not.match(re);
+        });
     });
 
     it(`Privacidad (${lang}): la API generada puede reproducir lo pegado, dura 30 min y es consultable con su URL`, () => {
       visitIn('/privacy', lang);
-      cy.get('section#demo').invoke('text').then((text) => {
-        expect(text).to.match(r.reproduces);
-        expect(text).to.match(DEMO_PRIVACY[lang].ttl[1]);
-      });
+      cy.get('section#demo')
+        .invoke('text')
+        .then((text) => {
+          expect(text).to.match(r.reproduces);
+          expect(text).to.match(DEMO_PRIVACY[lang].ttl[1]);
+        });
       // tambien en la fila de plazos de la API generada
       cy.contains('tr', r.mockRow).invoke('text').should('match', r.reproduces);
     });
 
     it(`Terminos (${lang}): el resultado puede reproducir lo pegado y es publico por URL durante 30 min`, () => {
       visitIn('/terms', lang);
-      cy.get('section#demo').invoke('text').then((text) => {
-        expect(text).to.match(r.reproduces);
-        expect(text).to.match(DEMO_PRIVACY[lang].ttl[1]);
-      });
+      cy.get('section#demo')
+        .invoke('text')
+        .then((text) => {
+          expect(text).to.match(r.reproduces);
+          expect(text).to.match(DEMO_PRIVACY[lang].ttl[1]);
+        });
     });
 
     it(`Privacidad (${lang}): el seudonimo por si solo no permite seguirte, pero los logs si contienen la IP`, () => {
       visitIn('/privacy', lang);
-      cy.get('section#demo').invoke('text').then((text) => {
-        expect(text).to.match(r.alone);
-        expect(text).to.match(DEMO_PRIVACY[lang].logsDeclared[1]);
-      });
+      cy.get('section#demo')
+        .invoke('text')
+        .then((text) => {
+          expect(text).to.match(r.alone);
+          expect(text).to.match(DEMO_PRIVACY[lang].logsDeclared[1]);
+        });
     });
   }
 });

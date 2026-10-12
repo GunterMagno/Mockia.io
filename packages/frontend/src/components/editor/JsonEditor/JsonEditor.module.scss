@@ -2,7 +2,7 @@
 .editorWrapper {
   flex: 1;
   min-height: 0; // Essential for Monaco in flex
-  min-width: 0;  // Essential for Monaco in flex to prevent horizontal overflow
+  min-width: 0; // Essential for Monaco in flex to prevent horizontal overflow
   height: 100%;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);

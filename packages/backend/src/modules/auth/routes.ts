@@ -1,9 +1,31 @@
 import { Router } from 'express';
-import { register, login, refresh, logout, logoutAll, sessions, me, forgot, reset, verify, resendVerificationEmail } from './controller.js';
-import { registerSchema, loginSchema, forgotSchema, resetSchema, verifySchema, resendSchema } from './validation.js';
+import {
+  register,
+  login,
+  refresh,
+  logout,
+  logoutAll,
+  sessions,
+  me,
+  forgot,
+  reset,
+  verify,
+  resendVerificationEmail,
+} from './controller.js';
+import {
+  registerSchema,
+  loginSchema,
+  forgotSchema,
+  resetSchema,
+  verifySchema,
+  resendSchema,
+} from './validation.js';
 import { requireCsrfHeader, requireJsonBody } from './cookie.js';
 import { validate } from '../../middlewares/validateRequest.js';
-import { authenticateToken, type AuthenticatedRequest } from '../../middlewares/authenticateToken.js';
+import {
+  authenticateToken,
+  type AuthenticatedRequest,
+} from '../../middlewares/authenticateToken.js';
 import { rateLimit } from '../../middlewares/rateLimit.js';
 
 /**
@@ -52,12 +74,7 @@ const resendLimiter = rateLimit({
  *       201:
  *         description: Created
  */
-authRouter.post(
-  '/register',
-  requireJsonBody,
-  validate({ body: registerSchema }),
-  register
-);
+authRouter.post('/register', requireJsonBody, validate({ body: registerSchema }), register);
 
 /**
  * @swagger
@@ -87,12 +104,7 @@ authRouter.post(
  *       415:
  *         description: Body is not application/json (login-CSRF defence; HTML forms cannot send JSON)
  */
-authRouter.post(
-  '/login',
-  requireJsonBody,
-  validate({ body: loginSchema }),
-  login
-);
+authRouter.post('/login', requireJsonBody, validate({ body: loginSchema }), login);
 
 /**
  * @swagger
@@ -116,11 +128,7 @@ authRouter.post(
  *       403:
  *         description: Missing X-Requested-With header
  */
-authRouter.post(
-  '/refresh',
-  requireCsrfHeader,
-  refresh
-);
+authRouter.post('/refresh', requireCsrfHeader, refresh);
 
 /**
  * @swagger
@@ -142,11 +150,7 @@ authRouter.post(
  *       403:
  *         description: Missing X-Requested-With header
  */
-authRouter.post(
-  '/logout',
-  requireCsrfHeader,
-  logout
-);
+authRouter.post('/logout', requireCsrfHeader, logout);
 
 /**
  * @swagger
@@ -162,11 +166,7 @@ authRouter.post(
  *       401:
  *         description: Unauthorized
  */
-authRouter.post(
-  '/logout-all',
-  authenticateToken,
-  logoutAll
-);
+authRouter.post('/logout-all', authenticateToken, logoutAll);
 
 /**
  * @swagger
@@ -182,11 +182,7 @@ authRouter.post(
  *       401:
  *         description: Unauthorized
  */
-authRouter.get(
-  '/sessions',
-  authenticateToken,
-  sessions
-);
+authRouter.get('/sessions', authenticateToken, sessions);
 
 /**
  * @swagger
@@ -286,16 +282,18 @@ authRouter.post('/verify', validate({ body: verifySchema }), verify);
  *       429:
  *         description: Too many requests (5 per 15 minutes)
  */
-authRouter.post('/verify/resend', authenticateToken, resendLimiter, validate({ body: resendSchema }), resendVerificationEmail);
+authRouter.post(
+  '/verify/resend',
+  authenticateToken,
+  resendLimiter,
+  validate({ body: resendSchema }),
+  resendVerificationEmail
+);
 
 /**
  * GET /api/auth/me
  * Gets current user info
  */
-authRouter.get(
-  '/me',
-  authenticateToken,
-  me
-);
+authRouter.get('/me', authenticateToken, me);
 
 export default authRouter;

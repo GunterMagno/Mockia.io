@@ -30,13 +30,13 @@ Navegador ─ nginx ─ /api/ai/ ─▶ backend ──(1) local ─▶ llm (Olla
 
 ### Qué ficheros hay
 
-| Fichero | Para qué |
-|---|---|
-| `docker-compose.ai.yml` | Servicio `llm` con **Ollama**, volumen de modelos y variables del backend. Funciona sobre el compose de producción y el de desarrollo. |
-| `docker-compose.ai.gpu.yml` | Añade la reserva de GPU NVIDIA a `llm`. En un servidor solo con CPU **no se incluye**. |
-| `docker-compose.ai.vllm.yml` | Alternativa **vLLM** (más caudal, exige GPU NVIDIA). Sustituye a `docker-compose.ai.yml`; nunca se combinan. |
-| `docker-compose.ai.eval.yml` | Opcional y **temporal**: publica el puerto del modelo solo en `127.0.0.1` para ejecutar el banco de evaluación. Se quita al terminar. |
-| `scripts/pull-model.sh` | Descarga un modelo en Ollama y lo calienta. |
+| Fichero                      | Para qué                                                                                                                               |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `docker-compose.ai.yml`      | Servicio `llm` con **Ollama**, volumen de modelos y variables del backend. Funciona sobre el compose de producción y el de desarrollo. |
+| `docker-compose.ai.gpu.yml`  | Añade la reserva de GPU NVIDIA a `llm`. En un servidor solo con CPU **no se incluye**.                                                 |
+| `docker-compose.ai.vllm.yml` | Alternativa **vLLM** (más caudal, exige GPU NVIDIA). Sustituye a `docker-compose.ai.yml`; nunca se combinan.                           |
+| `docker-compose.ai.eval.yml` | Opcional y **temporal**: publica el puerto del modelo solo en `127.0.0.1` para ejecutar el banco de evaluación. Se quita al terminar.  |
+| `scripts/pull-model.sh`      | Descarga un modelo en Ollama y lo calienta.                                                                                            |
 
 Las redes: el override crea una red propia (`llm-net`) y conecta a ella `llm` y `backend`; compose **suma** las redes del backend, así que no importa que el compose de desarrollo use `mockia-network` y el de producción `mockia-network-prod`.
 
@@ -44,11 +44,11 @@ Las redes: el override crea una red propia (`llm-net`) y conecta a ella `llm` y 
 
 Las cifras de abajo son órdenes de magnitud de la práctica habitual con modelos cuantizados a 4 bits (q4). **No están medidas en Mockia**; dependen de la longitud del contexto, del número de peticiones simultáneas y de la versión del servidor. El banco de evaluación (apartado 6) te da la latencia real de tu máquina.
 
-| Modelo (ejemplo) | Memoria orientativa (ESTIMACIÓN) | Notas |
-|---|---|---|
-| 7B q4 | unos 5-6 GB de VRAM, o 8 GB de RAM en CPU | Punto de partida razonable. |
-| 14B q4 | unos 9-11 GB de VRAM | Mejor calidad, más latencia. |
-| 32B q4 | 20 GB de VRAM o más | Requiere una GPU grande. |
+| Modelo (ejemplo) | Memoria orientativa (ESTIMACIÓN)          | Notas                        |
+| ---------------- | ----------------------------------------- | ---------------------------- |
+| 7B q4            | unos 5-6 GB de VRAM, o 8 GB de RAM en CPU | Punto de partida razonable.  |
+| 14B q4           | unos 9-11 GB de VRAM                      | Mejor calidad, más latencia. |
+| 32B q4           | 20 GB de VRAM o más                       | Requiere una GPU grande.     |
 
 - **Solo CPU**: funciona, pero la generación de un JSON de varios endpoints puede tardar mucho más que el límite de 60 s de la regla de decisión. **Medir con el banco** antes de fiarse; puede ser válido solo para pruebas o poco tráfico.
 - Cada petición simultánea (`OLLAMA_NUM_PARALLEL`) reserva su propio contexto: más memoria. Empieza en 1.
@@ -111,15 +111,15 @@ Prerrequisitos: Docker con Compose v2, el `.env` de producción rellenado (ver `
 
 ## 5. Variables
 
-| Variable | Dónde | Efecto |
-|---|---|---|
-| `AI_PROVIDERS` | backend | `openrouter` (defecto) o `local,openrouter`. |
-| `AI_LOCAL_BASE_URL` | backend | Raíz del servidor **sin `/v1`**. Con compose, vacía = `http://llm:11434` (Ollama). En el override de vLLM está fija en `http://llm:8000`. |
-| `AI_LOCAL_MODEL` | backend | Nombre del modelo (Ollama: `qwen2.5-coder:7b-instruct`). Con vLLM se toma de `VLLM_MODEL`. |
-| `AI_LOCAL_TIMEOUT_MS`, `AI_TOTAL_TIMEOUT_MS`, `AI_LOCAL_API_KEY` | backend | Plazos y clave opcional (ver `docs/08_despliegue.md`). |
-| `OLLAMA_IMAGE`, `OLLAMA_NUM_PARALLEL`, `OLLAMA_CONTEXT_LENGTH`, `LLM_MEM_LIMIT` | compose | Imagen fijada, concurrencia, contexto (16384 por defecto, ver apartado 3) y tope de RAM. |
-| `VLLM_IMAGE`, `VLLM_MODEL`, `VLLM_MAX_MODEL_LEN`, `VLLM_GPU_MEMORY_UTILIZATION`, `VLLM_SHM_SIZE`, `HF_TOKEN` | compose | Parámetros de vLLM. |
-| `COMPOSE_FILES`, `COMPOSE_ENV_FILE`, `SKIP_WARMUP` | `scripts/pull-model.sh` | Qué ficheros usa el script, `.env` alternativo y omitir el calentamiento. |
+| Variable                                                                                                     | Dónde                   | Efecto                                                                                                                                    |
+| ------------------------------------------------------------------------------------------------------------ | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `AI_PROVIDERS`                                                                                               | backend                 | `openrouter` (defecto) o `local,openrouter`.                                                                                              |
+| `AI_LOCAL_BASE_URL`                                                                                          | backend                 | Raíz del servidor **sin `/v1`**. Con compose, vacía = `http://llm:11434` (Ollama). En el override de vLLM está fija en `http://llm:8000`. |
+| `AI_LOCAL_MODEL`                                                                                             | backend                 | Nombre del modelo (Ollama: `qwen2.5-coder:7b-instruct`). Con vLLM se toma de `VLLM_MODEL`.                                                |
+| `AI_LOCAL_TIMEOUT_MS`, `AI_TOTAL_TIMEOUT_MS`, `AI_LOCAL_API_KEY`                                             | backend                 | Plazos y clave opcional (ver `docs/08_despliegue.md`).                                                                                    |
+| `OLLAMA_IMAGE`, `OLLAMA_NUM_PARALLEL`, `OLLAMA_CONTEXT_LENGTH`, `LLM_MEM_LIMIT`                              | compose                 | Imagen fijada, concurrencia, contexto (16384 por defecto, ver apartado 3) y tope de RAM.                                                  |
+| `VLLM_IMAGE`, `VLLM_MODEL`, `VLLM_MAX_MODEL_LEN`, `VLLM_GPU_MEMORY_UTILIZATION`, `VLLM_SHM_SIZE`, `HF_TOKEN` | compose                 | Parámetros de vLLM.                                                                                                                       |
+| `COMPOSE_FILES`, `COMPOSE_ENV_FILE`, `SKIP_WARMUP`                                                           | `scripts/pull-model.sh` | Qué ficheros usa el script, `.env` alternativo y omitir el calentamiento.                                                                 |
 
 ## 6. Evaluación y regla de decisión
 
@@ -158,12 +158,12 @@ Un modelo puede sustituir a OpenRouter **solo si cumple las tres**: `schemaValid
 
 Cada fila se completa a mano con el resumen que imprime el banco. Fecha y hardware incluidos, porque las latencias solo valen para esa máquina.
 
-| Modelo | Hardware | schemaValid % | F1 medio | fieldCoverage | p95 (s) | Veredicto |
-|---|---|---|---|---|---|---|
-| OpenRouter (línea base) | n/a | pendiente de medir por el titular | pendiente de medir por el titular | pendiente de medir por el titular | pendiente de medir por el titular | pendiente de medir por el titular |
-| Qwen2.5-Coder 7B instruct (q4) | pendiente de medir por el titular | pendiente de medir por el titular | pendiente de medir por el titular | pendiente de medir por el titular | pendiente de medir por el titular | pendiente de medir por el titular |
+| Modelo                          | Hardware                          | schemaValid %                     | F1 medio                          | fieldCoverage                     | p95 (s)                           | Veredicto                         |
+| ------------------------------- | --------------------------------- | --------------------------------- | --------------------------------- | --------------------------------- | --------------------------------- | --------------------------------- |
+| OpenRouter (línea base)         | n/a                               | pendiente de medir por el titular | pendiente de medir por el titular | pendiente de medir por el titular | pendiente de medir por el titular | pendiente de medir por el titular |
+| Qwen2.5-Coder 7B instruct (q4)  | pendiente de medir por el titular | pendiente de medir por el titular | pendiente de medir por el titular | pendiente de medir por el titular | pendiente de medir por el titular | pendiente de medir por el titular |
 | Qwen2.5-Coder 14B instruct (q4) | pendiente de medir por el titular | pendiente de medir por el titular | pendiente de medir por el titular | pendiente de medir por el titular | pendiente de medir por el titular | pendiente de medir por el titular |
-| Otra cuantización o modelo | pendiente de medir por el titular | pendiente de medir por el titular | pendiente de medir por el titular | pendiente de medir por el titular | pendiente de medir por el titular | pendiente de medir por el titular |
+| Otra cuantización o modelo      | pendiente de medir por el titular | pendiente de medir por el titular | pendiente de medir por el titular | pendiente de medir por el titular | pendiente de medir por el titular | pendiente de medir por el titular |
 
 ## 7. Seguridad
 

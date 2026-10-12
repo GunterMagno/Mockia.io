@@ -1,177 +1,185 @@
-import React, { useId, useState } from 'react'
-import { Modal } from '../../ui/Modal/Modal'
-import { createProject, importFromGitHub, hardDeleteProject } from '../../../services/projectService'
-import { parseGithubUrl } from '../../../services/githubService'
-import { generateAndSaveEndpoints, MAX_AI_REQUIREMENT_CHARS } from '../../../services/aiService'
-import { getBackendErrorCode, getBackendErrorMessage } from '../../../utils/error'
-import { Link } from 'react-router-dom'
-import { PATHS } from '../../../routes/paths'
-import type { Project } from '../../../services/projectService'
-import styles from './CreateProjectModal.module.scss'
-import { Icon } from '../../ui/Icon/Icon'
-import AiFeedback from '../../ui/AiFeedback/AiFeedback'
-import emptyProjectIcon from '../../../assets/empty-project.svg'
-import githubIcon from '../../../assets/github.svg'
-import aiSparkleIcon from '../../../assets/ai-sparkle.svg'
-import loaderIcon from '../../../assets/loader.svg'
-import checkIcon from '../../../assets/check.svg'
-import linkIcon from '../../../assets/link.svg'
-import folderIcon from '../../../assets/folder.svg'
-import { playErrorSound } from '../../../utils/audio'
-import ModalErrorAlert from '../../ui/ModalErrorAlert/ModalErrorAlert'
-import { useI18n } from '../../../i18n/I18nProvider'
+import React, { useId, useState } from 'react';
+import { Modal } from '../../ui/Modal/Modal';
+import {
+  createProject,
+  importFromGitHub,
+  hardDeleteProject,
+} from '../../../services/projectService';
+import { parseGithubUrl } from '../../../services/githubService';
+import { generateAndSaveEndpoints, MAX_AI_REQUIREMENT_CHARS } from '../../../services/aiService';
+import { getBackendErrorCode, getBackendErrorMessage } from '../../../utils/error';
+import { Link } from 'react-router-dom';
+import { PATHS } from '../../../routes/paths';
+import type { Project } from '../../../services/projectService';
+import styles from './CreateProjectModal.module.scss';
+import { Icon } from '../../ui/Icon/Icon';
+import AiFeedback from '../../ui/AiFeedback/AiFeedback';
+import emptyProjectIcon from '../../../assets/empty-project.svg';
+import githubIcon from '../../../assets/github.svg';
+import aiSparkleIcon from '../../../assets/ai-sparkle.svg';
+import loaderIcon from '../../../assets/loader.svg';
+import checkIcon from '../../../assets/check.svg';
+import linkIcon from '../../../assets/link.svg';
+import folderIcon from '../../../assets/folder.svg';
+import { playErrorSound } from '../../../utils/audio';
+import ModalErrorAlert from '../../ui/ModalErrorAlert/ModalErrorAlert';
+import { useI18n } from '../../../i18n/I18nProvider';
 
 type Props = {
-  isOpen: boolean
-  onClose: () => void
-  onCreated: (p: Project) => void
-}
+  isOpen: boolean;
+  onClose: () => void;
+  onCreated: (p: Project) => void;
+};
 
-type Mode = 'empty' | 'github'
-type Step = 'select' | 'config' | 'ai_prompt' | 'success'
+type Mode = 'empty' | 'github';
+type Step = 'select' | 'config' | 'ai_prompt' | 'success';
 
-const STEPS: Step[] = ['select', 'config', 'ai_prompt']
+const STEPS: Step[] = ['select', 'config', 'ai_prompt'];
 
 const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => {
-  const { t, tl, rich } = useI18n()
-  const uid = useId()
-  const [step, setStep] = useState<Step>('select')
-  const [mode, setMode] = useState<Mode | null>(null)
-  
+  const { t, tl, rich } = useI18n();
+  const uid = useId();
+  const [step, setStep] = useState<Step>('select');
+  const [mode, setMode] = useState<Mode | null>(null);
+
   // Form State
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [repoUrl, setRepoUrl] = useState('')
-  const [githubInfo, setGithubInfo] = useState<any>(null)
-  
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [repoUrl, setRepoUrl] = useState('');
+  const [githubInfo, setGithubInfo] = useState<any>(null);
+
   // AI State
-  const [shouldGenerate, setShouldGenerate] = useState(true)
-  const [aiRequirement, setAiRequirement] = useState(() => t('createProject.aiDefaultBasic'))
-  
+  const [shouldGenerate, setShouldGenerate] = useState(true);
+  const [aiRequirement, setAiRequirement] = useState(() => t('createProject.aiDefaultBasic'));
+
   // Progress State
-  const [loading, setLoading] = useState(false)
-  const [validating, setValidating] = useState(false)
-  const [progress, setProgress] = useState<string[]>([])
-  const [progressIdx, setProgressIdx] = useState(0)
-  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false);
+  const [validating, setValidating] = useState(false);
+  const [progress, setProgress] = useState<string[]>([]);
+  const [progressIdx, setProgressIdx] = useState(0);
+  const [error, setError] = useState('');
   // Un 402 de proyectos (limitReached) o un 429 de cuota de IA (quotaReached): ambos llevan a los planes
-  const [limitReached, setLimitReached] = useState(false)
-  const [quotaReached, setQuotaReached] = useState(false)
-  const [createdProject, setCreatedProject] = useState<Project | null>(null)
-  const [copiedUrl, setCopiedUrl] = useState(false)
-  const [generationId, setGenerationId] = useState<string | undefined>(undefined)
+  const [limitReached, setLimitReached] = useState(false);
+  const [quotaReached, setQuotaReached] = useState(false);
+  const [createdProject, setCreatedProject] = useState<Project | null>(null);
+  const [copiedUrl, setCopiedUrl] = useState(false);
+  const [generationId, setGenerationId] = useState<string | undefined>(undefined);
 
-  const apiBaseUrl = import.meta.env.VITE_API_URL && (import.meta.env.VITE_API_URL.startsWith('http') || import.meta.env.VITE_API_URL.startsWith('//'))
-    ? import.meta.env.VITE_API_URL
-    : window.location.origin + '/api';
+  const apiBaseUrl =
+    import.meta.env.VITE_API_URL &&
+    (import.meta.env.VITE_API_URL.startsWith('http') ||
+      import.meta.env.VITE_API_URL.startsWith('//'))
+      ? import.meta.env.VITE_API_URL
+      : window.location.origin + '/api';
   const cleanedApiBaseUrl = apiBaseUrl.endsWith('/') ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
-  const mockBaseUrl = createdProject?.slug ? `${cleanedApiBaseUrl}/mock/${createdProject.slug}` : '';
-
+  const mockBaseUrl = createdProject?.slug
+    ? `${cleanedApiBaseUrl}/mock/${createdProject.slug}`
+    : '';
 
   const reset = () => {
-    setStep('select')
-    setMode(null)
-    setTitle('')
-    setDescription('')
-    setRepoUrl('')
-    setShouldGenerate(true)
-    setAiRequirement(t('createProject.aiDefaultBasic'))
-    setLoading(false)
-    setValidating(false)
-    setProgress([])
-    setProgressIdx(0)
-    setError('')
-    setLimitReached(false)
-    setQuotaReached(false)
-    setCreatedProject(null)
-    setCopiedUrl(false)
-    setGenerationId(undefined)
-  }
+    setStep('select');
+    setMode(null);
+    setTitle('');
+    setDescription('');
+    setRepoUrl('');
+    setShouldGenerate(true);
+    setAiRequirement(t('createProject.aiDefaultBasic'));
+    setLoading(false);
+    setValidating(false);
+    setProgress([]);
+    setProgressIdx(0);
+    setError('');
+    setLimitReached(false);
+    setQuotaReached(false);
+    setCreatedProject(null);
+    setCopiedUrl(false);
+    setGenerationId(undefined);
+  };
 
   const closeAndReset = () => {
-    onClose()
-    setTimeout(reset, 300)
-  }
+    onClose();
+    setTimeout(reset, 300);
+  };
 
   const handleSelectMode = (m: Mode) => {
-    setMode(m)
-    setStep('config')
-    setError('')
-    setShouldGenerate(true) // Ensure it's active when switching modes
+    setMode(m);
+    setStep('config');
+    setError('');
+    setShouldGenerate(true); // Ensure it's active when switching modes
     if (m === 'github') {
-      setAiRequirement(t('createProject.aiDefaultGithub'))
+      setAiRequirement(t('createProject.aiDefaultGithub'));
     } else {
-      setAiRequirement(t('createProject.aiDefaultEmpty'))
+      setAiRequirement(t('createProject.aiDefaultEmpty'));
     }
-  }
+  };
 
   const handleConfigNext = async () => {
-    setError('')
+    setError('');
     if (mode === 'github') {
-      if (!repoUrl) return
-      setValidating(true)
+      if (!repoUrl) return;
+      setValidating(true);
       try {
-        const info = await parseGithubUrl(repoUrl)
-        setGithubInfo(info)
-        setStep('ai_prompt')
-        setShouldGenerate(true) // Ensure it's active when moving to next step
+        const info = await parseGithubUrl(repoUrl);
+        setGithubInfo(info);
+        setStep('ai_prompt');
+        setShouldGenerate(true); // Ensure it's active when moving to next step
       } catch (err) {
-        setError(getBackendErrorMessage(err, t))
-        playErrorSound()
+        setError(getBackendErrorMessage(err, t));
+        playErrorSound();
       } finally {
-        setValidating(false)
+        setValidating(false);
       }
     } else {
-      if (!title) return
-      setStep('ai_prompt')
-      setShouldGenerate(true) // Ensure it's active when moving to next step
+      if (!title) return;
+      setStep('ai_prompt');
+      setShouldGenerate(true); // Ensure it's active when moving to next step
     }
-  }
+  };
 
   const createProjectFlow = async () => {
-    setLoading(true)
-    setError('')
-    setLimitReached(false)
-    setQuotaReached(false)
-    
-    const messages = mode === 'github' ? tl('createProject.progressGithub') : tl('createProject.progressEmpty')
+    setLoading(true);
+    setError('');
+    setLimitReached(false);
+    setQuotaReached(false);
 
-    setProgress(messages)
-    setProgressIdx(0)
+    const messages =
+      mode === 'github' ? tl('createProject.progressGithub') : tl('createProject.progressEmpty');
+
+    setProgress(messages);
+    setProgressIdx(0);
 
     // Avanza por los pasos y se queda en el ultimo hasta que termine (antes rotaba en bucle)
     const interval = setInterval(() => {
-      setProgressIdx((i) => Math.min(i + 1, messages.length - 1))
-    }, 3500)
-    
-    
+      setProgressIdx((i) => Math.min(i + 1, messages.length - 1));
+    }, 3500);
+
     try {
       let proj: Project;
 
       if (mode === 'github') {
-        const info = githubInfo || await parseGithubUrl(repoUrl)
-        proj = await createProject({ 
+        const info = githubInfo || (await parseGithubUrl(repoUrl));
+        proj = await createProject({
           title: info.repo || t('createProject.importedTitle'),
-          description: t('createProject.importedFrom', { url: repoUrl }) 
-        })
-        
+          description: t('createProject.importedFrom', { url: repoUrl }),
+        });
+
         try {
           // Update project with GitHub info and analysis
-          const updatedProj = await importFromGitHub(proj.id, { repoUrl })
-          proj = updatedProj // Capture the updated version for onCreated
+          const updatedProj = await importFromGitHub(proj.id, { repoUrl });
+          proj = updatedProj; // Capture the updated version for onCreated
         } catch (githubErr) {
           // ROLLBACK: Delete project if GitHub import fails
           await hardDeleteProject(proj.id);
           throw githubErr;
         }
       } else {
-        proj = await createProject({ title, description })
+        proj = await createProject({ title, description });
       }
 
       if (shouldGenerate) {
         try {
-          const generated = await generateAndSaveEndpoints(proj.id, aiRequirement)
-          setGenerationId(generated.generationId)
+          const generated = await generateAndSaveEndpoints(proj.id, aiRequirement);
+          setGenerationId(generated.generationId);
         } catch (aiErr) {
           // ROLLBACK: Delete project if AI generation fails
           await hardDeleteProject(proj.id);
@@ -179,34 +187,45 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
         }
       }
 
-      clearInterval(interval)
-      setProgressIdx(messages.length)
-      setCreatedProject(proj)
-      setStep('success')
+      clearInterval(interval);
+      setProgressIdx(messages.length);
+      setCreatedProject(proj);
+      setStep('success');
     } catch (err: any) {
-      clearInterval(interval)
-      setError(getBackendErrorMessage(err, t))
-      setLimitReached(getBackendErrorCode(err) === 'PLAN_LIMIT_REACHED')
-      setQuotaReached(getBackendErrorCode(err) === 'AI_QUOTA_EXCEEDED')
-      playErrorSound()
-      setLoading(false)
+      clearInterval(interval);
+      setError(getBackendErrorMessage(err, t));
+      setLimitReached(getBackendErrorCode(err) === 'PLAN_LIMIT_REACHED');
+      setQuotaReached(getBackendErrorCode(err) === 'AI_QUOTA_EXCEEDED');
+      playErrorSound();
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <Modal isOpen={isOpen} onClose={closeAndReset} noPadding maxWidth="900px">
       <article className={styles.modalContent}>
         {/* Step Indicator */}
         {STEPS.includes(step) && (
-          <nav className={styles.stepIndicator} aria-label={t('createProject.steps', { current: STEPS.indexOf(step) + 1, total: STEPS.length })}>
+          <nav
+            className={styles.stepIndicator}
+            aria-label={t('createProject.steps', {
+              current: STEPS.indexOf(step) + 1,
+              total: STEPS.length,
+            })}
+          >
             {tl('createProject.stepNames').map((name, i) => (
               <span
                 key={name}
                 className={`${styles.seg} ${step === STEPS[i] ? styles.active : ''} ${i < STEPS.indexOf(step) ? styles.done : ''}`}
                 aria-current={step === STEPS[i] ? 'step' : undefined}
               >
-                <span className={styles.segLabel}><b>0{i + 1}</b>{name}</span>
-                <span className={styles.segTrack}><span /></span>
+                <span className={styles.segLabel}>
+                  <b>0{i + 1}</b>
+                  {name}
+                </span>
+                <span className={styles.segTrack}>
+                  <span />
+                </span>
               </span>
             ))}
           </nav>
@@ -220,14 +239,22 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
               <p>{t('createProject.subtitle')}</p>
             </header>
             <section className={styles.selectionGrid}>
-              <button type="button" className={styles.selectionCard} onClick={() => handleSelectMode('empty')}>
+              <button
+                type="button"
+                className={styles.selectionCard}
+                onClick={() => handleSelectMode('empty')}
+              >
                 <figure className={styles.icon}>
                   <Icon src={emptyProjectIcon} size={36} color="var(--color-accent-text)" />
                 </figure>
                 <h3>{t('createProject.emptyTitle')}</h3>
                 <p>{t('createProject.emptyText')}</p>
               </button>
-              <button type="button" className={styles.selectionCard} onClick={() => handleSelectMode('github')}>
+              <button
+                type="button"
+                className={styles.selectionCard}
+                onClick={() => handleSelectMode('github')}
+              >
                 <figure className={styles.icon}>
                   <Icon src={githubIcon} size={36} color="var(--color-text)" />
                 </figure>
@@ -236,7 +263,9 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
               </button>
             </section>
             <nav className={styles.actions}>
-              <button className={styles.cancelBtn} onClick={closeAndReset}>{t('common.cancel')}</button>
+              <button className={styles.cancelBtn} onClick={closeAndReset}>
+                {t('common.cancel')}
+              </button>
             </nav>
           </>
         )}
@@ -245,10 +274,18 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
         {step === 'config' && (
           <>
             <header className={styles.header}>
-              <h2>{mode === 'github' ? t('createProject.githubStepTitle') : t('createProject.detailsTitle')}</h2>
-              <p>{mode === 'github' ? t('createProject.githubStepText') : t('createProject.detailsText')}</p>
+              <h2>
+                {mode === 'github'
+                  ? t('createProject.githubStepTitle')
+                  : t('createProject.detailsTitle')}
+              </h2>
+              <p>
+                {mode === 'github'
+                  ? t('createProject.githubStepText')
+                  : t('createProject.detailsText')}
+              </p>
             </header>
-            
+
             <section className={styles.stepContent}>
               {mode === 'github' ? (
                 <article className={styles.formGroup}>
@@ -261,7 +298,7 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
                       className={styles.input}
                       placeholder="https://github.com/username/repo"
                       value={repoUrl}
-                      onChange={e => setRepoUrl(e.target.value)}
+                      onChange={(e) => setRepoUrl(e.target.value)}
                       autoFocus
                     />
                   </div>
@@ -277,7 +314,7 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
                         className={styles.input}
                         placeholder={t('createProject.projectTitlePlaceholder')}
                         value={title}
-                        onChange={e => setTitle(e.target.value)}
+                        onChange={(e) => setTitle(e.target.value)}
                         autoFocus
                       />
                     </div>
@@ -289,7 +326,7 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
                       className={styles.input}
                       placeholder={t('createProject.descriptionPlaceholder')}
                       value={description}
-                      onChange={e => setDescription(e.target.value)}
+                      onChange={(e) => setDescription(e.target.value)}
                     />
                   </article>
                 </>
@@ -298,11 +335,19 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
             </section>
 
             <nav className={styles.actions}>
-              <button className={styles.cancelBtn} onClick={() => setStep('select')} disabled={validating}>{t('common.back')}</button>
-              <button 
-                className={styles.primaryBtn} 
+              <button
+                className={styles.cancelBtn}
+                onClick={() => setStep('select')}
+                disabled={validating}
+              >
+                {t('common.back')}
+              </button>
+              <button
+                className={styles.primaryBtn}
                 onClick={handleConfigNext}
-                disabled={(mode === 'github' && !repoUrl) || (mode === 'empty' && !title) || validating}
+                disabled={
+                  (mode === 'github' && !repoUrl) || (mode === 'empty' && !title) || validating
+                }
               >
                 {validating ? t('createProject.checking') : t('common.continue')}
               </button>
@@ -330,14 +375,16 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
               </article>
 
               <article className={styles.aiToggle}>
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   id="shouldGenerate"
                   checked={shouldGenerate}
-                  onChange={e => setShouldGenerate(e.target.checked)}
+                  onChange={(e) => setShouldGenerate(e.target.checked)}
                   className={styles.checkbox}
                 />
-                <label htmlFor="shouldGenerate" className={styles.checkboxLabel}>{t('createProject.aiToggle')}</label>
+                <label htmlFor="shouldGenerate" className={styles.checkboxLabel}>
+                  {t('createProject.aiToggle')}
+                </label>
               </article>
 
               {shouldGenerate && (
@@ -347,7 +394,7 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
                     id={`${uid}-prompt`}
                     className={styles.textarea}
                     value={aiRequirement}
-                    onChange={e => setAiRequirement(e.target.value)}
+                    onChange={(e) => setAiRequirement(e.target.value)}
                     maxLength={MAX_AI_REQUIREMENT_CHARS}
                     placeholder={t('createProject.aiPromptPlaceholder')}
                   />
@@ -362,12 +409,27 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
               )}
 
               {loading && (
-                <ul className={styles.log} role="status" ref={(el) => el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })}>
+                <ul
+                  className={styles.log}
+                  role="status"
+                  ref={(el) => el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })}
+                >
                   {progress.map((message, i) => (
-                    <li key={message} className={i < progressIdx ? styles.logDone : i === progressIdx ? styles.logNow : undefined}>
+                    <li
+                      key={message}
+                      className={
+                        i < progressIdx
+                          ? styles.logDone
+                          : i === progressIdx
+                            ? styles.logNow
+                            : undefined
+                      }
+                    >
                       <span className={styles.logState} aria-hidden="true">
                         {i < progressIdx && <Icon src={checkIcon} size={16} />}
-                        {i === progressIdx && <Icon src={loaderIcon} size={16} className={styles.spinner} />}
+                        {i === progressIdx && (
+                          <Icon src={loaderIcon} size={16} className={styles.spinner} />
+                        )}
                       </span>
                       {message}
                     </li>
@@ -377,12 +439,14 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
             </section>
 
             <nav className={styles.actions}>
-              <button className={styles.cancelBtn} onClick={() => setStep('config')} disabled={loading}>{t('common.back')}</button>
-              <button 
-                className={styles.primaryBtn} 
-                onClick={createProjectFlow}
+              <button
+                className={styles.cancelBtn}
+                onClick={() => setStep('config')}
                 disabled={loading}
               >
+                {t('common.back')}
+              </button>
+              <button className={styles.primaryBtn} onClick={createProjectFlow} disabled={loading}>
                 {loading ? t('createProject.creating') : t('createProject.create')}
               </button>
             </nav>
@@ -393,7 +457,9 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
         {step === 'success' && createdProject && (
           <article className={styles.successContent}>
             <header className={styles.header}>
-              <figure className={styles.successBadge} aria-hidden="true">✓</figure>
+              <figure className={styles.successBadge} aria-hidden="true">
+                ✓
+              </figure>
               <h2>{t('createProject.successTitle')}</h2>
               <p>{t('createProject.successText')}</p>
             </header>
@@ -406,11 +472,11 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
                     <section className={styles.infoBox}>
                       <code>{mockBaseUrl}</code>
                     </section>
-                    <button 
+                    <button
                       onClick={() => {
-                        navigator.clipboard.writeText(mockBaseUrl)
-                        setCopiedUrl(true)
-                        setTimeout(() => setCopiedUrl(false), 2000)
+                        navigator.clipboard.writeText(mockBaseUrl);
+                        setCopiedUrl(true);
+                        setTimeout(() => setCopiedUrl(false), 2000);
                       }}
                       className={`${styles.copyBtn} ${copiedUrl ? styles.copied : ''}`}
                     >
@@ -420,10 +486,14 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
                 </article>
 
                 <article className={styles.instructionNote}>
-                  <figure className={styles.noteIcon} aria-hidden="true">!</figure>
+                  <figure className={styles.noteIcon} aria-hidden="true">
+                    !
+                  </figure>
                   <span className={styles.noteText}>
                     <strong>{t('createProject.important')}</strong>{' '}
-                    {rich('createProject.publicNote', { strong: (chunk) => <strong>{chunk}</strong> })}
+                    {rich('createProject.publicNote', {
+                      strong: (chunk) => <strong>{chunk}</strong>,
+                    })}
                   </span>
                 </article>
               </article>
@@ -431,11 +501,11 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
             </section>
 
             <nav className={styles.actions}>
-              <button 
-                className={styles.primaryBtn} 
+              <button
+                className={styles.primaryBtn}
                 onClick={() => {
-                  onCreated(createdProject)
-                  closeAndReset()
+                  onCreated(createdProject);
+                  closeAndReset();
                 }}
               >
                 {t('createProject.goToEditor')}
@@ -445,7 +515,7 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
         )}
       </article>
     </Modal>
-  )
-}
+  );
+};
 
-export default CreateProjectModal
+export default CreateProjectModal;

@@ -27,7 +27,14 @@ const SPEC = JSON.stringify({
   apiVersion: '1.0.0',
   title: 'Gym API',
   description: 'd',
-  endpoints: [{ path: '/members', method: 'GET', description: 'List members', examples: [{ request: {}, response: { id: 1 } }] }],
+  endpoints: [
+    {
+      path: '/members',
+      method: 'GET',
+      description: 'List members',
+      examples: [{ request: {}, response: { id: 1 } }],
+    },
+  ],
   dataModels: [],
 });
 
@@ -102,7 +109,13 @@ async function createUser(email: string, extra: Record<string, unknown> = {}) {
 }
 
 const projectOf = (ownerId: Types.ObjectId, slug: string, extra: Record<string, unknown> = {}) =>
-  ProjectModel.create({ title: slug, slug, ownerId, members: [{ userId: ownerId, role: 'owner' }], ...extra });
+  ProjectModel.create({
+    title: slug,
+    slug,
+    ownerId,
+    members: [{ userId: ownerId, role: 'owner' }],
+    ...extra,
+  });
 
 /** AI generations counted this month for the user, straight from Mongo. */
 async function usedNow(userId: string, now = new Date()): Promise<number> {
@@ -127,7 +140,12 @@ describe('cuota mensual de generaciones de IA', () => {
   beforeEach(async () => {
     process.env = { ...savedEnv };
     delete process.env.AI_LOCAL_API_KEY;
-    await Promise.all([UserModel.deleteMany({}), ProjectModel.deleteMany({}), UsageModel.deleteMany({}), AiRateWindowModel.deleteMany({})]);
+    await Promise.all([
+      UserModel.deleteMany({}),
+      ProjectModel.deleteMany({}),
+      UsageModel.deleteMany({}),
+      AiRateWindowModel.deleteMany({}),
+    ]);
     invalidatePlanCache();
     fake = await startFake(answer(SPEC));
     process.env.AI_PROVIDERS = 'local';
@@ -152,7 +170,12 @@ describe('cuota mensual de generaciones de IA', () => {
   });
 
   afterAll(async () => {
-    await Promise.all([UserModel.deleteMany({}), ProjectModel.deleteMany({}), UsageModel.deleteMany({}), AiRateWindowModel.deleteMany({})]);
+    await Promise.all([
+      UserModel.deleteMany({}),
+      ProjectModel.deleteMany({}),
+      UsageModel.deleteMany({}),
+      AiRateWindowModel.deleteMany({}),
+    ]);
     await disconnectDB();
   });
 
@@ -184,7 +207,9 @@ describe('cuota mensual de generaciones de IA', () => {
 
     it('(b) 20 reservas simultaneas con tope 5: exactamente 5 ok y el contador queda en 5', async () => {
       const u = await createUser('b@example.com');
-      const results = await Promise.all(Array.from({ length: 20 }, () => reserveAiGeneration(u.idStr, NOW)));
+      const results = await Promise.all(
+        Array.from({ length: 20 }, () => reserveAiGeneration(u.idStr, NOW))
+      );
       expect(results.filter((r) => r.ok)).toHaveLength(5);
       expect(results.filter((r) => !r.ok)).toHaveLength(15);
       expect(await usedNow(u.idStr, NOW)).toBe(5);
@@ -194,7 +219,9 @@ describe('cuota mensual de generaciones de IA', () => {
     it('(b) la carrera tambien se gana en la primera reserva del mes (el documento aun no existe)', async () => {
       for (let round = 0; round < 5; round++) {
         const u = await createUser(`b-race-${round}@example.com`);
-        const results = await Promise.all(Array.from({ length: 12 }, () => reserveAiGeneration(u.idStr, NOW)));
+        const results = await Promise.all(
+          Array.from({ length: 12 }, () => reserveAiGeneration(u.idStr, NOW))
+        );
         expect(results.filter((r) => r.ok)).toHaveLength(5);
         expect(await usedNow(u.idStr, NOW)).toBe(5);
       }
@@ -222,7 +249,10 @@ describe('cuota mensual de generaciones de IA', () => {
       const u = await createUser('c2@example.com');
       const r = await reserveAiGeneration(u.idStr, NOW);
       if (!r.ok) throw new Error('should be ok');
-      await UsageModel.updateOne({ ownerId: u.id, period: periodOf(NOW) }, { $set: { aiGenerations: 0 } });
+      await UsageModel.updateOne(
+        { ownerId: u.id, period: periodOf(NOW) },
+        { $set: { aiGenerations: 0 } }
+      );
       await r.release();
       expect(await usedNow(u.idStr, NOW)).toBe(0);
     });
@@ -234,7 +264,8 @@ describe('cuota mensual de generaciones de IA', () => {
       expect((await reserveAiGeneration(u.idStr, lastSecond)).ok).toBe(false);
       const firstSecond = new Date('2026-11-01T00:00:00.000Z');
       expect(nextPeriodStart(lastSecond).getTime()).toBe(firstSecond.getTime());
-      for (let i = 0; i < 5; i++) expect((await reserveAiGeneration(u.idStr, firstSecond)).ok).toBe(true);
+      for (let i = 0; i < 5; i++)
+        expect((await reserveAiGeneration(u.idStr, firstSecond)).ok).toBe(true);
       expect((await reserveAiGeneration(u.idStr, firstSecond)).ok).toBe(false);
       expect(await usedNow(u.idStr, lastSecond)).toBe(5);
       expect(await usedNow(u.idStr, firstSecond)).toBe(5);
@@ -317,7 +348,13 @@ describe('cuota mensual de generaciones de IA', () => {
 
     it('una fila de uso anterior sin el campo aiGenerations (solo peticiones) cuenta como 0 y se puede reservar', async () => {
       const u = await createUser('legacy@example.com');
-      await UsageModel.collection.insertOne({ ownerId: u.id, period: periodOf(NOW), requests: 12, createdAt: new Date(), updatedAt: new Date() });
+      await UsageModel.collection.insertOne({
+        ownerId: u.id,
+        period: periodOf(NOW),
+        requests: 12,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
       for (let i = 0; i < 5; i++) expect((await reserveAiGeneration(u.idStr, NOW)).ok).toBe(true);
       expect((await reserveAiGeneration(u.idStr, NOW)).ok).toBe(false);
       const doc = await UsageModel.findOne({ ownerId: u.id, period: periodOf(NOW) }).lean();
@@ -346,10 +383,16 @@ describe('cuota mensual de generaciones de IA', () => {
     it('una generacion correcta consume 1, con generate-mock-api-spec y con generate-and-save (mismo contador)', async () => {
       const u = await createUser('g1@example.com');
       const p = await projectOf(u.id, 'g1-p');
-      const spec = await request(app).post('/api/ai/generate-mock-api-spec').set(u.auth).send(body(p._id.toString()));
+      const spec = await request(app)
+        .post('/api/ai/generate-mock-api-spec')
+        .set(u.auth)
+        .send(body(p._id.toString()));
       expect(spec.status).toBe(200);
       expect(await usedNow(u.idStr)).toBe(1);
-      const save = await request(app).post('/api/ai/generate-and-save').set(u.auth).send(body(p._id.toString()));
+      const save = await request(app)
+        .post('/api/ai/generate-and-save')
+        .set(u.auth)
+        .send(body(p._id.toString()));
       expect(save.status).toBe(200);
       expect(await usedNow(u.idStr)).toBe(2);
     });
@@ -362,7 +405,10 @@ describe('cuota mensual de generaciones de IA', () => {
         res.end('boom');
       });
       for (const route of ['generate-mock-api-spec', 'generate-and-save']) {
-        const res = await request(app).post(`/api/ai/${route}`).set(u.auth).send(body(p._id.toString()));
+        const res = await request(app)
+          .post(`/api/ai/${route}`)
+          .set(u.auth)
+          .send(body(p._id.toString()));
         expect(res.status).toBeGreaterThanOrEqual(500);
         expect(await usedNow(u.idStr)).toBe(0);
       }
@@ -378,7 +424,10 @@ describe('cuota mensual de generaciones de IA', () => {
       fake.setHandler(answer('this is not json at all'));
       let expected = 0;
       for (const route of ['generate-mock-api-spec', 'generate-and-save']) {
-        const res = await request(app).post(`/api/ai/${route}`).set(u.auth).send(body(p._id.toString()));
+        const res = await request(app)
+          .post(`/api/ai/${route}`)
+          .set(u.auth)
+          .send(body(p._id.toString()));
         expect(res.status).toBe(502);
         expected += 1;
         expect(await usedNow(u.idStr)).toBe(expected);
@@ -390,7 +439,10 @@ describe('cuota mensual de generaciones de IA', () => {
       const p = await projectOf(u.id, 'g3b-p');
       fake.setHandler(truncated());
       for (const [i, route] of ['generate-mock-api-spec', 'generate-and-save'].entries()) {
-        const res = await request(app).post(`/api/ai/${route}`).set(u.auth).send(body(p._id.toString()));
+        const res = await request(app)
+          .post(`/api/ai/${route}`)
+          .set(u.auth)
+          .send(body(p._id.toString()));
         expect(res.status).toBe(502);
         expect(await usedNow(u.idStr)).toBe(i + 1);
       }
@@ -406,12 +458,18 @@ describe('cuota mensual de generaciones de IA', () => {
       resetLlm();
       fake.setHandler(truncated());
       for (let i = 0; i < 5; i++) {
-        const res = await request(app).post('/api/ai/generate-mock-api-spec').set(u.auth).send(body(p._id.toString()));
+        const res = await request(app)
+          .post('/api/ai/generate-mock-api-spec')
+          .set(u.auth)
+          .send(body(p._id.toString()));
         expect(res.status).toBe(502);
       }
       const hitsBefore = fake.hits;
       expect(hitsBefore).toBeGreaterThanOrEqual(5);
-      const sixth = await request(app).post('/api/ai/generate-mock-api-spec').set(u.auth).send(body(p._id.toString()));
+      const sixth = await request(app)
+        .post('/api/ai/generate-mock-api-spec')
+        .set(u.auth)
+        .send(body(p._id.toString()));
       expect(sixth.status).toBe(429);
       expect(sixth.body.error.code).toBe(ErrorCode.AI_QUOTA_EXCEEDED);
       expect(fake.hits).toBe(hitsBefore);
@@ -424,7 +482,10 @@ describe('cuota mensual de generaciones de IA', () => {
       fake.setHandler(() => undefined); // never answers
       process.env.AI_LOCAL_TIMEOUT_MS = '300';
       resetLlm();
-      const res = await request(app).post('/api/ai/generate-mock-api-spec').set(u.auth).send(body(p._id.toString()));
+      const res = await request(app)
+        .post('/api/ai/generate-mock-api-spec')
+        .set(u.auth)
+        .send(body(p._id.toString()));
       expect(res.status).toBeGreaterThanOrEqual(500);
       expect(fake.hits).toBe(1);
       expect(await usedNow(u.idStr)).toBe(1);
@@ -435,7 +496,10 @@ describe('cuota mensual de generaciones de IA', () => {
       const p = await projectOf(u.id, 'g3e-p');
       await fake.close();
       for (const route of ['generate-mock-api-spec', 'generate-and-save']) {
-        const res = await request(app).post(`/api/ai/${route}`).set(u.auth).send(body(p._id.toString()));
+        const res = await request(app)
+          .post(`/api/ai/${route}`)
+          .set(u.auth)
+          .send(body(p._id.toString()));
         expect(res.status).toBe(503);
         expect(await usedNow(u.idStr)).toBe(0);
       }
@@ -444,7 +508,10 @@ describe('cuota mensual de generaciones de IA', () => {
 
     it('un fallo anterior a la llamada al modelo (proyecto inexistente) devuelve la unidad', async () => {
       const u = await createUser('g3f@example.com');
-      const res = await request(app).post('/api/ai/generate-mock-api-spec').set(u.auth).send(body(new Types.ObjectId().toString()));
+      const res = await request(app)
+        .post('/api/ai/generate-mock-api-spec')
+        .set(u.auth)
+        .send(body(new Types.ObjectId().toString()));
       expect(res.status).toBeGreaterThanOrEqual(400);
       expect(fake.hits).toBe(0);
       expect(await usedNow(u.idStr)).toBe(0);
@@ -455,7 +522,10 @@ describe('cuota mensual de generaciones de IA', () => {
       const p = await projectOf(u.id, 'g4-p');
       let n = 0;
       fake.setHandler((res) => answer(n++ === 0 ? 'not json' : SPEC)(res));
-      const res = await request(app).post('/api/ai/generate-mock-api-spec').set(u.auth).send(body(p._id.toString()));
+      const res = await request(app)
+        .post('/api/ai/generate-mock-api-spec')
+        .set(u.auth)
+        .send(body(p._id.toString()));
       expect(res.status).toBe(200);
       expect(fake.hits).toBe(2); // first answer + repair
       expect(await usedNow(u.idStr)).toBe(1);
@@ -468,7 +538,10 @@ describe('cuota mensual de generaciones de IA', () => {
       process.env.AI_LOCAL_TIMEOUT_MS = '5000';
       process.env.AI_TOTAL_TIMEOUT_MS = '250';
       resetLlm();
-      const res = await request(app).post('/api/ai/generate-mock-api-spec').set(u.auth).send(body(p._id.toString()));
+      const res = await request(app)
+        .post('/api/ai/generate-mock-api-spec')
+        .set(u.auth)
+        .send(body(p._id.toString()));
       expect(res.status).toBe(504);
       expect(await usedNow(u.idStr)).toBe(1);
     });
@@ -479,7 +552,10 @@ describe('cuota mensual de generaciones de IA', () => {
       await UsageModel.create({ ownerId: u.id, period: periodOf(new Date()), aiGenerations: 5 });
       for (const route of ['generate-mock-api-spec', 'generate-and-save']) {
         const before = Date.now();
-        const res = await request(app).post(`/api/ai/${route}`).set(u.auth).send(body(p._id.toString()));
+        const res = await request(app)
+          .post(`/api/ai/${route}`)
+          .set(u.auth)
+          .send(body(p._id.toString()));
         expect(res.status).toBe(429);
         expect(ErrorCode.AI_QUOTA_EXCEEDED).toBe('AI_QUOTA_EXCEEDED');
         expect(res.body.success).toBe(false);
@@ -488,7 +564,9 @@ describe('cuota mensual de generaciones de IA', () => {
         expect(res.body.error.resetsAt).toBe(resetsAt.toISOString());
         const retryAfter = Number(res.headers['retry-after']);
         expect(retryAfter).toBeGreaterThan(0);
-        expect(Math.abs(retryAfter - Math.ceil((resetsAt.getTime() - before) / 1000))).toBeLessThanOrEqual(5);
+        expect(
+          Math.abs(retryAfter - Math.ceil((resetsAt.getTime() - before) / 1000))
+        ).toBeLessThanOrEqual(5);
       }
       expect(fake.hits).toBe(0);
       expect(await usedNow(u.idStr)).toBe(5);
@@ -499,22 +577,47 @@ describe('cuota mensual de generaciones de IA', () => {
       const stranger = await createUser('g7-stranger@example.com');
       const p = await projectOf(owner.id, 'g7-p');
       // not a member -> 403 and nothing reserved
-      const forbidden = await request(app).post('/api/ai/generate-and-save').set(stranger.auth).send(body(p._id.toString()));
+      const forbidden = await request(app)
+        .post('/api/ai/generate-and-save')
+        .set(stranger.auth)
+        .send(body(p._id.toString()));
       expect(forbidden.status).toBe(403);
       expect(await usedNow(stranger.idStr)).toBe(0);
       // a viewer cannot save -> 403 and nothing reserved
       const viewer = await createUser('g7-viewer@example.com');
-      await ProjectModel.updateOne({ _id: p._id }, { $push: { members: { userId: viewer.id, role: 'viewer' } } });
-      const viewerSave = await request(app).post('/api/ai/generate-and-save').set(viewer.auth).send(body(p._id.toString()));
+      await ProjectModel.updateOne(
+        { _id: p._id },
+        { $push: { members: { userId: viewer.id, role: 'viewer' } } }
+      );
+      const viewerSave = await request(app)
+        .post('/api/ai/generate-and-save')
+        .set(viewer.auth)
+        .send(body(p._id.toString()));
       expect(viewerSave.status).toBe(403);
       expect(await usedNow(viewer.idStr)).toBe(0);
       // unauthenticated -> 401
-      expect((await request(app).post('/api/ai/generate-and-save').send(body(p._id.toString()))).status).toBe(401);
+      expect(
+        (await request(app).post('/api/ai/generate-and-save').send(body(p._id.toString()))).status
+      ).toBe(401);
       // per-minute limiter answers 429 RATE_LIMIT_ERROR before the monthly quota is touched
       process.env.AI_RATE_PER_MINUTE = '1';
-      await UsageModel.create({ ownerId: owner.id, period: periodOf(new Date()), aiGenerations: 2 });
-      expect((await request(app).post('/api/ai/generate-and-save').set(owner.auth).send(body(p._id.toString()))).status).toBe(200);
-      const limited = await request(app).post('/api/ai/generate-and-save').set(owner.auth).send(body(p._id.toString()));
+      await UsageModel.create({
+        ownerId: owner.id,
+        period: periodOf(new Date()),
+        aiGenerations: 2,
+      });
+      expect(
+        (
+          await request(app)
+            .post('/api/ai/generate-and-save')
+            .set(owner.auth)
+            .send(body(p._id.toString()))
+        ).status
+      ).toBe(200);
+      const limited = await request(app)
+        .post('/api/ai/generate-and-save')
+        .set(owner.auth)
+        .send(body(p._id.toString()));
       expect(limited.status).toBe(429);
       expect(limited.body.error.code).toBe(ErrorCode.RATE_LIMIT_ERROR);
       expect(await usedNow(owner.idStr)).toBe(3);
@@ -525,7 +628,12 @@ describe('cuota mensual de generaciones de IA', () => {
       const p = await projectOf(u.id, 'g8-p');
       await UsageModel.create({ ownerId: u.id, period: periodOf(new Date()), aiGenerations: 2 });
       const results = await Promise.all(
-        Array.from({ length: 5 }, () => request(app).post('/api/ai/generate-mock-api-spec').set(u.auth).send(body(p._id.toString())))
+        Array.from({ length: 5 }, () =>
+          request(app)
+            .post('/api/ai/generate-mock-api-spec')
+            .set(u.auth)
+            .send(body(p._id.toString()))
+        )
       );
       expect(results.filter((r) => r.status === 200)).toHaveLength(3);
       expect(results.filter((r) => r.status === 429)).toHaveLength(2);
@@ -541,7 +649,10 @@ describe('cuota mensual de generaciones de IA', () => {
       await UserModel.updateOne({ _id: u.id }, { $set: { plan: 'starter' } }); // downgrade Pro -> Starter
       invalidatePlanCache(u.idStr);
 
-      const created = await request(app).post('/api/projects').set(u.auth).send({ title: 'Nuevo proyecto' });
+      const created = await request(app)
+        .post('/api/projects')
+        .set(u.auth)
+        .send({ title: 'Nuevo proyecto' });
       expect(created.status).toBe(402);
       expect(created.body.error.code).toBe('PLAN_LIMIT_REACHED');
       expect(created.body.error.details).toMatchObject({ plan: 'starter', limit: 15, active: 20 });
@@ -551,8 +662,12 @@ describe('cuota mensual de generaciones de IA', () => {
     it('un Starter que cancela con 15 proyectos conserva los 15 y no puede crear hasta bajar de 5', async () => {
       const u = await createUser('i2@example.com', { plan: 'starter', billingStatus: 'active' });
       const created: Types.ObjectId[] = [];
-      for (let i = 0; i < 15; i++) created.push((await projectOf(u.id, `i2-p${i}`))._id as Types.ObjectId);
-      await UserModel.updateOne({ _id: u.id }, { $set: { billingStatus: 'canceled', plan: 'free' } });
+      for (let i = 0; i < 15; i++)
+        created.push((await projectOf(u.id, `i2-p${i}`))._id as Types.ObjectId);
+      await UserModel.updateOne(
+        { _id: u.id },
+        { $set: { billingStatus: 'canceled', plan: 'free' } }
+      );
       invalidatePlanCache(u.idStr);
 
       const blocked = await request(app).post('/api/projects').set(u.auth).send({ title: 'Otro' });
@@ -561,7 +676,10 @@ describe('cuota mensual de generaciones de IA', () => {
       expect(await ProjectModel.countDocuments({ ownerId: u.id })).toBe(15);
 
       // archive down to 4 active: creating works again (the archived ones are kept)
-      await ProjectModel.updateMany({ _id: { $in: created.slice(4) } }, { $set: { isArchived: true } });
+      await ProjectModel.updateMany(
+        { _id: { $in: created.slice(4) } },
+        { $set: { isArchived: true } }
+      );
       const ok = await request(app).post('/api/projects').set(u.auth).send({ title: 'Otro' });
       expect(ok.status).toBe(201);
       expect(await ProjectModel.countDocuments({ ownerId: u.id })).toBe(16);
@@ -600,7 +718,10 @@ describe('cuota mensual de generaciones de IA', () => {
       const u = await createUser('del@example.com');
       await reserveAiGeneration(u.idStr);
       expect(await UsageModel.countDocuments({ ownerId: u.id })).toBe(1);
-      const res = await request(app).delete('/api/users/me').set(u.auth).send({ password: PASSWORD });
+      const res = await request(app)
+        .delete('/api/users/me')
+        .set(u.auth)
+        .send({ password: PASSWORD });
       expect(res.status).toBe(204);
       expect(await UsageModel.countDocuments({ ownerId: u.id })).toBe(0);
     });

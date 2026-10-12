@@ -77,12 +77,12 @@ const en = {
     how: {
       title: 'See how it works in 25 seconds.',
       text: 'From your GitHub repository to a live mock API, step by step.',
-      frameTitle: 'Animation: connect a repository, generate the API with AI and use it from your frontend',
+      frameTitle:
+        'Animation: connect a repository, generate the API with AI and use it from your frontend',
     },
     story: {
       title: 'No more “Lorem Ipsum”.',
-      text:
-        'Point to any repository. Our AI parses your types, interfaces and schemas to generate a mirror API in seconds. Mockia populates your endpoints with context-aware data that looks and feels like production.',
+      text: 'Point to any repository. Our AI parses your types, interfaces and schemas to generate a mirror API in seconds. Mockia populates your endpoints with context-aware data that looks and feels like production.',
       added: 'Added: ',
       removed: 'Removed: ',
     },
@@ -113,7 +113,8 @@ const en = {
     },
     bento: {
       teamTitle: 'Team collaboration',
-      teamText: 'Share mocks with your team. Secure-by-default environment for modern engineering organizations.',
+      teamText:
+        'Share mocks with your team. Secure-by-default environment for modern engineering organizations.',
       unlimitedProjects: 'Unlimited projects',
       autoSync: 'Changes sync automatically',
       rbac: 'RBAC permissions',
@@ -201,8 +202,10 @@ const en = {
     resetsOn: 'The request counter resets on {date}.',
     aiLabel: 'AI generations',
     aiResetsOn: 'Resets on {date}',
-    aiWarn: 'You have used {used} of your {limit} AI generations this month. The counter resets on {date}.',
-    aiFull: 'You have used all {limit} AI generations of your {plan} plan this month. They are available again on {date}.',
+    aiWarn:
+      'You have used {used} of your {limit} AI generations this month. The counter resets on {date}.',
+    aiFull:
+      'You have used all {limit} AI generations of your {plan} plan this month. They are available again on {date}.',
     plansTitle: 'Plans',
     upgradeCta: 'Upgrade plan',
     viewPlans: 'See plans',
@@ -211,23 +214,31 @@ const en = {
     checkout: {
       success: 'Payment received. Activating your plan…',
       activated: 'Your {plan} plan is active. Thanks for supporting Mockia!',
-      pending: 'Stripe hasn’t confirmed the payment yet. It can take a minute: refresh this page shortly.',
+      pending:
+        'Stripe hasn’t confirmed the payment yet. It can take a minute: refresh this page shortly.',
       cancel: 'Checkout canceled. You haven’t been charged.',
     },
-    pastDue: 'Your last payment failed, so your account is limited to the Free plan. Update your payment method to restore {plan}.',
-    pastDueGrace: 'We couldn’t charge your card. Your {plan} features stay active until {date}. Update your payment method.',
+    pastDue:
+      'Your last payment failed, so your account is limited to the Free plan. Update your payment method to restore {plan}.',
+    pastDueGrace:
+      'We couldn’t charge your card. Your {plan} features stay active until {date}. Update your payment method.',
     updatePayment: 'Update payment method',
-    cancelScheduled: 'Your {plan} subscription ends on {date}. You can keep it from the billing portal.',
-    overLimit: 'You have more active projects than your plan allows. Archive some or upgrade to create new ones.',
+    cancelScheduled:
+      'Your {plan} subscription ends on {date}. You can keep it from the billing portal.',
+    overLimit:
+      'You have more active projects than your plan allows. Archive some or upgrade to create new ones.',
     atLimit: 'You’ve reached the {limit} active projects of your plan.',
     paymentsOff: 'Online payments aren’t enabled on this server yet.',
     errors: {
-      limitReached: 'Your {plan} plan allows {limit} active projects. Archive one or upgrade your plan.',
-      alreadySubscribed: 'You already have a subscription. Change your plan from the billing portal.',
+      limitReached:
+        'Your {plan} plan allows {limit} active projects. Archive one or upgrade your plan.',
+      alreadySubscribed:
+        'You already have a subscription. Change your plan from the billing portal.',
       noAccount: 'You don’t have a billing account yet. Subscribe to a plan first.',
       notConfigured: 'Online payments aren’t enabled on this server yet.',
       stripe: 'Stripe is not responding right now. Please try again in a moment.',
-      aiQuota: 'You’ve used {used} of the {limit} AI generations included in your plan this month. They become available again on {date}.',
+      aiQuota:
+        'You’ve used {used} of the {limit} AI generations included in your plan this month. They become available again on {date}.',
     },
   },
 
@@ -263,14 +274,21 @@ const en = {
     cancelled: 'Cancelled. Nothing was sent and no attempt was used.',
     progress: {
       label: 'Generation progress',
-      solving: 'Solving a quick proof of work in your browser. It keeps bots out and takes a few seconds…',
+      solving:
+        'Solving a quick proof of work in your browser. It keeps bots out and takes a few seconds…',
       sending: 'Generating your API with AI. This can take up to a minute…',
     },
-    powTimeout: 'Solving the challenge took more than a minute, so it was stopped. No attempt was used. Try again.',
-    powUnsupported: 'Your browser cannot run the check here. It needs a secure (https) connection and a recent browser. Try another browser or create a free account.',
-    powFailed: 'The check could not complete in your browser. Nothing was sent and no attempt was used. Try again, or try another browser.',
+    powTimeout:
+      'Solving the challenge took more than a minute, so it was stopped. No attempt was used. Try again.',
+    powUnsupported:
+      'Your browser cannot run the check here. It needs a secure (https) connection and a recent browser. Try another browser or create a free account.',
+    powFailed:
+      'The check could not complete in your browser. Nothing was sent and no attempt was used. Try again, or try another browser.',
     announce: {
-      ready: { one: 'Your mock API is ready: {count} endpoint. It expires in {minutes} minutes.', other: 'Your mock API is ready: {count} endpoints. It expires in {minutes} minutes.' },
+      ready: {
+        one: 'Your mock API is ready: {count} endpoint. It expires in {minutes} minutes.',
+        other: 'Your mock API is ready: {count} endpoints. It expires in {minutes} minutes.',
+      },
       response: 'Response received: status {status}.',
     },
     result: {
@@ -301,10 +319,12 @@ const en = {
     },
     claim: {
       saving: 'Saving your demo as a project…',
-      waiting: 'Your demo is waiting for you. Verify your email address and we will save it as a project. The demo only lasts a few minutes, so do it soon.',
+      waiting:
+        'Your demo is waiting for you. Verify your email address and we will save it as a project. The demo only lasts a few minutes, so do it soon.',
       done: 'Your demo is now a project of your account: {title}.',
       open: 'Open project',
-      planLimit: 'We could not save your demo because your {plan} plan allows {limit} active projects. Archive a project or upgrade your plan, then try again while the demo lasts.',
+      planLimit:
+        'We could not save your demo because your {plan} plan allows {limit} active projects. Archive a project or upgrade your plan, then try again while the demo lasts.',
       plans: 'See plans',
       retry: 'Try again',
       gone: 'That demo has expired or was already saved, so there is nothing left to keep. You can generate a new one.',
@@ -316,11 +336,15 @@ const en = {
       unavailableTitle: 'The demo is not available right now',
       unavailable:
         'It may be turned off, busy or out of budget for today. Try again in a moment, or create a free account to generate mock APIs without the demo limits.',
-      limit: "You have used today's attempts. Come back around {time}, or create a free account to keep going.",
+      limit:
+        "You have used today's attempts. Come back around {time}, or create a free account to keep going.",
       rateLimit: 'Too many requests. Wait a minute and try again.',
-      badOutput: "The AI returned something we could not use. This attempt counted toward today's limit. Try again or pick a template.",
-      timeout: "The AI took too long to answer. This attempt counted toward today's limit. Try again in a moment.",
-      providerDown: "The AI service is not responding right now. This attempt may have counted toward today's limit (see the counter above). Try again in a moment.",
+      badOutput:
+        "The AI returned something we could not use. This attempt counted toward today's limit. Try again or pick a template.",
+      timeout:
+        "The AI took too long to answer. This attempt counted toward today's limit. Try again in a moment.",
+      providerDown:
+        "The AI service is not responding right now. This attempt may have counted toward today's limit (see the counter above). Try again in a moment.",
       network: 'We could not reach the server. Check your connection and try again.',
       other: 'Something went wrong. Please try again.',
     },
@@ -335,7 +359,8 @@ const en = {
     emailPlaceholder: 'you@email.com',
     password: 'Password',
     rememberMe: 'Remember me',
-    legalNotice: 'By signing up you accept the <terms>Terms of Service</terms> and the <privacy>Privacy Policy</privacy>.',
+    legalNotice:
+      'By signing up you accept the <terms>Terms of Service</terms> and the <privacy>Privacy Policy</privacy>.',
     signIn: 'Sign in',
     createAccount: 'Create account',
     noAccount: 'Don’t have an account?',
@@ -346,11 +371,14 @@ const en = {
     passwordHint: 'At least 10 characters.',
     backToLogin: 'Back to log in',
     forgotTitle: 'Reset your password',
-    forgotIntro: 'Enter the email of your account and we will send you a link to choose a new password.',
+    forgotIntro:
+      'Enter the email of your account and we will send you a link to choose a new password.',
     forgotSubmit: 'Send reset link',
-    forgotSent: 'If an account exists for that email, a reset link is on its way. It is valid for 30 minutes.',
+    forgotSent:
+      'If an account exists for that email, a reset link is on its way. It is valid for 30 minutes.',
     resetTitle: 'Choose a new password',
-    resetIntro: 'Pick a password you do not use anywhere else. Changing it signs you out on every device.',
+    resetIntro:
+      'Pick a password you do not use anywhere else. Changing it signs you out on every device.',
     newPassword: 'New password',
     confirmPassword: 'Confirm new password',
     resetSubmit: 'Change password',
@@ -363,7 +391,8 @@ const en = {
     verifyDone: 'Your email address is verified. Thank you!',
     verifyMissingToken: 'This verification link is incomplete.',
     verifyContinue: 'Continue to your projects',
-    verifyBannerText: 'Verify your email address to unlock AI generation and billing. We sent you a link when you signed up.',
+    verifyBannerText:
+      'Verify your email address to unlock AI generation and billing. We sent you a link when you signed up.',
     verifyBannerResend: 'Resend email',
     verifyBannerSent: 'Verification email sent. Check your inbox.',
     verifyBannerDismiss: 'Dismiss',
@@ -398,23 +427,29 @@ const en = {
     invalidCredentials: 'Invalid email or password',
     emailTaken: 'That email is already registered',
     tooManyRequests: 'Too many requests. Try again later.',
-    aiRateLimit: 'You have made too many AI generations in a short time. Wait a minute and try again.',
+    aiRateLimit:
+      'You have made too many AI generations in a short time. Wait a minute and try again.',
     aiTimeout: 'The AI took too long to answer and the request was cancelled. Please try again.',
     aiUnavailable: 'The AI service is not available right now. Please try again in a few minutes.',
-    aiInvalidAnswer: 'The AI returned an answer we could not use. Please try again (rephrasing the description may help).',
+    aiInvalidAnswer:
+      'The AI returned an answer we could not use. Please try again (rephrasing the description may help).',
     aiUpstream: 'The AI provider failed on our side. Please try again later.',
-    unsupportedMediaType: 'The request was sent in a format the server does not accept. Reload the page and try again.',
-    tooLarge: 'The request is too large. Shorten the text (the AI description allows up to 4000 characters).',
+    unsupportedMediaType:
+      'The request was sent in a format the server does not accept. Reload the page and try again.',
+    tooLarge:
+      'The request is too large. Shorten the text (the AI description allows up to 4000 characters).',
     projectNotFound: 'Project not found',
     endpointNotFound: 'Endpoint not found',
     userNotFound: 'User not found',
     noProjectAccess: 'You don’t have access to this project',
     alreadyMember: 'That user is already a member of this project',
-    ownerCannotLeave: 'Owners cannot leave the project. Transfer ownership or delete the project instead.',
+    ownerCannotLeave:
+      'Owners cannot leave the project. Transfer ownership or delete the project instead.',
     invalidGithubUrl: 'Invalid GitHub URL format',
     sessionExpired: 'Invalid or expired session. Please log in again.',
     invalidToken: 'This link is invalid, has expired or was already used.',
-    emailNotVerified: 'Verify your email address to use this feature. You can resend the email from your dashboard.',
+    emailNotVerified:
+      'Verify your email address to use this feature. You can resend the email from your dashboard.',
   },
 
   dashboard: {
@@ -454,13 +489,15 @@ const en = {
     aiTitle: 'AI generation',
     aiText: 'Do you want Mockia AI to generate endpoints for you?',
     aiCardTitle: 'Smart API generation',
-    aiCardText: 'Mockia will use LLMs to create realistic endpoints and data structures based on your input.',
+    aiCardText:
+      'Mockia will use LLMs to create realistic endpoints and data structures based on your input.',
     aiToggle: 'Generate endpoints with AI',
     aiPrompt: 'What should the AI generate?',
     aiPromptPlaceholder:
       'Describe the endpoints you want (e.g. a user management API with login, register and profile endpoints…)',
     aiDefaultBasic: 'Create a basic API for this project with common endpoints.',
-    aiDefaultGithub: 'Extract all relevant API endpoints, interfaces and controllers to create a complete mock API.',
+    aiDefaultGithub:
+      'Extract all relevant API endpoints, interfaces and controllers to create a complete mock API.',
     aiDefaultEmpty:
       'Create a complete REST API with GET, POST, PUT, DELETE endpoints for a simple resource (e.g. tasks, users or products).',
     creating: 'Creating…',
@@ -486,7 +523,8 @@ const en = {
     successText: 'Your mock API has been created successfully.',
     mockBaseUrl: 'Mock base URL',
     important: 'Important:',
-    publicNote: 'Your mock is public: anyone with the URL can call it. To require an API key, open <strong>Project settings → API access</strong>.',
+    publicNote:
+      'Your mock is public: anyone with the URL can call it. To require an API key, open <strong>Project settings → API access</strong>.',
     goToEditor: 'Go to editor →',
   },
 
@@ -526,7 +564,8 @@ const en = {
     aiModalTitle: 'Generate endpoints with AI',
     aiModalText:
       'Tell Mockia AI which endpoints you want to create. You can describe the business logic, data models or specific routes you need.',
-    aiModalPlaceholder: 'e.g. Create endpoints for a shopping cart with add, remove and checkout functionality…',
+    aiModalPlaceholder:
+      'e.g. Create endpoints for a shopping cart with add, remove and checkout functionality…',
     generate: 'Generate',
     aiProgress: [
       'Analyzing current project structure…',
@@ -537,7 +576,8 @@ const en = {
       'Almost there…',
     ],
     confirmDeleteTitle: 'Confirm deletion',
-    confirmDeleteText: 'Are you sure you want to delete this endpoint? This action cannot be undone.',
+    confirmDeleteText:
+      'Are you sure you want to delete this endpoint? This action cannot be undone.',
   },
 
   tree: {
@@ -577,7 +617,8 @@ const en = {
     openRepo: 'Open repository',
     openOnGithub: 'Open on GitHub',
     leaveTitle: 'Leave project',
-    leaveText: 'Once you leave the project, you will lose all access. The owner must invite you again.',
+    leaveText:
+      'Once you leave the project, you will lose all access. The owner must invite you again.',
     leaveConfirm: 'Are you absolutely sure you want to leave this project?',
     stay: 'No, stay',
     leaving: 'Leaving…',
@@ -608,12 +649,14 @@ const en = {
 
   apiAccess: {
     title: 'Who can call this mock',
-    intro: 'The mock URL is open to anyone by default. Switch to an API key to keep the data of your prototype private.',
+    intro:
+      'The mock URL is open to anyone by default. Switch to an API key to keep the data of your prototype private.',
     visibilityLegend: 'Mock visibility',
     public: 'Public',
     publicHint: 'Anyone with the URL can call your mock. Best for demos and open prototypes.',
     keyed: 'Requires API key',
-    keyedHint: 'Requests must send the key in the {header} header. CORS preflight (OPTIONS) requests never need it.',
+    keyedHint:
+      'Requests must send the key in the {header} header. CORS preflight (OPTIONS) requests never need it.',
     keyNeededToRequire: 'Generate an API key first to require it.',
     visibilitySaved: 'Mock visibility is now: {mode}',
     visibilityFailed: 'Could not change the visibility',
@@ -624,15 +667,17 @@ const en = {
     generate: 'Generate API key',
     rotate: 'Rotate key',
     working: 'Working…',
-    rotateWarning: 'Rotating invalidates the current key immediately: every client still using it will get a 401.',
+    rotateWarning:
+      'Rotating invalidates the current key immediately: every client still using it will get a 401.',
     revoke: 'Revoke key',
     revokeConfirm: 'Revoke it?',
     revokeConfirmText: 'Clients using this key will get a 401 right away.',
     revokeYes: 'Yes, revoke',
-    lockedNote: 'This mock requires a key but none exists: every request gets a 401 until you generate one.',
+    lockedNote:
+      'This mock requires a key but none exists: every request gets a 401 until you generate one.',
     newKeyTitle: 'Your new API key',
-    newKeyWarning: 'Copy it now. You won\'t see it again.',
-    newKeyLive: 'API key created. Copy it now, you won\'t see it again.',
+    newKeyWarning: "Copy it now. You won't see it again.",
+    newKeyLive: "API key created. Copy it now, you won't see it again.",
     copyKey: 'Copy key',
     keyCopiedLive: 'API key copied to the clipboard',
     savedIt: 'I have saved it',
@@ -666,7 +711,8 @@ const en = {
       confirm: 'Delete my account permanently',
       deleting: 'Deleting…',
       wrongPassword: 'That password is not correct. Nothing was deleted.',
-      subscriptionFailed: 'We could not cancel your subscription, so nothing was deleted. Try again in a few minutes.',
+      subscriptionFailed:
+        'We could not cancel your subscription, so nothing was deleted. Try again in a few minutes.',
       subscriptionUnavailable:
         'Your account has an active subscription but payments are not available on this server, so it cannot be cancelled. Nothing was deleted; contact support.',
       deletedNotice: 'Your account and its data were deleted.',
@@ -695,7 +741,8 @@ const en = {
     notUseful: 'No, it was not useful',
     thanks: 'Thanks for your feedback!',
     failed: 'We could not send your feedback. Please try again.',
-    consentNeeded: 'Ratings are only kept if you let Mockia use your generations to improve the AI.',
+    consentNeeded:
+      'Ratings are only kept if you let Mockia use your generations to improve the AI.',
     consentLink: 'Turn it on in My data',
   },
 
@@ -715,11 +762,10 @@ const en = {
 
   notFound: {
     title: 'Lost in the <em>API matrix</em>',
-    text:
-      'The endpoint you are trying to reach has vanished into the digital void. Perhaps it was moved, deleted, or never existed in the first place.',
+    text: 'The endpoint you are trying to reach has vanished into the digital void. Perhaps it was moved, deleted, or never existed in the first place.',
     home: 'Return to home',
   },
-}
+};
 
-export type Messages = typeof en
-export default en
+export type Messages = typeof en;
+export default en;

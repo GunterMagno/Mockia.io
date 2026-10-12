@@ -17,7 +17,8 @@ const DISPLAY_PREFIX_LENGTH = KEY_PREFIX.length + 6;
 /** Longer than any key we issue: not worth hashing (headers are capped by Node anyway). */
 const MAX_PRESENTED_LENGTH = 256;
 
-export const hashApiKey = (key: string): string => crypto.createHash('sha256').update(key, 'utf8').digest('hex');
+export const hashApiKey = (key: string): string =>
+  crypto.createHash('sha256').update(key, 'utf8').digest('hex');
 
 /** A new key. The caller stores `hash` and `prefix`; `apiKey` is shown to the user once and then forgotten. */
 export function generateApiKey(): { apiKey: string; hash: string; prefix: string } {
@@ -36,7 +37,10 @@ export function presentedApiKey(headers: IncomingHttpHeaders): string | undefine
 }
 
 /** True when `presented` is the key whose SHA-256 is `storedHash`. Compares digests in constant time. */
-export function apiKeyMatches(presented: string | undefined, storedHash: string | null | undefined): boolean {
+export function apiKeyMatches(
+  presented: string | undefined,
+  storedHash: string | null | undefined
+): boolean {
   if (!presented || !storedHash || presented.length > MAX_PRESENTED_LENGTH) return false;
   const expected = Buffer.from(storedHash, 'hex');
   const actual = Buffer.from(hashApiKey(presented), 'hex');
@@ -53,7 +57,10 @@ export interface MockAccessProject {
  * May this request reach the mock? Public projects: always. 'key' projects: only with the right key.
  * A 'key' project with no key (revoked) lets nobody in: it fails closed.
  */
-export function mockAccessAllowed(project: MockAccessProject, headers: IncomingHttpHeaders): boolean {
+export function mockAccessAllowed(
+  project: MockAccessProject,
+  headers: IncomingHttpHeaders
+): boolean {
   if (project.visibility !== 'key') return true;
   return apiKeyMatches(presentedApiKey(headers), project.apiKeyHash);
 }

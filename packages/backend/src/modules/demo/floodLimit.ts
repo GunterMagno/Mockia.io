@@ -43,13 +43,17 @@ export function createFloodLimiter(opts: FloodLimiterOptions) {
         if (windows.size >= opts.maxKeys) {
           dropExpired(t);
           // Map iterates in insertion order: the first key is the oldest window
-          while (windows.size >= opts.maxKeys) windows.delete(windows.keys().next().value as string);
+          while (windows.size >= opts.maxKeys)
+            windows.delete(windows.keys().next().value as string);
         }
         w = { start: t, count: 0 };
         windows.set(key, w);
       }
       if (w.count >= opts.max) {
-        return { ok: false, retryAfterSeconds: Math.max(1, Math.ceil((w.start + opts.windowMs - t) / 1000)) };
+        return {
+          ok: false,
+          retryAfterSeconds: Math.max(1, Math.ceil((w.start + opts.windowMs - t) / 1000)),
+        };
       }
       w.count++;
       return { ok: true, retryAfterSeconds: 0 };

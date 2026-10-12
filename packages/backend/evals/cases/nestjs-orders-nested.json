@@ -1,11 +1,7 @@
 {
   "id": "nestjs-orders-nested",
   "description": "NestJS controller with a parent path parameter in the @Controller prefix.",
-  "tags": [
-    "nestjs",
-    "nested-resources",
-    "path-params"
-  ],
+  "tags": ["nestjs", "nested-resources", "path-params"],
   "input": {
     "projectTitle": "Customer Orders",
     "userInput": "Mock the orders of a customer.",
@@ -33,21 +29,15 @@
           "summary": "@Controller(\"customers/:customerId/orders\") OrdersController",
           "routes": [
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/customers/:customerId/orders"
             },
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/customers/:customerId/orders/:orderId"
             },
             {
-              "methods": [
-                "POST"
-              ],
+              "methods": ["POST"],
               "path": "/customers/:customerId/orders"
             }
           ]
@@ -103,13 +93,7 @@
               "type": "string"
             }
           },
-          "required": [
-            "id",
-            "customerId",
-            "totalCents",
-            "status",
-            "placedAt"
-          ]
+          "required": ["id", "customerId", "totalCents", "status", "placedAt"]
         }
       },
       "examples": [
@@ -155,13 +139,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "customerId",
-          "totalCents",
-          "status",
-          "placedAt"
-        ]
+        "required": ["id", "customerId", "totalCents", "status", "placedAt"]
       },
       "examples": [
         {
@@ -202,16 +180,11 @@
                   "type": "integer"
                 }
               },
-              "required": [
-                "sku",
-                "quantity"
-              ]
+              "required": ["sku", "quantity"]
             }
           }
         },
-        "required": [
-          "items"
-        ]
+        "required": ["items"]
       },
       "responseSchema": {
         "type": "object",
@@ -232,13 +205,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "customerId",
-          "totalCents",
-          "status",
-          "placedAt"
-        ]
+        "required": ["id", "customerId", "totalCents", "status", "placedAt"]
       },
       "examples": [
         {

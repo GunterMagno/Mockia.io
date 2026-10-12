@@ -24,7 +24,10 @@ const NO_RELEASE = async (): Promise<void> => undefined;
  * grace already applied). A plan without a finite cap is not metered and writes nothing.
  * `release()` is idempotent and never throws (a failed give-back is logged: the user can only lose one generation).
  */
-export async function reserveAiGeneration(userId: string, now: Date = aiQuotaClock.now()): Promise<AiReservation> {
+export async function reserveAiGeneration(
+  userId: string,
+  now: Date = aiQuotaClock.now()
+): Promise<AiReservation> {
   const plan = await getUserPlan(userId);
   const limit = PLAN_LIMITS[plan].maxMonthlyAiGenerations;
   if (!Number.isFinite(limit)) return { ok: true, release: NO_RELEASE };

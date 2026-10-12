@@ -11,7 +11,8 @@ export const swaggerOptions: swaggerJsdoc.Options = {
     info: {
       title: 'Mockia.io API Documentation',
       version: '1.0.0',
-      description: 'API documentation for the Mockia.io platform. Generate, manage and simulate APIs with AI.',
+      description:
+        'API documentation for the Mockia.io platform. Generate, manage and simulate APIs with AI.',
       contact: {
         name: 'Mockia Support',
         url: 'https://mockia.io',

@@ -6,9 +6,9 @@
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  
+
   opacity: 0;
-  transition: opacity 0.40s ease-out;
+  transition: opacity 0.4s ease-out;
   pointer-events: none;
 
   &.active {
@@ -18,7 +18,9 @@
 }
 .modal {
   /* recibe foco programatico al abrir (sin controles): sin anillo sobre todo el panel */
-  &:focus { outline: none; }
+  &:focus {
+    outline: none;
+  }
 
   width: var(--modal-width, 600px);
   max-width: 95vw;
@@ -28,10 +30,12 @@
   box-shadow: var(--shadow-lg);
   background: var(--card-bg);
   border: 1px solid var(--border);
-  
+
   opacity: 0;
   transform: scale(0.95) translateY(12px);
-  transition: transform 0.45s var(--ease-out), opacity 0.45s ease-out;
+  transition:
+    transform 0.45s var(--ease-out),
+    opacity 0.45s ease-out;
 
   &.active {
     opacity: 1;

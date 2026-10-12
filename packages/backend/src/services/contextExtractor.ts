@@ -15,22 +15,25 @@ import { ErrorCode } from '@mockia/shared';
  * @param content - File contents to parse
  * @returns Array of extracted paths and their methods
  */
-export function extractRoutesFromFileContent(content: string): Array<{ path: string; methods: string[] }> {
+export function extractRoutesFromFileContent(
+  content: string
+): Array<{ path: string; methods: string[] }> {
   const routes: Array<{ path: string; methods: string[] }> = [];
   const foundMap = new Map<string, Set<string>>();
 
   // 1. Find explicit HTTP method calls on client libraries or router:
   // e.g. axios.get('/api/users') or router.post('/login')
-  const apiCallRegex = /(?:axios|fetch|client|api|router|app)\.(get|post|put|patch|delete)\(\s*['"`](\/[^'"`\s\?]+)['"`]/gi;
+  const apiCallRegex =
+    /(?:axios|fetch|client|api|router|app)\.(get|post|put|patch|delete)\(\s*['"`](\/[^'"`\s\?]+)['"`]/gi;
   let match;
 
   while ((match = apiCallRegex.exec(content)) !== null) {
     const method = match[1].toUpperCase();
     const rawPath = match[2];
-    
+
     // Normalize path by replacing dynamic parameters (e.g. /users/123 or /users/:id) to standard path templates
     const normalizedPath = rawPath.replace(/\/\d+(?=\/|$)/g, '/{id}').replace(/\/:\w+/g, '/{id}');
-    
+
     if (!foundMap.has(normalizedPath)) {
       foundMap.set(normalizedPath, new Set());
     }
@@ -41,10 +44,10 @@ export function extractRoutesFromFileContent(content: string): Array<{ path: str
   const pathRegex = /['"`](\/[a-zA-Z0-9_\-]+(?:\/[a-zA-Z0-9_\-:{}/]+)+)['"`]/g;
   while ((match = pathRegex.exec(content)) !== null) {
     const rawPath = match[1];
-    
+
     // Ignore common non-paths like file extensions, image assets, or long text values
     if (rawPath.includes('.') || rawPath.length > 50) continue;
-    
+
     const normalizedPath = rawPath.replace(/\/\d+(?=\/|$)/g, '/{id}').replace(/\/:\w+/g, '/{id}');
     if (!foundMap.has(normalizedPath)) {
       // Default to GET if discovered out-of-context
@@ -115,7 +118,7 @@ export async function extractContextForProject(
     try {
       const filePath = path.join(repoPath, readmeFile.path);
       const content = await fs.readFile(filePath, 'utf-8');
-      
+
       files.push({
         path: readmeFile.path,
         type: 'other' as const,
@@ -132,7 +135,7 @@ export async function extractContextForProject(
   for (const file of codeFiles) {
     try {
       const filePath = path.join(repoPath, file.path);
-      
+
       // Read file content for route extraction
       let fileContent = '';
       try {
@@ -150,7 +153,9 @@ export async function extractContextForProject(
         parsed = await parseTypeScriptFile(filePath);
       } catch (err) {
         // Skip TS parsing warnings, we still preserve the file and its extracted routes!
-        console.warn(`[ContextExtractor] AST parsing skipped for ${file.path}: ${err instanceof Error ? err.message : err}`);
+        console.warn(
+          `[ContextExtractor] AST parsing skipped for ${file.path}: ${err instanceof Error ? err.message : err}`
+        );
       }
 
       const interfaces = parsed.interfaces.map((i: any) => ({
@@ -197,7 +202,10 @@ export async function extractContextForProject(
 
   for (const file of swaggerFiles) {
     // Only parse files that look like API specs
-    if (!file.path.toLowerCase().includes('swagger') && !file.path.toLowerCase().includes('openapi')) {
+    if (
+      !file.path.toLowerCase().includes('swagger') &&
+      !file.path.toLowerCase().includes('openapi')
+    ) {
       continue;
     }
 

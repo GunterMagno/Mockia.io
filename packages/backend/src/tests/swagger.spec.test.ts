@@ -11,9 +11,16 @@ describe('OpenAPI document of the API (/api/docs)', () => {
     try {
       const spec = buildSwaggerSpec() as { paths?: Record<string, unknown> };
       const reports = [...info.mock.calls, ...error.mock.calls].map((args) => args.join(' '));
-      expect(reports.filter((line) => /Not all input|YAML|Here's the report/i.test(line))).toEqual([]);
+      expect(reports.filter((line) => /Not all input|YAML|Here's the report/i.test(line))).toEqual(
+        []
+      );
       expect(Object.keys(spec.paths ?? {})).toEqual(
-        expect.arrayContaining(['/users/me/ai-consent', '/users/change-password', '/users/me/export', '/auth/login'])
+        expect.arrayContaining([
+          '/users/me/ai-consent',
+          '/users/change-password',
+          '/users/me/export',
+          '/auth/login',
+        ])
       );
     } finally {
       info.mockRestore();

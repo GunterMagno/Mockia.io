@@ -48,7 +48,7 @@ export function assertProdConfig(env: NodeJS.ProcessEnv = process.env): void {
     problems.push('CORS_ORIGIN must be set to the explicit frontend origin(s)');
   } else if (origins.includes('*')) {
     problems.push(
-      'CORS_ORIGIN must not be "*" in production; list the explicit frontend origin(s)',
+      'CORS_ORIGIN must not be "*" in production; list the explicit frontend origin(s)'
     );
   }
 
@@ -62,7 +62,9 @@ export function assertProdConfig(env: NodeJS.ProcessEnv = process.env): void {
 
   // GET /api/__test__/outbox serves every email sent, password-reset links included: an account takeover in production
   if (/^(true|1|yes|on)$/i.test(env.E2E_EXPOSE_MAIL_OUTBOX?.trim() ?? '')) {
-    problems.push('E2E_EXPOSE_MAIL_OUTBOX must not be enabled in production (it would expose password reset links)');
+    problems.push(
+      'E2E_EXPOSE_MAIL_OUTBOX must not be enabled in production (it would expose password reset links)'
+    );
   }
 
   // AI providers: "local" talks to a self-hosted model server, so it needs a usable address. OpenRouter keeps its
@@ -74,7 +76,9 @@ export function assertProdConfig(env: NodeJS.ProcessEnv = process.env): void {
     } else if (providers.includes('local')) {
       const baseUrl = (env.AI_LOCAL_BASE_URL ?? '').trim();
       if (!baseUrl) {
-        problems.push('AI_LOCAL_BASE_URL must be set when AI_PROVIDERS includes "local" (e.g. http://llm:11434)');
+        problems.push(
+          'AI_LOCAL_BASE_URL must be set when AI_PROVIDERS includes "local" (e.g. http://llm:11434)'
+        );
       } else if (!isHttpUrl(baseUrl)) {
         problems.push('AI_LOCAL_BASE_URL must be an http:// or https:// URL');
       }
@@ -84,8 +88,14 @@ export function assertProdConfig(env: NodeJS.ProcessEnv = process.env): void {
   // The public demo signs its proof-of-work challenges and pseudonymizes visitor IPs with DEMO_HMAC_SECRET
   if (/^(true|1|yes|on)$/i.test(env.DEMO_ENABLED?.trim() ?? '')) {
     const secret = env.DEMO_HMAC_SECRET ?? '';
-    if (secret.length < MIN_SECRET_LENGTH || KNOWN_DEFAULT_SECRETS.has(secret) || PLACEHOLDER_SECRET.test(secret)) {
-      problems.push(`DEMO_HMAC_SECRET must be set to a random secret of at least ${MIN_SECRET_LENGTH} characters when DEMO_ENABLED is true`);
+    if (
+      secret.length < MIN_SECRET_LENGTH ||
+      KNOWN_DEFAULT_SECRETS.has(secret) ||
+      PLACEHOLDER_SECRET.test(secret)
+    ) {
+      problems.push(
+        `DEMO_HMAC_SECRET must be set to a random secret of at least ${MIN_SECRET_LENGTH} characters when DEMO_ENABLED is true`
+      );
     }
   }
 
@@ -95,7 +105,7 @@ export function assertProdConfig(env: NodeJS.ProcessEnv = process.env): void {
     if (value === undefined || value === '') continue;
     if (KNOWN_DEFAULT_SECRETS.has(value) || PLACEHOLDER_SECRET.test(value)) {
       problems.push(
-        `${name} is set to a known default/placeholder value; generate a random secret`,
+        `${name} is set to a known default/placeholder value; generate a random secret`
       );
     } else if (value.length < MIN_SECRET_LENGTH) {
       problems.push(`${name} must be at least ${MIN_SECRET_LENGTH} characters`);

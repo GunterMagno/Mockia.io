@@ -1,10 +1,7 @@
 {
   "id": "nestjs-products",
   "description": "NestJS ProductsController with a DTO: CRUD with PATCH.",
-  "tags": [
-    "nestjs",
-    "path-params"
-  ],
+  "tags": ["nestjs", "path-params"],
   "input": {
     "projectTitle": "Catalog Service",
     "userInput": "Mock the products controller.",
@@ -32,33 +29,23 @@
           "summary": "@Controller(\"products\") ProductsController: @Get() findAll, @Get(\":id\") findOne, @Post() create, @Patch(\":id\") update, @Delete(\":id\") remove",
           "routes": [
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/products"
             },
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/products/:id"
             },
             {
-              "methods": [
-                "POST"
-              ],
+              "methods": ["POST"],
               "path": "/products"
             },
             {
-              "methods": [
-                "PATCH"
-              ],
+              "methods": ["PATCH"],
               "path": "/products/:id"
             },
             {
-              "methods": [
-                "DELETE"
-              ],
+              "methods": ["DELETE"],
               "path": "/products/:id"
             }
           ]
@@ -70,20 +57,11 @@
           "interfaces": [
             {
               "name": "CreateProductDto",
-              "properties": [
-                "name: string",
-                "price: number",
-                "category: string"
-              ]
+              "properties": ["name: string", "price: number", "category: string"]
             },
             {
               "name": "ProductEntity",
-              "properties": [
-                "id: number",
-                "name: string",
-                "price: number",
-                "category: string"
-              ]
+              "properties": ["id: number", "name: string", "price: number", "category: string"]
             }
           ]
         }
@@ -118,12 +96,7 @@
               "type": "string"
             }
           },
-          "required": [
-            "id",
-            "name",
-            "price",
-            "category"
-          ]
+          "required": ["id", "name", "price", "category"]
         }
       },
       "examples": [
@@ -165,12 +138,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "name",
-          "price",
-          "category"
-        ]
+        "required": ["id", "name", "price", "category"]
       },
       "examples": [
         {
@@ -208,11 +176,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "name",
-          "price",
-          "category"
-        ]
+        "required": ["name", "price", "category"]
       },
       "responseSchema": {
         "type": "object",
@@ -230,12 +194,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "name",
-          "price",
-          "category"
-        ]
+        "required": ["id", "name", "price", "category"]
       },
       "examples": [
         {
@@ -264,9 +223,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "price"
-        ]
+        "required": ["price"]
       },
       "responseSchema": {
         "type": "object",
@@ -284,12 +241,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "name",
-          "price",
-          "category"
-        ]
+        "required": ["id", "name", "price", "category"]
       },
       "examples": [
         {
@@ -324,10 +276,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "id",
-          "deleted"
-        ]
+        "required": ["id", "deleted"]
       },
       "examples": [
         {

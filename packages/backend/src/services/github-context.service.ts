@@ -30,19 +30,17 @@ function mapContextToDTO(doc: any): GitHubContext {
 
 /**
  * Retrieves the GitHub context for a project
- * 
+ *
  * @param projectId - Project ID to retrieve context for
  * @returns The GitHub context DTO
  * @throws AppError 404 if context not found for the project
  */
-export async function getProjectContext(
-  projectId: string
-): Promise<GitHubContext> {
+export async function getProjectContext(projectId: string): Promise<GitHubContext> {
   try {
     // Resolve project to get real ID
     let projectObjectId: string = projectId;
     const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(projectId);
-    
+
     if (!isValidObjectId) {
       const { ProjectModel } = await import('../models/Project.js');
       const project = await ProjectModel.findOne({ slug: projectId });
@@ -57,11 +55,7 @@ export async function getProjectContext(
     });
 
     if (!context) {
-      throw new AppError(
-        'No context found for this project',
-        ErrorCode.NOT_FOUND,
-        404
-      );
+      throw new AppError('No context found for this project', ErrorCode.NOT_FOUND, 404);
     }
 
     return mapContextToDTO(context);
@@ -71,35 +65,25 @@ export async function getProjectContext(
     }
 
     console.error('Error retrieving project context:', error);
-    throw new AppError(
-      'Failed to retrieve project context',
-      ErrorCode.INTERNAL_SERVER_ERROR,
-      500
-    );
+    throw new AppError('Failed to retrieve project context', ErrorCode.INTERNAL_SERVER_ERROR, 500);
   }
 }
 
 /**
  * Deletes the GitHub context for a project
- * 
+ *
  * @param projectId - Project ID
  * @returns The deleted GitHub context DTO
  * @throws AppError 404 if context not found
  */
-export async function deleteProjectContext(
-  projectId: string
-): Promise<GitHubContext> {
+export async function deleteProjectContext(projectId: string): Promise<GitHubContext> {
   try {
     const context = await GitHubContextModel.findOneAndDelete({
       projectId,
     });
 
     if (!context) {
-      throw new AppError(
-        'No context found for this project',
-        ErrorCode.NOT_FOUND,
-        404
-      );
+      throw new AppError('No context found for this project', ErrorCode.NOT_FOUND, 404);
     }
 
     return mapContextToDTO(context);
@@ -109,18 +93,14 @@ export async function deleteProjectContext(
     }
 
     console.error('Error deleting project context:', error);
-    throw new AppError(
-      'Failed to delete project context',
-      ErrorCode.INTERNAL_SERVER_ERROR,
-      500
-    );
+    throw new AppError('Failed to delete project context', ErrorCode.INTERNAL_SERVER_ERROR, 500);
   }
 }
 
 /**
  * Complete workflow: clone, analyze, and store GitHub repository context
  * Handles cleanup of temporary files
- * 
+ *
  * @param projectId - Project ID to import repository into
  * @param repoUrl - GitHub repository URL
  * @param branch - Optional branch name
@@ -146,11 +126,7 @@ export async function importAndAnalyzeRepository(
     }
 
     if (!project) {
-      throw new AppError(
-        'Project not found',
-        ErrorCode.NOT_FOUND,
-        404
-      );
+      throw new AppError('Project not found', ErrorCode.NOT_FOUND, 404);
     }
 
     const realProjectId = project._id.toString();

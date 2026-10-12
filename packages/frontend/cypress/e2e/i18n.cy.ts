@@ -48,7 +48,11 @@ const uniqueEmail = (prefix: string) => `${prefix}${Date.now()}${counter++}@exam
 
 /** Crea una cuenta por API; con `locale` la deja guardada en el servidor. Sin cookies al terminar: el test inicia sesion por la UI. */
 const createAccount = (email: string, locale?: 'en' | 'es' | 'zh') => {
-  cy.request('POST', '/api/auth/register', { email, password: PASSWORD, username: email.split('@')[0] });
+  cy.request('POST', '/api/auth/register', {
+    email,
+    password: PASSWORD,
+    username: email.split('@')[0],
+  });
   if (locale) {
     cy.request('POST', '/api/auth/login', { email, password: PASSWORD }).then((res) => {
       cy.request({
@@ -158,7 +162,9 @@ describe('i18n: idioma guardado por usuario', () => {
     uiLogin(email);
     cy.location('pathname').should('eq', '/dashboard');
 
-    cy.intercept('PATCH', '/api/users/me/preferences', { forceNetworkError: true }).as('failingSave');
+    cy.intercept('PATCH', '/api/users/me/preferences', { forceNetworkError: true }).as(
+      'failingSave'
+    );
     languageSelect().select('es');
     cy.wait('@failingSave');
     cy.get('html').should('have.attr', 'lang', 'es');
@@ -175,7 +181,8 @@ describe('i18n: selector de idioma en las paginas de auth', () => {
   ];
 
   const rectOf = ($el: JQuery<HTMLElement>) => $el[0].getBoundingClientRect();
-  const intersects = (a: DOMRect, b: DOMRect) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+  const intersects = (a: DOMRect, b: DOMRect) =>
+    a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
 
   beforeEach(() => {
     cy.clearCookies();
@@ -188,21 +195,27 @@ describe('i18n: selector de idioma en las paginas de auth', () => {
         cy.viewport(width, height);
         visitAs(path, 'en-US', 'en');
 
-        languageSelect().should('be.visible').then(($select) => {
-          const select = rectOf($select);
-          expect(select.left, 'left').to.be.at.least(0);
-          expect(select.top, 'top').to.be.at.least(0);
-          expect(select.right, 'right').to.be.at.most(width);
-          expect(select.width, 'ancho legible').to.be.at.least(100);
-          expect(select.height, 'objetivo tactil').to.be.at.least(40);
+        languageSelect()
+          .should('be.visible')
+          .then(($select) => {
+            const select = rectOf($select);
+            expect(select.left, 'left').to.be.at.least(0);
+            expect(select.top, 'top').to.be.at.least(0);
+            expect(select.right, 'right').to.be.at.most(width);
+            expect(select.width, 'ancho legible').to.be.at.least(100);
+            expect(select.height, 'objetivo tactil').to.be.at.least(40);
 
-          cy.get('header a[href="/"]').should('be.visible').then(($logo) => {
-            expect(intersects(select, rectOf($logo)), 'solapa el logo').to.eq(false);
+            cy.get('header a[href="/"]')
+              .should('be.visible')
+              .then(($logo) => {
+                expect(intersects(select, rectOf($logo)), 'solapa el logo').to.eq(false);
+              });
+            cy.get('main form')
+              .first()
+              .then(($form) => {
+                expect(intersects(select, rectOf($form)), 'solapa el formulario').to.eq(false);
+              });
           });
-          cy.get('main form').first().then(($form) => {
-            expect(intersects(select, rectOf($form)), 'solapa el formulario').to.eq(false);
-          });
-        });
 
         // Sin desbordamiento horizontal de la pagina
         cy.document().then((doc) => {
@@ -212,9 +225,11 @@ describe('i18n: selector de idioma en las paginas de auth', () => {
         // Cambiar el idioma desde aqui funciona y no mueve el selector fuera de la pantalla
         languageSelect().select('es');
         cy.get('html').should('have.attr', 'lang', 'es');
-        languageSelect().should('be.visible').then(($select) => {
-          expect(rectOf($select).right).to.be.at.most(width);
-        });
+        languageSelect()
+          .should('be.visible')
+          .then(($select) => {
+            expect(rectOf($select).right).to.be.at.most(width);
+          });
       });
     }
   }

@@ -33,7 +33,9 @@ describe('Cookie notice', () => {
 
   it('is translated: es and zh', () => {
     visitIn('/', 'es');
-    cy.get('[data-cookie-notice]').should('have.attr', 'aria-label', 'Aviso de cookies').and('contain.text', 'estrictamente necesarios');
+    cy.get('[data-cookie-notice]')
+      .should('have.attr', 'aria-label', 'Aviso de cookies')
+      .and('contain.text', 'estrictamente necesarios');
     cy.get('[data-cookie-notice] button').should('contain.text', 'Entendido');
     visitIn('/', 'zh');
     cy.get('[data-cookie-notice]').should('have.attr', 'aria-label', 'Cookie 提示');
@@ -66,7 +68,10 @@ describe('Cookie notice', () => {
     cy.press(Cypress.Keyboard.Keys.TAB);
     // un <button> nativo: Enter y Espacio lo activan sin codigo extra (cy.press no genera el caracter que activa el boton,
     // asi que la activacion se comprueba con el click; el Enter real se verifico a mano en el navegador)
-    cy.focused().should('have.prop', 'tagName', 'BUTTON').and('have.attr', 'type', 'button').and('contain.text', 'Got it');
+    cy.focused()
+      .should('have.prop', 'tagName', 'BUTTON')
+      .and('have.attr', 'type', 'button')
+      .and('contain.text', 'Got it');
     cy.focused().invoke('css', 'outline-style').should('not.eq', 'none');
     cy.focused().click();
     cy.get('[data-cookie-notice]').should('not.exist');
@@ -76,7 +81,10 @@ describe('Cookie notice', () => {
   it('stays compact on a phone and does not make the sign up button unreachable', () => {
     cy.viewport(375, 667);
     visitIn('/signup', 'en');
-    cy.get('[data-cookie-notice]').should('be.visible').invoke('outerHeight').should('be.lessThan', 150);
+    cy.get('[data-cookie-notice]')
+      .should('be.visible')
+      .invoke('outerHeight')
+      .should('be.lessThan', 150);
     cy.get('button[type="submit"]').scrollIntoView().should('be.visible');
     cy.get('[data-cookie-notice] button').click();
     cy.get('[data-cookie-notice]').should('not.exist');
@@ -88,6 +96,8 @@ describe('Cookie notice', () => {
       cy.get('article').should('contain.text', KEY);
     }
     visitIn('/cookies', 'en', { dismissed: true });
-    cy.get('article').should('contain.text', 'informational notice').and('not.contain.text', 'Why we do not show a cookie banner');
+    cy.get('article')
+      .should('contain.text', 'informational notice')
+      .and('not.contain.text', 'Why we do not show a cookie banner');
   });
 });

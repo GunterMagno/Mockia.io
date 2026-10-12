@@ -117,14 +117,11 @@ export const getProjectEndpointsHandler = asyncHandler(
       return;
     }
 
-    const endpoints = await getProjectEndpoints(
-      projectSlug,
-      method ? String(method) : undefined
-    );
+    const endpoints = await getProjectEndpoints(projectSlug, method ? String(method) : undefined);
 
-    const endpointIds = endpoints.map(ep => ep._id);
+    const endpointIds = endpoints.map((ep) => ep._id);
     const configs = await EndpointConfigModel.find({ endpointId: { $in: endpointIds } });
-    const configMap = new Map(configs.map(c => [c.endpointId.toString(), c]));
+    const configMap = new Map(configs.map((c) => [c.endpointId.toString(), c]));
 
     res.status(200).json({
       success: true,
@@ -132,7 +129,7 @@ export const getProjectEndpointsHandler = asyncHandler(
         projectSlug,
         method: method ? String(method) : 'all',
         count: endpoints.length,
-        endpoints: endpoints.map(ep => {
+        endpoints: endpoints.map((ep) => {
           const cfg = configMap.get(ep._id.toString());
           return {
             id: ep._id.toString(),
@@ -163,150 +160,150 @@ export const getProjectEndpointsHandler = asyncHandler(
  * @returns 200 with mock response data
  * @throws 404 if route not found
  */
-export const mockProxyHandler = asyncHandler(
-  async (req: Request, res: Response) => {
-    const startTime = Date.now();
-    applyMockHeaders(res);
-    const method = req.method;
-    
-    // Extract projectSlug and path from URL
-    // URL format: /api/mock/:projectSlug/*
-    const pathParts = req.path.split('/').filter(p => p);
-    
-    if (pathParts.length < 1) {
-      res.status(400).json({
-        success: false,
-        error: {
-          code: 'INVALID_REQUEST',
-          message: 'Missing project slug',
-        },
-        timestamp: new Date().toISOString(),
-      });
-      return;
-    }
-    
-    const projectSlug = pathParts[0];
-    const mockPath = pathParts.length > 1 ? '/' + pathParts.slice(1).join('/') : '';
+export const mockProxyHandler = asyncHandler(async (req: Request, res: Response) => {
+  const startTime = Date.now();
+  applyMockHeaders(res);
+  const method = req.method;
 
-    // 1. Authenticate with API Key (only projects with visibility 'key' ask for it)
-    const project = await mockCache.getProject(projectSlug);
-    
-    if (!project) {
-      res.status(404).json({
-        success: false,
-        error: {
-          code: 'NOT_FOUND',
-          message: `Project "${projectSlug}" not found`,
-        },
-        timestamp: new Date().toISOString(),
-      });
-      return;
-    }
+  // Extract projectSlug and path from URL
+  // URL format: /api/mock/:projectSlug/*
+  const pathParts = req.path.split('/').filter((p) => p);
 
-    if (!mockAccessAllowed(project, req.headers)) {
-      res.status(401).json(mockUnauthorizedBody());
-      return;
-    }
-
-    // 2. Handle Project Root (List Endpoints)
-    if (!mockPath || mockPath === '/') {
-      recordMockRequest(res);
-      const endpoints = await getProjectEndpoints(projectSlug);
-      res.status(200).json({
-        success: true,
-        project: {
-          title: project.title,
-          slug: project.slug,
-          description: project.description,
-        },
-        data: {
-          endpoints: endpoints.map(ep => ({
-            method: ep.method,
-            path: ep.path,
-            description: ep.description,
-            url: `${req.protocol}://${req.get('host')}/api/mock/${projectSlug}${ep.path.startsWith('/') ? '' : '/'}${ep.path}`
-          }))
-        },
-        timestamp: new Date().toISOString(),
-      });
-      return;
-    }
-
-    // 3. Resolve the route
-    const resolvedRoute = await resolveRoute(projectSlug, method, mockPath);
-
-    if (!resolvedRoute) {
-      res.status(404).json({
-        success: false,
-        error: {
-          code: 'NOT_FOUND',
-          message: `Route not found: ${method} ${mockPath}`,
-        },
-        timestamp: new Date().toISOString(),
-      });
-      return;
-    }
-
-    // The request is accepted from here on: it counts against the owner's monthly quota (before any configured delay)
-    recordMockRequest(res);
-
-    // 4. Select Response
-    const responseStatusHeader = req.headers['x-mockia-response-status'];
-    const responseNameHeader = req.headers['x-mockia-response-name'];
-    const responseQueryStatus = req.query._status;
-
-    // Use pre-populated responses if available in cache, otherwise fetch from DB
-    const responses = (resolvedRoute.endpoint.responses &&
-      resolvedRoute.endpoint.responses.length > 0 &&
-      typeof resolvedRoute.endpoint.responses[0] === 'object')
-      ? (resolvedRoute.endpoint.responses as any[])
-      : (await EndpointModel.findById(resolvedRoute.endpoint._id).populate('responses'))?.responses as any[] || [];
-    
-    let targetResponse;
-
-    if (responseStatusHeader || responseQueryStatus) {
-      const status = parseInt((responseStatusHeader || responseQueryStatus) as string);
-      targetResponse = responses.find(r => r.statusCode === status);
-    } else if (responseNameHeader) {
-      targetResponse = responses.find(r => r.name === responseNameHeader);
-    }
-
-    // Fallback to first response if no specific selection matched
-    if (!targetResponse && responses.length > 0) {
-      targetResponse = responses[0];
-    }
-
-    if (!targetResponse) {
-      res.status(200).json({});
-      return;
-    }
-
-    // 5. Return the mock response
-    let statusCode = clampStatus(targetResponse.statusCode, 200);
-    let responseData = targetResponse.schema || targetResponse.examples?.[0] || {};
-
-    // Apply interceptors/overrides if configured (using Cache)
-    const cfg = await mockCache.getEndpointConfig(resolvedRoute.endpoint._id.toString());
-    if (cfg) {
-      if (cfg.force_status_code) {
-        statusCode = clampStatus(cfg.force_status_code, statusCode);
-        // If there's an explicit response for this forced status code, use it!
-        const matchingResponse = responses.find(r => r.statusCode === statusCode);
-        if (matchingResponse) {
-          responseData = matchingResponse.schema || matchingResponse.examples?.[0] || {};
-        } else if (statusCode === 204) {
-          responseData = null;
-        } else if (statusCode >= 400) {
-          responseData = getDefaultErrorBody(statusCode);
-        }
-      }
-      if (cfg.override_response !== undefined && cfg.override_response !== null) {
-        responseData = cfg.override_response;
-      }
-      applyCustomHeaders(res, cfg.headers);
-      await waitDelay(startTime, cfg.delay_ms, cfg.jitter_ms);
-    }
-
-    res.status(statusCode).json(responseData);
+  if (pathParts.length < 1) {
+    res.status(400).json({
+      success: false,
+      error: {
+        code: 'INVALID_REQUEST',
+        message: 'Missing project slug',
+      },
+      timestamp: new Date().toISOString(),
+    });
+    return;
   }
-);
+
+  const projectSlug = pathParts[0];
+  const mockPath = pathParts.length > 1 ? '/' + pathParts.slice(1).join('/') : '';
+
+  // 1. Authenticate with API Key (only projects with visibility 'key' ask for it)
+  const project = await mockCache.getProject(projectSlug);
+
+  if (!project) {
+    res.status(404).json({
+      success: false,
+      error: {
+        code: 'NOT_FOUND',
+        message: `Project "${projectSlug}" not found`,
+      },
+      timestamp: new Date().toISOString(),
+    });
+    return;
+  }
+
+  if (!mockAccessAllowed(project, req.headers)) {
+    res.status(401).json(mockUnauthorizedBody());
+    return;
+  }
+
+  // 2. Handle Project Root (List Endpoints)
+  if (!mockPath || mockPath === '/') {
+    recordMockRequest(res);
+    const endpoints = await getProjectEndpoints(projectSlug);
+    res.status(200).json({
+      success: true,
+      project: {
+        title: project.title,
+        slug: project.slug,
+        description: project.description,
+      },
+      data: {
+        endpoints: endpoints.map((ep) => ({
+          method: ep.method,
+          path: ep.path,
+          description: ep.description,
+          url: `${req.protocol}://${req.get('host')}/api/mock/${projectSlug}${ep.path.startsWith('/') ? '' : '/'}${ep.path}`,
+        })),
+      },
+      timestamp: new Date().toISOString(),
+    });
+    return;
+  }
+
+  // 3. Resolve the route
+  const resolvedRoute = await resolveRoute(projectSlug, method, mockPath);
+
+  if (!resolvedRoute) {
+    res.status(404).json({
+      success: false,
+      error: {
+        code: 'NOT_FOUND',
+        message: `Route not found: ${method} ${mockPath}`,
+      },
+      timestamp: new Date().toISOString(),
+    });
+    return;
+  }
+
+  // The request is accepted from here on: it counts against the owner's monthly quota (before any configured delay)
+  recordMockRequest(res);
+
+  // 4. Select Response
+  const responseStatusHeader = req.headers['x-mockia-response-status'];
+  const responseNameHeader = req.headers['x-mockia-response-name'];
+  const responseQueryStatus = req.query._status;
+
+  // Use pre-populated responses if available in cache, otherwise fetch from DB
+  const responses =
+    resolvedRoute.endpoint.responses &&
+    resolvedRoute.endpoint.responses.length > 0 &&
+    typeof resolvedRoute.endpoint.responses[0] === 'object'
+      ? (resolvedRoute.endpoint.responses as any[])
+      : ((await EndpointModel.findById(resolvedRoute.endpoint._id).populate('responses'))
+          ?.responses as any[]) || [];
+
+  let targetResponse;
+
+  if (responseStatusHeader || responseQueryStatus) {
+    const status = parseInt((responseStatusHeader || responseQueryStatus) as string);
+    targetResponse = responses.find((r) => r.statusCode === status);
+  } else if (responseNameHeader) {
+    targetResponse = responses.find((r) => r.name === responseNameHeader);
+  }
+
+  // Fallback to first response if no specific selection matched
+  if (!targetResponse && responses.length > 0) {
+    targetResponse = responses[0];
+  }
+
+  if (!targetResponse) {
+    res.status(200).json({});
+    return;
+  }
+
+  // 5. Return the mock response
+  let statusCode = clampStatus(targetResponse.statusCode, 200);
+  let responseData = targetResponse.schema || targetResponse.examples?.[0] || {};
+
+  // Apply interceptors/overrides if configured (using Cache)
+  const cfg = await mockCache.getEndpointConfig(resolvedRoute.endpoint._id.toString());
+  if (cfg) {
+    if (cfg.force_status_code) {
+      statusCode = clampStatus(cfg.force_status_code, statusCode);
+      // If there's an explicit response for this forced status code, use it!
+      const matchingResponse = responses.find((r) => r.statusCode === statusCode);
+      if (matchingResponse) {
+        responseData = matchingResponse.schema || matchingResponse.examples?.[0] || {};
+      } else if (statusCode === 204) {
+        responseData = null;
+      } else if (statusCode >= 400) {
+        responseData = getDefaultErrorBody(statusCode);
+      }
+    }
+    if (cfg.override_response !== undefined && cfg.override_response !== null) {
+      responseData = cfg.override_response;
+    }
+    applyCustomHeaders(res, cfg.headers);
+    await waitDelay(startTime, cfg.delay_ms, cfg.jitter_ms);
+  }
+
+  res.status(statusCode).json(responseData);
+});

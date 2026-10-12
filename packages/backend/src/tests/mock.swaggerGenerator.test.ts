@@ -23,13 +23,15 @@ describe('Swagger Generator', () => {
           path: '/users/:id',
           method: 'GET',
           description: 'Get user',
-          responses: [{ statusCode: 200, schema: { type: 'object' } }]
-        }
+          responses: [{ statusCode: 200, schema: { type: 'object' } }],
+        },
       ];
 
       (ProjectModel.findById as jest.Mock).mockResolvedValue(mockProject);
       (MockAPIModel.findOne as jest.Mock).mockResolvedValue(mockApi);
-      jest.spyOn(mockPopulationService, 'getEndpointsForMockAPI').mockResolvedValue(mockEndpoints as any);
+      jest
+        .spyOn(mockPopulationService, 'getEndpointsForMockAPI')
+        .mockResolvedValue(mockEndpoints as any);
 
       const swagger = await generateSwaggerForProject(projectId);
 
@@ -59,16 +61,18 @@ describe('Swagger Generator', () => {
           method: 'POST',
           description: 'Create post',
           responses: [], // Test line 58
-          requestSchema: { type: 'object', properties: { title: { type: 'string' } } } // Test line 74
-        }
+          requestSchema: { type: 'object', properties: { title: { type: 'string' } } }, // Test line 74
+        },
       ];
 
       (ProjectModel.findById as jest.Mock).mockResolvedValue(mockProject);
       (MockAPIModel.findOne as jest.Mock).mockResolvedValue(mockApi);
-      jest.spyOn(mockPopulationService, 'getEndpointsForMockAPI').mockResolvedValue(mockEndpoints as any);
+      jest
+        .spyOn(mockPopulationService, 'getEndpointsForMockAPI')
+        .mockResolvedValue(mockEndpoints as any);
 
       const swagger = await generateSwaggerForProject(projectId);
-      
+
       expect(swagger.paths['/posts'].post.responses).toHaveProperty('200');
       expect(swagger.paths['/posts'].post).toHaveProperty('requestBody');
     });
@@ -106,12 +110,16 @@ describe('Swagger Generator', () => {
 
       (ProjectModel.findById as jest.Mock).mockResolvedValue(mockProject);
       (MockAPIModel.findOne as jest.Mock).mockResolvedValue(mockApi);
-      jest.spyOn(mockPopulationService, 'getEndpointsForMockAPI').mockResolvedValue(mockEndpoints as any);
+      jest
+        .spyOn(mockPopulationService, 'getEndpointsForMockAPI')
+        .mockResolvedValue(mockEndpoints as any);
 
       const swagger = await generateSwaggerForProject(projectId);
 
       expect(swagger.paths['/comments'].get.responses['204'].description).toBe('Response');
-      expect(swagger.paths['/comments'].get.responses['204'].content['application/json'].schema).toEqual({ type: 'object' });
+      expect(
+        swagger.paths['/comments'].get.responses['204'].content['application/json'].schema
+      ).toEqual({ type: 'object' });
     });
   });
 });

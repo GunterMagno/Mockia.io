@@ -9,60 +9,60 @@
 
 /** Usuario de la sesion tal como lo devuelve el backend. */
 export interface SessionUser {
-  id: string
-  email: string
-  username: string
+  id: string;
+  email: string;
+  username: string;
   /** ISO date de la verificacion del correo; ausente o null = sin verificar. */
-  emailVerifiedAt?: string | null
+  emailVerifiedAt?: string | null;
   /** Idioma guardado en la cuenta; ausente = nunca se guardo. */
-  locale?: 'en' | 'es' | 'zh'
-  createdAt?: string
-  updatedAt?: string
+  locale?: 'en' | 'es' | 'zh';
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 /** Evento que emite el cliente HTTP cuando la sesion ya no se puede renovar (cookie revocada, caducada o ausente). */
-export const SESSION_EXPIRED_EVENT = 'mockia:session-expired'
+export const SESSION_EXPIRED_EVENT = 'mockia:session-expired';
 
 /** Cabecera anti-CSRF que exigen /auth/refresh y /auth/logout (el backend rechaza con 403 cualquier otro valor). */
-export const CSRF_HEADERS = { 'X-Requested-With': 'mockia' } as const
+export const CSRF_HEADERS = { 'X-Requested-With': 'mockia' } as const;
 
-let accessToken: string | null = null
+let accessToken: string | null = null;
 /** Id del usuario de la sesion actual: un refresh que devuelva otro usuario no se acepta (login CSRF / cookie ajena). */
-let sessionUserId: string | null = null
+let sessionUserId: string | null = null;
 
 export function getAccessToken(): string | null {
-  return accessToken
+  return accessToken;
 }
 
 export function setAccessToken(token: string | null): void {
-  accessToken = token
+  accessToken = token;
 }
 
 export function getSessionUserId(): string | null {
-  return sessionUserId
+  return sessionUserId;
 }
 
 export function setSessionUserId(id: string | null): void {
-  sessionUserId = id
+  sessionUserId = id;
 }
 
 export function clearSession(): void {
-  accessToken = null
-  sessionUserId = null
+  accessToken = null;
+  sessionUserId = null;
 }
 
 /** Claves que usaban las versiones anteriores para guardar la sesion en el almacenamiento web. */
-const LEGACY_KEYS = ['mockia_token', 'mockia_refresh', 'mockia_user'] as const
+const LEGACY_KEYS = ['mockia_token', 'mockia_refresh', 'mockia_user'] as const;
 
 /**
  * Migracion de una sola vez: borra de localStorage y sessionStorage los tokens y el usuario que guardaban versiones
  * anteriores (no se reutilizan: el refresh token antiguo ya no se acepta y el nuevo vive en una cookie HttpOnly).
  */
 export function purgeLegacyStorage(): void {
-  if (typeof window === 'undefined') return
+  if (typeof window === 'undefined') return;
   for (const storage of ['localStorage', 'sessionStorage'] as const) {
     try {
-      for (const key of LEGACY_KEYS) window[storage].removeItem(key)
+      for (const key of LEGACY_KEYS) window[storage].removeItem(key);
     } catch {
       // almacenamiento no disponible: no hay nada que borrar
     }

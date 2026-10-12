@@ -1,7 +1,7 @@
-import { PLANS, type Plan } from '@mockia/shared'
-import type { MessageKey } from '../i18n/I18nProvider'
+import { PLANS, type Plan } from '@mockia/shared';
+import type { MessageKey } from '../i18n/I18nProvider';
 
-type Translate = (key: MessageKey, vars?: Record<string, string | number>) => string
+type Translate = (key: MessageKey, vars?: Record<string, string | number>) => string;
 
 /**
  * Mensajes del backend (en ingles) que el usuario ve a menudo, mapeados a su clave i18n.
@@ -18,7 +18,10 @@ const KNOWN: ReadonlyArray<readonly [RegExp, MessageKey]> = [
   [/^The AI request took too long/i, 'errors.aiTimeout'],
   [/^(AI service|OpenRouter API) temporarily unavailable/i, 'errors.aiUnavailable'],
   [/^OpenRouter API rate limited/i, 'errors.aiUnavailable'],
-  [/^(The AI returned an invalid answer|Failed to parse AI output|Invalid JSON response from AI|AI output too large)/i, 'errors.aiInvalidAnswer'],
+  [
+    /^(The AI returned an invalid answer|Failed to parse AI output|Invalid JSON response from AI|AI output too large)/i,
+    'errors.aiInvalidAnswer',
+  ],
   [/^OpenRouter API (error|authentication failed)/i, 'errors.aiUpstream'],
   // Request shape (non-JSON credential bodies, oversized bodies or descriptions)
   [/^Content-Type must be application\/json$/i, 'errors.unsupportedMediaType'],
@@ -34,7 +37,10 @@ const KNOWN: ReadonlyArray<readonly [RegExp, MessageKey]> = [
   [/^Invalid or expired refresh token$/i, 'errors.sessionExpired'],
   [/^Incorrect password$/i, 'profile.account.wrongPassword'],
   [/^Could not cancel your subscription/i, 'profile.account.subscriptionFailed'],
-  [/^Your account has an active subscription and payments are not configured/i, 'profile.account.subscriptionUnavailable'],
+  [
+    /^Your account has an active subscription and payments are not configured/i,
+    'profile.account.subscriptionUnavailable',
+  ],
   // Joi (mismos textos que la validacion del frontend)
   [/^Email must be valid$/i, 'validation.emailInvalid'],
   [/^Email is required$/i, 'validation.emailRequired'],
@@ -45,126 +51,135 @@ const KNOWN: ReadonlyArray<readonly [RegExp, MessageKey]> = [
   [/^Password is required$/i, 'validation.passwordRequired'],
   [/^Username must be at least 2 characters$/i, 'validation.usernameMin'],
   [/^Username is required$/i, 'validation.usernameRequired'],
-]
+];
 
 const translateKnown = (message: string, t: Translate): string => {
-  const hit = KNOWN.find(([re]) => re.test(message.trim()))
-  return hit ? t(hit[1]) : message
-}
+  const hit = KNOWN.find(([re]) => re.test(message.trim()));
+  return hit ? t(hit[1]) : message;
+};
 
 /** Nombre del plan con las mismas claves que las tarjetas de precios (un plan desconocido se muestra tal cual). */
 export const planName = (plan: unknown, t: Translate): string =>
-  PLANS.includes(plan as Plan) ? t(`pricing.plans.${plan as Plan}.name`) : String(plan ?? '')
+  PLANS.includes(plan as Plan) ? t(`pricing.plans.${plan as Plan}.name`) : String(plan ?? '');
 
 /** Cuota mensual de IA agotada (429 AI_QUOTA_EXCEEDED): uso, tope y el instante en que vuelve a haber generaciones. */
-export type AiQuotaInfo = { used: number; limit: number; resetsAt: string }
+export type AiQuotaInfo = { used: number; limit: number; resetsAt: string };
 
 /** Datos de la cuota si el error es AI_QUOTA_EXCEEDED con el cuerpo esperado; null en cualquier otro caso. */
 export function getAiQuotaInfo(err: any): AiQuotaInfo | null {
-  const e = err?.response?.data?.error
-  if (e?.code !== 'AI_QUOTA_EXCEEDED') return null
-  const { used, limit, resetsAt } = e
-  const at = typeof resetsAt === 'string' ? new Date(resetsAt) : null
-  if (typeof used !== 'number' || typeof limit !== 'number' || !at || Number.isNaN(at.getTime())) return null
-  return { used, limit, resetsAt }
+  const e = err?.response?.data?.error;
+  if (e?.code !== 'AI_QUOTA_EXCEEDED') return null;
+  const { used, limit, resetsAt } = e;
+  const at = typeof resetsAt === 'string' ? new Date(resetsAt) : null;
+  if (typeof used !== 'number' || typeof limit !== 'number' || !at || Number.isNaN(at.getTime()))
+    return null;
+  return { used, limit, resetsAt };
 }
 
 /** Errores de facturacion con codigo propio: sus details son datos (plan, limite), no mensajes. */
 function billingError(code: unknown, details: any, t: Translate): string | null {
   switch (code) {
     case 'PLAN_LIMIT_REACHED':
-      return t('billing.errors.limitReached', { plan: planName(details?.plan, t), limit: details?.limit ?? '' })
+      return t('billing.errors.limitReached', {
+        plan: planName(details?.plan, t),
+        limit: details?.limit ?? '',
+      });
     case 'ALREADY_SUBSCRIBED':
-      return t('billing.errors.alreadySubscribed')
+      return t('billing.errors.alreadySubscribed');
     case 'NO_BILLING_ACCOUNT':
-      return t('billing.errors.noAccount')
+      return t('billing.errors.noAccount');
     case 'BILLING_NOT_CONFIGURED':
-      return t('billing.errors.notConfigured')
+      return t('billing.errors.notConfigured');
     default:
-      return null
+      return null;
   }
 }
 
 /** Codigo de error de la API ('PLAN_LIMIT_REACHED'...), si lo hay. */
-export const getBackendErrorCode = (err: any): string | undefined => err?.response?.data?.error?.code
+export const getBackendErrorCode = (err: any): string | undefined =>
+  err?.response?.data?.error?.code;
 
 export function getBackendErrorMessage(err: any, t: Translate): string {
   // Axios error with response payload
   if (err?.response?.data) {
-    const data = err.response.data
+    const data = err.response.data;
 
-    if (data?.error?.code === 'EMAIL_NOT_VERIFIED') return t('errors.emailNotVerified')
+    if (data?.error?.code === 'EMAIL_NOT_VERIFIED') return t('errors.emailNotVerified');
 
     // Cuota de IA agotada: mensaje propio con cifras y fecha (en el idioma activo, que el proveedor deja en <html lang>)
-    const quota = getAiQuotaInfo(err)
+    const quota = getAiQuotaInfo(err);
     if (quota) {
-      const lang = document.documentElement.lang || 'en'
-      const number = new Intl.NumberFormat(lang)
+      const lang = document.documentElement.lang || 'en';
+      const number = new Intl.NumberFormat(lang);
       return t('billing.errors.aiQuota', {
         used: number.format(quota.used),
         limit: number.format(quota.limit),
         // UTC: el contador se reinicia a las 00:00 UTC del dia 1 (igual que el medidor de /billing)
-        date: new Intl.DateTimeFormat(lang, { dateStyle: 'long', timeZone: 'UTC' }).format(new Date(quota.resetsAt)),
-      })
+        date: new Intl.DateTimeFormat(lang, { dateStyle: 'long', timeZone: 'UTC' }).format(
+          new Date(quota.resetsAt)
+        ),
+      });
     }
 
-    const billing = billingError(data?.error?.code, data?.error?.details, t)
-    if (billing) return billing
-    
+    const billing = billingError(data?.error?.code, data?.error?.details, t);
+    if (billing) return billing;
+
     // 1. Try normalized error structure: { error: { message: "...", details: { ... } } }
     if (data?.error?.message && typeof data.error.message === 'string') {
       // Validation error with details: the details are what the user needs to read
       if (data.error.details && typeof data.error.details === 'object') {
         const messages = Object.values(data.error.details)
           .flat()
-          .filter((m): m is string => typeof m === 'string')
+          .filter((m): m is string => typeof m === 'string');
         if (messages.length > 0) {
-          return messages.map((m) => translateKnown(m, t)).join(', ')
+          return messages.map((m) => translateKnown(m, t)).join(', ');
         }
       }
-      return translateKnown(data.error.message, t)
+      return translateKnown(data.error.message, t);
     }
 
     // 2. Try simple message property: { message: "..." }
     if (data?.message && typeof data.message === 'string') {
-      return translateKnown(data.message, t)
+      return translateKnown(data.message, t);
     }
 
     // 3. Try legacy error property: { error: "..." }
     if (data?.error && typeof data.error === 'string') {
-      return translateKnown(data.error, t)
+      return translateKnown(data.error, t);
     }
 
     // 4. Try array of messages (e.g. class-validator)
     if (Array.isArray(data)) {
-      const msgs = data.map((d) => (typeof d?.message === 'string' ? translateKnown(d.message, t) : String(d)))
-      if (msgs.length) return msgs.join('; ')
+      const msgs = data.map((d) =>
+        typeof d?.message === 'string' ? translateKnown(d.message, t) : String(d)
+      );
+      if (msgs.length) return msgs.join('; ');
     }
 
     // 5. Try string body
     if (typeof data === 'string' && data.length > 0 && data.length < 200) {
-      return data
+      return data;
     }
   }
 
   // Network/Timeout errors
   if (err?.code === 'ECONNREFUSED' || err?.code === 'ERR_NETWORK') {
-    return t('errors.network')
+    return t('errors.network');
   }
 
   // Status-based fallbacks if no data payload
-  const status = err?.response?.status
+  const status = err?.response?.status;
   if (status) {
-    if (status === 401) return t('errors.unauthorized')
-    if (status === 403) return t('errors.forbidden')
-    if (status === 404) return t('errors.notFound')
-    if (status === 413) return t('errors.tooLarge')
-    if (status === 429) return t('errors.tooManyRequests')
-    if (status >= 400 && status < 500) return t('errors.request', { status })
-    if (status >= 500) return t('errors.server', { status })
+    if (status === 401) return t('errors.unauthorized');
+    if (status === 403) return t('errors.forbidden');
+    if (status === 404) return t('errors.notFound');
+    if (status === 413) return t('errors.tooLarge');
+    if (status === 429) return t('errors.tooManyRequests');
+    if (status >= 400 && status < 500) return t('errors.request', { status });
+    if (status >= 500) return t('errors.server', { status });
   }
 
-  return t('errors.unexpected')
+  return t('errors.unexpected');
 }
 
-export default getBackendErrorMessage
+export default getBackendErrorMessage;

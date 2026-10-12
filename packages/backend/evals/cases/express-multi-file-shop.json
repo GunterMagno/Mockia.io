@@ -1,11 +1,7 @@
 {
   "id": "express-multi-file-shop",
   "description": "Shop with products and a cart split in two routers and two model files.",
-  "tags": [
-    "express",
-    "nested-resources",
-    "path-params"
-  ],
+  "tags": ["express", "nested-resources", "path-params"],
   "input": {
     "projectTitle": "Corner Shop",
     "userInput": "Mock the shop API: catalogue and shopping cart.",
@@ -33,15 +29,11 @@
           "summary": "Catalogue router",
           "routes": [
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/products"
             },
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/products/:id"
             }
           ]
@@ -52,21 +44,15 @@
           "summary": "Cart router",
           "routes": [
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/cart"
             },
             {
-              "methods": [
-                "POST"
-              ],
+              "methods": ["POST"],
               "path": "/cart/items"
             },
             {
-              "methods": [
-                "DELETE"
-              ],
+              "methods": ["DELETE"],
               "path": "/cart/items/:productId"
             }
           ]
@@ -78,12 +64,7 @@
           "interfaces": [
             {
               "name": "Product",
-              "properties": [
-                "id: string",
-                "name: string",
-                "priceCents: number",
-                "inStock: boolean"
-              ]
+              "properties": ["id: string", "name: string", "priceCents: number", "inStock: boolean"]
             }
           ]
         },
@@ -94,17 +75,11 @@
           "interfaces": [
             {
               "name": "CartItem",
-              "properties": [
-                "productId: string",
-                "quantity: number"
-              ]
+              "properties": ["productId: string", "quantity: number"]
             },
             {
               "name": "Cart",
-              "properties": [
-                "items: CartItem[]",
-                "totalCents: number"
-              ]
+              "properties": ["items: CartItem[]", "totalCents: number"]
             }
           ]
         }
@@ -139,12 +114,7 @@
               "type": "boolean"
             }
           },
-          "required": [
-            "id",
-            "name",
-            "priceCents",
-            "inStock"
-          ]
+          "required": ["id", "name", "priceCents", "inStock"]
         }
       },
       "examples": [
@@ -186,12 +156,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "id",
-          "name",
-          "priceCents",
-          "inStock"
-        ]
+        "required": ["id", "name", "priceCents", "inStock"]
       },
       "examples": [
         {
@@ -236,20 +201,14 @@
                   "type": "integer"
                 }
               },
-              "required": [
-                "productId",
-                "quantity"
-              ]
+              "required": ["productId", "quantity"]
             }
           },
           "totalCents": {
             "type": "integer"
           }
         },
-        "required": [
-          "items",
-          "totalCents"
-        ]
+        "required": ["items", "totalCents"]
       },
       "examples": [
         {
@@ -280,10 +239,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "productId",
-          "quantity"
-        ]
+        "required": ["productId", "quantity"]
       },
       "responseSchema": {
         "type": "object",
@@ -300,20 +256,14 @@
                   "type": "integer"
                 }
               },
-              "required": [
-                "productId",
-                "quantity"
-              ]
+              "required": ["productId", "quantity"]
             }
           },
           "totalCents": {
             "type": "integer"
           }
         },
-        "required": [
-          "items",
-          "totalCents"
-        ]
+        "required": ["items", "totalCents"]
       },
       "examples": [
         {
@@ -353,10 +303,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "items",
-          "totalCents"
-        ]
+        "required": ["items", "totalCents"]
       },
       "examples": [
         {

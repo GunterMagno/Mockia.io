@@ -3,10 +3,7 @@
  * Orchestrates parser -> validator -> database population
  */
 
-import {
-  extractJsonFromLLMOutput,
-  tryExtractJsonFromLLMOutput,
-} from './llmOutputParser.js';
+import { extractJsonFromLLMOutput, tryExtractJsonFromLLMOutput } from './llmOutputParser.js';
 import { validateGeneratedApi } from './llmOutputValidator.js';
 import { populateEndpointsFromLLM } from '../mock/mockPopulation.service.js';
 import { MockAPIOutput } from '@mockia/shared';
@@ -34,7 +31,7 @@ export interface AIGenerationPipelineResult {
  * 2. Validate the structure
  * 3. Save endpoints to database
  * 4. Return the complete result
- * 
+ *
  * @param projectId - The project ID to save the mock API for
  * @param rawLLMOutput - The raw text response from the LLM
  * @param tokenUsage - Optional token usage statistics
@@ -65,10 +62,7 @@ export async function runAIGenerationPipeline(
 
     // Step 3: Save to database
     console.log('[Pipeline] Step 3: Saving endpoints to database...');
-    const databaseResult = await populateEndpointsFromLLM(
-      projectId,
-      specification
-    );
+    const databaseResult = await populateEndpointsFromLLM(projectId, specification);
     console.log(
       `[Pipeline] ✓ Database save successful - ${databaseResult.endpointsCreated} endpoints created`
     );
@@ -94,9 +88,9 @@ export async function runAIGenerationPipeline(
 /**
  * Safely runs the pipeline, returning null if any step fails
  * (instead of throwing)
- * 
+ *
  * Useful for non-critical generation attempts
- * 
+ *
  * @param projectId - The project ID
  * @param rawLLMOutput - The raw LLM output
  * @param tokenUsage - Optional token statistics

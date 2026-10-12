@@ -63,7 +63,11 @@ async function login(email: string) {
 }
 
 /** A project of `ownerId` with one child in every collection that hangs from a project. */
-async function seedProject(ownerId: Types.ObjectId, slug: string, extra: Record<string, unknown> = {}) {
+async function seedProject(
+  ownerId: Types.ObjectId,
+  slug: string,
+  extra: Record<string, unknown> = {}
+) {
   const project = await ProjectModel.create({
     title: `Title ${slug}`,
     description: `Desc ${slug}`,
@@ -108,20 +112,35 @@ async function seedProject(ownerId: Types.ObjectId, slug: string, extra: Record<
 /** Everything that belongs to a user besides projects: session, token, usage, notification without project. */
 async function seedUserData(userId: Types.ObjectId) {
   await UsageModel.create({ ownerId: userId, period: '2026-10', requests: 7, aiGenerations: 3 });
-  await AiRateWindowModel.create({ userId, windowStart: new Date(), count: 3, expireAt: new Date(Date.now() + 180_000) });
+  await AiRateWindowModel.create({
+    userId,
+    windowStart: new Date(),
+    count: 3,
+    expireAt: new Date(Date.now() + 180_000),
+  });
   // Data contributed to improving the AI (exists only with consent): a generation and a feedback row with a correction
   const generationId = `gen-${userId.toString()}`;
   await AiGenerationModel.create({
     generationId,
     userId,
-    messages: [{ role: 'system', content: 's' }, { role: 'user', content: 'u' }],
+    messages: [
+      { role: 'system', content: 's' },
+      { role: 'user', content: 'u' },
+    ],
     output: '{}',
     parsedOk: true,
     provider: 'p',
     model: 'm',
     expiresAt: new Date(Date.now() + 86_400_000),
   });
-  await AiFeedbackModel.create({ userId, generationId, verdict: 'good', provider: 'p', model: 'm', expiresAt: new Date(Date.now() + 86_400_000) });
+  await AiFeedbackModel.create({
+    userId,
+    generationId,
+    verdict: 'good',
+    provider: 'p',
+    model: 'm',
+    expiresAt: new Date(Date.now() + 86_400_000),
+  });
   await AuthTokenModel.create({
     tokenHash: `hash-${userId.toString()}`,
     userId,
@@ -136,7 +155,8 @@ async function seedUserData(userId: Types.ObjectId) {
   });
 }
 
-const counts = async () => Promise.all(ALL_MODELS.map((model) => (model as any).countDocuments({})));
+const counts = async () =>
+  Promise.all(ALL_MODELS.map((model) => (model as any).countDocuments({})));
 
 describe('RGPD - exportar y borrar la cuenta', () => {
   beforeAll(async () => {
@@ -168,12 +188,14 @@ describe('RGPD - exportar y borrar la cuenta', () => {
         const full = `${prefix}${path}`;
         const opts = (type as any).options ?? {};
         const ref = opts.ref ?? opts.type?.[0]?.ref;
-        if (ref === 'User' || ref === 'Project' || /^(user|owner|project)(Id)?$/i.test(path)) offenders.push(full);
+        if (ref === 'User' || ref === 'Project' || /^(user|owner|project)(Id)?$/i.test(path))
+          offenders.push(full);
         const sub = (type as any).schema as mongoose.Schema | undefined;
         if (sub) walk(sub, `${full}.`);
       });
     };
-    for (const model of [DemoBudgetModel, DemoMockModel, DemoSpentChallengeModel]) walk(model.schema, `${model.modelName}.`);
+    for (const model of [DemoBudgetModel, DemoMockModel, DemoSpentChallengeModel])
+      walk(model.schema, `${model.modelName}.`);
     expect(offenders).toEqual([]);
   });
 
@@ -182,7 +204,12 @@ describe('RGPD - exportar y borrar la cuenta', () => {
     // The public demo's collections (anonymous visitors) hold no account data: only daily IP pseudonyms with a TTL of
     // at most 48 h and ephemeral mocks, none of them linked to a user. They are deliberately outside erase/export.
     const demoOnly = ['DemoBudget', 'DemoMock', 'DemoSpentChallenge'];
-    expect(mongoose.modelNames().filter((n) => !demoOnly.includes(n)).sort()).toEqual(covered);
+    expect(
+      mongoose
+        .modelNames()
+        .filter((n) => !demoOnly.includes(n))
+        .sort()
+    ).toEqual(covered);
   });
 
   describe('GET /api/users/me/export', () => {
@@ -192,7 +219,11 @@ describe('RGPD - exportar y borrar la cuenta', () => {
     });
 
     it('downloads a JSON attachment with the account, its projects and children, and never a hash or other users data', async () => {
-      const alice = await createUser('alice@example.com', { plan: 'pro', stripeCustomerId: 'cus_internal', stripeSubscriptionId: 'sub_internal' });
+      const alice = await createUser('alice@example.com', {
+        plan: 'pro',
+        stripeCustomerId: 'cus_internal',
+        stripeSubscriptionId: 'sub_internal',
+      });
       const bob = await createUser('bob@example.com');
       await seedProject(alice._id as Types.ObjectId, 'alice-proj');
       await seedProject(bob._id as Types.ObjectId, 'bob-proj');
@@ -204,13 +235,21 @@ describe('RGPD - exportar y borrar la cuenta', () => {
 
       expect(res.status).toBe(200);
       expect(res.headers['content-type']).toMatch(/application\/json/);
-      expect(res.headers['content-disposition']).toMatch(/^attachment; filename="mockia-export-\d{4}-\d{2}-\d{2}\.json"$/);
+      expect(res.headers['content-disposition']).toMatch(
+        /^attachment; filename="mockia-export-\d{4}-\d{2}-\d{2}\.json"$/
+      );
       const raw = res.text;
       const data = JSON.parse(raw);
 
       expect(data.schemaVersion).toBe(1);
       expect(Number.isNaN(Date.parse(data.exportedAt))).toBe(false);
-      expect(data.account).toMatchObject({ email: 'alice@example.com', username: 'alice', locale: 'es', plan: 'pro', billingStatus: 'active' });
+      expect(data.account).toMatchObject({
+        email: 'alice@example.com',
+        username: 'alice',
+        locale: 'es',
+        plan: 'pro',
+        billingStatus: 'active',
+      });
       expect(data.account.id).toBe(alice._id.toString());
       expect(data.account.createdAt).toBeDefined();
       expect(data.billing).toEqual(expect.objectContaining({ plan: 'pro', status: 'active' }));
@@ -233,15 +272,24 @@ describe('RGPD - exportar y borrar la cuenta', () => {
       expect(project.mockApis).toHaveLength(1);
       const endpoint = project.mockApis[0].endpoints[0];
       expect(endpoint).toMatchObject({ path: '/alice-proj', method: 'GET' });
-      expect(endpoint.responses[0]).toMatchObject({ statusCode: 200, description: 'resp alice-proj' });
+      expect(endpoint.responses[0]).toMatchObject({
+        statusCode: 200,
+        description: 'resp alice-proj',
+      });
       expect(endpoint.config).toMatchObject({ delay_ms: 25 });
       expect(project.githubContexts[0]).toMatchObject({ repoName: 'repo-alice-proj' });
 
       // Notifications (own, incl. the project one), usage, sessions
-      expect(data.notifications.map((n: any) => n.title).sort()).toEqual([`loose-${alice._id.toString()}`, 'n-alice-proj'].sort());
-      expect(data.usage).toEqual([expect.objectContaining({ period: '2026-10', requests: 7, aiGenerations: 3 })]);
+      expect(data.notifications.map((n: any) => n.title).sort()).toEqual(
+        [`loose-${alice._id.toString()}`, 'n-alice-proj'].sort()
+      );
+      expect(data.usage).toEqual([
+        expect.objectContaining({ period: '2026-10', requests: 7, aiGenerations: 3 }),
+      ]);
       expect(data.sessions.length).toBeGreaterThanOrEqual(1);
-      expect(Object.keys(data.sessions[0]).sort()).toEqual(['createdAt', 'expiresAt', 'status', 'ip', 'ua'].sort());
+      expect(Object.keys(data.sessions[0]).sort()).toEqual(
+        ['createdAt', 'expiresAt', 'status', 'ip', 'ua'].sort()
+      );
 
       // Nothing of the other user
       expect(raw).not.toContain('bob@example.com');
@@ -264,7 +312,9 @@ describe('RGPD - exportar y borrar la cuenta', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.projects).toEqual([]);
-      expect(res.body.memberships).toEqual([expect.objectContaining({ title: 'Title shared-proj', role: 'editor' })]);
+      expect(res.body.memberships).toEqual([
+        expect.objectContaining({ title: 'Title shared-proj', role: 'editor' }),
+      ]);
       expect(res.text).not.toContain('bob@example.com');
       expect(res.text).not.toContain('summary shared-proj');
     });
@@ -304,7 +354,10 @@ describe('RGPD - exportar y borrar la cuenta', () => {
     });
 
     it('wrong password: 401, nothing is deleted and Stripe is not called', async () => {
-      const alice = await createUser('alice@example.com', { plan: 'pro', stripeSubscriptionId: 'sub_1' });
+      const alice = await createUser('alice@example.com', {
+        plan: 'pro',
+        stripeSubscriptionId: 'sub_1',
+      });
       await seedProject(alice._id as Types.ObjectId, 'alice-proj');
       await seedUserData(alice._id as Types.ObjectId);
       const auth = await login('alice@example.com');
@@ -312,7 +365,10 @@ describe('RGPD - exportar y borrar la cuenta', () => {
       global.fetch = fetchMock as any;
       const before = await counts();
 
-      const res = await request(app).delete('/api/users/me').set(auth).send({ password: 'not-the-password-1' });
+      const res = await request(app)
+        .delete('/api/users/me')
+        .set(auth)
+        .send({ password: 'not-the-password-1' });
 
       expect(res.status).toBe(401);
       expect(fetchMock).not.toHaveBeenCalled();
@@ -331,11 +387,16 @@ describe('RGPD - exportar y borrar la cuenta', () => {
       await seedProject(alice._id as Types.ObjectId, 'alice-proj');
       const auth = await login('alice@example.com');
 
-      const seenAtCall: Array<{ userExists: boolean; projects: number; url: string; init: any }> = [];
+      const seenAtCall: Array<{ userExists: boolean; projects: number; url: string; init: any }> =
+        [];
       global.fetch = jest.fn(async (url: any, init: any) => {
         // Listing the customer's other subscriptions (account deletion cancels every live one): none besides sub_123
         if (String(url).startsWith('https://api.stripe.com/v1/subscriptions?')) {
-          return { ok: true, status: 200, json: async () => ({ data: [{ id: 'sub_123', status: 'canceled' }], has_more: false }) } as any;
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({ data: [{ id: 'sub_123', status: 'canceled' }], has_more: false }),
+          } as any;
         }
         seenAtCall.push({
           url: String(url),
@@ -343,7 +404,11 @@ describe('RGPD - exportar y borrar la cuenta', () => {
           userExists: Boolean(await UserModel.exists({ _id: alice._id })),
           projects: await ProjectModel.countDocuments({ ownerId: alice._id }),
         });
-        return { ok: true, status: 200, json: async () => ({ id: 'sub_123', status: 'canceled' }) } as any;
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ id: 'sub_123', status: 'canceled' }),
+        } as any;
       }) as any;
 
       const res = await request(app).delete('/api/users/me').set(auth).send({ password: PASSWORD });
@@ -362,11 +427,18 @@ describe('RGPD - exportar y borrar la cuenta', () => {
     });
 
     it('Stripe failure: 502 with a clear message and NOTHING is deleted', async () => {
-      const alice = await createUser('alice@example.com', { plan: 'pro', stripeSubscriptionId: 'sub_1' });
+      const alice = await createUser('alice@example.com', {
+        plan: 'pro',
+        stripeSubscriptionId: 'sub_1',
+      });
       await seedProject(alice._id as Types.ObjectId, 'alice-proj');
       await seedUserData(alice._id as Types.ObjectId);
       const auth = await login('alice@example.com');
-      global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 500, json: async () => ({ error: { message: 'boom' } }) }) as any;
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+        json: async () => ({ error: { message: 'boom' } }),
+      }) as any;
       const before = await counts();
 
       const res = await request(app).delete('/api/users/me').set(auth).send({ password: PASSWORD });
@@ -378,7 +450,10 @@ describe('RGPD - exportar y borrar la cuenta', () => {
     });
 
     it('Stripe network error: 502 and nothing is deleted', async () => {
-      const alice = await createUser('alice@example.com', { plan: 'pro', stripeSubscriptionId: 'sub_1' });
+      const alice = await createUser('alice@example.com', {
+        plan: 'pro',
+        stripeSubscriptionId: 'sub_1',
+      });
       await seedProject(alice._id as Types.ObjectId, 'alice-proj');
       const auth = await login('alice@example.com');
       global.fetch = jest.fn().mockRejectedValue(new Error('ECONNRESET')) as any;
@@ -391,9 +466,16 @@ describe('RGPD - exportar y borrar la cuenta', () => {
     });
 
     it('a subscription Stripe no longer knows (404) counts as already cancelled', async () => {
-      const alice = await createUser('alice@example.com', { plan: 'pro', stripeSubscriptionId: 'sub_gone' });
+      const alice = await createUser('alice@example.com', {
+        plan: 'pro',
+        stripeSubscriptionId: 'sub_gone',
+      });
       const auth = await login('alice@example.com');
-      global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 404, json: async () => ({ error: { code: 'resource_missing' } }) }) as any;
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: false,
+        status: 404,
+        json: async () => ({ error: { code: 'resource_missing' } }),
+      }) as any;
 
       const res = await request(app).delete('/api/users/me').set(auth).send({ password: PASSWORD });
 
@@ -403,7 +485,10 @@ describe('RGPD - exportar y borrar la cuenta', () => {
 
     it('Stripe not configured but the user has a subscription: 409 and nothing is deleted', async () => {
       delete process.env.STRIPE_SECRET_KEY;
-      const alice = await createUser('alice@example.com', { plan: 'pro', stripeSubscriptionId: 'sub_1' });
+      const alice = await createUser('alice@example.com', {
+        plan: 'pro',
+        stripeSubscriptionId: 'sub_1',
+      });
       await seedProject(alice._id as Types.ObjectId, 'alice-proj');
       const auth = await login('alice@example.com');
       const fetchMock = jest.fn();
@@ -419,13 +504,20 @@ describe('RGPD - exportar y borrar la cuenta', () => {
 
     it('a user without subscription (or with a cancelled one) never touches Stripe', async () => {
       const free = await createUser('free@example.com');
-      const cancelled = await createUser('cancelled@example.com', { plan: 'free', billingStatus: 'canceled', stripeSubscriptionId: 'sub_old' });
+      const cancelled = await createUser('cancelled@example.com', {
+        plan: 'free',
+        billingStatus: 'canceled',
+        stripeSubscriptionId: 'sub_old',
+      });
       const fetchMock = jest.fn();
       global.fetch = fetchMock as any;
 
       for (const email of ['free@example.com', 'cancelled@example.com']) {
         const auth = await login(email);
-        const res = await request(app).delete('/api/users/me').set(auth).send({ password: PASSWORD });
+        const res = await request(app)
+          .delete('/api/users/me')
+          .set(auth)
+          .send({ password: PASSWORD });
         expect(res.status).toBe(204);
       }
       expect(fetchMock).not.toHaveBeenCalled();
@@ -442,7 +534,10 @@ describe('RGPD - exportar y borrar la cuenta', () => {
 
       const alice = await createUser('alice@example.com');
       const aliceProject = await seedProject(alice._id as Types.ObjectId, 'alice-proj');
-      await seedProject(alice._id as Types.ObjectId, 'alice-archived', { isArchived: true, archivedAt: new Date() });
+      await seedProject(alice._id as Types.ObjectId, 'alice-archived', {
+        isArchived: true,
+        archivedAt: new Date(),
+      });
       await seedUserData(alice._id as Types.ObjectId);
       const auth = await login('alice@example.com');
       expect((await counts()).every((n, i) => n > onlyBob[i])).toBe(true);
@@ -458,14 +553,18 @@ describe('RGPD - exportar y borrar la cuenta', () => {
 
     it('clears the refresh cookie in the response', async () => {
       await createUser('alice@example.com');
-      const loginRes = await request(app).post('/api/auth/login').send({ email: 'alice@example.com', password: PASSWORD });
+      const loginRes = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'alice@example.com', password: PASSWORD });
       const auth = { Authorization: `Bearer ${loginRes.body.data.tokens.accessToken as string}` };
 
       const res = await request(app).delete('/api/users/me').set(auth).send({ password: PASSWORD });
 
       expect(res.status).toBe(204);
       const cookies = ([] as string[]).concat(res.headers['set-cookie'] ?? []);
-      expect(cookies.some((c) => c.startsWith('mockia_rt=;') && /Path=\/api\/auth/.test(c))).toBe(true);
+      expect(cookies.some((c) => c.startsWith('mockia_rt=;') && /Path=\/api\/auth/.test(c))).toBe(
+        true
+      );
     });
 
     it('memberships: a project the user owns is deleted (members included); where only a member, just the membership goes', async () => {
@@ -499,10 +598,16 @@ describe('RGPD - exportar y borrar la cuenta', () => {
     it('deleting twice: the second call is a 401 (the account is gone)', async () => {
       await createUser('alice@example.com');
       const auth = await login('alice@example.com');
-      const first = await request(app).delete('/api/users/me').set(auth).send({ password: PASSWORD });
+      const first = await request(app)
+        .delete('/api/users/me')
+        .set(auth)
+        .send({ password: PASSWORD });
       expect(first.status).toBe(204);
 
-      const second = await request(app).delete('/api/users/me').set(auth).send({ password: PASSWORD });
+      const second = await request(app)
+        .delete('/api/users/me')
+        .set(auth)
+        .send({ password: PASSWORD });
       expect(second.status).toBe(401);
     });
 
@@ -511,7 +616,9 @@ describe('RGPD - exportar y borrar la cuenta', () => {
       const auth = await login('alice@example.com');
       await request(app).delete('/api/users/me').set(auth).send({ password: PASSWORD });
 
-      const res = await request(app).post('/api/auth/login').send({ email: 'alice@example.com', password: PASSWORD });
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'alice@example.com', password: PASSWORD });
       expect(res.status).toBe(401);
     });
   });

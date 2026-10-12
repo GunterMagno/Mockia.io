@@ -43,10 +43,15 @@ export const generationBodySchema = Joi.object({
     'string.base': 'projectId must be a string',
     'string.max': 'projectId is too long',
   }),
-  requirement: Joi.string().trim().min(1).max(MAX_REQUIREMENT_CHARS).required().messages({
-    'any.required': 'requirement is required (description of what the mock API should do)',
-    'string.base': 'requirement must be a string',
-    'string.empty': 'requirement is required (description of what the mock API should do)',
-    'string.max': `requirement is too long (${MAX_REQUIREMENT_CHARS} characters maximum)`,
-  }),
+  requirement: Joi.string()
+    .trim()
+    .min(1)
+    .max(MAX_REQUIREMENT_CHARS)
+    .required()
+    .messages({
+      'any.required': 'requirement is required (description of what the mock API should do)',
+      'string.base': 'requirement must be a string',
+      'string.empty': 'requirement is required (description of what the mock API should do)',
+      'string.max': `requirement is too long (${MAX_REQUIREMENT_CHARS} characters maximum)`,
+    }),
 });

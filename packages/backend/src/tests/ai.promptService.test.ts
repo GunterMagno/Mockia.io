@@ -1,4 +1,8 @@
-import { buildPrompt, validateJsonResponse, extractMockAPIFromResponse } from '../modules/ai/prompt.service.js';
+import {
+  buildPrompt,
+  validateJsonResponse,
+  extractMockAPIFromResponse,
+} from '../modules/ai/prompt.service.js';
 import { ProjectModel } from '../models/Project.js';
 import { getProjectContext } from '../services/github-context.service.js';
 import { AppError } from '../middlewares/errorHandler.js';
@@ -12,7 +16,11 @@ describe('AI Prompt Service', () => {
   });
 
   describe('buildPrompt', () => {
-    const mockProject = { _id: '123456789012345678901234', title: 'Test Project', slug: 'test-project' };
+    const mockProject = {
+      _id: '123456789012345678901234',
+      title: 'Test Project',
+      slug: 'test-project',
+    };
 
     it('should build a prompt with GitHub context', async () => {
       const mockContext = {
@@ -31,14 +39,14 @@ describe('AI Prompt Service', () => {
             typeAliases: [{ name: 'ID', type: 'string' }],
             enums: [{ name: 'Role', members: ['ADMIN', 'USER'] }],
             functions: [{ name: 'getUser', params: ['id: string'], returnType: 'User' }],
-            routes: [{ methods: ['GET'], path: '/api/users' }]
+            routes: [{ methods: ['GET'], path: '/api/users' }],
           },
           {
             path: 'swagger.yaml',
             type: 'swagger',
-            summary: 'API Spec'
-          }
-        ]
+            summary: 'API Spec',
+          },
+        ],
       } as any;
 
       (ProjectModel.findById as jest.Mock).mockResolvedValue(mockProject);
@@ -58,7 +66,7 @@ describe('AI Prompt Service', () => {
         repoName: 'test-repo',
         summary: longString,
         stats: { totalFiles: 1 },
-        files: []
+        files: [],
       } as any;
 
       (ProjectModel.findById as jest.Mock).mockResolvedValue(mockProject);

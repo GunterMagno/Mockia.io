@@ -47,7 +47,10 @@ const isDevelopment = process.env.NODE_ENV === 'development';
 
 // Behind a reverse proxy (nginx) req.ip must come from X-Forwarded-For, or every client shares one rate-limit bucket.
 // TRUST_PROXY = number of proxy hops (default 1 in production, off otherwise).
-app.set('trust proxy', Number(process.env.TRUST_PROXY ?? (process.env.NODE_ENV === 'production' ? 1 : 0)));
+app.set(
+  'trust proxy',
+  Number(process.env.TRUST_PROXY ?? (process.env.NODE_ENV === 'production' ? 1 : 0))
+);
 
 // ============================================================================
 // SECURITY AND UTILITY MIDDLEWARES
@@ -74,7 +77,11 @@ const corsMiddleware = cors({
 app.use((req, res, next) => {
   // Bypasses the restrictive global CORS domain check for public/mock endpoints,
   // allowing them to handle their own open CORS rules (origin: '*') in their respective routers.
-  if (req.path.startsWith('/api/mock') || req.path.startsWith('/mock') || req.path.startsWith('/api/demo-mock/')) {
+  if (
+    req.path.startsWith('/api/mock') ||
+    req.path.startsWith('/mock') ||
+    req.path.startsWith('/api/demo-mock/')
+  ) {
     return next();
   }
   corsMiddleware(req, res, next);
@@ -89,7 +96,10 @@ if (process.env.NODE_ENV !== 'test') {
   const MIN15 = 15 * 60 * 1000;
   const globalLimiter = rateLimit({ windowMs: MIN15, max: 1000 });
   // login / register brute force. AUTH_RATE_LIMIT_MAX raises it for the e2e suite, which logs in more than 20 times from one IP.
-  const authLimiter = rateLimit({ windowMs: MIN15, max: Number(process.env.AUTH_RATE_LIMIT_MAX) || 20 });
+  const authLimiter = rateLimit({
+    windowMs: MIN15,
+    max: Number(process.env.AUTH_RATE_LIMIT_MAX) || 20,
+  });
   const heavyLimiter = rateLimit({ windowMs: MIN15, max: 60 }); // AI (paid upstream) and GitHub clone
   // Public mock traffic (own quota gate), Stripe webhook, health probes and notification polling are not throttled here.
   app.use('/api', (req, res, next) =>
@@ -205,18 +215,13 @@ mountInterceptorRoutes(app);
 
 // Catch-all Mock Router for direct project path interception
 // Intercepts any request to /mock/:projectSlug/* and serves default responses
-app.all(
-  '/mock/:projectSlug/*',
-  cors(MOCK_CORS_OPTIONS),
-  catchAllMockRouter
-);
+app.all('/mock/:projectSlug/*', cors(MOCK_CORS_OPTIONS), catchAllMockRouter);
 
 // AI generation routes (protected)
 app.use('/api/ai', aiRouter);
 
 // Notification routes (protected)
 app.use('/api/notifications', notificationRouter);
-
 
 // ============================================================================
 // ERROR HANDLING
@@ -243,7 +248,11 @@ const startServer = async (): Promise<void> => {
     assertProdConfig();
     // Fail fast on an AI_PROVIDERS list without a valid provider; unknown names only produce a warning.
     const aiChain = getLlm().name;
-    if (process.env.NODE_ENV === 'production' && !process.env.SMTP_URL?.trim() && isEmailVerificationRequired()) {
+    if (
+      process.env.NODE_ENV === 'production' &&
+      !process.env.SMTP_URL?.trim() &&
+      isEmailVerificationRequired()
+    ) {
       console.warn(
         '[Backend] SMTP_URL is not set: verification and password reset emails cannot be delivered, and with email ' +
           'verification required users could not unlock AI generation or billing. Set SMTP_URL and MAIL_FROM.'
@@ -260,7 +269,8 @@ const startServer = async (): Promise<void> => {
     // Plain-text project API keys of older versions become SHA-256 hashes (idempotent, no-op once migrated).
     // Not caught on purpose: if it fails the server must not start, or private mocks would be served as public.
     const migratedKeys = await migrateLegacyApiKeys();
-    if (migratedKeys > 0) console.log(`[Backend] Migrated ${migratedKeys} project API key(s) to hashes`);
+    if (migratedKeys > 0)
+      console.log(`[Backend] Migrated ${migratedKeys} project API key(s) to hashes`);
 
     // Start project cleanup scheduler
     startProjectCleanupScheduler();

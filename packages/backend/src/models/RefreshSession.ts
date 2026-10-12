@@ -50,6 +50,9 @@ const refreshSessionSchema = new Schema<RefreshSessionDocument>(
 // TTL: Mongo removes each session at its expiresAt (expireAfterSeconds: 0 = "at the date stored in the field").
 refreshSessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
-export const RefreshSessionModel = model<RefreshSessionDocument>('RefreshSession', refreshSessionSchema);
+export const RefreshSessionModel = model<RefreshSessionDocument>(
+  'RefreshSession',
+  refreshSessionSchema
+);
 
 export type { RefreshSessionDocument };

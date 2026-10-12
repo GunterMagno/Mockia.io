@@ -23,7 +23,9 @@ const specWith = (extra: Record<string, unknown> = {}, path = '/members') => ({
   apiVersion: '1.0.0',
   title: 'Gym API',
   description: 'd',
-  endpoints: [{ path, method: 'GET', description: 'List', examples: [{ request: {}, response: { id: 1 } }] }],
+  endpoints: [
+    { path, method: 'GET', description: 'List', examples: [{ request: {}, response: { id: 1 } }] },
+  ],
   dataModels: [],
   ...extra,
 });
@@ -50,7 +52,9 @@ async function seed(opts: SeedOpts = {}) {
       email: opts.email ?? `u${counter}-${Date.now()}@example.com`,
       username: `u${counter}`,
       passwordHash: 'x'.repeat(20),
-      ...(opts.consent === null ? {} : { aiTrainingConsent: opts.consent ?? { granted: true, at: new Date() } }),
+      ...(opts.consent === null
+        ? {}
+        : { aiTrainingConsent: opts.consent ?? { granted: true, at: new Date() } }),
     }));
   const generationId = crypto.randomUUID();
   await AiGenerationModel.create({
@@ -80,17 +84,24 @@ async function seed(opts: SeedOpts = {}) {
   return { user, generationId };
 }
 
-const lines = (r: { train: string[]; val: string[] }) => [...r.train, ...r.val].map((l) => JSON.parse(l) as { messages: Array<{ role: string; content: string }> });
+const lines = (r: { train: string[]; val: string[] }) =>
+  [...r.train, ...r.val].map(
+    (l) => JSON.parse(l) as { messages: Array<{ role: string; content: string }> }
+  );
 
 describe('dataset export', () => {
   beforeAll(async () => {
     await connectDB();
   });
   beforeEach(async () => {
-    await Promise.all([UserModel, AiGenerationModel, AiFeedbackModel].map((m) => (m as any).deleteMany({})));
+    await Promise.all(
+      [UserModel, AiGenerationModel, AiFeedbackModel].map((m) => (m as any).deleteMany({}))
+    );
   });
   afterAll(async () => {
-    await Promise.all([UserModel, AiGenerationModel, AiFeedbackModel].map((m) => (m as any).deleteMany({})));
+    await Promise.all(
+      [UserModel, AiGenerationModel, AiFeedbackModel].map((m) => (m as any).deleteMany({}))
+    );
     await disconnectDB();
   });
 
@@ -118,13 +129,15 @@ describe('dataset export', () => {
     });
 
     it('a model output wrapped in fences or prose is normalised to the clean JSON', async () => {
-      await seed({ output: 'Here you go:\n```json\n' + JSON.stringify(specWith()) + '\n```\nEnjoy!' });
+      await seed({
+        output: 'Here you go:\n```json\n' + JSON.stringify(specWith()) + '\n```\nEnjoy!',
+      });
       const [line] = lines(await buildDataset());
       expect(JSON.parse(line.messages[2].content).title).toBe('Gym API');
       expect(line.messages[2].content.startsWith('{')).toBe(true);
     });
 
-    it('the user\'s corrected output wins over the model output', async () => {
+    it("the user's corrected output wins over the model output", async () => {
       const corrected = specWith({ title: 'Corrected title' }, '/fixed');
       await seed({ verdict: 'bad', corrected });
       await seed({ verdict: 'good', corrected });
@@ -170,14 +183,24 @@ describe('dataset export', () => {
 
     it('feedback whose generation was never stored (verdict-only rows) contributes nothing', async () => {
       const { user } = await seed({ verdict: null });
-      await AiFeedbackModel.create({ userId: user._id, generationId: crypto.randomUUID(), verdict: 'good', expiresAt: new Date(Date.now() + 1e9) });
+      await AiFeedbackModel.create({
+        userId: user._id,
+        generationId: crypto.randomUUID(),
+        verdict: 'good',
+        expiresAt: new Date(Date.now() + 1e9),
+      });
       expect((await buildDataset()).counts.included).toBe(0);
     });
 
     it('feedback of user A on a generation id that belongs to user B never joins them', async () => {
       const a = await seed({ verdict: null });
       const b = await seed({ verdict: null });
-      await AiFeedbackModel.create({ userId: b.user._id, generationId: a.generationId, verdict: 'good', expiresAt: new Date(Date.now() + 1e9) });
+      await AiFeedbackModel.create({
+        userId: b.user._id,
+        generationId: a.generationId,
+        verdict: 'good',
+        expiresAt: new Date(Date.now() + 1e9),
+      });
       expect((await buildDataset()).counts.included).toBe(0);
     });
   });
@@ -196,7 +219,10 @@ describe('dataset export', () => {
       const { user } = await seed({});
       expect((await buildDataset()).counts.included).toBe(1);
       // simulate a withdrawal whose cleanup has not run (or a failed one): flag flipped, rows still present
-      await UserModel.updateOne({ _id: user._id }, { aiTrainingConsent: { granted: false, at: new Date() } });
+      await UserModel.updateOne(
+        { _id: user._id },
+        { aiTrainingConsent: { granted: false, at: new Date() } }
+      );
       expect(await AiGenerationModel.countDocuments({})).toBe(1);
       const r = await buildDataset();
       expect(r.counts.included).toBe(0);
@@ -231,15 +257,39 @@ describe('dataset export', () => {
     });
 
     /** Stores a generation of a fresh consenting user with an explicit prompt and a 'good' vote. */
-    const seedPrompt = async (messages: Array<{ role: 'system' | 'user'; content: string }>, output: string) => {
+    const seedPrompt = async (
+      messages: Array<{ role: 'system' | 'user'; content: string }>,
+      output: string
+    ) => {
       const generationId = crypto.randomUUID();
       const { user } = await seed({ verdict: null });
-      await AiGenerationModel.create({ generationId, userId: user._id, messages, output, parsedOk: true, provider: 'p', model: 'm', expiresAt: new Date(Date.now() + 1e9) });
-      await AiFeedbackModel.create({ userId: user._id, generationId, verdict: 'good', expiresAt: new Date(Date.now() + 1e9) });
+      await AiGenerationModel.create({
+        generationId,
+        userId: user._id,
+        messages,
+        output,
+        parsedOk: true,
+        provider: 'p',
+        model: 'm',
+        expiresAt: new Date(Date.now() + 1e9),
+      });
+      await AiFeedbackModel.create({
+        userId: user._id,
+        generationId,
+        verdict: 'good',
+        expiresAt: new Date(Date.now() + 1e9),
+      });
     };
 
     it('removes the repository, owner, URL, branch and project identifiers of the prompt (built by the real prompt builder)', async () => {
-      const ids = ['zelda-acme-labs', 'gym-booking-secret-repo', 'github.com/zelda-acme-labs', 'feature/acme-payroll', 'Acme Internal Gym Portal', 'Acme Corp Madrid'];
+      const ids = [
+        'zelda-acme-labs',
+        'gym-booking-secret-repo',
+        'github.com/zelda-acme-labs',
+        'feature/acme-payroll',
+        'Acme Internal Gym Portal',
+        'Acme Corp Madrid',
+      ];
       const withRepo = buildPromptFromInput({
         projectTitle: 'Acme Internal Gym Portal',
         projectDescription: 'Portal for the Acme Corp Madrid branch members',
@@ -273,10 +323,17 @@ describe('dataset export', () => {
       const prompt = (repo: string) =>
         buildPromptFromInput({
           projectTitle: repo,
-          context: { repoName: repo, repoUrl: 'https://github.com/o-' + repo + '/' + repo, repoOwner: 'o-' + repo, summary: 's', files: [] },
+          context: {
+            repoName: repo,
+            repoUrl: 'https://github.com/o-' + repo + '/' + repo,
+            repoOwner: 'o-' + repo,
+            summary: 's',
+            files: [],
+          },
           userInput: 'Members CRUD',
         });
-      for (const repo of ['alpha-repo', 'beta-repo']) await seedPrompt(prompt(repo) as never, JSON.stringify(specWith()));
+      for (const repo of ['alpha-repo', 'beta-repo'])
+        await seedPrompt(prompt(repo) as never, JSON.stringify(specWith()));
       const r = await buildDataset();
       expect(r.counts.included).toBe(1);
       expect(r.counts.duplicates).toBe(1);
@@ -295,13 +352,20 @@ describe('dataset export', () => {
             method: 'POST',
             description: 'Login',
             examples: [
-              { request: { email: 'jane@example.org', password: 'hunter2' }, response: login, statusCode: 200 },
+              {
+                request: { email: 'jane@example.org', password: 'hunter2' },
+                response: login,
+                statusCode: 200,
+              },
               { request: {}, response: { leaked: SK } },
             ],
           },
         ],
       });
-      await seed({ userText: 'Auth API, contact boss@real-company.io and use password = Secret123!', output: JSON.stringify(target) });
+      await seed({
+        userText: 'Auth API, contact boss@real-company.io and use password = Secret123!',
+        output: JSON.stringify(target),
+      });
       const r = await buildDataset();
       const text = [...r.train, ...r.val].join('\n');
       const out = JSON.parse(lines(r)[0].messages[2].content);
@@ -454,7 +518,11 @@ describe('dataset export', () => {
 
     it('writes train.jsonl and val.jsonl whose lines are the dataset, both always present', async () => {
       for (let i = 0; i < 40; i++) await seed({});
-      await runExportCli(['--out', out, '--confirm-consent-checked', '--val-ratio', '0.25'], {}, log);
+      await runExportCli(
+        ['--out', out, '--confirm-consent-checked', '--val-ratio', '0.25'],
+        {},
+        log
+      );
       const train = fs.readFileSync(path.join(out, 'train.jsonl'), 'utf8');
       const val = fs.readFileSync(path.join(out, 'val.jsonl'), 'utf8');
       const trainLines = train.split('\n').filter(Boolean);
@@ -474,7 +542,10 @@ describe('dataset export', () => {
     });
 
     it('prints counts only: never a prompt, an output, an id or an email', async () => {
-      const { user, generationId } = await seed({ email: 'printer.person@example.org', userText: 'UNIQUE-PROMPT-TEXT-123' });
+      const { user, generationId } = await seed({
+        email: 'printer.person@example.org',
+        userText: 'UNIQUE-PROMPT-TEXT-123',
+      });
       await runExportCli(['--out', out, '--confirm-consent-checked'], {}, log);
       const text = printed.join('\n');
       expect(text).toMatch(/\d/);
@@ -485,30 +556,45 @@ describe('dataset export', () => {
       expect(text).not.toContain('printer.person');
     });
 
-    (process.platform === 'win32' ? it.skip : it)('creates the files with mode 0600 (owner only) and the directory 0700', async () => {
-      // POSIX permission bits do not exist on Windows (NTFS ACLs): the assertion is skipped there, the code still sets the mode
-      await seed({});
-      await runExportCli(['--out', out, '--confirm-consent-checked'], {}, log);
-      for (const f of ['train.jsonl', 'val.jsonl']) {
-        expect(fs.statSync(path.join(out, f)).mode & 0o777).toBe(0o600);
+    (process.platform === 'win32' ? it.skip : it)(
+      'creates the files with mode 0600 (owner only) and the directory 0700',
+      async () => {
+        // POSIX permission bits do not exist on Windows (NTFS ACLs): the assertion is skipped there, the code still sets the mode
+        await seed({});
+        await runExportCli(['--out', out, '--confirm-consent-checked'], {}, log);
+        for (const f of ['train.jsonl', 'val.jsonl']) {
+          expect(fs.statSync(path.join(out, f)).mode & 0o777).toBe(0o600);
+        }
+        expect(fs.statSync(out).mode & 0o777).toBe(0o700);
       }
-      expect(fs.statSync(out).mode & 0o777).toBe(0o700);
-    });
+    );
 
-    (process.platform === 'win32' ? it.skip : it)('re-tightens the mode of files that already existed with looser permissions', async () => {
-      fs.mkdirSync(out, { recursive: true });
-      fs.writeFileSync(path.join(out, 'train.jsonl'), 'old', { mode: 0o644 });
-      fs.chmodSync(path.join(out, 'train.jsonl'), 0o644);
-      await seed({});
-      await runExportCli(['--out', out, '--confirm-consent-checked'], {}, log);
-      expect(fs.statSync(path.join(out, 'train.jsonl')).mode & 0o777).toBe(0o600);
-      expect(fs.readFileSync(path.join(out, 'train.jsonl'), 'utf8')).not.toBe('old');
-    });
+    (process.platform === 'win32' ? it.skip : it)(
+      're-tightens the mode of files that already existed with looser permissions',
+      async () => {
+        fs.mkdirSync(out, { recursive: true });
+        fs.writeFileSync(path.join(out, 'train.jsonl'), 'old', { mode: 0o644 });
+        fs.chmodSync(path.join(out, 'train.jsonl'), 0o644);
+        await seed({});
+        await runExportCli(['--out', out, '--confirm-consent-checked'], {}, log);
+        expect(fs.statSync(path.join(out, 'train.jsonl')).mode & 0o777).toBe(0o600);
+        expect(fs.readFileSync(path.join(out, 'train.jsonl'), 'utf8')).not.toBe('old');
+      }
+    );
 
     it('rejects a bad --val-ratio and unknown flags with a non-zero code and writes nothing', async () => {
       await seed({});
-      for (const args of [['--val-ratio', '2'], ['--val-ratio', 'abc'], ['--val-ratio', '1'], ['--nope']]) {
-        const code = await runExportCli(['--out', out, '--confirm-consent-checked', ...args], {}, log);
+      for (const args of [
+        ['--val-ratio', '2'],
+        ['--val-ratio', 'abc'],
+        ['--val-ratio', '1'],
+        ['--nope'],
+      ]) {
+        const code = await runExportCli(
+          ['--out', out, '--confirm-consent-checked', ...args],
+          {},
+          log
+        );
         expect(code).not.toBe(0);
       }
       expect(fs.existsSync(out)).toBe(false);

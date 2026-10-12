@@ -29,7 +29,12 @@ describe('generateSnippets', () => {
   });
 
   it('no duplica Content-Type si ya viene (insensible a mayúsculas)', () => {
-    const s = generateSnippets({ method: 'PUT', url: 'u', headers: { 'content-type': 'application/json' }, body: { a: 1 } });
+    const s = generateSnippets({
+      method: 'PUT',
+      url: 'u',
+      headers: { 'content-type': 'application/json' },
+      body: { a: 1 },
+    });
     expect(s.curl.match(/Content-Type/gi)).toHaveLength(1);
   });
 
@@ -61,7 +66,11 @@ describe('generateSnippets', () => {
   });
 
   it('cuerpos vacíos u objetos anidados en Python son literales válidos', () => {
-    const s = generateSnippets({ method: 'PATCH', url: 'u', body: { a: {}, b: [], c: { d: [1, { e: false }] } } });
+    const s = generateSnippets({
+      method: 'PATCH',
+      url: 'u',
+      body: { a: {}, b: [], c: { d: [1, { e: false }] } },
+    });
     expect(s.python).toContain('"a": {}');
     expect(s.python).toContain('"b": []');
     expect(s.python).toContain('"e": False');

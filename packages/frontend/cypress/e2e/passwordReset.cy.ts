@@ -39,7 +39,9 @@ const registerViaApi = (email: string, username: string) =>
 describe('Password reset', () => {
   before(() => {
     // Falla pronto y con un mensaje claro si el backend no expone el buzon de pruebas
-    cy.request({ url: '/api/__test__/outbox', failOnStatusCode: false }).its('status').should('eq', 200);
+    cy.request({ url: '/api/__test__/outbox', failOnStatusCode: false })
+      .its('status')
+      .should('eq', 200);
   });
 
   beforeEach(() => {
@@ -101,7 +103,12 @@ describe('Password reset', () => {
       cy.focused().should('have.attr', 'role', 'status');
 
       // The old password is dead, the new one logs in
-      cy.request({ method: 'POST', url: '/api/auth/login', body: { email, password: PASSWORD }, failOnStatusCode: false })
+      cy.request({
+        method: 'POST',
+        url: '/api/auth/login',
+        body: { email, password: PASSWORD },
+        failOnStatusCode: false,
+      })
         .its('status')
         .should('eq', 401);
       cy.clearCookies();
@@ -132,7 +139,9 @@ describe('Password reset', () => {
 
 describe('Email verification', () => {
   before(() => {
-    cy.request({ url: '/api/__test__/outbox', failOnStatusCode: false }).its('status').should('eq', 200);
+    cy.request({ url: '/api/__test__/outbox', failOnStatusCode: false })
+      .its('status')
+      .should('eq', 200);
   });
 
   beforeEach(() => {
@@ -153,7 +162,9 @@ describe('Email verification', () => {
     const email = uniqueEmail('verify');
     signUp(email);
 
-    cy.contains('Verify your email address to unlock AI generation and billing').should('be.visible');
+    cy.contains('Verify your email address to unlock AI generation and billing').should(
+      'be.visible'
+    );
     mailsFor(email, 'verify').should('have.length', 1);
 
     cy.contains('button', 'Resend email').click();

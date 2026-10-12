@@ -1,57 +1,71 @@
-import { api } from './api'
-import { setAccessToken } from './session'
-import { filenameFromDisposition } from '../utils/download'
+import { api } from './api';
+import { setAccessToken } from './session';
+import { filenameFromDisposition } from '../utils/download';
 
 export interface UserProfile {
-  id: string
-  email: string
-  fullName?: string
-  username?: string
+  id: string;
+  email: string;
+  fullName?: string;
+  username?: string;
   /** Consent to use my AI generations to improve the AI. Absent = never decided = off. */
-  aiTrainingConsent?: { granted: boolean; at: string; grantedAt?: string | null; withdrawnAt?: string | null }
-  createdAt: string
-  updatedAt: string
+  aiTrainingConsent?: {
+    granted: boolean;
+    at: string;
+    grantedAt?: string | null;
+    withdrawnAt?: string | null;
+  };
+  createdAt: string;
+  updatedAt: string;
 }
 
 export const getProfile = async (): Promise<UserProfile> => {
-  const res = await api.get<UserProfile>('/users/profile')
-  return res.data
-}
+  const res = await api.get<UserProfile>('/users/profile');
+  return res.data;
+};
 
-export const updateProfile = async (payload: { fullName?: string, username?: string }): Promise<UserProfile> => {
-  const res = await api.put<UserProfile>('/users/profile', payload)
-  return res.data
-}
+export const updateProfile = async (payload: {
+  fullName?: string;
+  username?: string;
+}): Promise<UserProfile> => {
+  const res = await api.put<UserProfile>('/users/profile', payload);
+  return res.data;
+};
 
 /**
  * Cambia la contrasena. El backend cierra todas las sesiones anteriores (tambien la de esta pestana) y entrega una
  * nueva: cookie de refresh nueva y el access token en el cuerpo, que se guarda en memoria para seguir conectado.
  */
-export const changePassword = async (payload: { currentPassword: string, newPassword: string }): Promise<void> => {
-  const res = await api.post('/users/change-password', payload)
-  const accessToken: unknown = res?.data?.data?.accessToken
-  if (typeof accessToken === 'string') setAccessToken(accessToken)
-}
+export const changePassword = async (payload: {
+  currentPassword: string;
+  newPassword: string;
+}): Promise<void> => {
+  const res = await api.post('/users/change-password', payload);
+  const accessToken: unknown = res?.data?.data?.accessToken;
+  if (typeof accessToken === 'string') setAccessToken(accessToken);
+};
 
 /**
  * Descarga el JSON con todos los datos personales (GET /users/me/export). Devuelve el contenido y el nombre de archivo
  * que propone el servidor (Content-Disposition), con uno propio de respaldo.
  */
 export const exportMyData = async (): Promise<{ blob: Blob; filename: string }> => {
-  const res = await api.get<Blob>('/users/me/export', { responseType: 'blob' })
-  const filename = filenameFromDisposition(res.headers['content-disposition'], `mockia-export-${new Date().toISOString().slice(0, 10)}.json`)
-  return { blob: res.data, filename }
-}
+  const res = await api.get<Blob>('/users/me/export', { responseType: 'blob' });
+  const filename = filenameFromDisposition(
+    res.headers['content-disposition'],
+    `mockia-export-${new Date().toISOString().slice(0, 10)}.json`
+  );
+  return { blob: res.data, filename };
+};
 
 /** Borra la cuenta y todos sus datos (DELETE /users/me). Pide la contrasena; cancela antes la suscripcion de Stripe. */
 export const deleteMyAccount = async (password: string): Promise<void> => {
-  await api.delete('/users/me', { data: { password } })
-}
+  await api.delete('/users/me', { data: { password } });
+};
 
 /**
  * Gives or withdraws the optional consent to use my AI generations to improve Mockia's AI (PUT /users/me/ai-consent).
  * Withdrawing makes the server erase everything it stored for that purpose.
  */
 export const setAiTrainingConsent = async (granted: boolean): Promise<void> => {
-  await api.put('/users/me/ai-consent', { granted })
-}
+  await api.put('/users/me/ai-consent', { granted });
+};

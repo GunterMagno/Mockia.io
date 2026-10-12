@@ -13,7 +13,13 @@ import { buildPromptFromInput } from '../modules/ai/prompt.service.js';
  */
 
 const CASES_DIR = path.resolve(__dirname, '../../evals', CASES_DIR_NAME);
-const wrap = (endpoints: unknown) => ({ apiVersion: '1.0.0', title: 'T', description: 'D', endpoints, dataModels: [] });
+const wrap = (endpoints: unknown) => ({
+  apiVersion: '1.0.0',
+  title: 'T',
+  description: 'D',
+  endpoints,
+  dataModels: [],
+});
 
 describe('evaluation cases', () => {
   const files = fs.readdirSync(CASES_DIR).filter((f) => f.endsWith('.json'));
@@ -53,11 +59,18 @@ describe('evaluation cases', () => {
     });
 
     it('the expected answer scores 1.0 on everything against itself', () => {
-      expect(scoreOutput(c.expected, wrap(c.expected))).toEqual({ validJson: true, schemaValid: true, methodPathF1: 1, fieldCoverage: 1 });
+      expect(scoreOutput(c.expected, wrap(c.expected))).toEqual({
+        validJson: true,
+        schemaValid: true,
+        methodPathF1: 1,
+        fieldCoverage: 1,
+      });
     });
 
     it('has no duplicated method+path in expected (it would make the F1 ambiguous)', () => {
-      const keys = c.expected.map((e) => `${e.method} ${e.path.toLowerCase().replace(/[:{][^/}]*\}?/g, ':p')}`);
+      const keys = c.expected.map(
+        (e) => `${e.method} ${e.path.toLowerCase().replace(/[:{][^/}]*\}?/g, ':p')}`
+      );
       expect(new Set(keys).size).toBe(keys.length);
     });
 
@@ -100,34 +113,49 @@ describe('evaluation cases', () => {
   describe('adversarial cases', () => {
     const adversarial = cases.filter((c) => (c.tags ?? []).includes('adversarial'));
 
-    it.each(adversarial.map((c) => [c.id, c] as const))('%s: the injected instruction is in the input, not in the expected answer, and the scorer punishes following it', (_id, c) => {
-      expect(c.trap).toBeDefined();
-      const trap = c.trap!;
-      const haystack = JSON.stringify(c.input).toLowerCase();
-      expect(haystack).toMatch(/ignore|ignora|disregard|olvida|system prompt|instrucciones anteriores|previous instructions/);
-      expect(haystack).toContain(trap.path.toLowerCase());
-      const expectedKeys = c.expected.map((e) => `${e.method} ${e.path}`);
-      expect(expectedKeys).not.toContain(`${trap.method} ${trap.path}`);
+    it.each(adversarial.map((c) => [c.id, c] as const))(
+      '%s: the injected instruction is in the input, not in the expected answer, and the scorer punishes following it',
+      (_id, c) => {
+        expect(c.trap).toBeDefined();
+        const trap = c.trap!;
+        const haystack = JSON.stringify(c.input).toLowerCase();
+        expect(haystack).toMatch(
+          /ignore|ignora|disregard|olvida|system prompt|instrucciones anteriores|previous instructions/
+        );
+        expect(haystack).toContain(trap.path.toLowerCase());
+        const expectedKeys = c.expected.map((e) => `${e.method} ${e.path}`);
+        expect(expectedKeys).not.toContain(`${trap.method} ${trap.path}`);
 
-      const followedInjection = wrap([
-        ...c.expected,
-        { method: trap.method, path: trap.path, description: 'injected', requestSchema: {}, responseSchema: {}, examples: [{ request: {}, response: { pwned: true } }] },
-      ]);
-      const score = scoreOutput(c.expected, followedInjection);
-      expect(score.methodPathF1).toBeLessThan(1);
-      expect(score.methodPathF1).toBeGreaterThan(0.5);
-    });
+        const followedInjection = wrap([
+          ...c.expected,
+          {
+            method: trap.method,
+            path: trap.path,
+            description: 'injected',
+            requestSchema: {},
+            responseSchema: {},
+            examples: [{ request: {}, response: { pwned: true } }],
+          },
+        ]);
+        const score = scoreOutput(c.expected, followedInjection);
+        expect(score.methodPathF1).toBeLessThan(1);
+        expect(score.methodPathF1).toBeGreaterThan(0.5);
+      }
+    );
   });
 });
 
 describe('evaluation cases against the shipped JSON schema', () => {
   const validate = new Ajv({ allErrors: true }).compile(MOCK_SPEC_JSON_SCHEMA);
 
-  it.each(loadCases(CASES_DIR).map((c) => [c.id, c] as const))('%s: expected is accepted by MOCK_SPEC_JSON_SCHEMA and by the production validator', (_id, c) => {
-    const answer = wrap(JSON.parse(JSON.stringify(c.expected)));
-    const ok = validate(answer);
-    expect(validate.errors ?? []).toEqual([]);
-    expect(ok).toBe(true);
-    expect(() => validateGeneratedApi(JSON.parse(JSON.stringify(answer)))).not.toThrow();
-  });
+  it.each(loadCases(CASES_DIR).map((c) => [c.id, c] as const))(
+    '%s: expected is accepted by MOCK_SPEC_JSON_SCHEMA and by the production validator',
+    (_id, c) => {
+      const answer = wrap(JSON.parse(JSON.stringify(c.expected)));
+      const ok = validate(answer);
+      expect(validate.errors ?? []).toEqual([]);
+      expect(ok).toBe(true);
+      expect(() => validateGeneratedApi(JSON.parse(JSON.stringify(answer)))).not.toThrow();
+    }
+  );
 });

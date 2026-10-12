@@ -1,28 +1,28 @@
-import { api } from './api'
+import { api } from './api';
 
 /** Longest requirement the backend accepts (generationBodySchema: 4000 characters). */
-export const MAX_AI_REQUIREMENT_CHARS = 4000
+export const MAX_AI_REQUIREMENT_CHARS = 4000;
 
 export interface AIGenerationResponse {
-  specification: any
+  specification: any;
   database: {
-    mockApiId: string
-    endpointsCreated: number
-    responsesCreated: number
-  }
+    mockApiId: string;
+    endpointsCreated: number;
+    responsesCreated: number;
+  };
   usage: {
-    totalTokens: number
-  }
+    totalTokens: number;
+  };
   /** Random id of this generation; send it back with the user's feedback. Absent on servers that predate feedback. */
-  generationId?: string
+  generationId?: string;
 }
 
-export type AiVerdict = 'good' | 'bad'
+export type AiVerdict = 'good' | 'bad';
 
 /** Thumbs up / down on a generation (POST /ai/feedback). The latest vote per generation wins on the server. */
 export const sendAiFeedback = async (generationId: string, verdict: AiVerdict): Promise<void> => {
-  await api.post('/ai/feedback', { generationId, verdict })
-}
+  await api.post('/ai/feedback', { generationId, verdict });
+};
 
 /**
  * Generates mock endpoints and saves them to the project
@@ -31,12 +31,12 @@ export const sendAiFeedback = async (generationId: string, verdict: AiVerdict): 
  * @returns Generation results
  */
 export const generateAndSaveEndpoints = async (
-  projectId: string, 
+  projectId: string,
   requirement: string
 ): Promise<AIGenerationResponse> => {
   const res = await api.post<{ data: AIGenerationResponse }>('/ai/generate-and-save', {
     projectId,
-    requirement
-  })
-  return res.data.data
-}
+    requirement,
+  });
+  return res.data.data;
+};

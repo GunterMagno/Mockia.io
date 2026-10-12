@@ -1,11 +1,7 @@
 {
   "id": "express-inventory-pagination",
   "description": "Inventory service with page/limit pagination: list responses are envelopes with paging metadata.",
-  "tags": [
-    "express",
-    "pagination",
-    "path-params"
-  ],
+  "tags": ["express", "pagination", "path-params"],
   "input": {
     "projectTitle": "Warehouse Inventory",
     "userInput": "Mock the inventory API, lists must be paginated as documented.",
@@ -33,21 +29,15 @@
           "summary": "Items router",
           "routes": [
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/items"
             },
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/items/:sku"
             },
             {
-              "methods": [
-                "PATCH"
-              ],
+              "methods": ["PATCH"],
               "path": "/items/:sku/stock"
             }
           ]
@@ -59,21 +49,11 @@
           "interfaces": [
             {
               "name": "Item",
-              "properties": [
-                "sku: string",
-                "name: string",
-                "quantity: number",
-                "location: string"
-              ]
+              "properties": ["sku: string", "name: string", "quantity: number", "location: string"]
             },
             {
               "name": "Page",
-              "properties": [
-                "items: Item[]",
-                "page: number",
-                "pageSize: number",
-                "total: number"
-              ]
+              "properties": ["items: Item[]", "page: number", "pageSize: number", "total: number"]
             }
           ]
         }
@@ -111,12 +91,7 @@
                   "type": "string"
                 }
               },
-              "required": [
-                "sku",
-                "name",
-                "quantity",
-                "location"
-              ]
+              "required": ["sku", "name", "quantity", "location"]
             }
           },
           "page": {
@@ -129,12 +104,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "items",
-          "page",
-          "pageSize",
-          "total"
-        ]
+        "required": ["items", "page", "pageSize", "total"]
       },
       "examples": [
         {
@@ -180,12 +150,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "sku",
-          "name",
-          "quantity",
-          "location"
-        ]
+        "required": ["sku", "name", "quantity", "location"]
       },
       "examples": [
         {
@@ -217,9 +182,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "delta"
-        ]
+        "required": ["delta"]
       },
       "responseSchema": {
         "type": "object",
@@ -237,12 +200,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "sku",
-          "name",
-          "quantity",
-          "location"
-        ]
+        "required": ["sku", "name", "quantity", "location"]
       },
       "examples": [
         {

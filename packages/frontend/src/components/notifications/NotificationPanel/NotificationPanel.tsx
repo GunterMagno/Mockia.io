@@ -14,10 +14,10 @@ interface NotificationPanelProps {
   onRefresh: () => void;
 }
 
-const NotificationPanel: React.FC<NotificationPanelProps> = ({ 
-  notifications, 
+const NotificationPanel: React.FC<NotificationPanelProps> = ({
+  notifications,
   onClose,
-  onRefresh 
+  onRefresh,
 }) => {
   const { t, formatDate: format } = useI18n();
   const navigate = useNavigate();
@@ -28,7 +28,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
       await markAsRead([notification.id]);
       onRefresh();
     }
-    
+
     if (notification.link) {
       navigate(notification.link);
     }
@@ -46,7 +46,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
   };
 
   const handleMarkAllAsRead = async () => {
-    const unreadIds = notifications.filter(n => !n.isRead).map(n => n.id);
+    const unreadIds = notifications.filter((n) => !n.isRead).map((n) => n.id);
     if (unreadIds.length > 0) {
       await markAsRead(unreadIds);
       onRefresh();
@@ -76,7 +76,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
     <aside className={styles.panel} ref={panelRef}>
       <header className={styles.header}>
         <h3>{t('notifications.title')}</h3>
-        {notifications.some(n => !n.isRead) && (
+        {notifications.some((n) => !n.isRead) && (
           <button onClick={handleMarkAllAsRead} className={styles.markAllBtn}>
             {t('notifications.markAllRead')}
           </button>
@@ -86,9 +86,9 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
         {notifications.length === 0 ? (
           <article className={styles.empty}>{t('notifications.empty')}</article>
         ) : (
-          notifications.map(notification => (
-            <article 
-              key={notification.id} 
+          notifications.map((notification) => (
+            <article
+              key={notification.id}
               className={`${styles.item} ${!notification.isRead ? styles.unread : ''}`}
               onClick={() => handleNotificationClick(notification)}
             >
@@ -101,8 +101,8 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({
                 <span className={styles.date}>{formatDate(notification.createdAt)}</span>
               </section>
               {!notification.isRead && <span className={styles.unreadDot} />}
-              <button 
-                className={styles.deleteBtn} 
+              <button
+                className={styles.deleteBtn}
                 onClick={(e) => handleDelete(e, notification.id)}
                 title={t('notifications.delete')}
                 aria-label={t('notifications.delete')}

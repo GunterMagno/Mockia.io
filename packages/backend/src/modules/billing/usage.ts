@@ -20,7 +20,8 @@ export const periodOf = (d: Date): string =>
   `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
 
 /** First instant of the next UTC month: when the monthly counter starts again. */
-export const nextPeriodStart = (d: Date): Date => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1));
+export const nextPeriodStart = (d: Date): Date =>
+  new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1));
 
 interface Entry {
   ownerId: string;
@@ -46,7 +47,9 @@ const keyOf = (ownerId: string, period: string) => `${ownerId}:${period}`;
 async function load(entry: Entry, nowMs: number): Promise<void> {
   const version = entry.version;
   try {
-    const doc = await UsageModel.findOne({ ownerId: entry.ownerId, period: entry.period }).select('requests').lean();
+    const doc = await UsageModel.findOne({ ownerId: entry.ownerId, period: entry.period })
+      .select('requests')
+      .lean();
     if (entry.version === version) entry.persisted = doc?.requests ?? 0;
   } catch (err) {
     // Fail open: keep counting in memory with the last known total.
@@ -155,7 +158,8 @@ export function flushUsage(): Promise<void> {
         }
       }
       // Old months with nothing left to write are dropped so the map stays bounded.
-      if (entry.period !== current && entry.pending === 0 && entry.inFlight === 0) entries.delete(key);
+      if (entry.period !== current && entry.pending === 0 && entry.inFlight === 0)
+        entries.delete(key);
     }
   })().finally(() => {
     flushing = null;
@@ -195,7 +199,11 @@ export type AiSlot = { ok: true; period: string; used: number } | { ok: false; u
  * collides with the unique (ownerId, period) index (E11000), which is how the rejection is detected atomically.
  * Rejections never change the counter. `limit` must be finite.
  */
-export async function reserveAiGenerationSlot(ownerId: string, limit: number, now = new Date()): Promise<AiSlot> {
+export async function reserveAiGenerationSlot(
+  ownerId: string,
+  limit: number,
+  now = new Date()
+): Promise<AiSlot> {
   const period = periodOf(now);
   if (!(limit > 0)) return { ok: false, used: 0 };
   // The unique index must exist, or the "at the limit" collision would insert a second document instead
@@ -222,7 +230,10 @@ export async function reserveAiGenerationSlot(ownerId: string, limit: number, no
 
 /** Gives back one reserved generation of `period` (the generation failed). Never goes below zero, never creates a document. */
 export async function releaseAiGenerationSlot(ownerId: string, period: string): Promise<void> {
-  await UsageModel.updateOne({ ownerId, period, aiGenerations: { $gt: 0 } }, { $inc: { aiGenerations: -1 } });
+  await UsageModel.updateOne(
+    { ownerId, period, aiGenerations: { $gt: 0 } },
+    { $inc: { aiGenerations: -1 } }
+  );
 }
 
 /** Mock requests and AI generations of the month for `ownerId`, as persisted (plus the requests this process has not written yet). */
@@ -233,7 +244,10 @@ export async function getMonthlyUsageDetail(
   const period = periodOf(now);
   const doc = await UsageModel.findOne({ ownerId, period }).select('requests aiGenerations').lean();
   const local = entries.get(keyOf(ownerId, period));
-  return { requests: (doc?.requests ?? 0) + (local ? local.pending : 0), aiGenerations: doc?.aiGenerations ?? 0 };
+  return {
+    requests: (doc?.requests ?? 0) + (local ? local.pending : 0),
+    aiGenerations: doc?.aiGenerations ?? 0,
+  };
 }
 
 /** Test helper: forget local state and stop the flush timer. */

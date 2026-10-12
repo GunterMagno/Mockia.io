@@ -74,7 +74,9 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
 function pickTarget(
   feedback: { correctedOutput?: unknown },
   generation: { output: string; parsedOk: boolean }
-): { ok: true; target: Record<string, unknown> } | { ok: false; reason: 'unparseable' | 'invalidCorrection' } {
+):
+  | { ok: true; target: Record<string, unknown> }
+  | { ok: false; reason: 'unparseable' | 'invalidCorrection' } {
   if (feedback.correctedOutput !== undefined && feedback.correctedOutput !== null) {
     try {
       validateGeneratedApi(clone(feedback.correctedOutput)); // it heals in place: validate a copy
@@ -131,12 +133,16 @@ export async function buildDataset(options: DatasetOptions = {}): Promise<Datase
   const kept = new Map<string, { line: string; generationId: string }>();
 
   const processBatch = async (batch: Array<Awaited<ReturnType<typeof useful.next>> & object>) => {
-    const generations = await AiGenerationModel.find({ generationId: { $in: batch.map((f) => f.generationId) } }).lean();
+    const generations = await AiGenerationModel.find({
+      generationId: { $in: batch.map((f) => f.generationId) },
+    }).lean();
     const byId = new Map(generations.map((g) => [g.generationId, g]));
     const users = await UserModel.find({ _id: { $in: batch.map((f) => f.userId) } })
       .select('aiTrainingConsent')
       .lean();
-    const consentOf = new Map(users.map((u) => [u._id.toString(), u.aiTrainingConsent?.granted === true]));
+    const consentOf = new Map(
+      users.map((u) => [u._id.toString(), u.aiTrainingConsent?.granted === true])
+    );
 
     for (const fb of batch) {
       // Consent first and as it stands NOW: a withdrawal after the feedback removes the example
@@ -160,7 +166,10 @@ export async function buildDataset(options: DatasetOptions = {}): Promise<Datase
       }
 
       const messages = [
-        ...gen.messages.map((m) => ({ role: m.role, content: redactSecrets(anonymizePromptIdentifiers(m.content)) })),
+        ...gen.messages.map((m) => ({
+          role: m.role,
+          content: redactSecrets(anonymizePromptIdentifiers(m.content)),
+        })),
         { role: 'assistant' as const, content: JSON.stringify(redactTarget(picked.target)) },
       ];
       const line = JSON.stringify({ messages });
@@ -199,7 +208,10 @@ export async function buildDataset(options: DatasetOptions = {}): Promise<Datase
 }
 
 /** Writes train.jsonl and val.jsonl into `outDir` (created with mode 0700 if missing); the files are 0600. */
-export function writeDataset(result: Pick<DatasetResult, 'train' | 'val'>, outDir: string): { trainPath: string; valPath: string } {
+export function writeDataset(
+  result: Pick<DatasetResult, 'train' | 'val'>,
+  outDir: string
+): { trainPath: string; valPath: string } {
   fs.mkdirSync(outDir, { recursive: true, mode: 0o700 });
   const write = (name: string, lines: string[]) => {
     const file = path.join(outDir, name);
@@ -222,7 +234,10 @@ export interface ExportArgs {
 function parseArgs(argv: string[]): ExportArgs | { error: string } {
   const args: ExportArgs = { out: DEFAULT_OUT_DIR, valRatio: DEFAULT_VAL_RATIO, confirm: false };
   for (let i = 0; i < argv.length; i++) {
-    const [flag, inline] = argv[i].startsWith('--') && argv[i].includes('=') ? [argv[i].slice(0, argv[i].indexOf('=')), argv[i].slice(argv[i].indexOf('=') + 1)] : [argv[i], undefined];
+    const [flag, inline] =
+      argv[i].startsWith('--') && argv[i].includes('=')
+        ? [argv[i].slice(0, argv[i].indexOf('=')), argv[i].slice(argv[i].indexOf('=') + 1)]
+        : [argv[i], undefined];
     const value = () => (inline !== undefined ? inline : argv[++i]);
     switch (flag) {
       case '--confirm-consent-checked':
@@ -237,7 +252,8 @@ function parseArgs(argv: string[]): ExportArgs | { error: string } {
       case '--val-ratio': {
         const v = value();
         const n = v === undefined || v.trim() === '' ? Number.NaN : Number(v);
-        if (!Number.isFinite(n) || n < 0 || n >= 1) return { error: '--val-ratio must be a number in [0, 1)' };
+        if (!Number.isFinite(n) || n < 0 || n >= 1)
+          return { error: '--val-ratio must be a number in [0, 1)' };
         args.valRatio = n;
         break;
       }
@@ -293,7 +309,9 @@ export async function runExportCli(
   const result = await buildDataset({ valRatio: args.valRatio });
   const { trainPath, valPath } = writeDataset(result, path.resolve(args.out));
   const c = result.counts;
-  log(`Dataset written: ${c.included} examples (train ${c.train}, val ${c.val}) from ${c.included + c.duplicates} usable feedback rows.`);
+  log(
+    `Dataset written: ${c.included} examples (train ${c.train}, val ${c.val}) from ${c.included + c.duplicates} usable feedback rows.`
+  );
   log(`Duplicates dropped: ${c.duplicates}. Not useful (bad without correction): ${c.notUseful}.`);
   log(
     `Excluded: no consent ${c.excluded.noConsent}, generation missing ${c.excluded.noGeneration}, expired ${c.excluded.expired}, ` +

@@ -1,84 +1,88 @@
-import React, { useEffect, useState } from 'react'
-import Layout from '../../layouts/Layout'
-import { Button } from '../../components/ui/Button/Button'
-import { getProjects } from '../../services/projectService'
-import type { Project } from '../../services/projectService'
-import CreateProjectModal from '../../components/projects/CreateProjectModal'
-import EmailVerificationBanner from '../../components/ui/EmailVerificationBanner/EmailVerificationBanner'
-import PastDueBanner from '../../components/billing/PastDueBanner/PastDueBanner'
-import DemoClaimNotice from '../../components/demo/DemoClaimNotice/DemoClaimNotice'
-import { Link, useNavigate } from 'react-router-dom'
-import { Icon } from '../../components/ui/Icon/Icon'
-import { useAuth } from '../../contexts/AuthContext'
-import folderIcon from '../../assets/folder.svg'
-import { PATHS } from '../../routes/paths'
-import { useI18n } from '../../i18n/I18nProvider'
-import { getBillingOverview, type BillingOverview } from '../../services/billingService'
+import React, { useEffect, useState } from 'react';
+import Layout from '../../layouts/Layout';
+import { Button } from '../../components/ui/Button/Button';
+import { getProjects } from '../../services/projectService';
+import type { Project } from '../../services/projectService';
+import CreateProjectModal from '../../components/projects/CreateProjectModal';
+import EmailVerificationBanner from '../../components/ui/EmailVerificationBanner/EmailVerificationBanner';
+import PastDueBanner from '../../components/billing/PastDueBanner/PastDueBanner';
+import DemoClaimNotice from '../../components/demo/DemoClaimNotice/DemoClaimNotice';
+import { Link, useNavigate } from 'react-router-dom';
+import { Icon } from '../../components/ui/Icon/Icon';
+import { useAuth } from '../../contexts/AuthContext';
+import folderIcon from '../../assets/folder.svg';
+import { PATHS } from '../../routes/paths';
+import { useI18n } from '../../i18n/I18nProvider';
+import { getBillingOverview, type BillingOverview } from '../../services/billingService';
 
-import styles from './Dashboard.module.scss'
+import styles from './Dashboard.module.scss';
 
 const Dashboard: React.FC = () => {
-  const navigate = useNavigate()
-  const { user } = useAuth()
-  const { t, formatDate, formatNumber } = useI18n()
-  const [projects, setProjects] = useState<Project[]>([])
-  const [loading, setLoading] = useState(true)
-  const [open, setOpen] = useState(false)
-  const [billing, setBilling] = useState<BillingOverview | null>(null)
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { t, formatDate, formatNumber } = useI18n();
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
+  const [billing, setBilling] = useState<BillingOverview | null>(null);
 
   const fetchProjects = (silent = false) => {
-    if (!silent) setLoading(true)
+    if (!silent) setLoading(true);
     getProjects()
       .then((ps) => {
         try {
-          const lastVisited = JSON.parse(localStorage.getItem('mockia_last_visited') || '{}')
+          const lastVisited = JSON.parse(localStorage.getItem('mockia_last_visited') || '{}');
           const getProjectTime = (p: Project) => {
-            const localVis = lastVisited[p.id] || 0
-            const dbUp = p.updatedAt ? new Date(p.updatedAt).getTime() : 0
-            const dbCr = p.createdAt ? new Date(p.createdAt).getTime() : 0
-            return Math.max(localVis, dbUp, dbCr)
-          }
+            const localVis = lastVisited[p.id] || 0;
+            const dbUp = p.updatedAt ? new Date(p.updatedAt).getTime() : 0;
+            const dbCr = p.createdAt ? new Date(p.createdAt).getTime() : 0;
+            return Math.max(localVis, dbUp, dbCr);
+          };
 
-          const sorted = [...ps].sort((a, b) => getProjectTime(b) - getProjectTime(a))
-          setProjects(sorted)
+          const sorted = [...ps].sort((a, b) => getProjectTime(b) - getProjectTime(a));
+          setProjects(sorted);
         } catch (e) {
-          console.error("Error sorting projects:", e)
-          setProjects(ps)
+          console.error('Error sorting projects:', e);
+          setProjects(ps);
         }
       })
       .catch(() => setProjects([]))
       .finally(() => {
-        if (!silent) setLoading(false)
-      })
-  }
+        if (!silent) setLoading(false);
+      });
+  };
 
   useEffect(() => {
-    fetchProjects()
-    
-    const interval = setInterval(() => {
-      fetchProjects(true)
-    }, 5000)
+    fetchProjects();
 
-    return () => clearInterval(interval)
-  }, [])
+    const interval = setInterval(() => {
+      fetchProjects(true);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Plan y uso: se refresca cuando cambia el numero de proyectos (crear, archivar, compartir)
   useEffect(() => {
     getBillingOverview()
       .then(setBilling)
-      .catch(() => setBilling(null))
-  }, [projects.length])
+      .catch(() => setBilling(null));
+  }, [projects.length]);
 
-  const projectLimit = billing?.limits.maxActiveProjects ?? null
-  const pastDue = billing?.billingStatus === 'past_due'
-  const requestsLimit = billing?.limits.maxMonthlyRequests ?? null
-  const requestsNearLimit = billing !== null && requestsLimit !== null && billing.usage.monthlyRequests >= requestsLimit * 0.9
-  const atLimit = billing !== null && projectLimit !== null && billing.usage.activeProjects >= projectLimit
+  const projectLimit = billing?.limits.maxActiveProjects ?? null;
+  const pastDue = billing?.billingStatus === 'past_due';
+  const requestsLimit = billing?.limits.maxMonthlyRequests ?? null;
+  const requestsNearLimit =
+    billing !== null &&
+    requestsLimit !== null &&
+    billing.usage.monthlyRequests >= requestsLimit * 0.9;
+  const atLimit =
+    billing !== null && projectLimit !== null && billing.usage.activeProjects >= projectLimit;
 
   const handleCreated = (p: Project) => {
-    setProjects((prev) => [p, ...prev])
-    navigate(PATHS.editor(p.slug))
-  }
+    setProjects((prev) => [p, ...prev]);
+    navigate(PATHS.editor(p.slug));
+  };
 
   return (
     <Layout>
@@ -91,15 +95,30 @@ const Dashboard: React.FC = () => {
           <h1>{t('dashboard.title')}</h1>
           <p>{t('dashboard.subtitle')}</p>
           {billing && (
-            <Link to={PATHS.billing} className={`${styles.planChip} ${atLimit || pastDue || requestsNearLimit ? styles.planChipWarn : ''}`}>
-              <span>{t('billing.planBadge', { plan: t(`pricing.plans.${billing.plan}.name`) })}</span>
+            <Link
+              to={PATHS.billing}
+              className={`${styles.planChip} ${atLimit || pastDue || requestsNearLimit ? styles.planChipWarn : ''}`}
+            >
+              <span>
+                {t('billing.planBadge', { plan: t(`pricing.plans.${billing.plan}.name`) })}
+              </span>
               {pastDue && <strong>· {t('billing.status.past_due')}</strong>}
               {projectLimit !== null && (
-                <span>· {t('billing.projectsUsage', { used: billing.usage.activeProjects, limit: projectLimit })}</span>
+                <span>
+                  ·{' '}
+                  {t('billing.projectsUsage', {
+                    used: billing.usage.activeProjects,
+                    limit: projectLimit,
+                  })}
+                </span>
               )}
               {billing.limits.maxMonthlyRequests !== null && (
-                <span data-testid="plan-chip-requests" className={requestsNearLimit ? styles.planChipStrong : undefined}>
-                  · {t('billing.requestsUsage', {
+                <span
+                  data-testid="plan-chip-requests"
+                  className={requestsNearLimit ? styles.planChipStrong : undefined}
+                >
+                  ·{' '}
+                  {t('billing.requestsUsage', {
                     used: formatNumber(billing.usage.monthlyRequests),
                     limit: formatNumber(billing.limits.maxMonthlyRequests),
                   })}
@@ -112,7 +131,10 @@ const Dashboard: React.FC = () => {
           )}
         </article>
         <Button size="lg" onClick={() => setOpen(true)}>
-          <span className={styles.plus} aria-hidden="true">+</span> {t('dashboard.newProject')}
+          <span className={styles.plus} aria-hidden="true">
+            +
+          </span>{' '}
+          {t('dashboard.newProject')}
         </Button>
       </header>
 
@@ -132,21 +154,18 @@ const Dashboard: React.FC = () => {
       ) : (
         <section className={styles.grid}>
           {projects.map((p) => (
-            <article
-              key={p.id}
-              className={styles.projectCard}
-            >
+            <article key={p.id} className={styles.projectCard}>
               <header className={styles.cardHeader}>
                 <h3 className={styles.cardTitle}>
-                  <Link to={PATHS.editor(p.slug)} className={styles.cardLink}>{p.title}</Link>
+                  <Link to={PATHS.editor(p.slug)} className={styles.cardLink}>
+                    {p.title}
+                  </Link>
                 </h3>
-                {p.members.some(m => m.userId === user?.id && m.role !== 'OWNER') && (
+                {p.members.some((m) => m.userId === user?.id && m.role !== 'OWNER') && (
                   <span className={styles.sharedBadge}>{t('dashboard.shared')}</span>
                 )}
               </header>
-              <p className={styles.description}>
-                {p.description || t('dashboard.noDescription')}
-              </p>
+              <p className={styles.description}>{p.description || t('dashboard.noDescription')}</p>
               <footer className={styles.cardFooter}>
                 <div className={styles.meta}>
                   {p.gitHubRepo ? (
@@ -162,17 +181,19 @@ const Dashboard: React.FC = () => {
                   )}
                 </div>
                 <span className={styles.date}>
-                  {p.updatedAt ? formatDate(p.updatedAt, { month: 'short', day: 'numeric', year: 'numeric' }) : t('dashboard.recently')}
+                  {p.updatedAt
+                    ? formatDate(p.updatedAt, { month: 'short', day: 'numeric', year: 'numeric' })
+                    : t('dashboard.recently')}
                 </span>
               </footer>
             </article>
           ))}
         </section>
       )}
-      
+
       <CreateProjectModal isOpen={open} onClose={() => setOpen(false)} onCreated={handleCreated} />
     </Layout>
-  )
-}
+  );
+};
 
-export default Dashboard
+export default Dashboard;

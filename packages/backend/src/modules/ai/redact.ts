@@ -25,14 +25,16 @@ const NB = '(?<![A-Za-z0-9])';
  * JWT. Only where a token can start (not inside a longer base64url run) and with bounded segments: the unanchored form
  * was quadratic on "eyJeyJeyJ..." (7.9 s on 100 KB).
  */
-const JWT_PATTERN = /(?<![A-Za-z0-9_-])eyJ[A-Za-z0-9_-]{5,8192}\.[A-Za-z0-9_-]{5,8192}\.[A-Za-z0-9_-]{0,8192}/g;
+const JWT_PATTERN =
+  /(?<![A-Za-z0-9_-])eyJ[A-Za-z0-9_-]{5,8192}\.[A-Za-z0-9_-]{5,8192}\.[A-Za-z0-9_-]{0,8192}/g;
 
 /** PEM blocks with their END marker, then any BEGIN ... KEY left over (a truncated prompt): up to the end of the text. */
 const PEM_BLOCK = /-----BEGIN ([A-Z0-9 ]{0,40}KEY)-----[\s\S]*?-----END \1-----/g;
 const PEM_UNTERMINATED = /-----BEGIN [A-Z0-9 ]{0,40}KEY-----[\s\S]*$/;
 
 /** `scheme://user:password@host/...`: the whole URL goes (the host of a private database identifies the system). */
-const URL_CREDENTIALS = /(?<![A-Za-z0-9+.-])[a-z][a-z0-9+.-]{0,15}:\/\/[^\s\/@:'"`<>]{1,128}:[^\s'"`<>]{1,256}@[^\s'"`<>)]{1,256}/g;
+const URL_CREDENTIALS =
+  /(?<![A-Za-z0-9+.-])[a-z][a-z0-9+.-]{0,15}:\/\/[^\s\/@:'"`<>]{1,128}:[^\s'"`<>]{1,256}@[^\s'"`<>)]{1,256}/g;
 
 const TOKEN_PATTERNS: RegExp[] = [
   new RegExp(`${NB}(?:sk|pk|rk)_(?:live|test)_[A-Za-z0-9]{8,}`, 'g'), // Stripe
@@ -49,13 +51,15 @@ const TOKEN_PATTERNS: RegExp[] = [
 /** `Bearer <token>`: only values that look like one (they contain a digit), so "Bearer authentication" stays prose. */
 const BEARER = /(Bearer\s+)(?=[A-Za-z0-9._~+/=-]{0,200}\d)[A-Za-z0-9._~+/=-]{8,}/g;
 
-const EMAIL = /[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9-]{1,63}(?:\.[A-Za-z0-9-]{1,63}){0,4}\.[A-Za-z]{2,24}/g;
+const EMAIL =
+  /[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9-]{1,63}(?:\.[A-Za-z0-9-]{1,63}){0,4}\.[A-Za-z]{2,24}/g;
 
 /**
  * `name = value` where name contains password/secret/token/api key (optionally with a quote, with a `_key|_id|...`
  * suffix, in `.env`, JSON or code). Group 1: name + separator, group 2: the value, quoted or not.
  */
-const SECRET_NAME = '(?:password|passwd|secret|token|api[_-]?key|apikey|private[_-]?key)(?:[_-]?(?:key|id|secret|value|hash))?';
+const SECRET_NAME =
+  '(?:password|passwd|secret|token|api[_-]?key|apikey|private[_-]?key)(?:[_-]?(?:key|id|secret|value|hash))?';
 const ASSIGNMENT = new RegExp(
   `(${SECRET_NAME}\\\\?["']?\\s*[:=]\\s*)("[^"\\n]{1,500}"|'[^'\\n]{1,500}'|[^\\s,;'"\`]{1,500})`,
   'gi'
@@ -64,9 +68,38 @@ const ASSIGNMENT = new RegExp(
 const SECRET_KEY_NAME = new RegExp(`${SECRET_NAME}$`, 'i');
 
 const TYPE_WORDS = new Set([
-  'string', 'number', 'boolean', 'bool', 'any', 'unknown', 'never', 'void', 'null', 'undefined', 'true', 'false',
-  'object', 'array', 'date', 'integer', 'int', 'float', 'required', 'optional', 'secret', 'password', 'token',
-  'changeme', 'example', 'your-token', 'your_token', 'yourpassword', 'your-password', 'xxxxx', 'xxxxxx', '******',
+  'string',
+  'number',
+  'boolean',
+  'bool',
+  'any',
+  'unknown',
+  'never',
+  'void',
+  'null',
+  'undefined',
+  'true',
+  'false',
+  'object',
+  'array',
+  'date',
+  'integer',
+  'int',
+  'float',
+  'required',
+  'optional',
+  'secret',
+  'password',
+  'token',
+  'changeme',
+  'example',
+  'your-token',
+  'your_token',
+  'yourpassword',
+  'your-password',
+  'xxxxx',
+  'xxxxxx',
+  '******',
 ]);
 
 /** True when a would-be secret value is clearly not a literal: a type, a placeholder, or code that reads/derives one. */
@@ -114,13 +147,20 @@ export function redactDeep<T>(value: T): T {
 
 function walk(value: unknown, key: string | undefined): unknown {
   if (typeof value === 'string') {
-    if (key && SECRET_KEY_NAME.test(key) && value !== '' && !isNotALiteralSecret(JSON.stringify(value))) return REDACTED_KEY;
+    if (
+      key &&
+      SECRET_KEY_NAME.test(key) &&
+      value !== '' &&
+      !isNotALiteralSecret(JSON.stringify(value))
+    )
+      return REDACTED_KEY;
     return redactSecrets(value);
   }
   if (Array.isArray(value)) return value.map((v) => walk(v, undefined));
   if (value && typeof value === 'object') {
     const out: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(value as Record<string, unknown>)) out[redactSecrets(k)] = walk(v, k);
+    for (const [k, v] of Object.entries(value as Record<string, unknown>))
+      out[redactSecrets(k)] = walk(v, k);
     return out;
   }
   return value;
@@ -152,7 +192,9 @@ const JWT_IO_SAMPLE_PAYLOAD = { sub: '1234567890', name: 'John Doe' };
 function decodeJwtPart(part: string): Record<string, unknown> | undefined {
   try {
     const parsed: unknown = JSON.parse(Buffer.from(part, 'base64url').toString('utf8'));
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : undefined;
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : undefined;
   } catch {
     return undefined;
   }
@@ -179,7 +221,9 @@ function redactTargetString(text: string): string {
       return /EXAMPLE/.test(match) ? match : REDACTED_KEY; // the AWS documentation key AKIAIOSFODNN7EXAMPLE is mock data
     });
   }
-  return out.replace(EMAIL, (email) => (RESERVED_EMAIL_DOMAIN.test(email.slice(email.lastIndexOf('@') + 1)) ? email : REDACTED_EMAIL));
+  return out.replace(EMAIL, (email) =>
+    RESERVED_EMAIL_DOMAIN.test(email.slice(email.lastIndexOf('@') + 1)) ? email : REDACTED_EMAIL
+  );
 }
 
 /** Target counterpart of `redactDeep`: same walk, the rules above. Returns a new value; idempotent. */

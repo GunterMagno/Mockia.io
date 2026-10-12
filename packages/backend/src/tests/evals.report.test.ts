@@ -63,8 +63,23 @@ describe('summarize', () => {
   it('computes percentages, means, latency percentiles and tokens/s', () => {
     const rows = [
       row({ id: 'a', latencyMs: 1000, outputTokens: 100 }),
-      row({ id: 'b', schemaValid: false, methodPathF1: 0.5, fieldCoverage: 0.5, latencyMs: 3000, outputTokens: 100 }),
-      row({ id: 'c', validJson: false, schemaValid: false, methodPathF1: 0, fieldCoverage: 0, latencyMs: 2000, error: 'timeout' }),
+      row({
+        id: 'b',
+        schemaValid: false,
+        methodPathF1: 0.5,
+        fieldCoverage: 0.5,
+        latencyMs: 3000,
+        outputTokens: 100,
+      }),
+      row({
+        id: 'c',
+        validJson: false,
+        schemaValid: false,
+        methodPathF1: 0,
+        fieldCoverage: 0,
+        latencyMs: 2000,
+        error: 'timeout',
+      }),
       row({ id: 'd', latencyMs: 4000, outputTokens: 200 }),
     ];
     const s = summarize(rows);
@@ -86,7 +101,14 @@ describe('summarize', () => {
 
   it('an empty run summarizes to zeros without NaN', () => {
     const s = summarize([]);
-    expect(s).toMatchObject({ cases: 0, validJsonPct: 0, schemaValidPct: 0, meanMethodPathF1: 0, meanFieldCoverage: 0, latencyP95Ms: 0 });
+    expect(s).toMatchObject({
+      cases: 0,
+      validJsonPct: 0,
+      schemaValidPct: 0,
+      meanMethodPathF1: 0,
+      meanFieldCoverage: 0,
+      latencyP95Ms: 0,
+    });
   });
 });
 
@@ -94,11 +116,20 @@ describe('evaluateCriteria (schemaValid >= 95 %, mean F1 >= 0.85, p95 <= 60 s)',
   const base = summarize([row({ latencyMs: 1000 })]);
 
   it('documents the thresholds', () => {
-    expect(ACCEPTANCE).toEqual({ minSchemaValidPct: 95, minMeanMethodPathF1: 0.85, maxLatencyP95Ms: 60_000 });
+    expect(ACCEPTANCE).toEqual({
+      minSchemaValidPct: 95,
+      minMeanMethodPathF1: 0.85,
+      maxLatencyP95Ms: 60_000,
+    });
   });
 
   it('passes exactly on the thresholds (inclusive)', () => {
-    const verdict = evaluateCriteria({ ...base, schemaValidPct: 95, meanMethodPathF1: 0.85, latencyP95Ms: 60_000 });
+    const verdict = evaluateCriteria({
+      ...base,
+      schemaValidPct: 95,
+      meanMethodPathF1: 0.85,
+      latencyP95Ms: 60_000,
+    });
     expect(verdict.pass).toBe(true);
     expect(verdict.checks.every((c) => c.pass)).toBe(true);
   });
@@ -131,7 +162,10 @@ describe('compareResults', () => {
   });
 
   it('compareResults(previous, current) prints each metric as previous -> current with its signed delta', () => {
-    const text = compareResults(result({ schemaValidPct: 90, meanMethodPathF1: 0.8, latencyP95Ms: 5000 }), result({ schemaValidPct: 97, meanMethodPathF1: 0.7, latencyP95Ms: 5000 }));
+    const text = compareResults(
+      result({ schemaValidPct: 90, meanMethodPathF1: 0.8, latencyP95Ms: 5000 }),
+      result({ schemaValidPct: 97, meanMethodPathF1: 0.7, latencyP95Ms: 5000 })
+    );
     expect(text).toMatch(/schemaValid%.*90.*97.*\+7/);
     expect(text).toMatch(/methodPathF1.*0\.8.*0\.7.*-0\.1/);
     expect(text).toMatch(/latency p95.*5000.*5000.*0/);

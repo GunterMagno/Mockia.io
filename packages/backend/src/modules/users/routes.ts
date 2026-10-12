@@ -1,9 +1,26 @@
 import { Router } from 'express';
-import { getProfile, updateProfile, changePassword, updatePreferences, exportMyData, deleteMyAccount, updateAiConsent } from './controller.js';
-import { authenticateToken, type AuthenticatedRequest } from '../../middlewares/authenticateToken.js';
+import {
+  getProfile,
+  updateProfile,
+  changePassword,
+  updatePreferences,
+  exportMyData,
+  deleteMyAccount,
+  updateAiConsent,
+} from './controller.js';
+import {
+  authenticateToken,
+  type AuthenticatedRequest,
+} from '../../middlewares/authenticateToken.js';
 import { rateLimit } from '../../middlewares/rateLimit.js';
 import { validate } from '../../middlewares/validateRequest.js';
-import { updateProfileSchema, changePasswordSchema, updatePreferencesSchema, deleteAccountSchema, aiConsentSchema } from './validation.js';
+import {
+  updateProfileSchema,
+  changePasswordSchema,
+  updatePreferencesSchema,
+  deleteAccountSchema,
+  aiConsentSchema,
+} from './validation.js';
 
 /**
  * User router
@@ -11,7 +28,8 @@ import { updateProfileSchema, changePasswordSchema, updatePreferencesSchema, del
  */
 export const userRouter = Router();
 
-const perUser = (req: unknown) => (req as AuthenticatedRequest).user?.id ?? (req as { ip?: string }).ip ?? 'unknown';
+const perUser = (req: unknown) =>
+  (req as AuthenticatedRequest).user?.id ?? (req as { ip?: string }).ip ?? 'unknown';
 
 /** The export reads the whole account (heavy) and is the first thing a stolen session would grab: 5 per 15 min. */
 const exportLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 5, keyFn: perUser });
@@ -169,7 +187,12 @@ userRouter.patch(
  *       401:
  *         description: Unauthorized
  */
-userRouter.put('/me/ai-consent', authenticateToken, validate({ body: aiConsentSchema }), updateAiConsent);
+userRouter.put(
+  '/me/ai-consent',
+  authenticateToken,
+  validate({ body: aiConsentSchema }),
+  updateAiConsent
+);
 
 /**
  * @swagger
@@ -223,4 +246,10 @@ userRouter.get('/me/export', authenticateToken, exportLimiter, exportMyData);
  *       502:
  *         description: Stripe could not cancel the subscription; nothing was deleted
  */
-userRouter.delete('/me', authenticateToken, deleteLimiter, validate({ body: deleteAccountSchema }), deleteMyAccount);
+userRouter.delete(
+  '/me',
+  authenticateToken,
+  deleteLimiter,
+  validate({ body: deleteAccountSchema }),
+  deleteMyAccount
+);

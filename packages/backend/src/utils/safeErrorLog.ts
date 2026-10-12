@@ -8,10 +8,17 @@
  */
 export function describeError(err: unknown): string {
   if (err === null || typeof err !== 'object') return 'unknown';
-  const e = err as { name?: unknown; code?: unknown; statusCode?: unknown; status?: unknown; response?: { status?: unknown } };
+  const e = err as {
+    name?: unknown;
+    code?: unknown;
+    statusCode?: unknown;
+    status?: unknown;
+    response?: { status?: unknown };
+  };
   const parts: string[] = [typeof e.name === 'string' && e.name ? e.name : 'Error'];
   const status = e.response?.status ?? e.statusCode ?? e.status;
   if (typeof status === 'number') parts.push(`status=${status}`);
-  if (typeof e.code === 'string' || typeof e.code === 'number') parts.push(`code=${String(e.code)}`);
+  if (typeof e.code === 'string' || typeof e.code === 'number')
+    parts.push(`code=${String(e.code)}`);
   return parts.join(' ');
 }

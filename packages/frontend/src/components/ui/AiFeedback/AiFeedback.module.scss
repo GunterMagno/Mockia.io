@@ -47,7 +47,9 @@
   font-size: 1.25rem;
   line-height: 1;
   cursor: pointer;
-  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    background-color var(--transition-fast);
 
   &:hover:not(:disabled) {
     border-color: var(--color-accent-text);
@@ -75,11 +77,17 @@
   font-size: var(--text-sm);
   font-weight: 600;
 
-  &:empty { display: none; }
+  &:empty {
+    display: none;
+  }
 }
 
-.thanks { color: var(--color-ok); }
-.error { color: var(--color-danger); }
+.thanks {
+  color: var(--color-ok);
+}
+.error {
+  color: var(--color-danger);
+}
 
 @media (max-width: 600px) {
   .feedback {

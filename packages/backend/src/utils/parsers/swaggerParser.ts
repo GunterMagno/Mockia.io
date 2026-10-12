@@ -47,8 +47,8 @@ export async function parseSwaggerFile(filePath: string): Promise<ParsedSwaggerF
   const title = info?.title as string | undefined;
   const description = info?.description as string | undefined;
 
-  const paths = extractPaths(swaggerObj.paths as Record<string, unknown> || {});
-  const components = extractComponents(swaggerObj.components as Record<string, unknown> || {});
+  const paths = extractPaths((swaggerObj.paths as Record<string, unknown>) || {});
+  const components = extractComponents((swaggerObj.components as Record<string, unknown>) || {});
 
   return {
     version,

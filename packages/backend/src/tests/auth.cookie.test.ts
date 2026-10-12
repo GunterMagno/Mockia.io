@@ -5,7 +5,13 @@ import app from '../index.js';
 import { UserModel } from '../models/User.js';
 import { RefreshSessionModel } from '../models/RefreshSession.js';
 import { connectDB, disconnectDB } from '../config/connection.js';
-import { CSRF_HEADERS, RT_COOKIE, cookieAttributes, refreshSetCookie, refreshTokenOf } from './authCookieHelpers.js';
+import {
+  CSRF_HEADERS,
+  RT_COOKIE,
+  cookieAttributes,
+  refreshSetCookie,
+  refreshTokenOf,
+} from './authCookieHelpers.js';
 
 const EMAIL = 'cookie@example.com';
 const PASSWORD = 'cookiepass123';
@@ -14,7 +20,9 @@ const WEEK_SECONDS = 7 * 24 * 3600;
 const jtiOf = (token: string) => (jsonwebtoken.decode(token) as { jti: string }).jti;
 
 const login = (body: Record<string, unknown> = {}) =>
-  request(app).post('/api/auth/login').send({ email: EMAIL, password: PASSWORD, ...body });
+  request(app)
+    .post('/api/auth/login')
+    .send({ email: EMAIL, password: PASSWORD, ...body });
 
 const refreshWith = (token: string) =>
   request(app).post('/api/auth/refresh').set(CSRF_HEADERS).set('Cookie', `${RT_COOKIE}=${token}`);
@@ -115,9 +123,15 @@ describe('Auth - refresh token in an HttpOnly cookie', () => {
       const kept = await login({ remember: true });
       const dropped = await login({ remember: false });
       const omitted = await login();
-      expect((await RefreshSessionModel.findOne({ jti: jtiOf(refreshTokenOf(kept)!) }))!.persistent).toBe(true);
-      expect((await RefreshSessionModel.findOne({ jti: jtiOf(refreshTokenOf(dropped)!) }))!.persistent).toBe(false);
-      expect((await RefreshSessionModel.findOne({ jti: jtiOf(refreshTokenOf(omitted)!) }))!.persistent).toBe(false);
+      expect(
+        (await RefreshSessionModel.findOne({ jti: jtiOf(refreshTokenOf(kept)!) }))!.persistent
+      ).toBe(true);
+      expect(
+        (await RefreshSessionModel.findOne({ jti: jtiOf(refreshTokenOf(dropped)!) }))!.persistent
+      ).toBe(false);
+      expect(
+        (await RefreshSessionModel.findOne({ jti: jtiOf(refreshTokenOf(omitted)!) }))!.persistent
+      ).toBe(false);
     });
 
     it('rejects a non-boolean "remember" with a validation error', async () => {
@@ -165,7 +179,9 @@ describe('Auth - refresh token in an HttpOnly cookie', () => {
     it('answers 403 FORBIDDEN without the X-Requested-With header, without consuming the token', async () => {
       const token = refreshTokenOf(await login())!;
 
-      const res = await request(app).post('/api/auth/refresh').set('Cookie', `${RT_COOKIE}=${token}`);
+      const res = await request(app)
+        .post('/api/auth/refresh')
+        .set('Cookie', `${RT_COOKIE}=${token}`);
       expect(res.status).toBe(403);
       expect(res.body.error).toHaveProperty('code', 'FORBIDDEN');
       expect(refreshSetCookie(res)).toBeUndefined();
@@ -201,7 +217,9 @@ describe('Auth - refresh token in an HttpOnly cookie', () => {
       const attrs = cookieAttributes(refreshSetCookie(res)!);
       expect(attrs['httponly']).toBe(true);
       expect(attrs['path']).toBe('/api/auth');
-      expect((await RefreshSessionModel.findOne({ jti: jtiOf(first) }))!.usedAt).toBeInstanceOf(Date);
+      expect((await RefreshSessionModel.findOne({ jti: jtiOf(first) }))!.usedAt).toBeInstanceOf(
+        Date
+      );
       expect(await RefreshSessionModel.findOne({ jti: jtiOf(second) })).not.toBeNull();
     });
 
@@ -214,7 +232,9 @@ describe('Auth - refresh token in an HttpOnly cookie', () => {
         expect(r.status).toBe(200);
         expect(cookieAttributes(refreshSetCookie(r)!)['max-age']).toBe(String(WEEK_SECONDS));
         remembered = refreshTokenOf(r)!;
-        expect((await RefreshSessionModel.findOne({ jti: jtiOf(remembered) }))!.persistent).toBe(true);
+        expect((await RefreshSessionModel.findOne({ jti: jtiOf(remembered) }))!.persistent).toBe(
+          true
+        );
 
         const t = await refreshWith(transient);
         expect(t.status).toBe(200);
@@ -222,7 +242,9 @@ describe('Auth - refresh token in an HttpOnly cookie', () => {
         expect(attrs['max-age']).toBeUndefined();
         expect(attrs['expires']).toBeUndefined();
         transient = refreshTokenOf(t)!;
-        expect((await RefreshSessionModel.findOne({ jti: jtiOf(transient) }))!.persistent).toBe(false);
+        expect((await RefreshSessionModel.findOne({ jti: jtiOf(transient) }))!.persistent).toBe(
+          false
+        );
       }
     });
 
@@ -235,7 +257,10 @@ describe('Auth - refresh token in an HttpOnly cookie', () => {
 
     it('does not accept the refresh token in the body (no fallback)', async () => {
       const token = refreshTokenOf(await login())!;
-      const res = await request(app).post('/api/auth/refresh').set(CSRF_HEADERS).send({ refreshToken: token });
+      const res = await request(app)
+        .post('/api/auth/refresh')
+        .set(CSRF_HEADERS)
+        .send({ refreshToken: token });
       expect(res.status).toBe(401);
       expectCleared(res);
       expect((await RefreshSessionModel.findOne({ jti: jtiOf(token) }))!.usedAt).toBeUndefined();
@@ -265,7 +290,10 @@ describe('Auth - refresh token in an HttpOnly cookie', () => {
     it('a token reused after the grace window revokes the family and clears the cookie', async () => {
       const first = refreshTokenOf(await login())!;
       const second = refreshTokenOf(await refreshWith(first))!;
-      await RefreshSessionModel.updateOne({ jti: jtiOf(first) }, { usedAt: new Date(Date.now() - 11_000) });
+      await RefreshSessionModel.updateOne(
+        { jti: jtiOf(first) },
+        { usedAt: new Date(Date.now() - 11_000) }
+      );
 
       const reuse = await refreshWith(first);
       expect(reuse.status).toBe(401);
@@ -275,9 +303,11 @@ describe('Auth - refresh token in an HttpOnly cookie', () => {
 
     it('does not clear the cookie on a server error (the user may still have a valid session)', async () => {
       const token = refreshTokenOf(await login())!;
-      const spy = jest.spyOn(RefreshSessionModel, 'findOneAndUpdate').mockImplementationOnce((() => {
-        throw new Error('database unavailable');
-      }) as never);
+      const spy = jest
+        .spyOn(RefreshSessionModel, 'findOneAndUpdate')
+        .mockImplementationOnce((() => {
+          throw new Error('database unavailable');
+        }) as never);
       try {
         const res = await refreshWith(token);
         expect(res.status).toBe(500);
@@ -294,7 +324,9 @@ describe('Auth - refresh token in an HttpOnly cookie', () => {
     it('answers 403 without the X-Requested-With header and leaves the session untouched', async () => {
       const token = refreshTokenOf(await login())!;
 
-      const res = await request(app).post('/api/auth/logout').set('Cookie', `${RT_COOKIE}=${token}`);
+      const res = await request(app)
+        .post('/api/auth/logout')
+        .set('Cookie', `${RT_COOKIE}=${token}`);
       expect(res.status).toBe(403);
       expect(res.body.error).toHaveProperty('code', 'FORBIDDEN');
       expect(refreshSetCookie(res)).toBeUndefined();
@@ -326,7 +358,10 @@ describe('Auth - refresh token in an HttpOnly cookie', () => {
 
     it('ignores a refresh token sent in the body (cookie only)', async () => {
       const token = refreshTokenOf(await login())!;
-      const res = await request(app).post('/api/auth/logout').set(CSRF_HEADERS).send({ refreshToken: token });
+      const res = await request(app)
+        .post('/api/auth/logout')
+        .set(CSRF_HEADERS)
+        .send({ refreshToken: token });
       expect(res.status).toBe(204);
       expect((await refreshWith(token)).status).toBe(200);
     });
@@ -362,7 +397,9 @@ describe('Auth - refresh token in an HttpOnly cookie', () => {
       expect(current[0].id).toBe(jtiOf(refreshTokenOf(b)!));
 
       // Without the cookie nothing is current (e.g. an API client using only the Bearer token)
-      const noCookie = await request(app).get('/api/auth/sessions').set('Authorization', `Bearer ${accessB}`);
+      const noCookie = await request(app)
+        .get('/api/auth/sessions')
+        .set('Authorization', `Bearer ${accessB}`);
       expect(noCookie.body.data.every((s: { current: boolean }) => s.current === false)).toBe(true);
 
       // A cookie of another session of the same user marks that one, and still after it rotated
@@ -371,9 +408,11 @@ describe('Auth - refresh token in an HttpOnly cookie', () => {
         .get('/api/auth/sessions')
         .set('Authorization', `Bearer ${accessB}`)
         .set('Cookie', `${RT_COOKIE}=${rotatedA}`);
-      expect(asA.body.data.filter((s: { current: boolean }) => s.current).map((s: { id: string }) => s.id)).toEqual([
-        jtiOf(rotatedA),
-      ]);
+      expect(
+        asA.body.data
+          .filter((s: { current: boolean }) => s.current)
+          .map((s: { id: string }) => s.id)
+      ).toEqual([jtiOf(rotatedA)]);
     });
 
     it('never flags as current the sessions of another user, even with a stolen cookie', async () => {
@@ -400,14 +439,18 @@ describe('Auth - refresh token in an HttpOnly cookie', () => {
     it('login -> refresh -> logout works with the cookie alone, no tokens in bodies', async () => {
       const agent = request.agent(app);
 
-      const loggedIn = await agent.post('/api/auth/login').send({ email: EMAIL, password: PASSWORD, remember: true });
+      const loggedIn = await agent
+        .post('/api/auth/login')
+        .send({ email: EMAIL, password: PASSWORD, remember: true });
       expect(loggedIn.status).toBe(200);
 
       const refreshed = await agent.post('/api/auth/refresh').set(CSRF_HEADERS);
       expect(refreshed.status).toBe(200);
       expect(refreshed.body.data.accessToken).toEqual(expect.any(String));
 
-      const me = await agent.get('/api/auth/me').set('Authorization', `Bearer ${refreshed.body.data.accessToken}`);
+      const me = await agent
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${refreshed.body.data.accessToken}`);
       expect(me.status).toBe(200);
       expect(me.body.user).toHaveProperty('email', EMAIL);
 
@@ -424,7 +467,9 @@ describe('Auth - refresh token in an HttpOnly cookie', () => {
         .set('Origin', 'http://localhost:5173')
         .set('Access-Control-Request-Method', 'POST')
         .set('Access-Control-Request-Headers', 'x-requested-with');
-      expect(String(res.headers['access-control-allow-headers']).toLowerCase()).toContain('x-requested-with');
+      expect(String(res.headers['access-control-allow-headers']).toLowerCase()).toContain(
+        'x-requested-with'
+      );
       expect(res.headers['access-control-allow-credentials']).toBe('true');
       expect(res.headers['access-control-allow-origin']).toBe('http://localhost:5173');
     });

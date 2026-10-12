@@ -1,5 +1,9 @@
 import { Router } from 'express';
-import { updateEndpointHandler, createEndpointHandler, deleteEndpointHandler } from '../controllers/endpoint.controller.js';
+import {
+  updateEndpointHandler,
+  createEndpointHandler,
+  deleteEndpointHandler,
+} from '../controllers/endpoint.controller.js';
 import { authenticateToken } from '../middlewares/authenticateToken.js';
 import { validate } from '../middlewares/validateRequest.js';
 import { createEndpointSchema, updateEndpointSchema } from '../validation/endpoints.validation.js';
@@ -56,11 +60,7 @@ endpointsRouter.put(
  *       200:
  *         description: Success
  */
-endpointsRouter.delete(
-  '/:id',
-  authenticateToken,
-  deleteEndpointHandler
-);
+endpointsRouter.delete('/:id', authenticateToken, deleteEndpointHandler);
 
 /**
  * @swagger

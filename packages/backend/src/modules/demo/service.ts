@@ -1,14 +1,35 @@
 import { ErrorCode } from '@mockia/shared';
 import { AppError } from '../../middlewares/errorHandler.js';
-import { DEMO_MAX_TOKENS, getDemoAiProviders, getDemoAiTimeoutMs, getSpecGenerationSampling } from '../../config/ai.js';
+import {
+  DEMO_MAX_TOKENS,
+  getDemoAiProviders,
+  getDemoAiTimeoutMs,
+  getSpecGenerationSampling,
+} from '../../config/ai.js';
 import { describeError } from '../../utils/safeErrorLog.js';
 import { getLlm, type ChatMessage } from '../ai/providers/index.js';
-import { extractJsonFromLLMOutput, validateGeneratedApi, MOCK_SPEC_JSON_SCHEMA } from '../ai/index.js';
-import { acquireGenerationSlot, peekDemoBudget, peekGlobalDemoBudget, refundDemoBudget, tryConsumeDemoBudget } from './budget.js';
+import {
+  extractJsonFromLLMOutput,
+  validateGeneratedApi,
+  MOCK_SPEC_JSON_SCHEMA,
+} from '../ai/index.js';
+import {
+  acquireGenerationSlot,
+  peekDemoBudget,
+  peekGlobalDemoBudget,
+  refundDemoBudget,
+  tryConsumeDemoBudget,
+} from './budget.js';
 import { getDemoConfig } from './config.js';
 import { pseudonymizeIp, pseudonymizeNet } from './ipHash.js';
 import { checkProof, isChallengeSpent, spendChallenge } from './pow.js';
-import { createDemoMock, DemoMockError, prepareDemoEndpoints, type DemoEndpoint, type DemoMethod } from './mockStore.js';
+import {
+  createDemoMock,
+  DemoMockError,
+  prepareDemoEndpoints,
+  type DemoEndpoint,
+  type DemoMethod,
+} from './mockStore.js';
 import { DEMO_TEMPLATES, type DemoTemplateId } from './templates.js';
 import { demoClock } from './mockRouter.js';
 
@@ -53,7 +74,7 @@ export class DemoRefusal extends AppError {
     message: string,
     code: ErrorCode,
     statusCode: number,
-    public retryAfterSeconds?: number,
+    public retryAfterSeconds?: number
   ) {
     super(message, code, statusCode);
     Object.setPrototypeOf(this, DemoRefusal.prototype);
@@ -61,7 +82,13 @@ export class DemoRefusal extends AppError {
 }
 
 export const secondsToNextUtcMidnight = (now: Date): number =>
-  Math.max(1, Math.ceil((Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1) - now.getTime()) / 1000));
+  Math.max(
+    1,
+    Math.ceil(
+      (Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1) - now.getTime()) /
+        1000
+    )
+  );
 
 const unavailable = (message: string, retryAfterSeconds?: number) =>
   new DemoRefusal(message, ErrorCode.DEMO_UNAVAILABLE, 503, retryAfterSeconds);
@@ -119,18 +146,28 @@ export function buildDemoMessages(source: DemoSource): ChatMessage[] {
 
 /* ------------------------------------------------------------------------------------------------------ the output */
 
-type SpecEndpoint = { path: string; method: string; examples?: Array<{ response?: unknown; statusCode?: unknown; status?: unknown }> };
+type SpecEndpoint = {
+  path: string;
+  method: string;
+  examples?: Array<{ response?: unknown; statusCode?: unknown; status?: unknown }>;
+};
 
-const statusOf = (example: { statusCode?: unknown; status?: unknown } | undefined): number | undefined => {
+const statusOf = (
+  example: { statusCode?: unknown; status?: unknown } | undefined
+): number | undefined => {
   for (const value of [example?.statusCode, example?.status]) {
-    if (typeof value === 'number' && Number.isInteger(value) && value >= 100 && value <= 599) return value;
+    if (typeof value === 'number' && Number.isInteger(value) && value >= 100 && value <= 599)
+      return value;
   }
   return undefined;
 };
 
 /** `/users/{id}?x=1` -> `/users/:id` (the form the router matches). */
 const routePath = (path: string): string => {
-  const noQuery = path.split(/[?#]/)[0].trim().replace(/\{([A-Za-z_]\w*)\}/g, ':$1');
+  const noQuery = path
+    .split(/[?#]/)[0]
+    .trim()
+    .replace(/\{([A-Za-z_]\w*)\}/g, ':$1');
   return noQuery.startsWith('/') ? noQuery : `/${noQuery}`;
 };
 
@@ -141,7 +178,9 @@ const routePath = (path: string): string => {
 function toDemoEndpoints(endpoints: SpecEndpoint[], max: number): DemoEndpoint[] {
   return endpoints.slice(0, max).map((ep) => {
     const examples = Array.isArray(ep.examples) ? ep.examples : [];
-    const pick = examples.find((e) => (statusOf(e) ?? 200) < 300 && (statusOf(e) ?? 200) >= 200) ?? examples[0];
+    const pick =
+      examples.find((e) => (statusOf(e) ?? 200) < 300 && (statusOf(e) ?? 200) >= 200) ??
+      examples[0];
     const status = statusOf(pick) ?? 200;
     return {
       method: ep.method as DemoMethod,
@@ -154,7 +193,8 @@ function toDemoEndpoints(endpoints: SpecEndpoint[], max: number): DemoEndpoint[]
 
 /** Content-free reasons handed back to the model in the repair turn (never a quote of its output). */
 const NOT_JSON = 'the output is not valid JSON';
-const WRONG_SHAPE = 'the JSON does not match the required schema (an object with apiVersion, title, description, endpoints and dataModels)';
+const WRONG_SHAPE =
+  'the JSON does not match the required schema (an object with apiVersion, title, description, endpoints and dataModels)';
 const OVER_LIMITS =
   'the endpoints do not fit the demo limits: at most 5 endpoints, plain absolute paths such as /products/{id} without a query string, ' +
   'success or error status codes from 200 to 599, and every response body small JSON under 8 KB';
@@ -177,7 +217,10 @@ function parseDemoOutput(text: string): DemoEndpoint[] {
     throw new DemoOutputError(WRONG_SHAPE);
   }
   try {
-    const endpoints = toDemoEndpoints(spec.endpoints as SpecEndpoint[], getDemoConfig().maxEndpoints);
+    const endpoints = toDemoEndpoints(
+      spec.endpoints as SpecEndpoint[],
+      getDemoConfig().maxEndpoints
+    );
     prepareDemoEndpoints(endpoints); // dry run of everything createDemoMock will check
     return endpoints;
   } catch {
@@ -256,7 +299,10 @@ export async function getDemoAvailability(): Promise<boolean> {
  */
 function demoLlm() {
   const providers = getDemoAiProviders();
-  const env: NodeJS.ProcessEnv = { ...process.env, AI_TOTAL_TIMEOUT_MS: String(getDemoAiTimeoutMs()) };
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    AI_TOTAL_TIMEOUT_MS: String(getDemoAiTimeoutMs()),
+  };
   if (providers !== undefined) env.AI_PROVIDERS = providers;
   return getLlm(env, 'demo');
 }
@@ -273,7 +319,11 @@ export async function generateDemoMock(input: GenerateInput): Promise<GenerateRe
   //    counter nor hold a unit of the demo-wide budget, which is what stops an attacker who invents its own address from
   //    growing the database or flapping `available` for everybody with requests that cost it nothing.
   const invalidProof = () =>
-    new DemoRefusal('The challenge is not valid or has expired. Request a new one and try again.', ErrorCode.DEMO_CHALLENGE_INVALID, 400);
+    new DemoRefusal(
+      'The challenge is not valid or has expired. Request a new one and try again.',
+      ErrorCode.DEMO_CHALLENGE_INVALID,
+      400
+    );
   const checked = checkProof(input.challenge, input.nonce, now);
   if (!checked.ok || (await isChallengeSpent(checked.id))) throw invalidProof();
 
@@ -285,13 +335,16 @@ export async function generateDemoMock(input: GenerateInput): Promise<GenerateRe
       throw new DemoRefusal(
         budget.scope === 'ip'
           ? 'You have used all your demo generations for today. Create a free account to keep going, or come back tomorrow.'
-          : "The demo generations for today have been used up from your network. Create a free account to keep going, or come back tomorrow.",
+          : 'The demo generations for today have been used up from your network. Create a free account to keep going, or come back tomorrow.',
         ErrorCode.DEMO_LIMIT_REACHED,
         429,
-        secondsToNextUtcMidnight(now),
+        secondsToNextUtcMidnight(now)
       );
     }
-    throw unavailable("The demo has reached today's limit. Please try again tomorrow or create a free account.", secondsToNextUtcMidnight(now));
+    throw unavailable(
+      "The demo has reached today's limit. Please try again tomorrow or create a free account.",
+      secondsToNextUtcMidnight(now)
+    );
   }
 
   let requestSent = false;
@@ -303,7 +356,8 @@ export async function generateDemoMock(input: GenerateInput): Promise<GenerateRe
 
     // 3. Concurrency slot (per process)
     released = acquireGenerationSlot(ipHash);
-    if (!released) throw unavailable('The demo is busy right now. Please try again in a few seconds.', 10);
+    if (!released)
+      throw unavailable('The demo is busy right now. Please try again in a few seconds.', 10);
 
     // 4. The model
     let llm;
@@ -329,7 +383,11 @@ export async function generateDemoMock(input: GenerateInput): Promise<GenerateRe
       created = await createDemoMock(ipHash, parseDemoOutput(completion.text), demoClock.now());
     } catch (err) {
       if (err instanceof DemoMockError || err instanceof DemoOutputError) {
-        throw new AppError('The generated API did not fit the demo limits. Please try again.', ErrorCode.EXTERNAL_SERVICE_ERROR, 502);
+        throw new AppError(
+          'The generated API did not fit the demo limits. Please try again.',
+          ErrorCode.EXTERNAL_SERVICE_ERROR,
+          502
+        );
       }
       throw err;
     }
@@ -343,11 +401,16 @@ export async function generateDemoMock(input: GenerateInput): Promise<GenerateRe
       remainingToday: left ? left.ipLeft : null,
     };
   } catch (err) {
-    if (!requestSent) await refundDemoBudget(ipHash, 'generation', now, netHash).catch(() => undefined);
+    if (!requestSent)
+      await refundDemoBudget(ipHash, 'generation', now, netHash).catch(() => undefined);
     if (err instanceof AppError) throw err;
     // Never forward an unknown error: its message can quote the text it choked on
     console.error(`[Demo] generation failed (${describeError(err)})`);
-    throw new AppError('The demo could not generate your API. Please try again.', ErrorCode.INTERNAL_SERVER_ERROR, 500);
+    throw new AppError(
+      'The demo could not generate your API. Please try again.',
+      ErrorCode.INTERNAL_SERVER_ERROR,
+      500
+    );
   } finally {
     released?.();
   }

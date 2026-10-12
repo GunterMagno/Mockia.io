@@ -18,16 +18,32 @@ const MAX_CHALLENGE_LENGTH = 512;
 const MAX_NONCE_LENGTH = 64;
 const NONCE_FORMAT = /^[A-Za-z0-9_-]+$/;
 
-export type ProofFailure = 'malformed' | 'bad_signature' | 'expired' | 'insufficient_work' | 'replayed';
+export type ProofFailure =
+  | 'malformed'
+  | 'bad_signature'
+  | 'expired'
+  | 'insufficient_work'
+  | 'replayed';
 export type ProofResult = { ok: true } | { ok: false; reason: ProofFailure };
 
-const sign = (payloadPart: string): Buffer => crypto.createHmac('sha256', demoKey('demo-pow')).update(payloadPart).digest();
+const sign = (payloadPart: string): Buffer =>
+  crypto.createHmac('sha256', demoKey('demo-pow')).update(payloadPart).digest();
 
-export function issueChallenge(now: Date = new Date()): { challenge: string; bits: number; expiresAt: string } {
+export function issueChallenge(now: Date = new Date()): {
+  challenge: string;
+  bits: number;
+  expiresAt: string;
+} {
   const { powBits } = getDemoConfig();
   const exp = now.getTime() + CHALLENGE_TTL_MS;
-  const payload = Buffer.from(JSON.stringify({ id: crypto.randomBytes(16).toString('hex'), bits: powBits, exp })).toString('base64url');
-  return { challenge: `${payload}.${sign(payload).toString('base64url')}`, bits: powBits, expiresAt: new Date(exp).toISOString() };
+  const payload = Buffer.from(
+    JSON.stringify({ id: crypto.randomBytes(16).toString('hex'), bits: powBits, exp })
+  ).toString('base64url');
+  return {
+    challenge: `${payload}.${sign(payload).toString('base64url')}`,
+    bits: powBits,
+    expiresAt: new Date(exp).toISOString(),
+  };
 }
 
 /** Number of leading zero bits of a digest. */
@@ -62,7 +78,9 @@ function parsePayload(part: string): Payload | null {
 }
 
 /** What a successful pure check hands to the steps that follow: the id the challenge is spent under. */
-export type ProofCheck = { ok: true; id: string } | { ok: false; reason: Exclude<ProofFailure, 'replayed'> };
+export type ProofCheck =
+  | { ok: true; id: string }
+  | { ok: false; reason: Exclude<ProofFailure, 'replayed'> };
 
 /**
  * The part of the verification that needs no database: shape, signature, expiry and the work itself. It costs a few
@@ -71,8 +89,14 @@ export type ProofCheck = { ok: true; id: string } | { ok: false; reason: Exclude
  * the demo-wide budget, whatever address it claims to come from.
  */
 export function checkProof(challenge: unknown, nonce: unknown, now: Date = new Date()): ProofCheck {
-  if (typeof challenge !== 'string' || typeof nonce !== 'string') return { ok: false, reason: 'malformed' };
-  if (challenge.length > MAX_CHALLENGE_LENGTH || nonce.length === 0 || nonce.length > MAX_NONCE_LENGTH || !NONCE_FORMAT.test(nonce)) {
+  if (typeof challenge !== 'string' || typeof nonce !== 'string')
+    return { ok: false, reason: 'malformed' };
+  if (
+    challenge.length > MAX_CHALLENGE_LENGTH ||
+    nonce.length === 0 ||
+    nonce.length > MAX_NONCE_LENGTH ||
+    !NONCE_FORMAT.test(nonce)
+  ) {
     return { ok: false, reason: 'malformed' };
   }
   const parts = challenge.split('.');
@@ -80,7 +104,8 @@ export function checkProof(challenge: unknown, nonce: unknown, now: Date = new D
 
   const given = Buffer.from(parts[1], 'base64url');
   const expected = sign(parts[0]);
-  if (given.length !== expected.length || !crypto.timingSafeEqual(given, expected)) return { ok: false, reason: 'bad_signature' };
+  if (given.length !== expected.length || !crypto.timingSafeEqual(given, expected))
+    return { ok: false, reason: 'bad_signature' };
 
   const payload = parsePayload(parts[0]);
   if (!payload) return { ok: false, reason: 'malformed' };
@@ -107,7 +132,11 @@ export async function spendChallenge(id: string, now: Date = new Date()): Promis
   }
 }
 
-export async function verifyProof(challenge: unknown, nonce: unknown, now: Date = new Date()): Promise<ProofResult> {
+export async function verifyProof(
+  challenge: unknown,
+  nonce: unknown,
+  now: Date = new Date()
+): Promise<ProofResult> {
   const checked = checkProof(challenge, nonce, now);
   if (!checked.ok) return checked;
   // Spending is the last step, so a wrong nonce does not burn a challenge the client could still solve

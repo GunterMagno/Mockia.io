@@ -11,7 +11,11 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: radial-gradient(circle at top right, var(--color-accent-solid-hover), transparent 50%);
+  background: radial-gradient(
+    circle at top right,
+    var(--color-accent-solid-hover),
+    transparent 50%
+  );
   opacity: 0.15;
   pointer-events: none;
 }
@@ -38,7 +42,7 @@
   margin: 0 auto var(--spacing-6);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-sm);
-  
+
   img {
     width: 40px;
     height: 40px;

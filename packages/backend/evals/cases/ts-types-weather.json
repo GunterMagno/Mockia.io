@@ -1,10 +1,7 @@
 {
   "id": "ts-types-weather",
   "description": "Weather types with a type alias and nested objects; a read-only API is requested.",
-  "tags": [
-    "typescript-types",
-    "path-params"
-  ],
+  "tags": ["typescript-types", "path-params"],
   "input": {
     "projectTitle": "Weather Board",
     "userInput": "Read-only mock API: current weather and forecast per city.",
@@ -42,19 +39,11 @@
             },
             {
               "name": "ForecastDay",
-              "properties": [
-                "date: string",
-                "minC: number",
-                "maxC: number",
-                "condition: Condition"
-              ]
+              "properties": ["date: string", "minC: number", "maxC: number", "condition: Condition"]
             },
             {
               "name": "Forecast",
-              "properties": [
-                "city: string",
-                "days: ForecastDay[]"
-              ]
+              "properties": ["city: string", "days: ForecastDay[]"]
             }
           ],
           "typeAliases": [
@@ -93,12 +82,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "city",
-          "temperatureC",
-          "condition",
-          "humidity"
-        ]
+        "required": ["city", "temperatureC", "condition", "humidity"]
       },
       "examples": [
         {
@@ -152,19 +136,11 @@
                   "type": "string"
                 }
               },
-              "required": [
-                "date",
-                "minC",
-                "maxC",
-                "condition"
-              ]
+              "required": ["date", "minC", "maxC", "condition"]
             }
           }
         },
-        "required": [
-          "city",
-          "days"
-        ]
+        "required": ["city", "days"]
       },
       "examples": [
         {

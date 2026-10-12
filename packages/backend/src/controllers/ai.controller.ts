@@ -10,7 +10,12 @@ import { consumeAiQuota } from '../modules/ai/aiRateLimit.js';
 import { aiQuotaClock, reserveAiGeneration } from '../modules/billing/aiQuota.js';
 import { parseAiProviders, getSpecGenerationSampling } from '../config/ai.js';
 import { describeError } from '../utils/safeErrorLog.js';
-import { getLlm, type LlmCompletion, type LlmRequest, type ProviderOutcome } from '../modules/ai/providers/index.js';
+import {
+  getLlm,
+  type LlmCompletion,
+  type LlmRequest,
+  type ProviderOutcome,
+} from '../modules/ai/providers/index.js';
 import { newGenerationId, persistGeneration } from '../modules/ai/generationStore.js';
 import { recordFeedback } from '../modules/ai/feedback.js';
 import { AppError } from '../middlewares/errorHandler.js';
@@ -45,11 +50,17 @@ async function enforceAiRateLimit(userId: string, res: Response): Promise<void> 
  * the next UTC month) and returns null, so the caller stops without touching the LLM. Otherwise returns the `release`
  * function, which the caller invokes on a failure path only when createRefundTracker allows it, and never after a successful answer.
  */
-async function reserveOrReject(userId: string, res: Response): Promise<(() => Promise<void>) | null> {
+async function reserveOrReject(
+  userId: string,
+  res: Response
+): Promise<(() => Promise<void>) | null> {
   const now = aiQuotaClock.now();
   const reservation = await reserveAiGeneration(userId, now);
   if (reservation.ok) return reservation.release;
-  const retryAfter = Math.max(1, Math.ceil((reservation.resetsAt.getTime() - now.getTime()) / 1000));
+  const retryAfter = Math.max(
+    1,
+    Math.ceil((reservation.resetsAt.getTime() - now.getTime()) / 1000)
+  );
   res.set('Retry-After', String(retryAfter));
   res.status(429).json({
     success: false,
@@ -115,7 +126,8 @@ function usageOf(result: LlmCompletion) {
 
 /** Content-free reasons the validators hand back to the model in a repair request (never quote the output). */
 const NOT_JSON = 'the output is not valid JSON';
-const WRONG_SHAPE = 'the JSON does not match the required schema (an object with apiVersion, title, description, endpoints and dataModels)';
+const WRONG_SHAPE =
+  'the JSON does not match the required schema (an object with apiVersion, title, description, endpoints and dataModels)';
 
 /** Which content-free reason applies to a text the downstream step rejected. */
 function invalidReason(text: string): string {
@@ -185,11 +197,7 @@ export const generateMockAPISpecHandler = asyncHandler(
 
     // Validation
     if (!projectId) {
-      throw new AppError(
-        'projectId is required',
-        ErrorCode.VALIDATION_ERROR,
-        400
-      );
+      throw new AppError('projectId is required', ErrorCode.VALIDATION_ERROR, 400);
     }
 
     if (!requirement) {
@@ -286,19 +294,11 @@ export const generateAndSaveHandler = asyncHandler(
 
     // Validation
     if (!projectId) {
-      throw new AppError(
-        'projectId is required',
-        ErrorCode.VALIDATION_ERROR,
-        400
-      );
+      throw new AppError('projectId is required', ErrorCode.VALIDATION_ERROR, 400);
     }
 
     if (!requirement) {
-      throw new AppError(
-        'requirement is required',
-        ErrorCode.VALIDATION_ERROR,
-        400
-      );
+      throw new AppError('requirement is required', ErrorCode.VALIDATION_ERROR, 400);
     }
 
     // One generation of the monthly plan quota, reserved BEFORE any prompt or model work; 429 when it is spent

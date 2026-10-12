@@ -14,12 +14,7 @@ export const ModalErrorAlert: React.FC<ModalErrorAlertProps> = ({ message, class
   return (
     <article className={`${styles.alertContainer} ${className}`} role="alert">
       <figure className={styles.iconContainer}>
-        <Icon
-          src={errorAlertIcon}
-          size={18}
-          color="var(--color-danger)"
-          className={styles.icon}
-        />
+        <Icon src={errorAlertIcon} size={18} color="var(--color-danger)" className={styles.icon} />
       </figure>
       <section className={styles.messageContainer}>
         <span className={styles.messageText}>{message}</span>

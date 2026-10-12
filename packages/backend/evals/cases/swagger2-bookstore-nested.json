@@ -1,11 +1,7 @@
 {
   "id": "swagger2-bookstore-nested",
   "description": "Swagger 2.0 bookstore with an order resource nested under customers and a PATCH.",
-  "tags": [
-    "swagger2",
-    "nested-resources",
-    "path-params"
-  ],
+  "tags": ["swagger2", "nested-resources", "path-params"],
   "input": {
     "projectTitle": "Bookstore",
     "userInput": "Create the mock API of the Swagger document.",
@@ -28,27 +24,19 @@
           "summary": "Swagger 2.0. definitions.Customer = { id: integer, name: string, city: string }; definitions.Order = { id: integer, customerId: integer, total: number, state: string }.",
           "routes": [
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/customers"
             },
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/customers/{customerId}"
             },
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/customers/{customerId}/orders"
             },
             {
-              "methods": [
-                "PATCH"
-              ],
+              "methods": ["PATCH"],
               "path": "/orders/{orderId}"
             }
           ]
@@ -81,11 +69,7 @@
               "type": "string"
             }
           },
-          "required": [
-            "id",
-            "name",
-            "city"
-          ]
+          "required": ["id", "name", "city"]
         }
       },
       "examples": [
@@ -123,11 +107,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "name",
-          "city"
-        ]
+        "required": ["id", "name", "city"]
       },
       "examples": [
         {
@@ -174,12 +154,7 @@
               "type": "string"
             }
           },
-          "required": [
-            "id",
-            "customerId",
-            "total",
-            "state"
-          ]
+          "required": ["id", "customerId", "total", "state"]
         }
       },
       "examples": [
@@ -207,9 +182,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "state"
-        ]
+        "required": ["state"]
       },
       "responseSchema": {
         "type": "object",
@@ -227,12 +200,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "customerId",
-          "total",
-          "state"
-        ]
+        "required": ["id", "customerId", "total", "state"]
       },
       "examples": [
         {

@@ -3,7 +3,8 @@ import { SUPPORTED_LOCALES, type Locale } from '@mockia/shared';
 /** Stripe limit for custom_text[...][message] (Checkout renders a subset of markdown, links included). */
 export const STRIPE_CUSTOM_TEXT_MAX = 1200;
 
-const isLocale = (value: unknown): value is Locale => (SUPPORTED_LOCALES as readonly unknown[]).includes(value);
+const isLocale = (value: unknown): value is Locale =>
+  (SUPPORTED_LOCALES as readonly unknown[]).includes(value);
 
 /** Checkout locale: the user's saved language, or Stripe's own detection (`auto`) when we do not know it. */
 export function stripeCheckoutLocale(saved: unknown): Locale | 'auto' {

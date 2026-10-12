@@ -43,8 +43,11 @@ describe('GDPR: export and delete the account', () => {
     cy.wait('@export').then(({ response }) => {
       expect(response?.statusCode).to.eq(200);
       const disposition = String(response?.headers['content-disposition']);
-      expect(disposition).to.match(/^attachment; filename="mockia-export-\d{4}-\d{2}-\d{2}\.json"$/);
-      const text = typeof response?.body === 'string' ? response.body : JSON.stringify(response?.body);
+      expect(disposition).to.match(
+        /^attachment; filename="mockia-export-\d{4}-\d{2}-\d{2}\.json"$/
+      );
+      const text =
+        typeof response?.body === 'string' ? response.body : JSON.stringify(response?.body);
       expect(text).not.to.contain('passwordHash');
       const data = JSON.parse(text);
       expect(data.account.email).to.eq(email);
@@ -87,14 +90,21 @@ describe('GDPR: export and delete the account', () => {
     cy.get('[role="dialog"] [role="alert"]').should('contain.text', 'password is not correct');
     cy.get('[role="dialog"]').should('be.visible');
     cy.url().should('include', '/dashboard');
-    cy.request({ method: 'POST', url: '/api/auth/login', body: { email, password: PASSWORD } }).its('status').should('eq', 200);
+    cy.request({ method: 'POST', url: '/api/auth/login', body: { email, password: PASSWORD } })
+      .its('status')
+      .should('eq', 200);
 
     // Right password: account gone, back on the landing with a confirmation, login no longer works
     cy.get('input[name="delete-password"]').clear().type(PASSWORD);
     confirmButton().click();
     cy.location('pathname').should('eq', '/');
     cy.get('[data-account-deleted]').should('be.visible').and('contain.text', 'deleted');
-    cy.request({ method: 'POST', url: '/api/auth/login', body: { email, password: PASSWORD }, failOnStatusCode: false })
+    cy.request({
+      method: 'POST',
+      url: '/api/auth/login',
+      body: { email, password: PASSWORD },
+      failOnStatusCode: false,
+    })
       .its('status')
       .should('eq', 401);
     loginViaUi(email);
@@ -114,6 +124,8 @@ describe('GDPR: export and delete the account', () => {
     cy.get('[role="dialog"] form').contains('button', 'Cancel').click();
     cy.get('form input[name="confirm-email"]').should('not.exist');
     cy.contains('button', 'Delete account').should('be.focused');
-    cy.request({ method: 'POST', url: '/api/auth/login', body: { email, password: PASSWORD } }).its('status').should('eq', 200);
+    cy.request({ method: 'POST', url: '/api/auth/login', body: { email, password: PASSWORD } })
+      .its('status')
+      .should('eq', 200);
   });
 });

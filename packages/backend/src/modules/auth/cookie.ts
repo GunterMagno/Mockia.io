@@ -37,7 +37,10 @@ export function cookieSameSite(env: NodeJS.ProcessEnv = process.env): SameSite {
  *
  * @param persistent - the user chose "remember me": the cookie gets Max-Age (7 d), else it is a session cookie
  */
-export function refreshCookieOptions(persistent: boolean, env: NodeJS.ProcessEnv = process.env): CookieOptions {
+export function refreshCookieOptions(
+  persistent: boolean,
+  env: NodeJS.ProcessEnv = process.env
+): CookieOptions {
   const sameSite = cookieSameSite(env);
   return {
     httpOnly: true,

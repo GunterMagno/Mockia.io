@@ -5,13 +5,10 @@ import Joi from 'joi';
  * Validates that the request body contains a valid GitHub URL
  */
 export const parseGithubUrlSchema = Joi.object({
-  url: Joi.string()
-    .uri()
-    .required()
-    .messages({
-      'string.uri': 'URL must be a valid GitHub URL',
-      'any.required': 'URL is required',
-    }),
+  url: Joi.string().uri().required().messages({
+    'string.uri': 'URL must be a valid GitHub URL',
+    'any.required': 'URL is required',
+  }),
 });
 
 /**
@@ -19,18 +16,13 @@ export const parseGithubUrlSchema = Joi.object({
  * Validates that the request body contains a valid GitHub URL and optional branch
  */
 export const ingestGithubRepoSchema = Joi.object({
-  url: Joi.string()
-    .uri()
-    .required()
-    .messages({
-      'string.uri': 'URL must be a valid GitHub URL',
-      'any.required': 'URL is required',
-    }),
-  branch: Joi.string()
-    .optional()
-    .messages({
-      'string.base': 'Branch must be a string',
-    }),
+  url: Joi.string().uri().required().messages({
+    'string.uri': 'URL must be a valid GitHub URL',
+    'any.required': 'URL is required',
+  }),
+  branch: Joi.string().optional().messages({
+    'string.base': 'Branch must be a string',
+  }),
 });
 
 /**
@@ -38,16 +30,11 @@ export const ingestGithubRepoSchema = Joi.object({
  * Validates GitHub URL and optional branch for project import
  */
 export const importGitHubSchema = Joi.object({
-  repoUrl: Joi.string()
-    .uri()
-    .required()
-    .messages({
-      'string.uri': 'Repository URL must be a valid GitHub URL',
-      'any.required': 'Repository URL is required',
-    }),
-  branch: Joi.string()
-    .optional()
-    .messages({
-      'string.base': 'Branch must be a string',
-    }),
+  repoUrl: Joi.string().uri().required().messages({
+    'string.uri': 'Repository URL must be a valid GitHub URL',
+    'any.required': 'Repository URL is required',
+  }),
+  branch: Joi.string().optional().messages({
+    'string.base': 'Branch must be a string',
+  }),
 });

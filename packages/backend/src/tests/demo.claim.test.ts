@@ -29,11 +29,22 @@ import { mockCache } from '../modules/mock/mockCache.service.js';
 
 const PASSWORD = 'demo-claim-test-password-1';
 const SECRET = 'demo-test-secret-with-more-than-32-chars!!';
-const ENV_KEYS = ['DEMO_ENABLED', 'DEMO_HMAC_SECRET', 'REQUIRE_EMAIL_VERIFICATION', 'DEMO_MOCK_TTL_MINUTES'] as const;
+const ENV_KEYS = [
+  'DEMO_ENABLED',
+  'DEMO_HMAC_SECRET',
+  'REQUIRE_EMAIL_VERIFICATION',
+  'DEMO_MOCK_TTL_MINUTES',
+] as const;
 const saved: Record<string, string | undefined> = {};
 
 const ENDPOINTS: DemoEndpoint[] = [
-  { method: 'GET', path: '/products', statusCode: 200, body: [{ id: 1, name: 'Mug' }], headers: { 'x-total-count': '1' } },
+  {
+    method: 'GET',
+    path: '/products',
+    statusCode: 200,
+    body: [{ id: 1, name: 'Mug' }],
+    headers: { 'x-total-count': '1' },
+  },
   { method: 'GET', path: '/products/:id', statusCode: 200, body: { id: 1, name: 'Mug' } },
   { method: 'POST', path: '/products', statusCode: 201, body: { id: 2, name: 'Cup' } },
   { method: 'DELETE', path: '/products/:id', statusCode: 204, body: null },
@@ -50,10 +61,14 @@ async function createUser(opts: { verified?: boolean } = {}) {
     ...(opts.verified === false ? {} : { emailVerifiedAt: new Date() }),
   });
   const login = await request(app).post('/api/auth/login').send({ email, password: PASSWORD });
-  return { id: user._id.toString(), auth: { Authorization: `Bearer ${login.body.data.tokens.accessToken as string}` } };
+  return {
+    id: user._id.toString(),
+    auth: { Authorization: `Bearer ${login.body.data.tokens.accessToken as string}` },
+  };
 }
 
-const newDemo = async (endpoints: DemoEndpoint[] = ENDPOINTS) => (await createDemoMock('pseudonym-of-a-visitor', endpoints, demoClock.now())).demoId;
+const newDemo = async (endpoints: DemoEndpoint[] = ENDPOINTS) =>
+  (await createDemoMock('pseudonym-of-a-visitor', endpoints, demoClock.now())).demoId;
 const claim = (demoId: string, auth?: Record<string, string>) => {
   const req = request(app).post(`/api/demo/${demoId}/claim`);
   return auth ? req.set(auth) : req;
@@ -63,7 +78,8 @@ const demoExists = async (demoId: string) => (await DemoMockModel.countDocuments
 const collectionCounts = async (): Promise<Record<string, number>> => {
   const names = (await mongoose.connection.db!.listCollections().toArray()).map((c) => c.name);
   const out: Record<string, number> = {};
-  for (const name of names) out[name] = await mongoose.connection.db!.collection(name).countDocuments({});
+  for (const name of names)
+    out[name] = await mongoose.connection.db!.collection(name).countDocuments({});
   return out;
 };
 
@@ -72,7 +88,12 @@ describe('demo publica: reclamar la demo como proyecto (POST /api/demo/:demoId/c
 
   beforeAll(async () => {
     await connectDB();
-    await Promise.all([DemoMockModel.init(), DemoBudgetModel.init(), DemoSpentChallengeModel.init(), AiRateWindowModel.init()]);
+    await Promise.all([
+      DemoMockModel.init(),
+      DemoBudgetModel.init(),
+      DemoSpentChallengeModel.init(),
+      AiRateWindowModel.init(),
+    ]);
   });
   afterAll(async () => {
     await disconnectDB();
@@ -140,16 +161,21 @@ describe('demo publica: reclamar la demo como proyecto (POST /api/demo/:demoId/c
       // El mock queda guardado como en cualquier proyecto: MockAPI -> Endpoint -> Response
       const mockApi = await MockAPIModel.findOne({ projectId: dto.id }).lean();
       expect(mockApi).not.toBeNull();
-      const endpoints = await EndpointModel.find({ mockApiId: mockApi!._id }).populate('responses').lean();
+      const endpoints = await EndpointModel.find({ mockApiId: mockApi!._id })
+        .populate('responses')
+        .lean();
       expect(endpoints).toHaveLength(ENDPOINTS.length);
-      const key = (m: string, p: string) => endpoints.find((e) => e.method === m && e.path === p) as any;
+      const key = (m: string, p: string) =>
+        endpoints.find((e) => e.method === m && e.path === p) as any;
       expect(key('GET', '/products').responses[0].statusCode).toBe(200);
       expect(key('GET', '/products').responses[0].examples[0]).toEqual([{ id: 1, name: 'Mug' }]);
       expect(key('POST', '/products').responses[0].statusCode).toBe(201);
       expect(key('GET', '/products/:id').responses[0].examples[0]).toEqual({ id: 1, name: 'Mug' });
       expect(key('DELETE', '/products/:id').responses[0].statusCode).toBe(204);
       // las cabeceras permitidas pasan a la configuracion del endpoint (se vuelven a filtrar al servirlas)
-      const cfg = await EndpointConfigModel.findOne({ endpointId: key('GET', '/products')._id }).lean();
+      const cfg = await EndpointConfigModel.findOne({
+        endpointId: key('GET', '/products')._id,
+      }).lean();
       expect(cfg?.headers).toEqual({ 'x-total-count': '1' });
       // la lista de proyectos del usuario ya lo incluye
       const list = await request(app).get('/api/projects').set(user.auth);
@@ -187,7 +213,9 @@ describe('demo publica: reclamar la demo como proyecto (POST /api/demo/:demoId/c
 
       const after = await collectionCounts();
       const grown = Object.keys(after).filter((c) => after[c] !== (before[c] ?? 0));
-      expect(grown.sort()).toEqual(['demomocks', 'endpointconfigs', 'endpoints', 'mockapis', 'projects', 'responses'].sort());
+      expect(grown.sort()).toEqual(
+        ['demomocks', 'endpointconfigs', 'endpoints', 'mockapis', 'projects', 'responses'].sort()
+      );
       expect(after.aigenerations ?? 0).toBe(0);
       expect(after.demobudgets ?? 0).toBe(before.demobudgets ?? 0);
       expect(await UsageModel.find({}).lean()).toEqual(usageBefore);
@@ -196,13 +224,17 @@ describe('demo publica: reclamar la demo como proyecto (POST /api/demo/:demoId/c
     it('el titulo es razonable (<= 60 caracteres, derivado del primer recurso) y no lleva nada del visitante', async () => {
       const user = await createUser();
       const long = '/' + 'a'.repeat(150);
-      const demoId = await newDemo([{ method: 'GET', path: long, statusCode: 200, body: { note: '<script>alert(1)</script>' } }]);
+      const demoId = await newDemo([
+        { method: 'GET', path: long, statusCode: 200, body: { note: '<script>alert(1)</script>' } },
+      ]);
       const dto = (await claim(demoId, user.auth)).body.data;
       expect(dto.title.length).toBeLessThanOrEqual(60);
       expect(dto.title).toMatch(/^Demo/);
       expect(dto.title).not.toMatch(/[<>]/);
 
-      const demoId2 = await newDemo([{ method: 'GET', path: '/users/:id', statusCode: 200, body: {} }]);
+      const demoId2 = await newDemo([
+        { method: 'GET', path: '/users/:id', statusCode: 200, body: {} },
+      ]);
       const dto2 = (await claim(demoId2, user.auth)).body.data;
       expect(dto2.title).toBe('Demo - users');
     });
@@ -236,7 +268,10 @@ describe('demo publica: reclamar la demo como proyecto (POST /api/demo/:demoId/c
       const real = await newDemo();
       clockOffset = 0;
       const expired = await newDemo();
-      await DemoMockModel.updateOne({ demoId: expired }, { $set: { expiresAt: new Date(Date.now() - 1000) } });
+      await DemoMockModel.updateOne(
+        { demoId: expired },
+        { $set: { expiresAt: new Date(Date.now() - 1000) } }
+      );
       const attempts = [
         'f'.repeat(32), // bien formado, no existe
         real.slice(0, 31) + (real.endsWith('0') ? '1' : '0'), // un caracter distinto
@@ -260,13 +295,30 @@ describe('demo publica: reclamar la demo como proyecto (POST /api/demo/:demoId/c
     it('no hay listado de demos y un id adivinado no da nada', async () => {
       const user = await createUser();
       await newDemo();
-      for (const p of ['/api/demo', '/api/demo/list', '/api/demo/mine', '/api/demo/claims', '/api/demo/all']) {
+      for (const p of [
+        '/api/demo',
+        '/api/demo/list',
+        '/api/demo/mine',
+        '/api/demo/claims',
+        '/api/demo/all',
+      ]) {
         const res = await request(app).get(p).set(user.auth);
         expect(res.status).toBe(404);
       }
       // el documento no guarda ningun dato de usuario que pudiera relacionarse con una cuenta
       const raw = await mongoose.connection.db!.collection('demomocks').findOne({});
-      expect(Object.keys(raw!).sort()).toEqual(['__v', '_id', 'createdAt', 'demoId', 'endpoints', 'expiresAt', 'ipHash', 'requestCount'].sort());
+      expect(Object.keys(raw!).sort()).toEqual(
+        [
+          '__v',
+          '_id',
+          'createdAt',
+          'demoId',
+          'endpoints',
+          'expiresAt',
+          'ipHash',
+          'requestCount',
+        ].sort()
+      );
     });
   });
 
@@ -309,7 +361,12 @@ describe('demo publica: reclamar la demo como proyecto (POST /api/demo/:demoId/c
   describe('(d) limite de proyectos del plan', () => {
     const fillProjects = async (ownerId: string, n: number) => {
       for (let i = 0; i < n; i++) {
-        await ProjectModel.create({ title: `p${i}`, slug: `fill-${ownerId}-${i}`, ownerId, members: [{ userId: ownerId, role: 'owner' }] });
+        await ProjectModel.create({
+          title: `p${i}`,
+          slug: `fill-${ownerId}-${i}`,
+          ownerId,
+          members: [{ userId: ownerId, role: 'owner' }],
+        });
       }
     };
 
@@ -362,7 +419,12 @@ describe('demo publica: reclamar la demo como proyecto (POST /api/demo/:demoId/c
       const a = await createUser();
       const b = await createUser();
       const demoId = await newDemo();
-      const results = await Promise.all([claim(demoId, a.auth), claim(demoId, b.auth), claim(demoId, a.auth), claim(demoId, b.auth)]);
+      const results = await Promise.all([
+        claim(demoId, a.auth),
+        claim(demoId, b.auth),
+        claim(demoId, a.auth),
+        claim(demoId, b.auth),
+      ]);
       expect(results.filter((r) => r.status === 201)).toHaveLength(1);
       expect(await ProjectModel.countDocuments({})).toBe(1);
     });
@@ -378,7 +440,9 @@ describe('demo publica: reclamar la demo como proyecto (POST /api/demo/:demoId/c
       const demoId = await newDemo();
       await DemoMockModel.updateOne({ demoId }, { $set: { requestCount: 7 } });
       const before = await sameDemo(demoId);
-      const save = jest.spyOn(ProjectModel.prototype, 'save').mockRejectedValueOnce(new Error('boom'));
+      const save = jest
+        .spyOn(ProjectModel.prototype, 'save')
+        .mockRejectedValueOnce(new Error('boom'));
       jest.spyOn(console, 'error').mockImplementation(() => undefined);
 
       const res = await claim(demoId, user.auth);

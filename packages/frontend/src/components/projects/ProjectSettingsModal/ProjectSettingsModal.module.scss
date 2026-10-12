@@ -21,7 +21,7 @@
   @include respond-to('sm') {
     padding: var(--spacing-4) var(--spacing-4) var(--spacing-2);
   }
-  
+
   h2 {
     margin: 0 0 var(--spacing-6);
     font-size: 2rem;
@@ -44,16 +44,15 @@
     gap: var(--spacing-3);
     overflow-x: auto;
     padding-bottom: 0;
-    
+
     /* Hide scrollbar but keep functionality */
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
     &::-webkit-scrollbar {
       display: none; /* Chrome, Safari and Opera */
     }
   }
 }
-
 
 .tab {
   background: none;
@@ -116,7 +115,9 @@
   }
 }
 
-.input, .textarea, .select {
+.input,
+.textarea,
+.select {
   background-color: var(--color-surface-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -174,7 +175,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  
+
   h4 {
     margin: 0;
     font-size: var(--text-lg);
@@ -242,7 +243,7 @@
   border-radius: var(--radius-md);
   cursor: pointer;
   color: var(--color-text);
-  
+
   &:hover {
     background-color: var(--sidebar-item-active);
   }
@@ -257,7 +258,7 @@
   color: var(--color-accent-text);
   font-weight: 600;
   transition: all var(--transition-fast);
-  
+
   &:hover {
     background-color: var(--color-active);
     border-color: var(--color-accent-text);
@@ -272,7 +273,7 @@
   border-radius: var(--radius-md);
   cursor: pointer;
   font-weight: bold;
-  
+
   &:hover {
     background-color: var(--color-danger-solid);
   }
@@ -281,7 +282,7 @@
 /* Members Tab */
 .inviteSection {
   margin-bottom: var(--spacing-8);
-  
+
   label {
     display: block;
     margin-bottom: var(--spacing-2);
@@ -304,7 +305,7 @@
   .select {
     width: 150px;
     appearance: none;
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%22%20fill%3D%22none%22%20stroke%3D%22currentColor%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E");
+    background-image: url('data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%22%20fill%3D%22none%22%20stroke%3D%22currentColor%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E');
     background-repeat: no-repeat;
     background-position: right var(--spacing-3) center;
     background-size: 1.2rem;
@@ -441,7 +442,7 @@
   color: var(--muted);
   cursor: pointer;
   padding: 0;
-  
+
   &:hover {
     color: var(--color-danger);
   }
@@ -469,7 +470,7 @@
   @include respond-to('sm') {
     font-size: 1.25rem;
   }
-  
+
   &:hover {
     text-decoration: underline;
   }
@@ -488,11 +489,11 @@
     font-size: 1.25rem;
     width: 100%;
   }
-  
+
   &:hover:not(:disabled) {
     background-color: var(--color-accent-solid-hover);
   }
-  
+
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
@@ -511,7 +512,9 @@
   flex-direction: column;
   gap: var(--spacing-8);
 
-  &[hidden] { display: none; }
+  &[hidden] {
+    display: none;
+  }
 }
 
 .githubBox {
@@ -569,4 +572,3 @@
 .githubIconColor {
   opacity: 0.8;
 }
-

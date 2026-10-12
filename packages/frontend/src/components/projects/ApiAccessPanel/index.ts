@@ -1,1 +1,1 @@
-export { ApiAccessPanel } from './ApiAccessPanel'
+export { ApiAccessPanel } from './ApiAccessPanel';

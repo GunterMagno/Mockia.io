@@ -53,7 +53,6 @@ describe('Notifications API (notification.routes)', () => {
         title: 'Welcome!',
         message: 'Welcome to Mockia.io final project evaluation.',
       });
-
     } catch (error) {
       console.error('Error in beforeAll of notifications test:', error);
     }
@@ -71,8 +70,7 @@ describe('Notifications API (notification.routes)', () => {
 
   describe('GET /api/notifications', () => {
     it('should block retrieval without token (401)', async () => {
-      const response = await request(app)
-        .get('/api/notifications');
+      const response = await request(app).get('/api/notifications');
 
       expect(response.status).toBe(401);
     });
@@ -116,8 +114,7 @@ describe('Notifications API (notification.routes)', () => {
 
   describe('DELETE /api/notifications/:id', () => {
     it('should block deletion without token (401)', async () => {
-      const response = await request(app)
-        .delete(`/api/notifications/${testNotificationId}`);
+      const response = await request(app).delete(`/api/notifications/${testNotificationId}`);
 
       expect(response.status).toBe(401);
     });

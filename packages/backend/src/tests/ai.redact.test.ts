@@ -18,7 +18,11 @@ const GH_PAT = 'github' + '_pat_' + rep('A1b2C3d4', 8);
 const AKIA = 'AKIA' + 'ABCDEFGHIJKLMNOP';
 const AIZA = 'AIza' + rep('Sy1_', 8) + 'abc';
 const XOX = 'xox' + 'b-' + '1234567890-' + rep('abcdEF', 4);
-const JWT = [b64('{"alg":"HS256","typ":"JWT"}'), b64('{"sub":"1234567890","name":"x"}'), b64('signature-bytes')].join('.');
+const JWT = [
+  b64('{"alg":"HS256","typ":"JWT"}'),
+  b64('{"sub":"1234567890","name":"x"}'),
+  b64('signature-bytes'),
+].join('.');
 const PEM = [
   '-----BEGIN ' + 'RSA PRIVATE KEY-----',
   'MIIEowIBAAKCAQEA' + rep('abcd', 20),
@@ -46,7 +50,11 @@ describe('redactSecrets: patterns', () => {
     ['Google API key', `GOOGLE ${AIZA}`, AIZA],
     ['Slack token', `slack ${XOX}`, XOX],
     ['JWT', `Cookie: session=${JWT}; Path=/`, JWT],
-    ['Bearer token', 'Authorization: Bearer abcdefghijklmnop.qrstuvwxyz-0123456789', 'abcdefghijklmnop.qrstuvwxyz-0123456789'],
+    [
+      'Bearer token',
+      'Authorization: Bearer abcdefghijklmnop.qrstuvwxyz-0123456789',
+      'abcdefghijklmnop.qrstuvwxyz-0123456789',
+    ],
     ['mongodb connection string', `MONGODB_URI=${MONGO}`, 's3cr3tP4ss'],
     ['mongodb+srv connection string', `uri = "${MONGO_SRV}"`, 'hunter2'],
     ['postgres connection string', `DATABASE_URL=${POSTGRES}`, 'pa55word'],
@@ -65,13 +73,15 @@ describe('redactSecrets: patterns', () => {
   });
 
   it('an unterminated PEM block (truncated prompt) is removed up to the end', () => {
-    const truncated = '-----BEGIN ' + 'PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASC' + rep('x', 80);
+    const truncated =
+      '-----BEGIN ' + 'PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASC' + rep('x', 80);
     const out = redactSecrets(`keep this\n${truncated}`);
     expect(out).toBe(`keep this\n${REDACTED_KEY}`);
   });
 
   it('a PEM public key block is removed too (BEGIN ... KEY)', () => {
-    const pub = '-----BEGIN ' + 'PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYI\n-----END ' + 'PUBLIC KEY-----';
+    const pub =
+      '-----BEGIN ' + 'PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYI\n-----END ' + 'PUBLIC KEY-----';
     expect(redactSecrets(pub)).toBe(REDACTED_KEY);
   });
 
@@ -167,7 +177,9 @@ describe('redactSecrets: properties', () => {
 
   it('redacts every occurrence, not only the first', () => {
     const out = redactSecrets(`${SK_LIVE} ${SK_LIVE} ${GHP} a@b.com c@d.com`);
-    expect(out).toBe(`${REDACTED_KEY} ${REDACTED_KEY} ${REDACTED_KEY} ${REDACTED_EMAIL} ${REDACTED_EMAIL}`);
+    expect(out).toBe(
+      `${REDACTED_KEY} ${REDACTED_KEY} ${REDACTED_KEY} ${REDACTED_EMAIL} ${REDACTED_EMAIL}`
+    );
   });
 
   it('a long non-secret text is processed quickly (no catastrophic backtracking)', () => {
@@ -189,7 +201,13 @@ describe('redactDeep (structured targets)', () => {
   it('redacts every string inside objects and arrays and keeps the JSON valid', () => {
     const input = {
       title: `Admin ${SK_LIVE}`,
-      endpoints: [{ path: '/x', description: 'mail a@b.com', examples: [{ request: {}, response: { token: 'abc123def' } }] }],
+      endpoints: [
+        {
+          path: '/x',
+          description: 'mail a@b.com',
+          examples: [{ request: {}, response: { token: 'abc123def' } }],
+        },
+      ],
       count: 3,
       ok: true,
       none: null,
@@ -207,7 +225,12 @@ describe('redactDeep (structured targets)', () => {
   });
 
   it('a string under a secret-looking key is redacted, but type words and objects under that key are not', () => {
-    const out = redactDeep({ password: 'hunter2', token: 'string', secret: { type: 'string' }, apiKey: '' }) as Record<string, unknown>;
+    const out = redactDeep({
+      password: 'hunter2',
+      token: 'string',
+      secret: { type: 'string' },
+      apiKey: '',
+    }) as Record<string, unknown>;
     expect(out.password).toBe(REDACTED_KEY);
     expect(out.token).toBe('string');
     expect(out.secret).toEqual({ type: 'string' });
@@ -234,14 +257,28 @@ describe('redactTarget (synthetic mock data survives, real-looking secrets do no
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
 
   const loginResponse = {
-    user: { id: 'usr_1', email: 'john.doe@example.com', password: 'Secret123!', username: 'johndoe' },
+    user: {
+      id: 'usr_1',
+      email: 'john.doe@example.com',
+      password: 'Secret123!',
+      username: 'johndoe',
+    },
     token: 'abc123',
     accessToken: FAKE_JWT_SHORT,
     refreshToken: FAKE_JWT_PLACEHOLDER,
     idToken: JWT_IO_SAMPLE,
     apiKey: 'my-api-key',
     secret: 'changeit',
-    contact: ['test@test.com', 'user@domain.com', 'a@b.example', 'x@host.test', 'ops@corp.invalid', 'me@localhost.localhost', 'a@example.org', 'b@sub.example.net'],
+    contact: [
+      'test@test.com',
+      'user@domain.com',
+      'a@b.example',
+      'x@host.test',
+      'ops@corp.invalid',
+      'me@localhost.localhost',
+      'a@example.org',
+      'b@sub.example.net',
+    ],
   };
 
   it('a typical login / user mock response survives intact', () => {
@@ -249,7 +286,19 @@ describe('redactTarget (synthetic mock data survives, real-looking secrets do no
   });
 
   it('survives inside a whole specification', () => {
-    const spec = { endpoints: [{ path: '/login', examples: [{ request: { email: 'jane@example.com', password: 'hunter2' }, response: loginResponse }] }] };
+    const spec = {
+      endpoints: [
+        {
+          path: '/login',
+          examples: [
+            {
+              request: { email: 'jane@example.com', password: 'hunter2' },
+              response: loginResponse,
+            },
+          ],
+        },
+      ],
+    };
     expect(redactTarget(spec)).toEqual(spec);
   });
 
@@ -265,7 +314,8 @@ describe('redactTarget (synthetic mock data survives, real-looking secrets do no
         nested: { list: [`key ${SK_TEST} end`] },
       })
     );
-    for (const s of [SK_LIVE, GHP, AKIA, AIZA, XOX, SK_TEST, 'MIIEowIBAAKCAQEA']) expect(out).not.toContain(s);
+    for (const s of [SK_LIVE, GHP, AKIA, AIZA, XOX, SK_TEST, 'MIIEowIBAAKCAQEA'])
+      expect(out).not.toContain(s);
     expect(out).toContain('[REDACTED_KEY]');
     expect(() => JSON.parse(out)).not.toThrow();
   });
@@ -281,7 +331,11 @@ describe('redactTarget (synthetic mock data survives, real-looking secrets do no
   });
 
   it('e-mails: reserved and obviously fake domains stay, any other domain goes', () => {
-    const out = redactTarget({ a: 'jane.real@gmail.com', b: 'bob@acme-corp.io', c: 'ok@example.com' }) as Record<string, string>;
+    const out = redactTarget({
+      a: 'jane.real@gmail.com',
+      b: 'bob@acme-corp.io',
+      c: 'ok@example.com',
+    }) as Record<string, string>;
     expect(out.a).toBe(REDACTED_EMAIL);
     expect(out.b).toBe(REDACTED_EMAIL);
     expect(out.c).toBe('ok@example.com');

@@ -19,7 +19,12 @@ import {
 } from '../config/ai.js';
 import { callOpenRouterWithRetry } from '../services/openRouter.service.js';
 import { assertProdConfig } from '../config/assertProdConfig.js';
-import { getLlm, resetLlm, createFallbackLlm, classifyFailure } from '../modules/ai/providers/index.js';
+import {
+  getLlm,
+  resetLlm,
+  createFallbackLlm,
+  classifyFailure,
+} from '../modules/ai/providers/index.js';
 import type { LlmProvider, LlmRequest } from '../modules/ai/providers/types.js';
 import { consumeAiQuota } from '../modules/ai/aiRateLimit.js';
 import { AppError } from '../middlewares/errorHandler.js';
@@ -210,7 +215,7 @@ describe('AI providers (local first, OpenRouter as reserve)', () => {
       expect(local.seen[0].body.temperature).toBe(0.2);
     });
 
-    it('without a schema: temperature 0.7, max_tokens 5000 and no response_format (today\'s defaults)', async () => {
+    it("without a schema: temperature 0.7, max_tokens 5000 and no response_format (today's defaults)", async () => {
       await getLlm().complete({ messages: MESSAGES });
       expect(local.seen[0].body.temperature).toBe(0.7);
       expect(local.seen[0].body.max_tokens).toBe(5000);
@@ -218,7 +223,12 @@ describe('AI providers (local first, OpenRouter as reserve)', () => {
     });
 
     it('the caller keeps control of temperature and max tokens, also with a schema', async () => {
-      await getLlm().complete({ messages: MESSAGES, jsonSchema: SCHEMA, temperature: 0.9, maxTokens: 123 });
+      await getLlm().complete({
+        messages: MESSAGES,
+        jsonSchema: SCHEMA,
+        temperature: 0.9,
+        maxTokens: 123,
+      });
       expect(local.seen[0].body.temperature).toBe(0.9);
       expect(local.seen[0].body.max_tokens).toBe(123);
       await getLlm().complete({ messages: MESSAGES, temperature: 0 });
@@ -236,7 +246,11 @@ describe('AI providers (local first, OpenRouter as reserve)', () => {
       process.env.AI_PROVIDERS = 'openrouter';
       resetLlm();
       const out = await getLlm().complete({ messages: MESSAGES, jsonSchema: SCHEMA });
-      expect(out).toMatchObject({ text: 'from-openrouter', provider: 'openrouter', model: 'served-model' });
+      expect(out).toMatchObject({
+        text: 'from-openrouter',
+        provider: 'openrouter',
+        model: 'served-model',
+      });
       expect(local.seen).toHaveLength(0);
       expect(remote.seen[0].url).toBe('/chat/completions');
       expect(remote.seen[0].headers.authorization).toBe('Bearer sk-or-test-key');
@@ -295,7 +309,11 @@ describe('AI providers (local first, OpenRouter as reserve)', () => {
             res.end('model not found');
           }),
       ],
-      ['an envelope that is not JSON', 'invalid_envelope', () => local.setHandler((_r, res) => res.end('<html>nope</html>'))],
+      [
+        'an envelope that is not JSON',
+        'invalid_envelope',
+        () => local.setHandler((_r, res) => res.end('<html>nope</html>')),
+      ],
       [
         'a JSON body that is not a chat completion',
         'invalid_envelope',
@@ -305,23 +323,33 @@ describe('AI providers (local first, OpenRouter as reserve)', () => {
       ['null content', 'empty_content', () => local.setHandler(answer(null))],
     ];
 
-    it.each(cases)('%s -> OpenRouter answers and the reason is logged without any content', async (_n, reason, arrange) => {
-      await arrange();
-      resetLlm();
+    it.each(cases)(
+      '%s -> OpenRouter answers and the reason is logged without any content',
+      async (_n, reason, arrange) => {
+        await arrange();
+        resetLlm();
 
-      const out = await getLlm().complete({ messages: MESSAGES });
+        const out = await getLlm().complete({ messages: MESSAGES });
 
-      expect(out.provider).toBe('openrouter');
-      expect(out.text).toBe('from-openrouter');
-      expect(remote.seen).toHaveLength(1);
-      const log = warned();
-      expect(log).toContain('local');
-      expect(log).toContain(reason);
-      expect(log).toContain('openrouter');
-      for (const secret of ['SECRET-SYSTEM-PROMPT', 'SECRET-REPO-CONTENT', 'sk-or-test-key', 'boom', 'model not found', 'nope']) {
-        expect(log).not.toContain(secret);
+        expect(out.provider).toBe('openrouter');
+        expect(out.text).toBe('from-openrouter');
+        expect(remote.seen).toHaveLength(1);
+        const log = warned();
+        expect(log).toContain('local');
+        expect(log).toContain(reason);
+        expect(log).toContain('openrouter');
+        for (const secret of [
+          'SECRET-SYSTEM-PROMPT',
+          'SECRET-REPO-CONTENT',
+          'sk-or-test-key',
+          'boom',
+          'model not found',
+          'nope',
+        ]) {
+          expect(log).not.toContain(secret);
+        }
       }
-    });
+    );
 
     it('when every provider fails the caller gets an AppError (no raw 500) and nothing is leaked', async () => {
       local.setHandler((_r, res) => {
@@ -368,7 +396,9 @@ describe('AI providers (local first, OpenRouter as reserve)', () => {
     it('an already aborted signal does not even call the first provider', async () => {
       const ac = new AbortController();
       ac.abort();
-      await expect(getLlm().complete({ messages: MESSAGES, signal: ac.signal })).rejects.toBeDefined();
+      await expect(
+        getLlm().complete({ messages: MESSAGES, signal: ac.signal })
+      ).rejects.toBeDefined();
       expect(local.seen).toHaveLength(0);
       expect(remote.seen).toHaveLength(0);
     });
@@ -393,14 +423,20 @@ describe('AI providers (local first, OpenRouter as reserve)', () => {
 
   describe('AI_PROVIDERS parsing', () => {
     it('parses the ordered list, case and spaces insensitive, without duplicates', () => {
-      expect(parseAiProviders(' Local , openrouter,LOCAL ')).toEqual({ providers: ['local', 'openrouter'], ignored: [] });
+      expect(parseAiProviders(' Local , openrouter,LOCAL ')).toEqual({
+        providers: ['local', 'openrouter'],
+        ignored: [],
+      });
       expect(parseAiProviders('openrouter,local').providers).toEqual(['openrouter', 'local']);
       expect(parseAiProviders(undefined)).toEqual({ providers: ['openrouter'], ignored: [] });
       expect(parseAiProviders('  ')).toEqual({ providers: ['openrouter'], ignored: [] });
     });
 
     it('unknown names are ignored and reported', () => {
-      expect(parseAiProviders('gpt-magic,local')).toEqual({ providers: ['local'], ignored: ['gpt-magic'] });
+      expect(parseAiProviders('gpt-magic,local')).toEqual({
+        providers: ['local'],
+        ignored: ['gpt-magic'],
+      });
     });
 
     it('unknown names are ignored with a warning and the rest still works', async () => {
@@ -428,7 +464,12 @@ describe('AI providers (local first, OpenRouter as reserve)', () => {
         apiKey: undefined,
       });
       expect(
-        getLocalAiConfig({ AI_LOCAL_BASE_URL: ' http://llm:11434/ ', AI_LOCAL_MODEL: 'm', AI_LOCAL_TIMEOUT_MS: '5000', AI_LOCAL_API_KEY: 'k' })
+        getLocalAiConfig({
+          AI_LOCAL_BASE_URL: ' http://llm:11434/ ',
+          AI_LOCAL_MODEL: 'm',
+          AI_LOCAL_TIMEOUT_MS: '5000',
+          AI_LOCAL_API_KEY: 'k',
+        })
       ).toEqual({ baseUrl: 'http://llm:11434', model: 'm', timeoutMs: 5000, apiKey: 'k' });
       expect(getLocalAiConfig({ AI_LOCAL_TIMEOUT_MS: 'abc' }).timeoutMs).toBe(120000);
       expect(getLocalAiConfig({ AI_LOCAL_TIMEOUT_MS: '-5' }).timeoutMs).toBe(120000);
@@ -563,7 +604,10 @@ describe('AI providers (local first, OpenRouter as reserve)', () => {
     });
 
     it('only providers declared with a breaker are ever skipped (the reserve is always tried)', async () => {
-      const reserve = failing('openrouter', new AppError('upstream', ErrorCode.EXTERNAL_SERVICE_ERROR, 503));
+      const reserve = failing(
+        'openrouter',
+        new AppError('upstream', ErrorCode.EXTERNAL_SERVICE_ERROR, 503)
+      );
       const { llm } = build(failing('local'), reserve);
       for (let i = 0; i < 6; i++) await expect(llm.complete(req)).rejects.toBeInstanceOf(AppError);
       expect(reserve.complete).toHaveBeenCalledTimes(6);
@@ -571,9 +615,12 @@ describe('AI providers (local first, OpenRouter as reserve)', () => {
 
     it('with only a tripped local provider the error is a 503, not a hang or a 500', async () => {
       const local1 = failing('local');
-      const llm = createFallbackLlm([{ provider: local1, breaker: { failureThreshold: 1, cooldownMs: 1000 } }], {
-        now: () => 5,
-      });
+      const llm = createFallbackLlm(
+        [{ provider: local1, breaker: { failureThreshold: 1, cooldownMs: 1000 } }],
+        {
+          now: () => 5,
+        }
+      );
       await expect(llm.complete(req)).rejects.toMatchObject({ statusCode: 503 });
       await expect(llm.complete(req)).rejects.toMatchObject({ statusCode: 503 });
       expect(local1.complete).toHaveBeenCalledTimes(1);
@@ -617,9 +664,15 @@ describe('AI providers (local first, OpenRouter as reserve)', () => {
 
   describe('classifyFailure', () => {
     it('names the failure without including messages', () => {
-      expect(classifyFailure(new AppError('secret text', ErrorCode.EXTERNAL_SERVICE_ERROR, 503))).toBe('http_503');
-      expect(classifyFailure(Object.assign(new Error('x'), { code: 'ECONNABORTED' }))).toBe('timeout');
-      expect(classifyFailure(Object.assign(new Error('x'), { code: 'ENOTFOUND' }))).toBe('dns_error');
+      expect(
+        classifyFailure(new AppError('secret text', ErrorCode.EXTERNAL_SERVICE_ERROR, 503))
+      ).toBe('http_503');
+      expect(classifyFailure(Object.assign(new Error('x'), { code: 'ECONNABORTED' }))).toBe(
+        'timeout'
+      );
+      expect(classifyFailure(Object.assign(new Error('x'), { code: 'ENOTFOUND' }))).toBe(
+        'dns_error'
+      );
       expect(classifyFailure(new TypeError('whatever secret'))).toBe('TypeError');
       expect(classifyFailure('weird')).toBe('unknown');
     });
@@ -654,7 +707,10 @@ describe('AI providers (local first, OpenRouter as reserve)', () => {
     it('two users never share a bucket', async () => {
       for (let i = 0; i < 3; i++) await consumeAiQuota(u1, { limit: 3, now: () => T0 });
       expect((await consumeAiQuota(u1, { limit: 3, now: () => T0 })).allowed).toBe(false);
-      expect(await consumeAiQuota(u2, { limit: 3, now: () => T0 })).toMatchObject({ allowed: true, count: 1 });
+      expect(await consumeAiQuota(u2, { limit: 3, now: () => T0 })).toMatchObject({
+        allowed: true,
+        count: 1,
+      });
     });
 
     it('window rollover: a new minute starts from zero', async () => {
@@ -665,7 +721,9 @@ describe('AI providers (local first, OpenRouter as reserve)', () => {
     });
 
     it('concurrent calls are counted exactly (atomic upsert-$inc, no lost updates, no duplicate-key crash)', async () => {
-      const results = await Promise.all(Array.from({ length: 25 }, () => consumeAiQuota(u1, { limit: 10, now: () => T0 })));
+      const results = await Promise.all(
+        Array.from({ length: 25 }, () => consumeAiQuota(u1, { limit: 10, now: () => T0 }))
+      );
       expect(results.filter((r) => r.allowed)).toHaveLength(10);
       expect(results.filter((r) => !r.allowed)).toHaveLength(15);
       expect(new Set(results.map((r) => r.count)).size).toBe(25);
@@ -680,7 +738,9 @@ describe('AI providers (local first, OpenRouter as reserve)', () => {
       expect(doc?.expireAt.getTime()).toBeGreaterThan(T0);
       const indexes = await AiRateWindowModel.collection.indexes();
       expect(indexes.some((i) => i.key.expireAt === 1 && i.expireAfterSeconds === 0)).toBe(true);
-      expect(indexes.some((i) => i.unique && i.key.userId === 1 && i.key.windowStart === 1)).toBe(true);
+      expect(indexes.some((i) => i.unique && i.key.userId === 1 && i.key.windowStart === 1)).toBe(
+        true
+      );
     });
 
     it('uses AI_RATE_PER_MINUTE when no explicit limit is given', async () => {
@@ -739,11 +799,29 @@ describe('AI providers (local first, OpenRouter as reserve)', () => {
     // "local is back up" case is kept on the spec route
     it('generate-mock-api-spec: local answers again as soon as it is back up', async () => {
       const { id, auth } = await createUser('d2@example.com');
-      const project = await ProjectModel.create({ title: 'Gym', slug: 'gym-t12-up', ownerId: id, members: [{ userId: id, role: 'owner' }] });
+      const project = await ProjectModel.create({
+        title: 'Gym',
+        slug: 'gym-t12-up',
+        ownerId: id,
+        members: [{ userId: id, role: 'owner' }],
+      });
       process.env.AI_LOCAL_BASE_URL = local.url; // Ollama is back
-      local.setHandler(answer(JSON.stringify({ apiVersion: '1.0.0', title: 'Gym API', description: 'd', endpoints: [], dataModels: [] })));
+      local.setHandler(
+        answer(
+          JSON.stringify({
+            apiVersion: '1.0.0',
+            title: 'Gym API',
+            description: 'd',
+            endpoints: [],
+            dataModels: [],
+          })
+        )
+      );
       resetLlm();
-      const up = await request(app).post('/api/ai/generate-mock-api-spec').set(auth).send({ projectId: project._id.toString(), requirement: 'x' });
+      const up = await request(app)
+        .post('/api/ai/generate-mock-api-spec')
+        .set(auth)
+        .send({ projectId: project._id.toString(), requirement: 'x' });
       expect(up.status).toBe(200);
       expect(local.seen).toHaveLength(1);
       expect(remote.seen).toHaveLength(0);
@@ -751,9 +829,22 @@ describe('AI providers (local first, OpenRouter as reserve)', () => {
 
     it('generate-mock-api-spec: usage keeps its shape (promptTokens/completionTokens/totalTokens)', async () => {
       const { id, auth } = await createUser('d3@example.com');
-      const project = await ProjectModel.create({ title: 'Gym', slug: 'gym-t12', ownerId: id, members: [{ userId: id, role: 'owner' }] });
+      const project = await ProjectModel.create({
+        title: 'Gym',
+        slug: 'gym-t12',
+        ownerId: id,
+        members: [{ userId: id, role: 'owner' }],
+      });
       remote.setHandler(
-        answer(JSON.stringify({ apiVersion: '1.0.0', title: 'Gym API', description: 'd', endpoints: [], dataModels: [] }))
+        answer(
+          JSON.stringify({
+            apiVersion: '1.0.0',
+            title: 'Gym API',
+            description: 'd',
+            endpoints: [],
+            dataModels: [],
+          })
+        )
       );
       const res = await request(app)
         .post('/api/ai/generate-mock-api-spec')
@@ -761,7 +852,11 @@ describe('AI providers (local first, OpenRouter as reserve)', () => {
         .send({ projectId: project._id.toString(), requirement: 'members CRUD' });
       expect(res.status).toBe(200);
       expect(res.body.data.specification.title).toBe('Gym API');
-      expect(res.body.data.usage).toEqual({ promptTokens: 11, completionTokens: 7, totalTokens: 18 });
+      expect(res.body.data.usage).toEqual({
+        promptTokens: 11,
+        completionTokens: 7,
+        totalTokens: 18,
+      });
       expect(remote.seen[0].body.response_format).toEqual({ type: 'json_object' });
     });
 
@@ -775,13 +870,23 @@ describe('AI providers (local first, OpenRouter as reserve)', () => {
         members: [{ userId: id, role: 'owner' }],
       });
       remote.setHandler(
-        answer(JSON.stringify({ apiVersion: '1.0.0', title: 'PRIVATE-ANSWER-TEXT', description: 'd', endpoints: [], dataModels: [] }))
+        answer(
+          JSON.stringify({
+            apiVersion: '1.0.0',
+            title: 'PRIVATE-ANSWER-TEXT',
+            description: 'd',
+            endpoints: [],
+            dataModels: [],
+          })
+        )
       );
       await request(app)
         .post('/api/ai/generate-mock-api-spec')
         .set(auth)
         .send({ projectId: project._id.toString(), requirement: 'PRIVATE-USER-MESSAGE' });
-      const all = [...log.mock.calls, ...warn.mock.calls].map((c) => c.map(String).join(' ')).join('\n');
+      const all = [...log.mock.calls, ...warn.mock.calls]
+        .map((c) => c.map(String).join(' '))
+        .join('\n');
       expect(all).toMatch(/provider=openrouter/);
       for (const secret of ['PRIVATE-PROMPT', 'PRIVATE-USER-MESSAGE', 'PRIVATE-ANSWER-TEXT']) {
         expect(all).not.toContain(secret);
@@ -792,9 +897,26 @@ describe('AI providers (local first, OpenRouter as reserve)', () => {
       process.env.AI_RATE_PER_MINUTE = '2';
       const a = await createUser('rl-a@example.com');
       const b = await createUser('rl-b@example.com');
-      remote.setHandler(answer(JSON.stringify({ apiVersion: '1.0.0', title: 'Gym API', description: 'd', endpoints: [], dataModels: [] })));
+      remote.setHandler(
+        answer(
+          JSON.stringify({
+            apiVersion: '1.0.0',
+            title: 'Gym API',
+            description: 'd',
+            endpoints: [],
+            dataModels: [],
+          })
+        )
+      );
       const projectOf = async (u: { id: unknown }, slug: string) =>
-        (await ProjectModel.create({ title: 'P', slug, ownerId: u.id, members: [{ userId: u.id, role: 'owner' }] }))._id.toString();
+        (
+          await ProjectModel.create({
+            title: 'P',
+            slug,
+            ownerId: u.id,
+            members: [{ userId: u.id, role: 'owner' }],
+          })
+        )._id.toString();
       const projects = new Map([
         [a.auth.Authorization, await projectOf(a, 'rl-a-p')],
         [b.auth.Authorization, await projectOf(b, 'rl-b-p')],
@@ -820,10 +942,31 @@ describe('AI providers (local first, OpenRouter as reserve)', () => {
     it('every generation route shares the user bucket', async () => {
       process.env.AI_RATE_PER_MINUTE = '2';
       const a = await createUser('rl-c@example.com');
-      const own = await ProjectModel.create({ title: 'Own', slug: 'own-t12', ownerId: a.id, members: [{ userId: a.id, role: 'owner' }] });
-      remote.setHandler(answer(JSON.stringify({ apiVersion: '1.0.0', title: 'Gym API', description: 'd', endpoints: [], dataModels: [] })));
-      await request(app).post('/api/ai/generate-mock-api-spec').set(a.auth).send({ projectId: own._id.toString(), requirement: 'm' });
-      await request(app).post('/api/ai/generate-and-save').set(a.auth).send({ projectId: own._id.toString(), requirement: 'm' });
+      const own = await ProjectModel.create({
+        title: 'Own',
+        slug: 'own-t12',
+        ownerId: a.id,
+        members: [{ userId: a.id, role: 'owner' }],
+      });
+      remote.setHandler(
+        answer(
+          JSON.stringify({
+            apiVersion: '1.0.0',
+            title: 'Gym API',
+            description: 'd',
+            endpoints: [],
+            dataModels: [],
+          })
+        )
+      );
+      await request(app)
+        .post('/api/ai/generate-mock-api-spec')
+        .set(a.auth)
+        .send({ projectId: own._id.toString(), requirement: 'm' });
+      await request(app)
+        .post('/api/ai/generate-and-save')
+        .set(a.auth)
+        .send({ projectId: own._id.toString(), requirement: 'm' });
       const third = await request(app)
         .post('/api/ai/generate-mock-api-spec')
         .set(a.auth)
@@ -840,7 +983,9 @@ describe('AI providers (local first, OpenRouter as reserve)', () => {
       complete: jest.fn(
         (r: LlmRequest) =>
           new Promise<never>((_resolve, reject) => {
-            r.signal?.addEventListener('abort', () => reject(r.signal?.reason ?? new Error('aborted')));
+            r.signal?.addEventListener('abort', () =>
+              reject(r.signal?.reason ?? new Error('aborted'))
+            );
           })
       ),
     });
@@ -868,7 +1013,9 @@ describe('AI providers (local first, OpenRouter as reserve)', () => {
     it('a local model that eats the whole budget ends the chain with a 504 and the reserve is not even tried', async () => {
       const local1 = hanging('local');
       const reserve = ok('openrouter');
-      const llm = createFallbackLlm([{ provider: local1 }, { provider: reserve }], { totalTimeoutMs: 120 });
+      const llm = createFallbackLlm([{ provider: local1 }, { provider: reserve }], {
+        totalTimeoutMs: 120,
+      });
       const started = Date.now();
       await expect(llm.complete(req)).rejects.toMatchObject({
         statusCode: 504,
@@ -879,9 +1026,12 @@ describe('AI providers (local first, OpenRouter as reserve)', () => {
     });
 
     it('a slow failing local plus a hanging reserve never exceeds the budget', async () => {
-      const llm = createFallbackLlm([{ provider: failsAfter('local', 60) }, { provider: hanging('openrouter') }], {
-        totalTimeoutMs: 200,
-      });
+      const llm = createFallbackLlm(
+        [{ provider: failsAfter('local', 60) }, { provider: hanging('openrouter') }],
+        {
+          totalTimeoutMs: 200,
+        }
+      );
       const started = Date.now();
       await expect(llm.complete(req)).rejects.toMatchObject({ statusCode: 504 });
       const elapsed = Date.now() - started;
@@ -912,7 +1062,9 @@ describe('AI providers (local first, OpenRouter as reserve)', () => {
 
     it('the caller aborting is still not a fallback and not a 504, with or without a deadline', async () => {
       const reserve = ok('openrouter');
-      const llm = createFallbackLlm([{ provider: hanging('local') }, { provider: reserve }], { totalTimeoutMs: 5000 });
+      const llm = createFallbackLlm([{ provider: hanging('local') }, { provider: reserve }], {
+        totalTimeoutMs: 5000,
+      });
       const ac = new AbortController();
       const settled = llm.complete({ ...req, signal: ac.signal }).then(
         () => 'resolved',
@@ -933,7 +1085,9 @@ describe('AI providers (local first, OpenRouter as reserve)', () => {
       process.env.AI_TOTAL_TIMEOUT_MS = '250';
       resetLlm();
       const started = Date.now();
-      await expect(getLlm().complete({ messages: MESSAGES })).rejects.toMatchObject({ statusCode: 504 });
+      await expect(getLlm().complete({ messages: MESSAGES })).rejects.toMatchObject({
+        statusCode: 504,
+      });
       expect(Date.now() - started).toBeLessThan(1500);
       expect(remote.seen).toHaveLength(0);
     });
@@ -947,7 +1101,9 @@ describe('AI providers (local first, OpenRouter as reserve)', () => {
         res.end('busy');
       });
       const started = Date.now();
-      await expect(getLlm().complete({ messages: MESSAGES })).rejects.toMatchObject({ statusCode: 504 });
+      await expect(getLlm().complete({ messages: MESSAGES })).rejects.toMatchObject({
+        statusCode: 504,
+      });
       // first attempt answers 503, then the client would sleep >= 1 s before retrying
       expect(Date.now() - started).toBeLessThan(900);
       expect(remote.seen).toHaveLength(1);
@@ -976,7 +1132,9 @@ describe('AI providers (local first, OpenRouter as reserve)', () => {
         .map((call) =>
           call
             // what the console would print, nested config/headers/response of an error included
-            .map((a: unknown) => (typeof a === 'string' ? a : inspect(a, { depth: 8, showHidden: true })))
+            .map((a: unknown) =>
+              typeof a === 'string' ? a : inspect(a, { depth: 8, showHidden: true })
+            )
             .join(' ')
         )
         .join('\n');
@@ -1007,9 +1165,13 @@ describe('AI providers (local first, OpenRouter as reserve)', () => {
           res.statusCode = 503;
           res.end(BODY);
         });
-        await expect(callOpenRouterWithRetry([{ role: 'user', content: PROMPT }])).rejects.toBeDefined();
+        await expect(
+          callOpenRouterWithRetry([{ role: 'user', content: PROMPT }])
+        ).rejects.toBeDefined();
         openRouterConfig.baseUrl = await closedPortUrl();
-        await expect(callOpenRouterWithRetry([{ role: 'user', content: PROMPT }])).rejects.toBeDefined();
+        await expect(
+          callOpenRouterWithRetry([{ role: 'user', content: PROMPT }])
+        ).rejects.toBeDefined();
       } finally {
         Object.assign(cfg, original);
       }
@@ -1029,7 +1191,9 @@ describe('AI providers (local first, OpenRouter as reserve)', () => {
         passwordHash: await bcrypt.hash('providers-test-password-1', 4),
         emailVerifiedAt: new Date(),
       });
-      const login = await request(app).post('/api/auth/login').send({ email: 'log1@example.com', password: 'providers-test-password-1' });
+      const login = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'log1@example.com', password: 'providers-test-password-1' });
       const auth = { Authorization: `Bearer ${login.body.data.tokens.accessToken as string}` };
       const project = await ProjectModel.create({
         title: 'Logs',
@@ -1070,29 +1234,44 @@ describe('AI providers (local first, OpenRouter as reserve)', () => {
     });
 
     it('local requires AI_LOCAL_BASE_URL', () => {
-      expect(() => assertProdConfig(prod({ AI_PROVIDERS: 'local,openrouter' }))).toThrow(/AI_LOCAL_BASE_URL/);
-      expect(() => assertProdConfig(prod({ AI_PROVIDERS: 'local', AI_LOCAL_BASE_URL: '  ' }))).toThrow(/AI_LOCAL_BASE_URL/);
+      expect(() => assertProdConfig(prod({ AI_PROVIDERS: 'local,openrouter' }))).toThrow(
+        /AI_LOCAL_BASE_URL/
+      );
+      expect(() =>
+        assertProdConfig(prod({ AI_PROVIDERS: 'local', AI_LOCAL_BASE_URL: '  ' }))
+      ).toThrow(/AI_LOCAL_BASE_URL/);
     });
 
-    it.each(['llm:11434', 'ftp://llm:11434', 'javascript:alert(1)', 'not a url'])('rejects a non-http(s) base URL (%p) without echoing it', (value) => {
-      let message = '';
-      try {
-        assertProdConfig(prod({ AI_PROVIDERS: 'local', AI_LOCAL_BASE_URL: value }));
-      } catch (e) {
-        message = (e as Error).message;
+    it.each(['llm:11434', 'ftp://llm:11434', 'javascript:alert(1)', 'not a url'])(
+      'rejects a non-http(s) base URL (%p) without echoing it',
+      (value) => {
+        let message = '';
+        try {
+          assertProdConfig(prod({ AI_PROVIDERS: 'local', AI_LOCAL_BASE_URL: value }));
+        } catch (e) {
+          message = (e as Error).message;
+        }
+        expect(message).toMatch(/AI_LOCAL_BASE_URL/);
+        expect(message).not.toContain(value);
       }
-      expect(message).toMatch(/AI_LOCAL_BASE_URL/);
-      expect(message).not.toContain(value);
-    });
+    );
 
     it('accepts http and https base URLs', () => {
-      expect(() => assertProdConfig(prod({ AI_PROVIDERS: 'local,openrouter', AI_LOCAL_BASE_URL: 'http://llm:11434' }))).not.toThrow();
-      expect(() => assertProdConfig(prod({ AI_PROVIDERS: 'local', AI_LOCAL_BASE_URL: 'https://llm.internal' }))).not.toThrow();
+      expect(() =>
+        assertProdConfig(
+          prod({ AI_PROVIDERS: 'local,openrouter', AI_LOCAL_BASE_URL: 'http://llm:11434' })
+        )
+      ).not.toThrow();
+      expect(() =>
+        assertProdConfig(prod({ AI_PROVIDERS: 'local', AI_LOCAL_BASE_URL: 'https://llm.internal' }))
+      ).not.toThrow();
     });
 
     it('a list without any valid provider is rejected; the local checks do not run outside production', () => {
       expect(() => assertProdConfig(prod({ AI_PROVIDERS: 'nope' }))).toThrow(/AI_PROVIDERS/);
-      expect(() => assertProdConfig({ NODE_ENV: 'development', AI_PROVIDERS: 'local' })).not.toThrow();
+      expect(() =>
+        assertProdConfig({ NODE_ENV: 'development', AI_PROVIDERS: 'local' })
+      ).not.toThrow();
     });
   });
 });

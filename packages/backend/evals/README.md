@@ -12,11 +12,11 @@ La tarea es la misma que hace el producto: dado el contexto de un repositorio (R
 
 Un modelo puede sustituir a OpenRouter si y solo si, sobre todos los casos:
 
-| Métrica | Umbral |
-|---|---|
-| `schemaValid` | **≥ 95 %** |
+| Métrica              | Umbral     |
+| -------------------- | ---------- |
+| `schemaValid`        | **≥ 95 %** |
 | `methodPathF1` medio | **≥ 0.85** |
-| Latencia p95 | **≤ 60 s** |
+| Latencia p95         | **≤ 60 s** |
 
 El informe termina con `PASS` o `FAIL` contra esos tres umbrales y el proceso sale con código 0 o 1 (`--no-fail` fuerza 0 en ejecuciones exploratorias). Un resultado sin casos nunca pasa.
 
@@ -58,18 +58,18 @@ AI_LOCAL_BASE_URL=http://gpu-box:8000 AI_LOCAL_API_KEY=... \
 
 Opciones:
 
-| Opción | Efecto |
-|---|---|
-| `--provider=<local\|openrouter\|fake-perfect\|fake-noisy>` | Obligatoria. |
-| `--model=<nombre>` | Sustituye `AI_LOCAL_MODEL` (local) o `OPENROUTER_MODEL` (openrouter) solo en esta ejecución. |
-| `--limit=N` | Solo los N primeros casos (ordenados por `id`). |
-| `--temperature=<n>` | Temperatura de muestreo (0 a 2). Por defecto la de producción para generar endpoints (`SPEC_GENERATION_DEFAULTS.temperature`, 0.85). |
-| `--max-tokens=<n>` | Máximo de tokens de salida. Por defecto el de producción (`SPEC_GENERATION_DEFAULTS.maxTokens`, 5000). |
-| `--concurrency=N` | Llamadas simultáneas (1 por defecto: la latencia solo es comparable si el servidor no está compartido). |
-| `--out=<dir>` | Carpeta del resultado (por defecto `evals/results`). |
-| `--compare=<fichero>` | Imprime la diferencia contra un resultado anterior o contra `evals/baseline.json`. |
-| `--cases=<dir>` | Ejecuta los casos de otra carpeta en vez de `evals/cases` (p. ej. los casos reservados de `val.jsonl`, ver abajo). |
-| `--no-fail` | Sale con 0 aunque no se cumplan los criterios. |
+| Opción                                                     | Efecto                                                                                                                               |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `--provider=<local\|openrouter\|fake-perfect\|fake-noisy>` | Obligatoria.                                                                                                                         |
+| `--model=<nombre>`                                         | Sustituye `AI_LOCAL_MODEL` (local) o `OPENROUTER_MODEL` (openrouter) solo en esta ejecución.                                         |
+| `--limit=N`                                                | Solo los N primeros casos (ordenados por `id`).                                                                                      |
+| `--temperature=<n>`                                        | Temperatura de muestreo (0 a 2). Por defecto la de producción para generar endpoints (`SPEC_GENERATION_DEFAULTS.temperature`, 0.85). |
+| `--max-tokens=<n>`                                         | Máximo de tokens de salida. Por defecto el de producción (`SPEC_GENERATION_DEFAULTS.maxTokens`, 5000).                               |
+| `--concurrency=N`                                          | Llamadas simultáneas (1 por defecto: la latencia solo es comparable si el servidor no está compartido).                              |
+| `--out=<dir>`                                              | Carpeta del resultado (por defecto `evals/results`).                                                                                 |
+| `--compare=<fichero>`                                      | Imprime la diferencia contra un resultado anterior o contra `evals/baseline.json`.                                                   |
+| `--cases=<dir>`                                            | Ejecuta los casos de otra carpeta en vez de `evals/cases` (p. ej. los casos reservados de `val.jsonl`, ver abajo).                   |
+| `--no-fail`                                                | Sale con 0 aunque no se cumplan los criterios.                                                                                       |
 
 Códigos de salida: `0` criterios cumplidos (o `--no-fail`), `1` criterios no cumplidos, `2` error de uso o de configuración (argumento desconocido, proveedor inválido, fichero de `--compare` ilegible, `--provider=local` sin `AI_LOCAL_BASE_URL` o `--provider=openrouter` sin `OPENROUTER_API_KEY`; falla antes de hacer ninguna llamada y dice qué falta).
 
@@ -103,7 +103,7 @@ Después, cualquier candidato se compara con `--compare=evals/baseline.json`.
 
 Para cada caso (`scoreOutput(expected, actual)` en `scoring.ts`):
 
-- **`validJson`**: la respuesta se pudo interpretar como JSON (objeto o lista) con el parser tolerante de producción, que acepta bloques markdown ```` ```json ```` y texto alrededor del JSON. Si la respuesta es texto, se parsea igual que en producción; si ya es un valor, se usa tal cual.
+- **`validJson`**: la respuesta se pudo interpretar como JSON (objeto o lista) con el parser tolerante de producción, que acepta bloques markdown ` ```json ` y texto alrededor del JSON. Si la respuesta es texto, se parsea igual que en producción; si ya es un valor, se usa tal cual.
 - **`schemaValid`**: el validador de producción (`validateGeneratedApi`) la acepta como especificación (campos obligatorios, métodos `GET/POST/PUT/DELETE/PATCH`, al menos un endpoint, etc.). Se valida una copia, porque el validador "cura" los ejemplos en su sitio.
 - **`methodPathF1`**: F1 sobre el **conjunto** de pares `MÉTODO ruta` normalizados. Un endpoint inventado baja la precisión; uno que falta baja la cobertura (recall). Ambos vacíos = 1; uno vacío y el otro no = 0.
   - Normalización: método en mayúsculas; ruta sin host, sin query, en minúsculas, sin barras duplicadas ni final; cualquier parámetro (`:id`, `{id}`, `{userId}`) se trata como "un parámetro". Los duplicados cuentan una vez.
@@ -126,18 +126,40 @@ Cada caso es un fichero `cases/<id>.json`; el `id` coincide con el nombre del fi
     "projectDescription": "Opcional",
     "userInput": "La instrucción del usuario",
     "context": {
-      "repoName": "todo-api", "repoUrl": "...", "repoOwner": "...", "branch": "main", "summary": "...",
+      "repoName": "todo-api",
+      "repoUrl": "...",
+      "repoOwner": "...",
+      "branch": "main",
+      "summary": "...",
       "stats": { "totalFiles": 3, "totalInterfaces": 1, "totalFunctions": 0, "totalRoutes": 5 },
       "files": [
         { "path": "README.md", "type": "other", "summary": "contenido del README" },
-        { "path": "src/routes/todos.ts", "type": "typescript", "summary": "...",
+        {
+          "path": "src/routes/todos.ts",
+          "type": "typescript",
+          "summary": "...",
           "routes": [{ "methods": ["GET"], "path": "/todos" }],
-          "interfaces": [{ "name": "Todo", "properties": ["id: string"] }] },
-        { "path": "openapi.yaml", "type": "swagger", "summary": "...", "routes": [{ "methods": ["GET"], "path": "/pets" }] }
+          "interfaces": [{ "name": "Todo", "properties": ["id: string"] }]
+        },
+        {
+          "path": "openapi.yaml",
+          "type": "swagger",
+          "summary": "...",
+          "routes": [{ "methods": ["GET"], "path": "/pets" }]
+        }
       ]
     }
   },
-  "expected": [ { "method": "GET", "path": "/todos", "description": "...", "requestSchema": {}, "responseSchema": {}, "examples": [{ "request": {}, "response": { "id": "t1" } }] } ]
+  "expected": [
+    {
+      "method": "GET",
+      "path": "/todos",
+      "description": "...",
+      "requestSchema": {},
+      "responseSchema": {},
+      "examples": [{ "request": {}, "response": { "id": "t1" } }]
+    }
+  ]
 }
 ```
 
@@ -173,15 +195,15 @@ No guardes cifras de coste en el repositorio: cambian con el modelo y el proveed
 
 ## Estructura
 
-| Fichero | Contenido |
-|---|---|
-| `scoring.ts` | `scoreOutput` (puro, sin E/S) y la normalización de `MÉTODO ruta`. |
-| `report.ts` | Percentiles, resumen, criterios de aceptación, comparación e impresión. |
-| `cases.ts` | Tipo `EvalCase` y `loadCases`. |
+| Fichero                          | Contenido                                                               |
+| -------------------------------- | ----------------------------------------------------------------------- |
+| `scoring.ts`                     | `scoreOutput` (puro, sin E/S) y la normalización de `MÉTODO ruta`.      |
+| `report.ts`                      | Percentiles, resumen, criterios de aceptación, comparación e impresión. |
+| `cases.ts`                       | Tipo `EvalCase` y `loadCases`.                                          |
 | `valCases.ts`, `val-to-cases.ts` | Convierten `val.jsonl` en casos reservados (`npm run ai:val-to-cases`). |
-| `fakeProviders.ts` | `fake-perfect` y `fake-noisy`. |
-| `runner.ts` | Núcleo del banco (`runEval`, `parseArgs`); lo usan la CLI y los tests. |
-| `run.ts` | Punto de entrada de `npm run eval`. |
-| `tsconfig.json` | Comprobación de tipos del banco: `npx tsc -p evals/tsconfig.json`. |
-| `baseline.json` | Línea base de OpenRouter (pendiente, ver arriba). |
-| `results/` | Resultados de cada ejecución (ignorado por git). |
+| `fakeProviders.ts`               | `fake-perfect` y `fake-noisy`.                                          |
+| `runner.ts`                      | Núcleo del banco (`runEval`, `parseArgs`); lo usan la CLI y los tests.  |
+| `run.ts`                         | Punto de entrada de `npm run eval`.                                     |
+| `tsconfig.json`                  | Comprobación de tipos del banco: `npx tsc -p evals/tsconfig.json`.      |
+| `baseline.json`                  | Línea base de OpenRouter (pendiente, ver arriba).                       |
+| `results/`                       | Resultados de cada ejecución (ignorado por git).                        |

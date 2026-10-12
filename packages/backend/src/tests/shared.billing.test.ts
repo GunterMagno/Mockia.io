@@ -48,6 +48,7 @@ describe('catalogo de precios con intervalo', () => {
     expect(BILLING_INTERVALS).toEqual(['month', 'year']);
     expect(isBillingInterval('month')).toBe(true);
     expect(isBillingInterval('year')).toBe(true);
-    for (const bad of ['monthly', 'annual', '', 'YEAR', undefined, null, 1, {}]) expect(isBillingInterval(bad)).toBe(false);
+    for (const bad of ['monthly', 'annual', '', 'YEAR', undefined, null, 1, {}])
+      expect(isBillingInterval(bad)).toBe(false);
   });
 });

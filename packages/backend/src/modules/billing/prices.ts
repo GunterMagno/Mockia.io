@@ -15,7 +15,8 @@ const PAID_PLANS: readonly PaidPlan[] = ['starter', 'pro', 'team'];
 const INTERVALS: readonly BillingInterval[] = ['month', 'year'];
 
 /** Nombre de la variable de entorno con el price id de ese plan e intervalo. */
-export const priceEnvName = (plan: PaidPlan, interval: BillingInterval): string => PRICE_ENV[plan][interval];
+export const priceEnvName = (plan: PaidPlan, interval: BillingInterval): string =>
+  PRICE_ENV[plan][interval];
 
 /** Price id configurado, o undefined si la variable falta o esta vacia. */
 export function priceIdFor(plan: PaidPlan, interval: BillingInterval): string | undefined {
@@ -24,7 +25,9 @@ export function priceIdFor(plan: PaidPlan, interval: BillingInterval): string | 
 }
 
 /** Plan e intervalo de un price id, solo si es uno de los configurados. Un id desconocido (o vacio) no es nada. */
-export function planAndIntervalOfPrice(priceId: unknown): { plan: PaidPlan; interval: BillingInterval } | undefined {
+export function planAndIntervalOfPrice(
+  priceId: unknown
+): { plan: PaidPlan; interval: BillingInterval } | undefined {
   if (typeof priceId !== 'string' || priceId === '') return undefined;
   for (const plan of PAID_PLANS) {
     for (const interval of INTERVALS) {

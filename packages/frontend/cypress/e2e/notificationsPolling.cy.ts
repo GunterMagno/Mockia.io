@@ -26,8 +26,14 @@ describe('Notification polling', () => {
     cy.clock(Date.now(), ['setInterval', 'clearInterval']);
     cy.visit('/dashboard', {
       onBeforeLoad(win) {
-        Object.defineProperty(win.document, 'visibilityState', { configurable: true, get: () => visibility.state });
-        Object.defineProperty(win.document, 'hidden', { configurable: true, get: () => visibility.state === 'hidden' });
+        Object.defineProperty(win.document, 'visibilityState', {
+          configurable: true,
+          get: () => visibility.state,
+        });
+        Object.defineProperty(win.document, 'hidden', {
+          configurable: true,
+          get: () => visibility.state === 'hidden',
+        });
       },
     });
     cy.contains('My projects').should('be.visible');
@@ -71,6 +77,8 @@ describe('Notification polling', () => {
     });
     cy.tick(10_000);
     cy.wait('@notifications');
-    cy.wait(300).then(() => expect(notificationCalls - base, '10 s after becoming visible').to.eq(perTick));
+    cy.wait(300).then(() =>
+      expect(notificationCalls - base, '10 s after becoming visible').to.eq(perTick)
+    );
   });
 });

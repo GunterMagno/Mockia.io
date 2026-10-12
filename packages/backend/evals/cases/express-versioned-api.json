@@ -1,10 +1,7 @@
 {
   "id": "express-versioned-api",
   "description": "API mounted under /api/v1: the version prefix is part of every path.",
-  "tags": [
-    "express",
-    "path-params"
-  ],
+  "tags": ["express", "path-params"],
   "input": {
     "projectTitle": "Fleet Tracker",
     "userInput": "Mock the vehicle endpoints of the v1 API.",
@@ -37,27 +34,19 @@
           "summary": "Vehicles router (mounted at /api/v1)",
           "routes": [
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/api/v1/vehicles"
             },
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/api/v1/vehicles/:plate"
             },
             {
-              "methods": [
-                "POST"
-              ],
+              "methods": ["POST"],
               "path": "/api/v1/vehicles"
             },
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/api/v1/vehicles/:plate/position"
             }
           ]
@@ -69,20 +58,11 @@
           "interfaces": [
             {
               "name": "Vehicle",
-              "properties": [
-                "plate: string",
-                "model: string",
-                "driver: string"
-              ]
+              "properties": ["plate: string", "model: string", "driver: string"]
             },
             {
               "name": "Position",
-              "properties": [
-                "lat: number",
-                "lng: number",
-                "speedKmh: number",
-                "recordedAt: string"
-              ]
+              "properties": ["lat: number", "lng: number", "speedKmh: number", "recordedAt: string"]
             }
           ]
         }
@@ -114,11 +94,7 @@
               "type": "string"
             }
           },
-          "required": [
-            "plate",
-            "model",
-            "driver"
-          ]
+          "required": ["plate", "model", "driver"]
         }
       },
       "examples": [
@@ -156,11 +132,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "plate",
-          "model",
-          "driver"
-        ]
+        "required": ["plate", "model", "driver"]
       },
       "examples": [
         {
@@ -197,11 +169,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "plate",
-          "model",
-          "driver"
-        ]
+        "required": ["plate", "model", "driver"]
       },
       "responseSchema": {
         "type": "object",
@@ -216,11 +184,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "plate",
-          "model",
-          "driver"
-        ]
+        "required": ["plate", "model", "driver"]
       },
       "examples": [
         {
@@ -262,12 +226,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "lat",
-          "lng",
-          "speedKmh",
-          "recordedAt"
-        ]
+        "required": ["lat", "lng", "speedKmh", "recordedAt"]
       },
       "examples": [
         {

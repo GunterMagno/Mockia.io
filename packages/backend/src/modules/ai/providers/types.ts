@@ -66,7 +66,9 @@ export interface LlmProvider {
  *  - invalid_output: the text failed the caller's validator twice (first answer + one repair)
  */
 export class LlmResponseError extends Error {
-  constructor(public readonly kind: 'invalid_envelope' | 'empty_content' | 'truncated' | 'invalid_output') {
+  constructor(
+    public readonly kind: 'invalid_envelope' | 'empty_content' | 'truncated' | 'invalid_output'
+  ) {
     // The message carries only the kind: it can end up in logs, and a response body must never be logged.
     super(kind);
     this.name = 'LlmResponseError';

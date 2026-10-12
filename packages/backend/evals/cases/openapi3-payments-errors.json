@@ -1,12 +1,7 @@
 {
   "id": "openapi3-payments-errors",
   "description": "OpenAPI 3 payments API with bearer security and documented 400, 401 and 404 answers.",
-  "tags": [
-    "openapi3",
-    "errors",
-    "auth",
-    "path-params"
-  ],
+  "tags": ["openapi3", "errors", "auth", "path-params"],
   "input": {
     "projectTitle": "Payments Gateway",
     "userInput": "Mock the payments API, including the documented errors.",
@@ -29,21 +24,15 @@
           "summary": "OpenAPI 3.0.3. securitySchemes: bearerAuth (HTTP bearer JWT) applied globally. Payment = { id: string, amount: number, currency: string, status: \"pending\"|\"settled\"|\"failed\" }. Responses: 400 invalid amount, 401 missing token, 404 unknown payment.",
           "routes": [
             {
-              "methods": [
-                "POST"
-              ],
+              "methods": ["POST"],
               "path": "/payments"
             },
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/payments/{paymentId}"
             },
             {
-              "methods": [
-                "POST"
-              ],
+              "methods": ["POST"],
               "path": "/payments/{paymentId}/refund"
             }
           ]
@@ -66,10 +55,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "amount",
-          "currency"
-        ]
+        "required": ["amount", "currency"]
       },
       "responseSchema": {
         "type": "object",
@@ -87,12 +73,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "amount",
-          "currency",
-          "status"
-        ]
+        "required": ["id", "amount", "currency", "status"]
       },
       "examples": [
         {
@@ -148,12 +129,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "amount",
-          "currency",
-          "status"
-        ]
+        "required": ["id", "amount", "currency", "status"]
       },
       "examples": [
         {
@@ -192,9 +168,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "reason"
-        ]
+        "required": ["reason"]
       },
       "responseSchema": {
         "type": "object",
@@ -212,12 +186,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "amount",
-          "currency",
-          "status"
-        ]
+        "required": ["id", "amount", "currency", "status"]
       },
       "examples": [
         {

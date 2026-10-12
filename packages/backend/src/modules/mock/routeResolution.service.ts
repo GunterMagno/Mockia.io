@@ -8,11 +8,7 @@ import { MockAPIModel, EndpointModel, EndpointDocument } from '../../models/Mock
 import { AppError } from '../../middlewares/errorHandler.js';
 import { ErrorCode } from '@mockia/shared';
 import { mockCache } from './mockCache.service.js';
-import {
-  extractPathParams,
-  calculatePatternSpecificity,
-  hasWildcards,
-} from './pathParams.util.js';
+import { extractPathParams, calculatePatternSpecificity, hasWildcards } from './pathParams.util.js';
 
 /**
  * Result of route resolution
@@ -24,11 +20,11 @@ export interface ResolvedRoute {
 
 /**
  * Resolves a mock API route based on project slug, HTTP method, and path
- * 
+ *
  * Priority:
  * 1. Static routes (exact match) - sorted by specificity
  * 2. Wildcard routes (parameter match) - sorted by specificity
- * 
+ *
  * @param projectSlug - The project slug (e.g., "my-project")
  * @param method - HTTP method (GET, POST, PUT, DELETE, PATCH)
  * @param path - The request path (e.g., "/users/123")
@@ -45,11 +41,7 @@ export async function resolveRoute(
     const project = await mockCache.getProject(projectSlug);
 
     if (!project) {
-      throw new AppError(
-        `Project "${projectSlug}" not found`,
-        ErrorCode.NOT_FOUND,
-        404
-      );
+      throw new AppError(`Project "${projectSlug}" not found`, ErrorCode.NOT_FOUND, 404);
     }
     // Step 2: Find MockAPI using Cache
     const mockAPI = await mockCache.getMockAPI(project._id.toString());
@@ -62,15 +54,15 @@ export async function resolveRoute(
     }
     // Step 3: Get all endpoints using Cache
     const allEndpoints = await mockCache.getEndpoints(mockAPI._id.toString());
-    
+
     // Filter by method in-memory (highly optimized)
     const verb = String(method ?? '').toUpperCase();
-    let endpoints = allEndpoints.filter(ep => ep.method === verb);
+    let endpoints = allEndpoints.filter((ep) => ep.method === verb);
     // HEAD sin endpoint propio => sirve el GET (Express descarta el cuerpo en HEAD)
     if (endpoints.length === 0 && verb === 'HEAD') {
-      endpoints = allEndpoints.filter(ep => ep.method === 'GET');
+      endpoints = allEndpoints.filter((ep) => ep.method === 'GET');
     }
-    
+
     if (endpoints.length === 0) {
       return null; // No endpoints found for this method
     }
@@ -89,8 +81,7 @@ export async function resolveRoute(
 
     // Step 5: Try static routes first (sorted by specificity, descending)
     staticRoutes.sort(
-      (a, b) =>
-        calculatePatternSpecificity(b.path) - calculatePatternSpecificity(a.path)
+      (a, b) => calculatePatternSpecificity(b.path) - calculatePatternSpecificity(a.path)
     );
 
     for (const endpoint of staticRoutes) {
@@ -104,8 +95,7 @@ export async function resolveRoute(
 
     // Step 6: Try wildcard routes (sorted by specificity, descending)
     wildcardRoutes.sort(
-      (a, b) =>
-        calculatePatternSpecificity(b.path) - calculatePatternSpecificity(a.path)
+      (a, b) => calculatePatternSpecificity(b.path) - calculatePatternSpecificity(a.path)
     );
 
     for (const endpoint of wildcardRoutes) {
@@ -124,19 +114,16 @@ export async function resolveRoute(
     if (error instanceof AppError) {
       throw error;
     }
-    throw new AppError(
-      'Failed to resolve route',
-      ErrorCode.INTERNAL_SERVER_ERROR,
-      500,
-      { originalError: error instanceof Error ? error.message : String(error) }
-    );
+    throw new AppError('Failed to resolve route', ErrorCode.INTERNAL_SERVER_ERROR, 500, {
+      originalError: error instanceof Error ? error.message : String(error),
+    });
   }
 }
 
 /**
  * Gets all endpoints for a project and method
  * Useful for debugging or listing available routes
- * 
+ *
  * @param projectSlug - The project slug
  * @param method - HTTP method (optional, if not provided returns all)
  * @returns Array of endpoints
@@ -157,11 +144,7 @@ export async function getProjectEndpoints(
     }
 
     if (!project) {
-      throw new AppError(
-        `Project "${projectSlug}" not found`,
-        ErrorCode.NOT_FOUND,
-        404
-      );
+      throw new AppError(`Project "${projectSlug}" not found`, ErrorCode.NOT_FOUND, 404);
     }
     const mockAPI = await MockAPIModel.findOne({ projectId: project._id });
     if (!mockAPI) {
@@ -184,11 +167,8 @@ export async function getProjectEndpoints(
     if (error instanceof AppError) {
       throw error;
     }
-    throw new AppError(
-      'Failed to fetch project endpoints',
-      ErrorCode.INTERNAL_SERVER_ERROR,
-      500,
-      { originalError: error instanceof Error ? error.message : String(error) }
-    );
+    throw new AppError('Failed to fetch project endpoints', ErrorCode.INTERNAL_SERVER_ERROR, 500, {
+      originalError: error instanceof Error ? error.message : String(error),
+    });
   }
 }

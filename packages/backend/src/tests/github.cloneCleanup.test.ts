@@ -6,7 +6,9 @@ jest.mock('simple-git', () => ({
   simpleGit: () => ({
     raw: async (args: string[]) => {
       const target = args[args.length - 1];
-      await (await import('fs/promises')).writeFile(path.join(target, 'partial.txt'), 'half a repository');
+      await (
+        await import('fs/promises')
+      ).writeFile(path.join(target, 'partial.txt'), 'half a repository');
       throw new Error('fatal: unable to access: connection reset');
     },
   }),
@@ -20,7 +22,9 @@ describe('cloneRepository removes its temporary directory when the clone fails',
   const owner = `cleanup-owner-${Date.now()}`;
 
   const leftovers = async () =>
-    (await fs.readdir(tmpRoot).catch(() => [] as string[])).filter((name) => name.startsWith(`${owner}-`));
+    (await fs.readdir(tmpRoot).catch(() => [] as string[])).filter((name) =>
+      name.startsWith(`${owner}-`)
+    );
 
   it('no partial clone is left on disk', async () => {
     await expect(cloneRepository(owner, 'repo', 'main')).rejects.toBeDefined();

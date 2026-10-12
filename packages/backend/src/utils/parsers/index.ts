@@ -3,13 +3,9 @@
  * and normalizing type representations
  */
 
-export {
-  parseTypeScriptFile,
-} from './tsParser.js';
+export { parseTypeScriptFile } from './tsParser.js';
 
-export {
-  parseSwaggerFile,
-} from './swaggerParser.js';
+export { parseSwaggerFile } from './swaggerParser.js';
 
 export {
   normalizeType,

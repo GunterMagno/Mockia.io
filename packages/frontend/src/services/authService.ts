@@ -1,29 +1,38 @@
-import { api, refreshSession } from './api'
-import { CSRF_HEADERS, clearSession, setAccessToken, setSessionUserId, type SessionUser } from './session'
+import { api, refreshSession } from './api';
+import {
+  CSRF_HEADERS,
+  clearSession,
+  setAccessToken,
+  setSessionUserId,
+  type SessionUser,
+} from './session';
 
 export interface Credentials {
-  email: string
-  password: string
+  email: string;
+  password: string;
 }
 
 export interface LoginResult {
-  user: SessionUser
-  accessToken: string
+  user: SessionUser;
+  accessToken: string;
 }
 
 /**
  * Inicia sesion. El backend responde con el access token en el cuerpo y pone el refresh token en la cookie HttpOnly
  * `mockia_rt`; "recordarme" solo decide si esa cookie dura 7 dias o termina con el navegador.
  */
-export async function loginRequest(credentials: Credentials, remember: boolean): Promise<LoginResult> {
-  const res = await api.post('/auth/login', { ...credentials, remember })
-  const data = res?.data?.data
-  const accessToken: unknown = data?.tokens?.accessToken
-  const user: SessionUser | undefined = data?.user
-  if (typeof accessToken !== 'string' || !user) throw new Error('Unexpected login response')
-  setAccessToken(accessToken)
-  setSessionUserId(user.id)
-  return { user, accessToken }
+export async function loginRequest(
+  credentials: Credentials,
+  remember: boolean
+): Promise<LoginResult> {
+  const res = await api.post('/auth/login', { ...credentials, remember });
+  const data = res?.data?.data;
+  const accessToken: unknown = data?.tokens?.accessToken;
+  const user: SessionUser | undefined = data?.user;
+  if (typeof accessToken !== 'string' || !user) throw new Error('Unexpected login response');
+  setAccessToken(accessToken);
+  setSessionUserId(user.id);
+  return { user, accessToken };
 }
 
 /**
@@ -31,8 +40,8 @@ export async function loginRequest(credentials: Credentials, remember: boolean):
  * y el usuario. Devuelve null si no hay sesion.
  */
 export async function restoreSession(): Promise<SessionUser | null> {
-  const outcome = await refreshSession()
-  return outcome.status === 'ok' ? outcome.user : null
+  const outcome = await refreshSession();
+  return outcome.status === 'ok' ? outcome.user : null;
 }
 
 /**
@@ -40,9 +49,9 @@ export async function restoreSession(): Promise<SessionUser | null> {
  * El token local se borra aunque la peticion falle.
  */
 export async function logoutRequest(): Promise<void> {
-  clearSession()
+  clearSession();
   try {
-    await api.post('/auth/logout', null, { headers: CSRF_HEADERS })
+    await api.post('/auth/logout', null, { headers: CSRF_HEADERS });
   } catch {
     // Best effort: sin red la cookie caduca sola y el refresh token queda revocado al siguiente intento
   }
@@ -53,21 +62,21 @@ export async function logoutRequest(): Promise<void> {
  * muestra el mismo mensaje en ambos casos y no hay nada que comparar.
  */
 export async function requestPasswordReset(email: string, locale: string): Promise<void> {
-  await api.post('/auth/forgot', { email, locale })
+  await api.post('/auth/forgot', { email, locale });
 }
 
 /** Cambia la contrasena con el token del correo. Cierra todas las sesiones del usuario en el servidor. */
 export async function resetPassword(token: string, password: string): Promise<void> {
-  await api.post('/auth/reset', { token, password })
+  await api.post('/auth/reset', { token, password });
 }
 
 /** Confirma el correo con el token del enlace de verificacion (no requiere sesion). */
 export async function verifyEmailToken(token: string): Promise<void> {
-  await api.post('/auth/verify', { token })
+  await api.post('/auth/verify', { token });
 }
 
 /** Reenvia el correo de verificacion al usuario autenticado. Devuelve true si ya estaba verificado (no se envia nada). */
 export async function resendVerificationEmail(locale: string): Promise<boolean> {
-  const res = await api.post('/auth/verify/resend', { locale })
-  return res?.data?.data?.alreadyVerified === true
+  const res = await api.post('/auth/verify/resend', { locale });
+  return res?.data?.data?.alreadyVerified === true;
 }

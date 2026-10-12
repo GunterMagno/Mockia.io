@@ -73,7 +73,8 @@ export function percentile(values: number[], p: number): number {
   return sorted[lower] + (sorted[upper] - sorted[lower]) * (rank - lower);
 }
 
-const mean = (values: number[]) => (values.length === 0 ? 0 : values.reduce((sum, v) => sum + v, 0) / values.length);
+const mean = (values: number[]) =>
+  values.length === 0 ? 0 : values.reduce((sum, v) => sum + v, 0) / values.length;
 
 export function summarize(rows: CaseRow[]): Summary {
   const pct = (count: number) => (rows.length === 0 ? 0 : (count / rows.length) * 100);
@@ -87,22 +88,48 @@ export function summarize(rows: CaseRow[]): Summary {
     schemaValidPct: pct(rows.filter((r) => r.schemaValid).length),
     meanMethodPathF1: mean(rows.map((r) => r.methodPathF1)),
     meanFieldCoverage: mean(rows.map((r) => r.fieldCoverage)),
-    latencyP50Ms: percentile(rows.map((r) => r.latencyMs), 50),
-    latencyP95Ms: percentile(rows.map((r) => r.latencyMs), 95),
+    latencyP50Ms: percentile(
+      rows.map((r) => r.latencyMs),
+      50
+    ),
+    latencyP95Ms: percentile(
+      rows.map((r) => r.latencyMs),
+      95
+    ),
     errors: rows.filter((r) => r.error !== undefined).length,
   };
-  if (withUsage.length > 0 && generationSeconds > 0) summary.tokensPerSecond = outputTokens / generationSeconds;
+  if (withUsage.length > 0 && generationSeconds > 0)
+    summary.tokensPerSecond = outputTokens / generationSeconds;
   return summary;
 }
 
 export function evaluateCriteria(summary: Summary): Criteria {
   const checks: Check[] = [
-    { name: 'schemaValid%', value: summary.schemaValidPct, threshold: ACCEPTANCE.minSchemaValidPct, comparator: '>=', pass: false },
-    { name: 'mean methodPathF1', value: summary.meanMethodPathF1, threshold: ACCEPTANCE.minMeanMethodPathF1, comparator: '>=', pass: false },
-    { name: 'latency p95 (ms)', value: summary.latencyP95Ms, threshold: ACCEPTANCE.maxLatencyP95Ms, comparator: '<=', pass: false },
+    {
+      name: 'schemaValid%',
+      value: summary.schemaValidPct,
+      threshold: ACCEPTANCE.minSchemaValidPct,
+      comparator: '>=',
+      pass: false,
+    },
+    {
+      name: 'mean methodPathF1',
+      value: summary.meanMethodPathF1,
+      threshold: ACCEPTANCE.minMeanMethodPathF1,
+      comparator: '>=',
+      pass: false,
+    },
+    {
+      name: 'latency p95 (ms)',
+      value: summary.latencyP95Ms,
+      threshold: ACCEPTANCE.maxLatencyP95Ms,
+      comparator: '<=',
+      pass: false,
+    },
   ];
   for (const check of checks) {
-    check.pass = check.comparator === '>=' ? check.value >= check.threshold : check.value <= check.threshold;
+    check.pass =
+      check.comparator === '>=' ? check.value >= check.threshold : check.value <= check.threshold;
   }
   // A run that measured nothing proves nothing, even though 0 ms is under the latency limit.
   const pass = summary.cases > 0 && checks.every((c) => c.pass);
@@ -133,11 +160,18 @@ export function formatRows(rows: CaseRow[]): string {
   return [header, ...lines].join('\n');
 }
 
-export function formatSummary(result: Pick<EvalResult, 'provider' | 'model' | 'summary' | 'criteria' | 'params'>): string {
+export function formatSummary(
+  result: Pick<EvalResult, 'provider' | 'model' | 'summary' | 'criteria' | 'params'>
+): string {
   const { summary: s, criteria } = result;
   const lines = [
     `Provider: ${result.provider}   Model: ${result.model}   Cases: ${s.cases}   Call errors: ${s.errors}`,
-    ...(result.params ? [`temperature     : ${result.params.temperature}`, `max tokens      : ${result.params.maxTokens}`] : []),
+    ...(result.params
+      ? [
+          `temperature     : ${result.params.temperature}`,
+          `max tokens      : ${result.params.maxTokens}`,
+        ]
+      : []),
     `validJson%      : ${round(s.validJsonPct, 1)}`,
     `schemaValid%    : ${round(s.schemaValidPct, 1)}`,
     `methodPathF1    : ${s.meanMethodPathF1.toFixed(3)}  (mean)`,
@@ -148,9 +182,12 @@ export function formatSummary(result: Pick<EvalResult, 'provider' | 'model' | 's
     '',
     `Acceptance criteria (schemaValid >= ${ACCEPTANCE.minSchemaValidPct} %, mean F1 >= ${ACCEPTANCE.minMeanMethodPathF1}, p95 <= ${ACCEPTANCE.maxLatencyP95Ms / 1000} s):`,
     ...criteria.checks.map(
-      (c) => `  [${c.pass ? 'ok' : 'XX'}] ${c.name}: ${round(c.value)} (${c.comparator} ${c.threshold})`
+      (c) =>
+        `  [${c.pass ? 'ok' : 'XX'}] ${c.name}: ${round(c.value)} (${c.comparator} ${c.threshold})`
     ),
-    criteria.pass ? 'PASS: this model meets the criteria to replace OpenRouter' : 'FAIL: this model does not meet the criteria to replace OpenRouter',
+    criteria.pass
+      ? 'PASS: this model meets the criteria to replace OpenRouter'
+      : 'FAIL: this model does not meet the criteria to replace OpenRouter',
   ];
   return lines.join('\n');
 }
@@ -174,8 +211,12 @@ export function compareResults(previous: EvalResult, current: EvalResult): strin
   const before = new Map(previous.rows.map((r) => [r.id, r]));
   const after = new Map(current.rows.map((r) => [r.id, r]));
   const moved = [...after.values()]
-    .filter((r) => before.has(r.id) && Math.abs(r.methodPathF1 - before.get(r.id)!.methodPathF1) > 1e-9)
-    .map((r) => `  ${r.id}: F1 ${round(before.get(r.id)!.methodPathF1)} -> ${round(r.methodPathF1)}`);
+    .filter(
+      (r) => before.has(r.id) && Math.abs(r.methodPathF1 - before.get(r.id)!.methodPathF1) > 1e-9
+    )
+    .map(
+      (r) => `  ${r.id}: F1 ${round(before.get(r.id)!.methodPathF1)} -> ${round(r.methodPathF1)}`
+    );
   if (moved.length > 0) lines.push('Cases whose F1 changed:', ...moved);
 
   const onlyPrevious = [...before.keys()].filter((id) => !after.has(id));

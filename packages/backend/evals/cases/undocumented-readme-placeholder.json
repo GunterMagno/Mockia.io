@@ -1,9 +1,7 @@
 {
   "id": "undocumented-readme-placeholder",
   "description": "The README is a placeholder and there is no code; the user states the endpoints.",
-  "tags": [
-    "undocumented"
-  ],
+  "tags": ["undocumented"],
   "input": {
     "projectTitle": "Task Board",
     "userInput": "Mock two endpoints: GET /tasks to list tasks and POST /tasks to create one. A task has id, title and status.",
@@ -53,11 +51,7 @@
               "type": "string"
             }
           },
-          "required": [
-            "id",
-            "title",
-            "status"
-          ]
+          "required": ["id", "title", "status"]
         }
       },
       "examples": [
@@ -84,9 +78,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "title"
-        ]
+        "required": ["title"]
       },
       "responseSchema": {
         "type": "object",
@@ -101,11 +93,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "title",
-          "status"
-        ]
+        "required": ["id", "title", "status"]
       },
       "examples": [
         {

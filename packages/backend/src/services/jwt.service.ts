@@ -35,7 +35,8 @@ function getSecret(name: 'JWT_ACCESS_SECRET' | 'JWT_REFRESH_SECRET'): string {
   if (secret.length < MIN_SECRET_LENGTH) {
     throw new Error(`${name} must be at least ${MIN_SECRET_LENGTH} characters`);
   }
-  const other = process.env[name === 'JWT_ACCESS_SECRET' ? 'JWT_REFRESH_SECRET' : 'JWT_ACCESS_SECRET'];
+  const other =
+    process.env[name === 'JWT_ACCESS_SECRET' ? 'JWT_REFRESH_SECRET' : 'JWT_ACCESS_SECRET'];
   if (other === secret) {
     throw new Error('JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be different');
   }
@@ -63,7 +64,9 @@ function verifyToken(token: string, secret: string, kind: 'access' | 'refresh'):
     }
     return payload as TokenPayload;
   } catch (error) {
-    throw new Error(`Invalid or expired ${kind} token: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(
+      `Invalid or expired ${kind} token: ${error instanceof Error ? error.message : String(error)}`
+    );
   }
 }
 

@@ -1,11 +1,7 @@
 {
   "id": "es-openapi-clinica",
   "description": "OpenAPI 3 document with Spanish summaries for a clinic (patients and appointments).",
-  "tags": [
-    "es",
-    "openapi3",
-    "path-params"
-  ],
+  "tags": ["es", "openapi3", "path-params"],
   "input": {
     "projectTitle": "Clinica Central",
     "userInput": "Genera la API simulada a partir de la especificacion OpenAPI.",
@@ -28,27 +24,19 @@
           "summary": "OpenAPI 3.0.3 \"Clinica Central\". Paciente = { id: string, nombre: string, telefono: string }. Cita = { id: string, pacienteId: string, fecha: string, motivo: string }.",
           "routes": [
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/pacientes"
             },
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/pacientes/{id}"
             },
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/citas"
             },
             {
-              "methods": [
-                "POST"
-              ],
+              "methods": ["POST"],
               "path": "/citas"
             }
           ]
@@ -81,11 +69,7 @@
               "type": "string"
             }
           },
-          "required": [
-            "id",
-            "nombre",
-            "telefono"
-          ]
+          "required": ["id", "nombre", "telefono"]
         }
       },
       "examples": [
@@ -123,11 +107,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "nombre",
-          "telefono"
-        ]
+        "required": ["id", "nombre", "telefono"]
       },
       "examples": [
         {
@@ -174,12 +154,7 @@
               "type": "string"
             }
           },
-          "required": [
-            "id",
-            "pacienteId",
-            "fecha",
-            "motivo"
-          ]
+          "required": ["id", "pacienteId", "fecha", "motivo"]
         }
       },
       "examples": [
@@ -213,11 +188,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "pacienteId",
-          "fecha",
-          "motivo"
-        ]
+        "required": ["pacienteId", "fecha", "motivo"]
       },
       "responseSchema": {
         "type": "object",
@@ -235,12 +206,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "pacienteId",
-          "fecha",
-          "motivo"
-        ]
+        "required": ["id", "pacienteId", "fecha", "motivo"]
       },
       "examples": [
         {

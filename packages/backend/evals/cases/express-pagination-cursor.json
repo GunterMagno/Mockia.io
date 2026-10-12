@@ -1,10 +1,7 @@
 {
   "id": "express-pagination-cursor",
   "description": "Event feed with cursor-based pagination.",
-  "tags": [
-    "express",
-    "pagination"
-  ],
+  "tags": ["express", "pagination"],
   "input": {
     "projectTitle": "Event Feed",
     "userInput": "Mock the event feed API.",
@@ -32,15 +29,11 @@
           "summary": "Events router",
           "routes": [
             {
-              "methods": [
-                "GET"
-              ],
+              "methods": ["GET"],
               "path": "/events"
             },
             {
-              "methods": [
-                "POST"
-              ],
+              "methods": ["POST"],
               "path": "/events"
             }
           ]
@@ -52,19 +45,11 @@
           "interfaces": [
             {
               "name": "Event",
-              "properties": [
-                "id: string",
-                "type: string",
-                "actor: string",
-                "occurredAt: string"
-              ]
+              "properties": ["id: string", "type: string", "actor: string", "occurredAt: string"]
             },
             {
               "name": "EventPage",
-              "properties": [
-                "events: Event[]",
-                "nextCursor: string | null"
-              ]
+              "properties": ["events: Event[]", "nextCursor: string | null"]
             }
           ]
         }
@@ -102,22 +87,14 @@
                   "type": "string"
                 }
               },
-              "required": [
-                "id",
-                "type",
-                "actor",
-                "occurredAt"
-              ]
+              "required": ["id", "type", "actor", "occurredAt"]
             }
           },
           "nextCursor": {
             "type": "string"
           }
         },
-        "required": [
-          "events",
-          "nextCursor"
-        ]
+        "required": ["events", "nextCursor"]
       },
       "examples": [
         {
@@ -150,10 +127,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "type",
-          "actor"
-        ]
+        "required": ["type", "actor"]
       },
       "responseSchema": {
         "type": "object",
@@ -171,12 +145,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "type",
-          "actor",
-          "occurredAt"
-        ]
+        "required": ["id", "type", "actor", "occurredAt"]
       },
       "examples": [
         {

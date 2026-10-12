@@ -21,7 +21,9 @@ export const testOutboxRouter = Router();
 
 /** GET /api/__test__/outbox -> { success, data: OutboxEntry[] } (oldest first) */
 testOutboxRouter.get('/outbox', (_req, res) => {
-  res.status(200).json({ success: true, data: getTestOutbox(), timestamp: new Date().toISOString() });
+  res
+    .status(200)
+    .json({ success: true, data: getTestOutbox(), timestamp: new Date().toISOString() });
 });
 
 /** DELETE /api/__test__/outbox -> 204 */

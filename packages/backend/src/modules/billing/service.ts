@@ -1,9 +1,28 @@
 import { UserModel } from '../../models/User.js';
 import { ProjectModel } from '../../models/Project.js';
 import { AppError } from '../../middlewares/errorHandler.js';
-import { ErrorCode, isBillingInterval, toLimitsDTO, type BillingInterval, type BillingOverview } from '@mockia/shared';
-import { PLAN_LIMITS, asPaidPlan, effectivePlan, graceEndsAt, invalidatePlanCache, type BillingStatus, type PaidPlan } from './plans.js';
-import { notifyPaymentFailed, notifyRefund, notifyTrialWillEnd, type NoticeUser } from './notices.js';
+import {
+  ErrorCode,
+  isBillingInterval,
+  toLimitsDTO,
+  type BillingInterval,
+  type BillingOverview,
+} from '@mockia/shared';
+import {
+  PLAN_LIMITS,
+  asPaidPlan,
+  effectivePlan,
+  graceEndsAt,
+  invalidatePlanCache,
+  type BillingStatus,
+  type PaidPlan,
+} from './plans.js';
+import {
+  notifyPaymentFailed,
+  notifyRefund,
+  notifyTrialWillEnd,
+  type NoticeUser,
+} from './notices.js';
 import { getMonthlyUsageDetail, nextPeriodStart } from './usage.js';
 import { stripeCheckoutLocale, termsAcceptanceMessage } from './checkoutText.js';
 import { appBaseUrl } from '../auth/passwordReset.js';
@@ -101,13 +120,20 @@ async function updateUser(
           {
             $set: {
               ...Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, { $literal: v }])),
-              pastDueSince: { $ifNull: ['$pastDueSince', Number.isFinite(event.created) ? new Date(event.created! * 1000) : new Date()] },
+              pastDueSince: {
+                $ifNull: [
+                  '$pastDueSince',
+                  Number.isFinite(event.created) ? new Date(event.created! * 1000) : new Date(),
+                ],
+              },
             },
           },
         ]
       : { $set: fields };
 
-  const user = await UserModel.findOneAndUpdate(filter, update, { new: true }).select('_id email username locale plan pastDueSince');
+  const user = await UserModel.findOneAndUpdate(filter, update, { new: true }).select(
+    '_id email username locale plan pastDueSince'
+  );
   if (!user) return (await UserModel.exists(base)) ? 'skipped' : 'unknown';
   invalidatePlanCache(user._id.toString());
   return user;
@@ -141,7 +167,9 @@ function periodFields(sub: Record<string, any>): Record<string, unknown> {
   const hasCancelInfo = typeof sub.cancel_at_period_end === 'boolean' || 'cancel_at' in sub;
   return {
     ...(Number.isFinite(end) && { currentPeriodEnd: new Date(end * 1000) }),
-    ...(hasCancelInfo && { cancelAtPeriodEnd: sub.cancel_at_period_end === true || Number.isFinite(sub.cancel_at) }),
+    ...(hasCancelInfo && {
+      cancelAtPeriodEnd: sub.cancel_at_period_end === true || Number.isFinite(sub.cancel_at),
+    }),
   };
 }
 
@@ -154,7 +182,10 @@ const NOTICE_IDS_KEPT = 20;
  * but delivered first would make the (older) subscription.deleted look stale and leave the user on a paid plan for good.
  * Same result contract as updateUser; an event without id cannot be deduplicated and is skipped.
  */
-async function claimNoticeEvent(event: StripeEvent, obj: Record<string, any>): Promise<UserHit | 'unknown' | 'skipped'> {
+async function claimNoticeEvent(
+  event: StripeEvent,
+  obj: Record<string, any>
+): Promise<UserHit | 'unknown' | 'skipped'> {
   const base = userFilter(obj);
   if (!base || typeof event.id !== 'string') return 'skipped';
   const user = await UserModel.findOneAndUpdate(
@@ -167,8 +198,15 @@ async function claimNoticeEvent(event: StripeEvent, obj: Record<string, any>): P
 }
 
 /** First failed invoice of a sequence announces itself once: claim the sequence atomically, then email + in-app. */
-async function announcePaymentFailure(user: UserHit, invoiceId: string, failedAt: Date): Promise<void> {
-  const claim = await UserModel.updateOne({ _id: user._id, lastPaymentFailedInvoiceId: null }, { $set: { lastPaymentFailedInvoiceId: invoiceId } });
+async function announcePaymentFailure(
+  user: UserHit,
+  invoiceId: string,
+  failedAt: Date
+): Promise<void> {
+  const claim = await UserModel.updateOne(
+    { _id: user._id, lastPaymentFailedInvoiceId: null },
+    { $set: { lastPaymentFailedInvoiceId: invoiceId } }
+  );
   if (claim.modifiedCount !== 1) return; // this sequence was already announced (retry of the same invoice, or a second failed invoice)
   await notifyPaymentFailed(user, user.pastDueSince ? new Date(user.pastDueSince) : failedAt);
 }
@@ -179,7 +217,9 @@ async function announcePaymentFailure(user: UserHit, invoiceId: string, failedAt
  * @returns 'handled' | 'ignored' (unsupported type, nothing to apply, stale/duplicate event, or an old event of an unknown customer)
  *          | 'retry' (a young event for a customer that is not linked to a user yet: the route answers 500 so Stripe delivers it again)
  */
-export async function handleStripeEvent(event: StripeEvent): Promise<'handled' | 'ignored' | 'retry'> {
+export async function handleStripeEvent(
+  event: StripeEvent
+): Promise<'handled' | 'ignored' | 'retry'> {
   const obj = event.data?.object ?? {};
   const eventAt = Number.isFinite(event.created) ? new Date(event.created! * 1000) : new Date();
   let result: Awaited<ReturnType<typeof updateUser>> = 'skipped';
@@ -189,7 +229,8 @@ export async function handleStripeEvent(event: StripeEvent): Promise<'handled' |
     case 'checkout.session.completed': {
       const plan = asPaidPlan(obj.metadata?.plan);
       // Skip non-subscription sessions and delayed payments not yet paid; subscription.updated(active) follows.
-      if (!plan || (obj.mode && obj.mode !== 'subscription') || obj.payment_status === 'unpaid') break;
+      if (!plan || (obj.mode && obj.mode !== 'subscription') || obj.payment_status === 'unpaid')
+        break;
       result = await updateUser(
         event,
         obj,
@@ -197,7 +238,9 @@ export async function handleStripeEvent(event: StripeEvent): Promise<'handled' |
           plan,
           billingStatus: 'active',
           // The interval chosen at checkout (our own metadata); subscription.created/updated refine it from the price right after
-          ...(isBillingInterval(obj.metadata?.interval) && { billingInterval: obj.metadata.interval }),
+          ...(isBillingInterval(obj.metadata?.interval) && {
+            billingInterval: obj.metadata.interval,
+          }),
           ...(typeof obj.customer === 'string' && { stripeCustomerId: obj.customer }),
           ...(typeof obj.subscription === 'string' && { stripeSubscriptionId: obj.subscription }),
         },
@@ -210,7 +253,10 @@ export async function handleStripeEvent(event: StripeEvent): Promise<'handled' |
       // A subscription created as incomplete (first payment still being confirmed) or incomplete_expired (never paid)
       // says nothing about access: checkout.session.completed / subscription.updated(active) grant the plan, and a
       // half-finished checkout must neither grant it nor degrade a user. Only the ids are linked.
-      if (event.type === 'customer.subscription.created' && ['incomplete', 'incomplete_expired'].includes(obj.status)) {
+      if (
+        event.type === 'customer.subscription.created' &&
+        ['incomplete', 'incomplete_expired'].includes(obj.status)
+      ) {
         result = await updateUser(event, obj, {
           stripeSubscriptionId: obj.id,
           ...(typeof obj.customer === 'string' && { stripeCustomerId: obj.customer }),
@@ -222,7 +268,8 @@ export async function handleStripeEvent(event: StripeEvent): Promise<'handled' |
       const billingStatus = STATUS_MAP[obj.status] ?? 'past_due';
       // Only Stripe's own past_due (a renewal failed, retries pending) opens a grace period. unpaid / incomplete / paused / unknown
       // statuses have no paid access to extend (a half-finished first checkout must not buy 7 days of a paid plan).
-      const pastDue = obj.status === 'past_due' ? 'start' : billingStatus === 'past_due' ? undefined : 'clear';
+      const pastDue =
+        obj.status === 'past_due' ? 'start' : billingStatus === 'past_due' ? undefined : 'clear';
       result = await updateUser(
         event,
         obj,
@@ -242,7 +289,12 @@ export async function handleStripeEvent(event: StripeEvent): Promise<'handled' |
       result = await updateUser(
         event,
         obj,
-        { plan: 'free', billingStatus: 'canceled', cancelAtPeriodEnd: false, currentPeriodEnd: null },
+        {
+          plan: 'free',
+          billingStatus: 'canceled',
+          cancelAtPeriodEnd: false,
+          currentPeriodEnd: null,
+        },
         { pastDue: 'clear' }
       );
       break;
@@ -250,7 +302,12 @@ export async function handleStripeEvent(event: StripeEvent): Promise<'handled' |
       // The very first invoice of a subscription failing means checkout never completed: no paid access was granted, nothing to degrade.
       if (obj.billing_reason === 'subscription_create') return 'ignored';
       const invoiceId = typeof obj.id === 'string' ? obj.id : String(event.id);
-      result = await updateUser(event, obj, { billingStatus: 'past_due' }, { pastDue: 'start', where: { plan: { $in: PAID_PLANS } } });
+      result = await updateUser(
+        event,
+        obj,
+        { billingStatus: 'past_due' },
+        { pastDue: 'start', where: { plan: { $in: PAID_PLANS } } }
+      );
       afterApplied = (user) => announcePaymentFailure(user, invoiceId, eventAt);
       break;
     }
@@ -262,7 +319,13 @@ export async function handleStripeEvent(event: StripeEvent): Promise<'handled' |
         event,
         obj,
         { billingStatus: 'active' },
-        { pastDue: 'clear', where: { billingStatus: 'past_due', lastPaymentFailedInvoiceId: { $in: [invoiceId, null] } } }
+        {
+          pastDue: 'clear',
+          where: {
+            billingStatus: 'past_due',
+            lastPaymentFailedInvoiceId: { $in: [invoiceId, null] },
+          },
+        }
       );
       break;
     }
@@ -275,7 +338,8 @@ export async function handleStripeEvent(event: StripeEvent): Promise<'handled' |
     case 'charge.refunded':
       // Notice only: a cancellation that goes with a refund arrives as customer.subscription.deleted.
       result = await claimNoticeEvent(event, obj);
-      afterApplied = (user) => notifyRefund(user, { amount: obj.amount_refunded, currency: obj.currency });
+      afterApplied = (user) =>
+        notifyRefund(user, { amount: obj.amount_refunded, currency: obj.currency });
       break;
     default:
       return 'ignored';
@@ -287,11 +351,18 @@ export async function handleStripeEvent(event: StripeEvent): Promise<'handled' |
   }
   if (result === 'unknown') {
     // Event ids only in the logs: a Stripe customer id or an address would be personal data in the log files.
-    if (Number.isFinite(event.created) && Date.now() - event.created! * 1000 < LINK_RACE_WINDOW_MS) {
-      console.warn(`[Billing] ${event.type} (${event.id}): no user is linked to the customer yet, asking Stripe to retry`);
+    if (
+      Number.isFinite(event.created) &&
+      Date.now() - event.created! * 1000 < LINK_RACE_WINDOW_MS
+    ) {
+      console.warn(
+        `[Billing] ${event.type} (${event.id}): no user is linked to the customer yet, asking Stripe to retry`
+      );
       return 'retry';
     }
-    console.warn(`[Billing] ${event.type} (${event.id}): no user is linked to the customer, dropping the event`);
+    console.warn(
+      `[Billing] ${event.type} (${event.id}): no user is linked to the customer, dropping the event`
+    );
     return 'ignored';
   }
   console.warn(`[Billing] ${event.type} (${event.id}) was not applicable or already applied`);
@@ -299,17 +370,27 @@ export async function handleStripeEvent(event: StripeEvent): Promise<'handled' |
 }
 
 const frontendBase = () =>
-  (process.env.FRONTEND_URL || process.env.CORS_ORIGIN?.split(',')[0] || 'http://localhost:5173').replace(/\/+$/, '');
+  (
+    process.env.FRONTEND_URL ||
+    process.env.CORS_ORIGIN?.split(',')[0] ||
+    'http://localhost:5173'
+  ).replace(/\/+$/, '');
 
 /** Checkout config from env; null when Stripe is not configured for that plan and interval. */
-export function checkoutConfig(plan: PaidPlan, interval: BillingInterval = 'month'): { secretKey: string; priceId: string } | null {
+export function checkoutConfig(
+  plan: PaidPlan,
+  interval: BillingInterval = 'month'
+): { secretKey: string; priceId: string } | null {
   const secretKey = process.env.STRIPE_SECRET_KEY;
   const priceId = priceIdFor(plan, interval);
   return secretKey && priceId ? { secretKey, priceId } : null;
 }
 
 /** Names of the env vars that keep checkout from working for that plan and interval (empty = configured). */
-export function missingCheckoutConfig(plan: PaidPlan, interval: BillingInterval = 'month'): string[] {
+export function missingCheckoutConfig(
+  plan: PaidPlan,
+  interval: BillingInterval = 'month'
+): string[] {
   return [
     ...(process.env.STRIPE_SECRET_KEY ? [] : ['STRIPE_SECRET_KEY']),
     ...(priceIdFor(plan, interval) ? [] : [priceEnvName(plan, interval)]),
@@ -355,7 +436,10 @@ export async function createCheckoutSession(input: {
     'tax_id_collection[enabled]': 'true',
     billing_address_collection: 'required',
     'consent_collection[terms_of_service]': 'required',
-    'custom_text[terms_of_service_acceptance][message]': termsAcceptanceMessage(input.locale, `${appBaseUrl()}/terms`),
+    'custom_text[terms_of_service_acceptance][message]': termsAcceptanceMessage(
+      input.locale,
+      `${appBaseUrl()}/terms`
+    ),
     locale: stripeCheckoutLocale(input.locale),
   });
   if (input.stripeCustomerId) {
@@ -386,8 +470,14 @@ export async function createCheckoutSession(input: {
 }
 
 /** A live (or unpaid) subscription already exists: plan changes go through the customer portal, not a second checkout. */
-export function hasOpenSubscription(user: { plan?: string | null; billingStatus?: string | null; stripeSubscriptionId?: string | null }): boolean {
-  return Boolean(user.stripeSubscriptionId && asPaidPlan(user.plan) && user.billingStatus !== 'canceled');
+export function hasOpenSubscription(user: {
+  plan?: string | null;
+  billingStatus?: string | null;
+  stripeSubscriptionId?: string | null;
+}): boolean {
+  return Boolean(
+    user.stripeSubscriptionId && asPaidPlan(user.plan) && user.billingStatus !== 'canceled'
+  );
 }
 
 /**
@@ -395,7 +485,10 @@ export function hasOpenSubscription(user: { plan?: string | null; billingStatus?
  * The portal must be configured once in the Stripe dashboard (Settings > Billing > Customer portal),
  * including the Starter, Pro and Team prices if plan switching should be offered.
  */
-export async function createPortalSession(input: { customerId: string; secretKey: string }): Promise<{ url: string }> {
+export async function createPortalSession(input: {
+  customerId: string;
+  secretKey: string;
+}): Promise<{ url: string }> {
   const params = new URLSearchParams({
     customer: input.customerId,
     return_url: process.env.STRIPE_PORTAL_RETURN_URL || `${frontendBase()}/billing`,
@@ -418,20 +511,42 @@ export async function createPortalSession(input: { customerId: string; secretKey
 }
 
 const cancelFailed = () =>
-  new AppError('Could not cancel your subscription. Nothing was deleted; try again later.', ErrorCode.EXTERNAL_SERVICE_ERROR, 502);
+  new AppError(
+    'Could not cancel your subscription. Nothing was deleted; try again later.',
+    ErrorCode.EXTERNAL_SERVICE_ERROR,
+    502
+  );
 
 /** Stripe statuses of a subscription that can still charge the customer (or become chargeable). */
-const LIVE_SUBSCRIPTION_STATUSES = new Set(['active', 'trialing', 'past_due', 'unpaid', 'incomplete', 'paused']);
+const LIVE_SUBSCRIPTION_STATUSES = new Set([
+  'active',
+  'trialing',
+  'past_due',
+  'unpaid',
+  'incomplete',
+  'paused',
+]);
 /** Statuses that mean the subscription is already over. */
 const DEAD_SUBSCRIPTION_STATUSES = new Set(['canceled', 'incomplete_expired']);
 /** Pages of 100 subscriptions read per customer at most (a customer never has that many; it only bounds a bad loop). */
 const MAX_SUBSCRIPTION_PAGES = 10;
 
-async function stripeFetch(url: string, secretKey: string, method: 'GET' | 'DELETE'): Promise<Response> {
+async function stripeFetch(
+  url: string,
+  secretKey: string,
+  method: 'GET' | 'DELETE'
+): Promise<Response> {
   try {
-    return await fetch(url, { method, headers: { Authorization: `Bearer ${secretKey}` }, signal: AbortSignal.timeout(10_000) });
+    return await fetch(url, {
+      method,
+      headers: { Authorization: `Bearer ${secretKey}` },
+      signal: AbortSignal.timeout(10_000),
+    });
   } catch (err) {
-    console.error(`[Billing] Stripe ${method} failed:`, err instanceof Error ? err.name : 'unknown error');
+    console.error(
+      `[Billing] Stripe ${method} failed:`,
+      err instanceof Error ? err.name : 'unknown error'
+    );
     throw cancelFailed();
   }
 }
@@ -442,7 +557,10 @@ async function stripeFetch(url: string, secretKey: string, method: 'GET' | 'DELE
  * cancelled. Only the status and Stripe's error code are logged.
  * @throws AppError 502 when it could not be cancelled
  */
-export async function cancelSubscriptionNow(subscriptionId: string, secretKey: string): Promise<void> {
+export async function cancelSubscriptionNow(
+  subscriptionId: string,
+  secretKey: string
+): Promise<void> {
   const url = `${STRIPE_API}/subscriptions/${encodeURIComponent(subscriptionId)}`;
   const res = await stripeFetch(url, secretKey, 'DELETE');
   if (res.ok) return;
@@ -452,12 +570,19 @@ export async function cancelSubscriptionNow(subscriptionId: string, secretKey: s
   const check = await stripeFetch(url, secretKey, 'GET').catch(() => null);
   const current: any = check?.ok ? await check.json().catch(() => ({})) : null;
   if (current && DEAD_SUBSCRIPTION_STATUSES.has(current.status)) return;
-  console.error('[Billing] Stripe subscription cancel failed:', res.status, data?.error?.code ?? '');
+  console.error(
+    '[Billing] Stripe subscription cancel failed:',
+    res.status,
+    data?.error?.code ?? ''
+  );
   throw cancelFailed();
 }
 
 /** Ids of the customer's subscriptions that can still charge (every page, up to a sane cap). */
-export async function listLiveSubscriptionIds(customerId: string, secretKey: string): Promise<string[]> {
+export async function listLiveSubscriptionIds(
+  customerId: string,
+  secretKey: string
+): Promise<string[]> {
   const ids: string[] = [];
   let startingAfter: string | undefined;
   for (let page = 0; page < MAX_SUBSCRIPTION_PAGES; page++) {
@@ -466,11 +591,16 @@ export async function listLiveSubscriptionIds(customerId: string, secretKey: str
     const res = await stripeFetch(`${STRIPE_API}/subscriptions?${params}`, secretKey, 'GET');
     const body: any = await res.json().catch(() => ({}));
     if (!res.ok || !Array.isArray(body?.data)) {
-      console.error('[Billing] Stripe subscription list failed:', res.status, body?.error?.code ?? '');
+      console.error(
+        '[Billing] Stripe subscription list failed:',
+        res.status,
+        body?.error?.code ?? ''
+      );
       throw cancelFailed();
     }
     for (const sub of body.data) {
-      if (typeof sub?.id === 'string' && LIVE_SUBSCRIPTION_STATUSES.has(sub.status)) ids.push(sub.id);
+      if (typeof sub?.id === 'string' && LIVE_SUBSCRIPTION_STATUSES.has(sub.status))
+        ids.push(sub.id);
     }
     const last = body.data[body.data.length - 1]?.id;
     if (!body.has_more || typeof last !== 'string') return ids;
@@ -488,11 +618,19 @@ export async function listLiveSubscriptionIds(customerId: string, secretKey: str
  * @throws AppError 502 when any of them could not be cancelled or the list could not be read (the caller deletes nothing)
  */
 export async function cancelAllSubscriptions(
-  user: { _id: unknown; stripeCustomerId?: string | null; stripeSubscriptionId?: string | null; billingStatus?: string | null },
+  user: {
+    _id: unknown;
+    stripeCustomerId?: string | null;
+    stripeSubscriptionId?: string | null;
+    billingStatus?: string | null;
+  },
   secretKey: string
 ): Promise<void> {
   const markCanceled = () =>
-    UserModel.updateOne({ _id: user._id }, { $set: { billingStatus: 'canceled', plan: 'free', cancelAtPeriodEnd: false } });
+    UserModel.updateOne(
+      { _id: user._id },
+      { $set: { billingStatus: 'canceled', plan: 'free', cancelAtPeriodEnd: false } }
+    );
   const done = new Set<string>();
   if (user.stripeSubscriptionId && user.billingStatus !== 'canceled') {
     await cancelSubscriptionNow(user.stripeSubscriptionId, secretKey);
@@ -510,9 +648,14 @@ export async function cancelAllSubscriptions(
 }
 
 /** Plan, limits and usage of the current billing period, for the billing page. */
-export async function getBillingOverview(userId: string, now = new Date()): Promise<BillingOverview> {
+export async function getBillingOverview(
+  userId: string,
+  now = new Date()
+): Promise<BillingOverview> {
   const user = await UserModel.findById(userId)
-    .select('plan billingStatus billingInterval pastDueSince stripeCustomerId cancelAtPeriodEnd currentPeriodEnd')
+    .select(
+      'plan billingStatus billingInterval pastDueSince stripeCustomerId cancelAtPeriodEnd currentPeriodEnd'
+    )
     .lean();
   if (!user) throw new AppError('User not found', ErrorCode.NOT_FOUND, 404);
 
@@ -530,13 +673,23 @@ export async function getBillingOverview(userId: string, now = new Date()): Prom
     subscribedPlan: asPaidPlan(user.plan) ?? 'free',
     billingStatus: (user.billingStatus as BillingStatus) ?? 'active',
     cancelAtPeriodEnd: Boolean(user.cancelAtPeriodEnd),
-    interval: liveSubscription && isBillingInterval(user.billingInterval) ? user.billingInterval : null,
+    interval:
+      liveSubscription && isBillingInterval(user.billingInterval) ? user.billingInterval : null,
     currentPeriodEnd: user.currentPeriodEnd ? new Date(user.currentPeriodEnd).toISOString() : null,
     pastDueUntil: graceEndsAt(user)?.toISOString() ?? null,
     limits: toLimitsDTO(PLAN_LIMITS[plan]),
-    usage: { activeProjects, monthlyRequests: monthly.requests, aiGenerations: monthly.aiGenerations, periodResetAt: nextPeriodStart(now).toISOString() },
+    usage: {
+      activeProjects,
+      monthlyRequests: monthly.requests,
+      aiGenerations: monthly.aiGenerations,
+      periodResetAt: nextPeriodStart(now).toISOString(),
+    },
     canManageBilling: stripeReady && Boolean(user.stripeCustomerId),
-    checkoutAvailable: { starter: Boolean(checkoutConfig('starter')), pro: Boolean(checkoutConfig('pro')), team: Boolean(checkoutConfig('team')) },
+    checkoutAvailable: {
+      starter: Boolean(checkoutConfig('starter')),
+      pro: Boolean(checkoutConfig('pro')),
+      team: Boolean(checkoutConfig('team')),
+    },
     yearlyCheckoutAvailable: {
       starter: Boolean(checkoutConfig('starter', 'year')),
       pro: Boolean(checkoutConfig('pro', 'year')),

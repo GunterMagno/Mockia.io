@@ -56,10 +56,12 @@ Condiciones que ninguna tarea prueba por sí sola y que más probablemente afect
 ### Task A1: Barrido único de formato y lint, y CI que bloquea
 
 **Files:**
+
 - Modify: todo el código formateable (solo formato), `.github/workflows/ci.yml` (quitar `continue-on-error` de los tres pasos de lint; añadir `concurrency` con `cancel-in-progress` por rama), `package.json` (scripts `format`, `format:check`, `lint` si faltan)
 - Test: el propio CI local: `npm run format:check`, `npm run lint`, suites existentes
 
 **Interfaces:**
+
 - Consumes: la deuda medida en el TODO(H10) del `ci.yml` (Prettier 244 ficheros; ESLint backend 1210 errores, frontend 2050).
 - Produces: `npm run format:check` y `npm run lint` salen con código 0 en la raíz y por paquete.
 
@@ -76,10 +78,12 @@ Condiciones que ninguna tarea prueba por sí sola y que más probablemente afect
 ### Task L1: El enlace compartido de una demo no sirve para reclamarla; reclamos simultáneos respetan el límite
 
 **Files:**
+
 - Modify: `packages/backend/src/modules/demo/{service,claim,controller,routes}.ts`, `packages/backend/src/models/DemoMock.ts`, `packages/shared/src/` (tipo de respuesta de generate), `packages/frontend/src/services/{demoService,demoPending}.ts`, `pages/Demo/Demo.tsx`, `docs/demo.md`
 - Test: `packages/backend/src/tests/demo.claim.test.ts` (ampliar), `packages/frontend/cypress/e2e/demo.cy.ts` (ampliar)
 
 **Interfaces:**
+
 - Produces: `POST /api/demo/generate` devuelve además `claimToken: string` (128 bits hex, solo en esa respuesta; se guarda en `DemoMock` como hash SHA-256 `claimTokenHash`, nunca en claro); `POST /api/demo/:demoId/claim` exige `{ claimToken }` en el cuerpo. El `demoId` (público, va en la URL del mock) deja de ser capacidad de reclamo.
 - Consumes: M1 y M8 del ledger del plan 2 (id compartido reclamable; dos reclamos con el plan a límite−1 dejan la cuenta 1 por encima).
 
@@ -92,10 +96,12 @@ Condiciones que ninguna tarea prueba por sí sola y que más probablemente afect
 ### Task L2: Avisar de la cuota de IA agotada antes de clonar el repositorio
 
 **Files:**
+
 - Modify: `packages/backend/src/modules/ai/` (ruta nueva) y `modules/billing/aiQuota.ts`, `packages/frontend/src/components/projects/CreateProjectModal/CreateProjectModal.tsx`, locales `en/es/zh`
 - Test: `packages/backend/src/tests/billing.aiQuota.test.ts` (ampliar), `packages/frontend/cypress/e2e/billing.cy.ts` (ampliar)
 
 **Interfaces:**
+
 - Produces: `GET /api/ai/quota` (autenticado) → `{ used: number, limit: number | null, resetsAt: string, available: boolean }`; solo informa, NO reserva (la reserva atómica sigue siendo la autoridad).
 
 - [ ] **Step 1: Tests (RED)**: (a) `GET /api/ai/quota` de un Free con 5/5 → `available:false`; con 4/5 → `true`; plan sin tope → `limit:null, available:true`; la llamada no cambia el contador; (b) Cypress: con cuota agotada (interceptada) el modal de crear proyecto desde GitHub muestra el aviso de cuota con enlace a `/billing` ANTES de lanzar `POST /api/github/…` (el spy de la ruta de clonado no se invoca).
@@ -107,10 +113,12 @@ Condiciones que ninguna tarea prueba por sí sola y que más probablemente afect
 ### Task L3: Detalles pequeños (precios duplicados, URL https del mock, mensaje de red compartida)
 
 **Files:**
+
 - Modify: `packages/backend/src/modules/billing/prices.ts`, `config/assertProdConfig.ts`, `packages/backend/src/modules/demo/service.ts` (baseUrl), locales `en/es/zh` (mensaje de cupo), `docs/economia-planes.md` si cita el mensaje
 - Test: `packages/backend/src/tests/billing.starter.test.ts` y `demo.generate.test.ts` (ampliar), `config.assertProdConfig.test.ts`
 
 **Interfaces:**
+
 - Produces: dos variables `STRIPE_PRICE_*` con el mismo id → `assertProdConfig` lanza (sin eco del valor) y `prices.ts` no resuelve en silencio a Starter; `baseUrl` de la demo usa `https` cuando la petición llegó con `X-Forwarded-Proto: https` (con `trust proxy` configurado) o cuando `APP_URL` es https.
 
 - [ ] **Step 1: Tests (RED)**: (a) producción con `STRIPE_PRICE_PRO` = `STRIPE_PRICE_STARTER_MONTHLY` → arranque falla nombrando ambas variables; (b) `generate` tras un proxy con `X-Forwarded-Proto: https` → `baseUrl` empieza por `https://`; (c) el mensaje de cupo agotado por IP en es/en/zh no dice "has usado" (texto neutro: "se alcanzó el cupo de esta red hoy").
@@ -120,6 +128,7 @@ Condiciones que ninguna tarea prueba por sí sola y que más probablemente afect
 ### Task L4: Limpieza de la carpeta `~` suelta en la raíz del repo
 
 **Files:**
+
 - Delete (manual, lo ejecuta la persona): `./~` (copia de `skill-creator-plus` creada por un `git clone` con `~` sin expandir; está ignorada por `*~`; la instalación buena está en `~/.claude/skills/skill-creator-plus`)
 
 - [ ] **Step 1:** Comprueba que `~/.claude/skills/skill-creator-plus/SKILL.md` existe y que `./~/.claude/skills/skill-creator-plus` es solo un duplicado (`diff -rq` sin diferencias relevantes).
@@ -132,11 +141,13 @@ Condiciones que ninguna tarea prueba por sí sola y que más probablemente afect
 ### Task O1: Eventos de llamadas de IA (`AiCall`) para métricas y alertas
 
 **Files:**
+
 - Create: `packages/backend/src/models/AiCall.ts`, `packages/backend/src/modules/metrics/aiCalls.ts`
 - Modify: `modules/ai/aiGenerationPipeline.ts` o el controlador de IA (punto único tras cada generación), `modules/demo/service.ts`
 - Test: `packages/backend/src/tests/metrics.aiCalls.test.ts`
 
 **Interfaces:**
+
 - Produces:
   - `AiCall { at: Date (índice TTL 90 días), scope: 'users' | 'demo' | 'byok', plan: Plan | 'anonymous', provider: string, model: string, outcome: 'ok' | 'invalid' | 'truncated' | 'timeout' | 'refused' | 'error', inputTokens?: number, outputTokens?: number, latencyMs: number }` (sin `userId`, sin IP, sin contenido).
   - `recordAiCall(event: Omit<AiCallEvent, 'at'>, now?: Date): Promise<void>` — nunca lanza (error logueado con `describeError`); no bloquea la respuesta.
@@ -150,11 +161,13 @@ Condiciones que ninguna tarea prueba por sí sola y que más probablemente afect
 ### Task O2: Administración por lista de correos
 
 **Files:**
+
 - Create: `packages/backend/src/config/admin.ts`, `packages/backend/src/middlewares/requireAdmin.ts`, `packages/backend/src/modules/admin/routes.ts`
 - Modify: `index.ts` (montar `/api/admin`), `config/assertProdConfig.ts`, ambos `.env.example`, `render.yaml`/`docker-compose.prod.yml` (reenviar `ADMIN_EMAILS` vacía)
 - Test: `packages/backend/src/tests/admin.auth.test.ts`
 
 **Interfaces:**
+
 - Produces: `getAdminEmails(env?): ReadonlySet<string>` (minúsculas, recortadas; entradas que no son un correo válido se ignoran y `assertProdConfig` las rechaza); `requireAdmin` (tras `authenticateToken`): 403 `FORBIDDEN` si el correo del usuario no está en la lista **o no está verificado**; `GET /api/admin/me` → `{ isAdmin: boolean }` para cualquier usuario autenticado (nunca revela la lista).
 
 - [ ] **Step 1: Tests (RED)** (Review Focus 4): (a) correo en la lista y verificado → `isAdmin:true` y acceso a una ruta de prueba protegida; (b) correo en la lista pero SIN verificar → 403; (c) usuario normal → 403; (d) sin sesión → 401; (e) la lista no distingue mayúsculas; (f) `GET /admin/me` de un no administrador responde `{isAdmin:false}` sin pista de quién lo es; (g) `assertProdConfig` rechaza una entrada que no es un correo sin eco del valor.
@@ -163,11 +176,13 @@ Condiciones que ninguna tarea prueba por sí sola y que más probablemente afect
 ### Task O3: Resumen operativo y versión desplegada
 
 **Files:**
+
 - Create: `packages/backend/src/modules/ops/{routes,summary}.ts`
 - Modify: `index.ts` (`/api/ops`, y `commit` en `/api/health`), `modules/ai/providers/index.ts` (`getLlmStatus`), `config/assertProdConfig.ts`, `.env.example`, `render.yaml`, `docker-compose.prod.yml`
 - Test: `packages/backend/src/tests/ops.summary.test.ts`
 
 **Interfaces:**
+
 - Consumes: `AiCall` (O1), `getDemoConfig`, `DemoBudget`, estado de cortacircuitos.
 - Produces:
   - `GET /api/health` añade `commit: string | null` (de `RENDER_GIT_COMMIT` o `GIT_COMMIT`).
@@ -184,11 +199,13 @@ Condiciones que ninguna tarea prueba por sí sola y que más probablemente afect
 ### Task A2: Seguridad automática (dependencias, código y secretos)
 
 **Files:**
+
 - Create: `.github/dependabot.yml`, `.github/workflows/security.yml`, `.gitleaks.toml` (solo si hace falta una lista de permitidos documentada)
-- Modify: `docs/08_despliegue.md` (sección de CI) 
+- Modify: `docs/08_despliegue.md` (sección de CI)
 - Test: `packages/backend/src/tests/ci.workflows.test.ts` (comprueba los YAML: ver abajo)
 
 **Interfaces:**
+
 - Produces: Dependabot semanal para `npm` (raíz y `packages/*`) y `github-actions` agrupando actualizaciones menores; workflow `security.yml` en push a `main`, PR y cron semanal con tres trabajos: CodeQL (JavaScript/TypeScript), `npm audit --omit=dev --audit-level=high` (bloquea por altas/críticas de producción), y `gitleaks` sobre el historial del PR.
 
 - [ ] **Step 1: Tests (RED)** en `ci.workflows.test.ts` (lee los YAML del repo con el parser de la propia suite o `JSON`-izando con una expresión simple; si no hay parser YAML en el repo, comprueba con regex las claves): existen `dependabot.yml` con los ecosistemas `npm` y `github-actions`; `security.yml` define los tres trabajos; ningún workflow usa `pull_request_target`; todos los `uses:` de acciones de terceros van fijados a una versión mayor concreta (no `@main`/`@master`); los permisos de cada workflow son mínimos (`contents: read` salvo donde se justifica).
@@ -197,10 +214,12 @@ Condiciones que ninguna tarea prueba por sí sola y que más probablemente afect
 ### Task A3: Vigilancia programada con incidencias automáticas
 
 **Files:**
+
 - Create: `.github/workflows/monitor.yml`, `scripts/ci/monitor.mjs`, `scripts/ci/monitor-decide.mjs`
 - Test: `scripts/ci/monitor-decide.test.mjs` (`node --test`, ejecutado también desde `ci.yml`)
 
 **Interfaces:**
+
 - Produces: `decide(probes: Probe[], summary: OpsSummary | null): Finding[]` (función pura) con `Finding = { key: string, severity: 'incident' | 'warning', title: string, detail: string }`; claves estables: `down`, `ai-errors`, `breaker-open`, `demo-budget`. `monitor.mjs` hace 3 reintentos separados 30 s a `${BACKEND_URL}/api/health` y `${APP_URL}/`, lee `/api/ops/summary` si hay `OPS_TOKEN`, y por cada `key` abre UNA incidencia con la etiqueta `incident-auto` (o comenta en la existente) y cierra las que ya no tienen hallazgo. Workflow: cron `*/15 * * * *` + `workflow_dispatch`; secretos `BACKEND_URL`, `APP_URL`, `OPS_TOKEN` (opcional); sin secretos, termina en verde con un aviso.
 
 - [ ] **Step 1: Tests (RED)** (Review Focus 5): (a) `/health` falla en 1 de 3 reintentos → sin hallazgos; falla en los 3 → hallazgo `down` severidad `incident`; (b) `errorRatio ≥ 0.5` con `calls ≥ 10` → `ai-errors`; con `calls < 10` → nada; (c) un cortacircuitos `open` → `breaker-open`; (d) `usedRatio ≥ 0.8` → `demo-budget` `warning`, `≥ 1` → `incident`; (e) sin resumen (sin token) solo evalúa `down`; (f) la reconciliación (`reconcile(findings, openIssues)`) devuelve `{ toOpen, toComment, toClose }` sin duplicar: dos ejecuciones seguidas con el mismo hallazgo → una sola apertura; hallazgo desaparecido → cierre; (g) el texto de la incidencia nunca incluye el token ni la URL con credenciales.
@@ -209,10 +228,12 @@ Condiciones que ninguna tarea prueba por sí sola y que más probablemente afect
 ### Task A4: Comprobación automática tras desplegar
 
 **Files:**
+
 - Create: `.github/workflows/post-deploy.yml`, `scripts/ci/smoke.mjs`, `scripts/ci/smoke-checks.mjs`
 - Test: `scripts/ci/smoke-checks.test.mjs`
 
 **Interfaces:**
+
 - Consumes: `/api/health` (con `commit`), `/api/demo/availability`, `/api/ops/summary` (O3).
 - Produces: `checks` puras: `commitMatches(health, sha)`, `securityHeaders(headers): string[]` (faltas de `helmet`: `x-content-type-options`, `strict-transport-security` en https, `x-frame-options`/CSP), `corsClosed(headers)` (un origen ajeno NO obtiene `access-control-allow-origin` en `/api/projects`), `ipSpoofable(pseudonymA, pseudonymB): boolean` (verdadero si dos peticiones directas al backend con `X-Forwarded-For` distintos dan seudónimos distintos). Workflow: en push a `main` y `workflow_dispatch`; espera hasta 10 min a que `health.commit == github.sha` (si el servidor no expone commit, salta la espera y lo anota), ejecuta los chequeos y abre incidencia `post-deploy-auto` si fallan los críticos (`commitMatches`, `corsClosed`, cabeceras); `ipSpoofable` verdadero abre una incidencia de severidad `warning` con la guía de `docs/demo.md` (esto automatiza la comprobación manual de `TRUST_PROXY` pendiente desde el plan 2).
 
@@ -222,11 +243,13 @@ Condiciones que ninguna tarea prueba por sí sola y que más probablemente afect
 ### Task A5: Copias de seguridad cifradas y simulacro de restauración
 
 **Files:**
+
 - Create: `.github/workflows/backup.yml`, `scripts/ci/backup.sh`, `scripts/ci/restore.sh`, `scripts/ci/backup-drill.sh`, `docs/operaciones.md`
 - Modify: `.github/workflows/ci.yml` (trabajo `backup-drill` con servicio Mongo), `docs/08_despliegue.md` (enlace)
 - Test: `scripts/ci/backup-drill.sh` (se ejecuta en CI y localmente con Mongo en 27017)
 
 **Interfaces:**
+
 - Produces: `backup.sh <uri> <recipient> <out>` → `mongodump --archive --gzip` cifrado con `age -r <recipient>`, fichero `mockia-YYYYMMDD-HHMM.archive.gz.age`, sin dejar nunca el volcado sin cifrar en disco (tubería directa) y sin imprimir la URI; `restore.sh <file.age> <identity-file> <uri>` descifra y restaura con `mongorestore --nsInclude`. Workflow `backup.yml`: cron diario 03:17 UTC; secretos `MONGODB_URI_BACKUP` (usuario de solo lectura), `BACKUP_AGE_RECIPIENT`; artefacto con retención de 14 días; si existen `BACKUP_S3_*` lo sube también a un almacenamiento compatible con S3; sin secretos termina en verde con un aviso. `docs/operaciones.md`: cómo generar la pareja de claves `age` (la privada solo en tu equipo y en un gestor de contraseñas), cómo restaurar paso a paso, qué cubre cada copia, y qué NO está cubierto (Stripe, el correo, las copias del propio Atlas).
 
 - [ ] **Step 1: Test (RED)** `backup-drill.sh`: genera una pareja `age` temporal, siembra una BD con colecciones y documentos conocidos, ejecuta `backup.sh`, comprueba que el fichero no contiene texto en claro de un documento sembrado (`grep` falla) y que sin la clave privada no se descifra, restaura con `restore.sh` en otra BD y compara el número de documentos y un hash por colección. Expected: código 0 y "drill OK".
@@ -239,25 +262,43 @@ Condiciones que ninguna tarea prueba por sí sola y que más probablemente afect
 ### Task P1: API de métricas del titular
 
 **Files:**
+
 - Create: `packages/backend/src/modules/admin/metrics.ts`, `packages/shared/src/admin.ts`
 - Modify: `modules/admin/routes.ts`, `docs/` (breve en `docs/operaciones.md`)
 - Test: `packages/backend/src/tests/admin.metrics.test.ts`
 
 **Interfaces:**
+
 - Consumes: O1 (`AiCall`), O2 (`requireAdmin`), `User`, `Project`, `Usage`, `PLAN_PRICE_USD`.
 - Produces: `GET /api/admin/metrics?days=7|30|90` (por defecto 30) → `AdminMetrics`:
+
   ```ts
   interface AdminMetrics {
-    generatedAt: string; days: number;
-    users: { total: number; verified: number; byPlan: Record<Plan, number>; newPerDay: { day: string; count: number }[] };
+    generatedAt: string;
+    days: number;
+    users: {
+      total: number;
+      verified: number;
+      byPlan: Record<Plan, number>;
+      newPerDay: { day: string; count: number }[];
+    };
     funnel: { registered: number; verified: number; withProject: number; withAiGeneration: number }; // cohorte registrada en la ventana
     billing: { paying: Record<PaidPlan, number>; mrrUsdEstimate: number }; // estimación desde el catálogo, NO es facturación
-    ai: { perDay: { day: string; calls: number; errors: number; byScope: Record<'users'|'demo'|'byok', number> }[];
-          tokens: { input: number; output: number }; errorRatio: number;
-          estimatedCostUsd: number | null /* null sin AI_PRICES_JSON */ };
+    ai: {
+      perDay: {
+        day: string;
+        calls: number;
+        errors: number;
+        byScope: Record<'users' | 'demo' | 'byok', number>;
+      }[];
+      tokens: { input: number; output: number };
+      errorRatio: number;
+      estimatedCostUsd: number | null; /* null sin AI_PRICES_JSON */
+    };
     demo: { generationsPerDay: { day: string; count: number }[] };
   }
   ```
+
   `AI_PRICES_JSON` = `{"<provider>/<model>": {"inputPerMTok": number, "outputPerMTok": number}}`; un modelo sin precio suma tokens pero no coste y se lista en `ai.unpriced: string[]`. Caché en memoria de 60 s por `days`.
 
 - [ ] **Step 1: Tests (RED)**: con datos sembrados conocidos (usuarios en 3 días, 2 planes de pago activos, 1 `past_due`, 20 `AiCall`): (a) cifras exactas de `users`, `funnel`, `billing.paying` y `mrrUsdEstimate` (el `past_due` y los cancelados no cuentan; el anual cuenta como precio/12); (b) `ai.perDay`, `tokens`, `errorRatio`; (c) coste con `AI_PRICES_JSON` definido y `null` sin él; modelo sin precio en `unpriced`; (d) la respuesta no contiene correos, ids de usuario ni IPs; (e) `days` inválido → 400; (f) no administrador → 403 (Review Focus 4); (g) segunda llamada dentro de 60 s no repite agregaciones (espía sobre `UserModel.aggregate`).
@@ -266,11 +307,13 @@ Condiciones que ninguna tarea prueba por sí sola y que más probablemente afect
 ### Task P2: Pantalla `/admin`
 
 **Files:**
+
 - Create: `packages/frontend/src/pages/Admin/{Admin.tsx,Admin.module.scss}`, `packages/frontend/src/components/admin/{LineChart,StatCard}.tsx`, `packages/frontend/src/services/adminService.ts`
 - Modify: `App.tsx`, `routes/paths.ts`, menú de usuario de la cabecera (enlace solo si `isAdmin`), locales `en/es/zh`
 - Test: `packages/frontend/cypress/e2e/admin.cy.ts`
 
 **Interfaces:**
+
 - Consumes: `GET /api/admin/me` y `GET /api/admin/metrics` (P1).
 - Produces: ruta `/admin` (protegida; un no administrador ve la página 404 existente), selector 7/30/90 días, tarjetas (usuarios, de pago, MRR estimado con la leyenda "estimación, consulta Stripe", llamadas de IA, tasa de error, coste estimado o "sin precios configurados"), gráficos de línea y barras en SVG propio (sin dependencias, con tabla accesible equivalente), embudo de activación, `<meta name="robots" content="noindex">`.
 
@@ -284,12 +327,15 @@ Condiciones que ninguna tarea prueba por sí sola y que más probablemente afect
 ### Task K1: Cifrado de secretos con llavero y rotación
 
 **Files:**
+
 - Create: `packages/backend/src/modules/byok/crypto.ts`, `packages/backend/src/scripts/byokKeys.ts` (`byok:genkey`, `byok:rotate`)
 - Modify: `config/assertProdConfig.ts`, ambos `.env.example`, `render.yaml`/`docker-compose.prod.yml` (`BYOK_ENABLED` por defecto `false`, `BYOK_KEYS` sin valor), `packages/backend/package.json` (scripts)
 - Test: `packages/backend/src/tests/byok.crypto.test.ts`
 
 **Interfaces:**
+
 - Produces:
+
   ```ts
   interface SealedSecret { v: 1; kid: string; iv: string; tag: string; ct: string } // base64
   type Keyring = { active: string; keys: ReadonlyMap<string, Buffer> }
@@ -298,6 +344,7 @@ Condiciones que ninguna tarea prueba por sí sola y que más probablemente afect
   open(sealed: SealedSecret, aad: string, ring?: Keyring): string   // lanza ByokCryptoError (mensaje fijo, sin texto en claro)
   needsRotation(sealed: SealedSecret, ring?: Keyring): boolean
   ```
+
   `byok:rotate -w @mockia/backend [--dry-run]` re-sella con la clave activa todas las credenciales cuyo `kid` no lo sea (idempotente; muestra solo recuentos).
 
 - [ ] **Step 1: Tests (RED)** (a) ida y vuelta; (b) AAD distinto → `open` falla (un texto cifrado no sirve para otro usuario, credencial o host); (c) alterar `ct`, `tag` o `iv` → falla; (d) `kid` desconocido → falla; (e) rotación: sellar con `k1`, luego llavero con `k2` activa y `k1` presente → `open` funciona y `needsRotation` es verdadero; tras re-sellar es falso; (f) 10 000 sellados del mismo texto producen IV distintos; (g) los mensajes de error y `JSON.stringify(sealed)` no contienen el texto en claro; (h) `loadKeyring` rechaza claves que no son de 32 bytes, ids fuera de `[a-z0-9_-]{1,16}` y duplicados; (i) `assertProdConfig` con `BYOK_ENABLED=true` y llavero ausente o inválido falla sin eco del valor.
@@ -306,17 +353,21 @@ Condiciones que ninguna tarea prueba por sí sola y que más probablemente afect
 ### Task K2: Cliente HTTP saliente endurecido contra SSRF
 
 **Files:**
+
 - Create: `packages/backend/src/modules/byok/safeHttp.ts`
 - Modify: `packages/backend/src/modules/ai/providers/openaiCompatible.ts` (acepta un `transport` opcional; por defecto el `fetch` global, sin cambiar el comportamiento actual)
 - Test: `packages/backend/src/tests/byok.safeHttp.test.ts`
 
 **Interfaces:**
+
 - Produces:
+
   ```ts
   isForbiddenAddress(ip: string): boolean            // loopback, privadas, link-local (169.254.0.0/16 incl. metadata), CGNAT, 0.0.0.0/8, multicast, reservadas, ULA fc00::/7, fe80::/10, ::1, v4-mapeadas de todo lo anterior
   normalizeHost(raw: string): string                 // IDNA, minúsculas, sin punto final; rechaza userinfo, puertos distintos de 443, IPs literales en decimal/octal/hex
   createSafeFetch(opts?: { timeoutMs?: number; maxBytes?: number; lookup?: LookupFn }): typeof fetch
   ```
+
   `createSafeFetch` usa `node:https` con un `lookup` propio que resuelve y **rechaza direcciones prohibidas en el momento de conectar** (anti-DNS-rebinding), solo `https:`, verificación TLS activa, **no sigue redirecciones** (3xx → error), tope de bytes de respuesta (por defecto 1 MiB) y de tiempo (30 s).
 
 - [ ] **Step 1: Tests (RED)** (Review Focus 2): tabla de ≥ 40 casos: `127.0.0.1`, `10.0.0.1`, `192.168.1.1`, `172.16.0.1`, `169.254.169.254`, `100.64.0.1`, `0.0.0.0`, `[::1]`, `[fd00::1]`, `[::ffff:127.0.0.1]`, `2130706433`, `0x7f000001`, `0177.0.0.1`, `localhost`, `localhost.`, `foo.localtest.me` resuelto por un `lookup` falso a `127.0.0.1`, host con `@`, puerto 8443, esquema `http:`/`file:`/`ftp:` → todos rechazados; un host público con `lookup` falso a `93.184.216.34` → permitido; DNS rebinding: un `lookup` falso que devuelve primero IP pública (en la validación) y luego `127.0.0.1` (al conectar) → rechazado; un servidor HTTPS local de prueba con certificado propio responde 302 hacia `http://169.254.169.254/` → error sin seguirla; respuesta mayor que `maxBytes` → corta con error; timeout → error; los mensajes de error no incluyen cabeceras de la petición.
@@ -325,11 +376,13 @@ Condiciones que ninguna tarea prueba por sí sola y que más probablemente afect
 ### Task K3: Modelo de credenciales y API de gestión
 
 **Files:**
+
 - Create: `packages/backend/src/models/AiCredential.ts`, `packages/backend/src/modules/byok/{routes,controller,service,validation,presets}.ts`, `packages/shared/src/byok.ts`
 - Modify: `index.ts` (`/api/ai-credentials` con `authenticateToken`, `requireVerifiedEmail`, el mismo requisito de cabecera anti-CSRF que el resto), `modules/users/gdpr.ts` (exportar solo metadatos), `modules/projects/cascade.ts` o el borrado de cuenta (borrar credenciales), plantilla de correo `ai_key_added` en `services/mailer.ts` (es/en/zh), `shared` (códigos de error)
 - Test: `packages/backend/src/tests/byok.credentials.test.ts`
 
 **Interfaces:**
+
 - Consumes: K1 (`seal/open`), K2 (`createSafeFetch`), `Notification`.
 - Produces:
   - `AiCredential { userId, label (≤ 40), preset: 'openai'|'openrouter'|'groq'|'mistral'|'together'|'custom', baseUrl, model, sealed: SealedSecret, last4: string, createdAt, lastUsedAt?, lastError?: 'rejected' | 'unreachable' }`, índice único `(userId, label)`, máximo 5 por usuario.
@@ -343,11 +396,13 @@ Condiciones que ninguna tarea prueba por sí sola y que más probablemente afect
 ### Task K4: Generar con la IA del usuario
 
 **Files:**
+
 - Create: `packages/backend/src/modules/byok/provider.ts`
 - Modify: `modules/ai/` (controlador de `generate-mock-api-spec` y `generate-and-save`, validación Joi: `credentialId?: ObjectId`), `modules/billing/aiQuota.ts` o `usage.ts` (contador mensual `byokGenerations` con reserva atómica y devolución al fallar sin respuesta), `modules/ai/generationStore.ts` (no guardar para el dataset), `modules/metrics/aiCalls.ts` (`scope:'byok'`), `modules/ai/redact.ts` (reutilizar), códigos de error en `shared`
 - Test: `packages/backend/src/tests/byok.generate.test.ts`
 
 **Interfaces:**
+
 - Consumes: K1, K2, K3, O1.
 - Produces: `createByokProvider(cred: AiCredentialDoc, apiKey: string): LlmProvider` (OpenAI-compatible con `createSafeFetch`; prueba `json_schema` y, si el proveedor rechaza `response_format` con 400, reintenta una vez con `json_object`; la salida pasa el mismo `validate` + una reparación que en la IA de la plataforma). En el controlador: con `credentialId` → carga la credencial **del usuario autenticado** (si no es suya o no existe, 404 `AI_CREDENTIAL_NOT_FOUND` sin distinguir), la abre en memoria, **no reserva cuota de la plataforma**, reserva su propio contador `BYOK_MAX_MONTHLY_GENERATIONS`, NO usa la cadena de la plataforma ni hace respaldo si falla, mapea 401/403 del proveedor a `AI_PROVIDER_REJECTED` (y marca `lastError:'rejected'`), 402/429 a mensajes propios, y registra `AiCall{scope:'byok'}` (con `provider` = preset, nunca la URL de una custom).
 
@@ -357,11 +412,13 @@ Condiciones que ninguna tarea prueba por sí sola y que más probablemente afect
 ### Task K5: Pantalla de ajustes de IA y selector al generar
 
 **Files:**
+
 - Create: `packages/frontend/src/pages/AiSettings/{AiSettings.tsx,AiSettings.module.scss}`, `packages/frontend/src/services/aiCredentialsService.ts`
 - Modify: `App.tsx`, `routes/paths.ts` (`/settings/ai`), menú de usuario, `MockEditor.tsx` (modal de IA) y `CreateProjectModal.tsx` (selector), locales `en/es/zh`
 - Test: `packages/frontend/cypress/e2e/byok.cy.ts`
 
 **Interfaces:**
+
 - Consumes: K3 y K4.
 - Produces: página con la lista de credenciales (etiqueta, proveedor, modelo, `…last4`, estado), formulario de alta (selector de proveedor; campo de URL solo si `allowCustom`; clave en `<input type="password" autocomplete="off">`; avisos: la clave no se vuelve a mostrar, el coste lo cobra tu proveedor, tu código del proyecto se envía a tu proveedor), borrado con confirmación; en los diálogos de IA, selector "IA de Mockia (cuota)" / "Mi IA: etiqueta" cuyo estado vive solo en memoria de React (sin `localStorage`).
 
@@ -371,11 +428,13 @@ Condiciones que ninguna tarea prueba por sí sola y que más probablemente afect
 ### Task K6: Textos legales, documentación y pruebas adversarias de extremo a extremo
 
 **Files:**
+
 - Create: `docs/ia-propia-usuario.md`, `packages/backend/src/tests/byok.abuse.test.ts`
 - Modify: `packages/frontend/src/pages/Legal/legalContent/{es,en,zh}.ts` (Privacidad y Términos), `packages/frontend/cypress/e2e/legal.cy.ts`, `docs/operaciones.md`
 - Test: `byok.abuse.test.ts`, `legal.cy.ts`
 
 **Interfaces:**
+
 - Consumes: K1-K5.
 - Produces: Privacidad — qué se guarda (clave cifrada, etiqueta, últimos 4 caracteres, modelo, URL del proveedor), para qué (llamar a tu proveedor a tu petición), base legal (ejecución del servicio), que el contenido de tu proyecto que envías al generar va a TU proveedor (la relación con él es tuya y puede implicar transferencias internacionales), borrado inmediato al eliminar la credencial o la cuenta, y que esos datos no se usan para entrenar. Términos — el uso y el coste de tu proveedor son tuyos, no uses claves ajenas, puedes revocar la clave en tu proveedor en cualquier momento, y el titular puede desactivar la función. `docs/ia-propia-usuario.md` — modelo de amenazas (qué protege el cifrado y qué no: un servidor comprometido con acceso al llavero y a la base ve las claves), gestión del llavero (generar, guardar fuera del repo, rotar, qué hacer si se filtra: rotar y pedir a los usuarios que revoquen), cómo apagar la función.
 

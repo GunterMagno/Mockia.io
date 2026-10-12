@@ -63,7 +63,9 @@ const reply =
     res.end(
       JSON.stringify({
         model: 'served-model',
-        choices: [{ index: 0, message: { role: 'assistant', content }, finish_reason: finishReason }],
+        choices: [
+          { index: 0, message: { role: 'assistant', content }, finish_reason: finishReason },
+        ],
       })
     );
   };
@@ -94,7 +96,11 @@ const MESSAGES = [
   { role: 'system' as const, content: 'SECRET-SYSTEM-PROMPT' },
   { role: 'user' as const, content: 'SECRET-REPO-CONTENT' },
 ];
-const req = (extra: Partial<LlmRequest> = {}): LlmRequest => ({ messages: MESSAGES, validate, ...extra });
+const req = (extra: Partial<LlmRequest> = {}): LlmRequest => ({
+  messages: MESSAGES,
+  validate,
+  ...extra,
+});
 
 describe('AI chain: output validation, one repair retry and fallback', () => {
   const savedEnv = { ...process.env };
@@ -122,7 +128,9 @@ describe('AI chain: output validation, one repair retry and fallback', () => {
     openRouterConfig.model = 'or-model';
     retryConfig.maxRetries = 1;
     resetLlm();
-    logs = (['warn', 'log', 'error', 'info'] as const).map((m) => jest.spyOn(console, m).mockImplementation(() => undefined));
+    logs = (['warn', 'log', 'error', 'info'] as const).map((m) =>
+      jest.spyOn(console, m).mockImplementation(() => undefined)
+    );
   });
 
   afterEach(async () => {
@@ -185,7 +193,8 @@ describe('AI chain: output validation, one repair retry and fallback', () => {
 
   it('repeated junk opens the local breaker (junk is no longer counted as a success)', async () => {
     local.setHandler(reply(JUNK));
-    for (let i = 0; i < 3; i++) expect((await getLlm().complete(req())).provider).toBe('openrouter');
+    for (let i = 0; i < 3; i++)
+      expect((await getLlm().complete(req())).provider).toBe('openrouter');
     const before = local.seen.length;
     expect((await getLlm().complete(req())).provider).toBe('openrouter');
     expect(local.seen.length).toBe(before); // circuit open: local not called
@@ -196,7 +205,12 @@ describe('AI chain: output validation, one repair retry and fallback', () => {
     remote.setHandler(sequence(JUNK, VALID));
     await getLlm().complete(req());
     const log = allLogs();
-    for (const secret of ['SECRET-JUNK', 'SECRET-SYSTEM-PROMPT', 'SECRET-REPO-CONTENT', 'sk-or-test-key']) {
+    for (const secret of [
+      'SECRET-JUNK',
+      'SECRET-SYSTEM-PROMPT',
+      'SECRET-REPO-CONTENT',
+      'sk-or-test-key',
+    ]) {
       expect(log).not.toContain(secret);
     }
     expect(log).toContain('invalid_output');
@@ -223,11 +237,15 @@ describe('AI chain: output validation, one repair retry and fallback', () => {
   });
 
   // C2: a request-dependent rejection says nothing about the model server's health
-  it.each([400, 413, 422])('an input-dependent HTTP %i still falls back but does not count toward the breaker', async (code) => {
-    local.setHandler(status(code));
-    for (let i = 0; i < 4; i++) expect((await getLlm().complete({ messages: MESSAGES })).provider).toBe('openrouter');
-    expect(local.seen).toHaveLength(4); // never skipped
-  });
+  it.each([400, 413, 422])(
+    'an input-dependent HTTP %i still falls back but does not count toward the breaker',
+    async (code) => {
+      local.setHandler(status(code));
+      for (let i = 0; i < 4; i++)
+        expect((await getLlm().complete({ messages: MESSAGES })).provider).toBe('openrouter');
+      expect(local.seen).toHaveLength(4); // never skipped
+    }
+  );
 
   it('a 500 from local still counts (control): the 4th request skips it', async () => {
     local.setHandler(status(500));

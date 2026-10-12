@@ -1,10 +1,11 @@
-import type { Messages } from './en'
+import type { Messages } from './en';
 
 /** 简体中文 (zh-CN) */
 const zh: Messages = {
   meta: {
     title: 'Mockia · 基于 GitHub 仓库的 AI 模拟 API',
-    description: 'Mockia 借助 AI，从你的 GitHub 仓库生成可用于生产环境的模拟 API。真实感数据、可模拟延迟与状态码。',
+    description:
+      'Mockia 借助 AI，从你的 GitHub 仓库生成可用于生产环境的模拟 API。真实感数据、可模拟延迟与状态码。',
   },
 
   language: {
@@ -62,7 +63,8 @@ const zh: Messages = {
   landing: {
     hero: {
       title: '不必再等<em>后端。</em>',
-      description: 'Mockia 利用 AI，从你的 GitHub 仓库即时生成可用于生产环境的模拟 API。同步你的数据结构，几秒钟即可开始编码。',
+      description:
+        'Mockia 利用 AI，从你的 GitHub 仓库即时生成可用于生产环境的模拟 API。同步你的数据结构，几秒钟即可开始编码。',
       ctaStart: '免费开始',
       ctaDashboard: '进入控制台',
       ctaDemo: '无需注册试用',
@@ -226,7 +228,8 @@ const zh: Messages = {
 
   demo: {
     title: '无需注册，立即试用 Mockia',
-    subtitle: '选择一个模板，或粘贴你的 README 或类型定义。我们用 AI 生成一个临时的模拟 API，你可以立刻调用。无需账号。',
+    subtitle:
+      '选择一个模板，或粘贴你的 README 或类型定义。我们用 AI 生成一个临时的模拟 API，你可以立刻调用。无需账号。',
     badge: '演示',
     status: '演示状态',
     attemptsLeft: '今天剩余次数：{count}',
@@ -259,10 +262,15 @@ const zh: Messages = {
       sending: '正在用 AI 生成你的 API，最多可能需要一分钟…',
     },
     powTimeout: '完成验证耗时超过一分钟，已停止。没有消耗次数，请重试。',
-    powUnsupported: '你的浏览器无法在此运行验证。它需要安全连接（https）和较新的浏览器。请换一个浏览器，或免费创建账号。',
-    powFailed: '验证未能在你的浏览器中完成。没有发送任何内容，也没有消耗次数。请重试，或换一个浏览器。',
+    powUnsupported:
+      '你的浏览器无法在此运行验证。它需要安全连接（https）和较新的浏览器。请换一个浏览器，或免费创建账号。',
+    powFailed:
+      '验证未能在你的浏览器中完成。没有发送任何内容，也没有消耗次数。请重试，或换一个浏览器。',
     announce: {
-      ready: { one: '你的模拟 API 已就绪：{count} 个端点，{minutes} 分钟后过期。', other: '你的模拟 API 已就绪：{count} 个端点，{minutes} 分钟后过期。' },
+      ready: {
+        one: '你的模拟 API 已就绪：{count} 个端点，{minutes} 分钟后过期。',
+        other: '你的模拟 API 已就绪：{count} 个端点，{minutes} 分钟后过期。',
+      },
       response: '已收到响应：状态 {status}。',
     },
     result: {
@@ -293,10 +301,12 @@ const zh: Messages = {
     },
     claim: {
       saving: '正在将你的演示保存为项目…',
-      waiting: '你的演示正在等你。请验证你的邮箱地址，我们会把它保存为项目。演示只会保留几分钟，请尽快完成。',
+      waiting:
+        '你的演示正在等你。请验证你的邮箱地址，我们会把它保存为项目。演示只会保留几分钟，请尽快完成。',
       done: '你的演示现在已是你账号中的一个项目：{title}。',
       open: '打开项目',
-      planLimit: '无法保存你的演示，因为你的 {plan} 套餐最多允许 {limit} 个活跃项目。请归档一个项目或升级套餐，然后在演示有效期内重试。',
+      planLimit:
+        '无法保存你的演示，因为你的 {plan} 套餐最多允许 {limit} 个活跃项目。请归档一个项目或升级套餐，然后在演示有效期内重试。',
       plans: '查看套餐',
       retry: '重试',
       gone: '该演示已过期或已被保存，没有可保留的内容了。你可以重新生成一个。',
@@ -306,12 +316,14 @@ const zh: Messages = {
     },
     errors: {
       unavailableTitle: '演示目前不可用',
-      unavailable: '它可能已关闭、正忙，或今天的额度已用完。请稍后再试，或免费创建账号，不受演示限制地生成模拟 API。',
+      unavailable:
+        '它可能已关闭、正忙，或今天的额度已用完。请稍后再试，或免费创建账号，不受演示限制地生成模拟 API。',
       limit: '你今天的次数已用完。请在 {time} 左右再来，或免费创建账号继续使用。',
       rateLimit: '请求过多。请等待一分钟后重试。',
       badOutput: 'AI 返回了无法使用的内容。这次尝试已计入今天的次数。请重试，或选择一个模板。',
       timeout: 'AI 响应超时。这次尝试已计入今天的次数。请稍后再试。',
-      providerDown: 'AI 服务目前没有响应。这次尝试可能已计入今天的次数（请看上方的计数）。请稍后再试。',
+      providerDown:
+        'AI 服务目前没有响应。这次尝试可能已计入今天的次数（请看上方的计数）。请稍后再试。',
       network: '无法连接到服务器。请检查网络后重试。',
       other: '出了点问题，请重试。',
     },
@@ -451,19 +463,33 @@ const zh: Messages = {
     aiPromptPlaceholder: '描述你需要的接口（例如：包含登录、注册和个人资料接口的用户管理 API…）',
     aiDefaultBasic: '为该项目创建一个包含常用接口的基础 API。',
     aiDefaultGithub: '提取所有相关的 API 接口、类型定义和控制器，创建完整的模拟 API。',
-    aiDefaultEmpty: '为一个简单资源（例如任务、用户或商品）创建包含 GET、POST、PUT、DELETE 接口的完整 REST API。',
+    aiDefaultEmpty:
+      '为一个简单资源（例如任务、用户或商品）创建包含 GET、POST、PUT、DELETE 接口的完整 REST API。',
     creating: '正在创建…',
     create: '创建项目',
     importedTitle: '导入的项目',
     importedFrom: '导入自 {url}',
     finishing: '即将完成…',
-    progressGithub: ['正在分析仓库…', '正在克隆源代码…', '正在提取接口和类型…', 'Mockia AI 正在生成你的接口…', '正在准备工作区…'],
-    progressEmpty: ['正在创建项目结构…', '正在初始化 API…', 'Mockia AI 正在生成你的接口…', '马上就好…', '正在完善细节…'],
+    progressGithub: [
+      '正在分析仓库…',
+      '正在克隆源代码…',
+      '正在提取接口和类型…',
+      'Mockia AI 正在生成你的接口…',
+      '正在准备工作区…',
+    ],
+    progressEmpty: [
+      '正在创建项目结构…',
+      '正在初始化 API…',
+      'Mockia AI 正在生成你的接口…',
+      '马上就好…',
+      '正在完善细节…',
+    ],
     successTitle: '项目已就绪！',
     successText: '你的模拟 API 已成功创建。',
     mockBaseUrl: '模拟 API 基础地址',
     important: '重要：',
-    publicNote: '你的 Mock 是公开的：任何拥有该 URL 的人都可以调用。如需要求 API 密钥，请打开<strong>项目设置 → API 访问</strong>。',
+    publicNote:
+      '你的 Mock 是公开的：任何拥有该 URL 的人都可以调用。如需要求 API 密钥，请打开<strong>项目设置 → API 访问</strong>。',
     goToEditor: '进入编辑器 →',
   },
 
@@ -643,7 +669,8 @@ const zh: Messages = {
       deleting: '正在删除…',
       wrongPassword: '密码不正确，未删除任何内容。',
       subscriptionFailed: '无法取消你的订阅，因此未删除任何内容。请几分钟后重试。',
-      subscriptionUnavailable: '你的账户有有效订阅，但此服务器未启用支付功能，无法取消订阅。未删除任何内容，请联系支持。',
+      subscriptionUnavailable:
+        '你的账户有有效订阅，但此服务器未启用支付功能，无法取消订阅。未删除任何内容，请联系支持。',
       deletedNotice: '你的账户及数据已删除。',
       dismissNotice: '关闭提示',
       aiConsent: {
@@ -693,6 +720,6 @@ const zh: Messages = {
     text: '你要访问的接口已消失在数字虚空中。它可能已被移动、删除，或者从未存在过。',
     home: '返回首页',
   },
-}
+};
 
-export default zh
+export default zh;

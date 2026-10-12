@@ -1,4 +1,4 @@
-import type { RequiredLegalField } from '@mockia/shared'
+import type { RequiredLegalField } from '@mockia/shared';
 
 /**
  * Forma de los textos legales. Cada idioma (es, en, zh) exporta un `LegalContent`; `LegalDocument` los pinta todos igual.
@@ -8,33 +8,33 @@ import type { RequiredLegalField } from '@mockia/shared'
  *    Si faltan se ve un marcador visible. Un parrafo o elemento de lista que use `{entity.registry}` se omite si no hay registro.
  *  - `**negrita**` y `[texto](destino)`; el destino puede ser una ruta interna (/terms), https://... o mailto:...
  */
-export type LegalDocKey = 'legal' | 'privacy' | 'terms' | 'cookies'
+export type LegalDocKey = 'legal' | 'privacy' | 'terms' | 'cookies';
 
 export type LegalBlock =
   | { p: string }
   | { ul: string[] }
-  | { table: { head: string[]; rows: string[][] } }
+  | { table: { head: string[]; rows: string[][] } };
 
 export interface LegalSection {
   /** Ancla opcional (/privacy#ai-training): la app enlaza a ella desde el perfil. */
-  id?: string
-  heading: string
-  blocks: LegalBlock[]
+  id?: string;
+  heading: string;
+  blocks: LegalBlock[];
 }
 
 export interface LegalDocContent {
-  title: string
-  sections: LegalSection[]
+  title: string;
+  sections: LegalSection[];
 }
 
 export interface LegalContent {
   /** Etiqueta antes de la fecha: "Ultima actualizacion". */
-  updatedLabel: string
+  updatedLabel: string;
   /** Aviso de borrador pendiente de revision juridica. */
-  draftNotice: string
+  draftNotice: string;
   /** Marcadores que se muestran cuando falta un dato del titular. */
-  placeholders: Record<RequiredLegalField, string>
+  placeholders: Record<RequiredLegalField, string>;
   /** Titulo de la lista de enlaces a los otros documentos. */
-  otherDocuments: string
-  docs: Record<LegalDocKey, LegalDocContent>
+  otherDocuments: string;
+  docs: Record<LegalDocKey, LegalDocContent>;
 }

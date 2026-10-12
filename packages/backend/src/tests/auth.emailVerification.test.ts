@@ -21,10 +21,18 @@ async function createUser(email: string, verified = false) {
     emailVerifiedAt: verified ? new Date() : null,
   });
   const login = await request(app).post('/api/auth/login').send({ email, password: PASSWORD });
-  return { id: user._id.toString(), auth: { Authorization: `Bearer ${login.body.data.tokens.accessToken as string}` } };
+  return {
+    id: user._id.toString(),
+    auth: { Authorization: `Bearer ${login.body.data.tokens.accessToken as string}` },
+  };
 }
 
-const linkToken = (to: string) => new URL(getTestOutbox().filter((m) => m.to === to).pop()!.link).searchParams.get('token')!;
+const linkToken = (to: string) =>
+  new URL(
+    getTestOutbox()
+      .filter((m) => m.to === to)
+      .pop()!.link
+  ).searchParams.get('token')!;
 
 describe('Email verification', () => {
   const savedEnv = { ...process.env };
@@ -102,7 +110,10 @@ describe('Email verification', () => {
     it('an expired verification token fails', async () => {
       const { id } = await createUser('v2@example.com');
       const token = await createAuthToken(id, 'verify', 60 * 24);
-      await AuthTokenModel.updateOne({ userId: id }, { $set: { expiresAt: new Date(Date.now() - 1000) } });
+      await AuthTokenModel.updateOne(
+        { userId: id },
+        { $set: { expiresAt: new Date(Date.now() - 1000) } }
+      );
       expect((await request(app).post('/api/auth/verify').send({ token })).status).toBe(400);
       expect((await UserModel.findById(id))!.emailVerifiedAt).toBeFalsy();
     });
@@ -121,10 +132,14 @@ describe('Email verification', () => {
       const { id, auth } = await createUser('v4@example.com');
       const before = await request(app).get('/api/auth/me').set(auth);
       expect(before.body.user.emailVerifiedAt ?? null).toBeNull();
-      await request(app).post('/api/auth/verify').send({ token: await createAuthToken(id, 'verify', 60) });
+      await request(app)
+        .post('/api/auth/verify')
+        .send({ token: await createAuthToken(id, 'verify', 60) });
       const after = await request(app).get('/api/auth/me').set(auth);
       expect(typeof after.body.user.emailVerifiedAt).toBe('string');
-      const login = await request(app).post('/api/auth/login').send({ email: 'v4@example.com', password: PASSWORD });
+      const login = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'v4@example.com', password: PASSWORD });
       expect(typeof login.body.data.user.emailVerifiedAt).toBe('string');
     });
   });
@@ -136,12 +151,21 @@ describe('Email verification', () => {
 
     it('sends a new verification email to an unverified user', async () => {
       const { auth } = await createUser('r1@example.com');
-      const res = await request(app).post('/api/auth/verify/resend').set(auth).send({ locale: 'zh' });
+      const res = await request(app)
+        .post('/api/auth/verify/resend')
+        .set(auth)
+        .send({ locale: 'zh' });
       expect(res.status).toBe(202);
       expect(getTestOutbox()).toHaveLength(1);
-      expect(getTestOutbox()[0]).toMatchObject({ to: 'r1@example.com', template: 'verify', locale: 'zh' });
+      expect(getTestOutbox()[0]).toMatchObject({
+        to: 'r1@example.com',
+        template: 'verify',
+        locale: 'zh',
+      });
       // the link works
-      const verify = await request(app).post('/api/auth/verify').send({ token: linkToken('r1@example.com') });
+      const verify = await request(app)
+        .post('/api/auth/verify')
+        .send({ token: linkToken('r1@example.com') });
       expect(verify.status).toBe(200);
     });
 
@@ -157,7 +181,9 @@ describe('Email verification', () => {
       const { auth } = await createUser('r3@example.com');
       const statuses: number[] = [];
       for (let i = 0; i < 7; i++) {
-        statuses.push((await request(app).post('/api/auth/verify/resend').set(auth).send({})).status);
+        statuses.push(
+          (await request(app).post('/api/auth/verify/resend').set(auth).send({})).status
+        );
       }
       expect(statuses.slice(0, 5)).toEqual([202, 202, 202, 202, 202]);
       expect(statuses.slice(5)).toEqual([429, 429]);
@@ -173,11 +199,22 @@ describe('Email verification', () => {
     });
 
     it('the variable overrides the default in both directions', () => {
-      expect(isEmailVerificationRequired({ NODE_ENV: 'production', REQUIRE_EMAIL_VERIFICATION: 'false' })).toBe(false);
-      expect(isEmailVerificationRequired({ NODE_ENV: 'development', REQUIRE_EMAIL_VERIFICATION: 'true' })).toBe(true);
-      expect(isEmailVerificationRequired({ NODE_ENV: 'development', REQUIRE_EMAIL_VERIFICATION: ' TRUE ' })).toBe(true);
+      expect(
+        isEmailVerificationRequired({ NODE_ENV: 'production', REQUIRE_EMAIL_VERIFICATION: 'false' })
+      ).toBe(false);
+      expect(
+        isEmailVerificationRequired({ NODE_ENV: 'development', REQUIRE_EMAIL_VERIFICATION: 'true' })
+      ).toBe(true);
+      expect(
+        isEmailVerificationRequired({
+          NODE_ENV: 'development',
+          REQUIRE_EMAIL_VERIFICATION: ' TRUE ',
+        })
+      ).toBe(true);
       // anything that is not an explicit true/false falls back to the default
-      expect(isEmailVerificationRequired({ NODE_ENV: 'production', REQUIRE_EMAIL_VERIFICATION: 'maybe' })).toBe(true);
+      expect(
+        isEmailVerificationRequired({ NODE_ENV: 'production', REQUIRE_EMAIL_VERIFICATION: 'maybe' })
+      ).toBe(true);
     });
 
     const gated: Array<[string, string]> = [
@@ -186,14 +223,17 @@ describe('Email verification', () => {
       ['post', '/api/billing/checkout'],
     ];
 
-    it.each(gated)('enforced: an unverified user gets 403 EMAIL_NOT_VERIFIED on %s %s', async (method, path) => {
-      process.env.REQUIRE_EMAIL_VERIFICATION = 'true';
-      const { auth } = await createUser('gate1@example.com');
-      const res = await (request(app) as any)[method](path).set(auth).send({ plan: 'pro' });
-      expect(res.status).toBe(403);
-      expect(res.body.error.code).toBe('EMAIL_NOT_VERIFIED');
-      expect(res.body.error.message).toMatch(/verif/i);
-    });
+    it.each(gated)(
+      'enforced: an unverified user gets 403 EMAIL_NOT_VERIFIED on %s %s',
+      async (method, path) => {
+        process.env.REQUIRE_EMAIL_VERIFICATION = 'true';
+        const { auth } = await createUser('gate1@example.com');
+        const res = await (request(app) as any)[method](path).set(auth).send({ plan: 'pro' });
+        expect(res.status).toBe(403);
+        expect(res.body.error.code).toBe('EMAIL_NOT_VERIFIED');
+        expect(res.body.error.message).toMatch(/verif/i);
+      }
+    );
 
     it.each(gated)('enforced: a verified user is let through on %s %s', async (method, path) => {
       process.env.REQUIRE_EMAIL_VERIFICATION = 'true';
@@ -212,8 +252,12 @@ describe('Email verification', () => {
     it('verifying the email lifts the block', async () => {
       process.env.REQUIRE_EMAIL_VERIFICATION = 'true';
       const { id, auth } = await createUser('gate4@example.com');
-      expect((await request(app).post('/api/billing/checkout').set(auth).send({ plan: 'pro' })).status).toBe(403);
-      await request(app).post('/api/auth/verify').send({ token: await createAuthToken(id, 'verify', 60) });
+      expect(
+        (await request(app).post('/api/billing/checkout').set(auth).send({ plan: 'pro' })).status
+      ).toBe(403);
+      await request(app)
+        .post('/api/auth/verify')
+        .send({ token: await createAuthToken(id, 'verify', 60) });
       const res = await request(app).post('/api/billing/checkout').set(auth).send({ plan: 'pro' });
       expect(res.body?.error?.code).not.toBe('EMAIL_NOT_VERIFIED');
     });
@@ -240,8 +284,17 @@ describe('Email verification', () => {
     it('marks every unverified user as verified and leaves the existing dates alone', async () => {
       const when = new Date('2025-01-01T00:00:00Z');
       await UserModel.create({ email: 'b1@example.com', username: 'b1', passwordHash: 'x' });
-      await UserModel.create({ email: 'b2@example.com', username: 'b2', passwordHash: 'x', emailVerifiedAt: when });
-      await UserModel.collection.insertOne({ email: 'b3@example.com', username: 'b3', passwordHash: 'x' }); // legacy: no field at all
+      await UserModel.create({
+        email: 'b2@example.com',
+        username: 'b2',
+        passwordHash: 'x',
+        emailVerifiedAt: when,
+      });
+      await UserModel.collection.insertOne({
+        email: 'b3@example.com',
+        username: 'b3',
+        passwordHash: 'x',
+      }); // legacy: no field at all
 
       const modified = await backfillEmailVerified();
       expect(modified).toBe(2);
@@ -254,7 +307,9 @@ describe('Email verification', () => {
 
   describe('test outbox endpoint', () => {
     it('GET /api/__test__/outbox lists the captured emails and DELETE clears them (never mounted in production)', async () => {
-      await request(app).post('/api/auth/register').send({ email: 'o@example.com', password: PASSWORD, username: 'outbox' });
+      await request(app)
+        .post('/api/auth/register')
+        .send({ email: 'o@example.com', password: PASSWORD, username: 'outbox' });
       const list = await request(app).get('/api/__test__/outbox');
       expect(list.status).toBe(200);
       expect(list.body.data).toHaveLength(1);

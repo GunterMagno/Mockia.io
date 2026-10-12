@@ -71,7 +71,9 @@ describe('Password policy and bcrypt cost', () => {
         username: 'changeuser',
         passwordHash: await bcrypt.hash('current-password-1', 12),
       });
-      const login = await request(app).post('/api/auth/login').send({ email: 'change@example.com', password: 'current-password-1' });
+      const login = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'change@example.com', password: 'current-password-1' });
       const auth = { Authorization: `Bearer ${login.body.data.tokens.accessToken}` };
 
       const short = await request(app)
@@ -92,8 +94,14 @@ describe('Password policy and bcrypt cost', () => {
 
   describe('login', () => {
     it('does NOT enforce the length policy: an existing 6-character password still logs in', async () => {
-      await UserModel.create({ email: 'old@example.com', username: 'olduser', passwordHash: await bcrypt.hash('abc123', 12) });
-      const res = await request(app).post('/api/auth/login').send({ email: 'old@example.com', password: 'abc123' });
+      await UserModel.create({
+        email: 'old@example.com',
+        username: 'olduser',
+        passwordHash: await bcrypt.hash('abc123', 12),
+      });
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'old@example.com', password: 'abc123' });
       expect(res.status).toBe(200);
     });
 
@@ -105,7 +113,9 @@ describe('Password policy and bcrypt cost', () => {
       });
       expect(bcryptCostOf(user.passwordHash)).toBe(10);
 
-      const res = await request(app).post('/api/auth/login').send({ email: 'rehash@example.com', password: 'legacy-password-1' });
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'rehash@example.com', password: 'legacy-password-1' });
       expect(res.status).toBe(200);
 
       const after = await UserModel.findById(user._id);
@@ -113,7 +123,9 @@ describe('Password policy and bcrypt cost', () => {
       expect(await bcrypt.compare('legacy-password-1', after!.passwordHash)).toBe(true);
 
       // and the next login keeps working (and keeps the same cost-12 hash)
-      const again = await request(app).post('/api/auth/login').send({ email: 'rehash@example.com', password: 'legacy-password-1' });
+      const again = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'rehash@example.com', password: 'legacy-password-1' });
       expect(again.status).toBe(200);
       expect((await UserModel.findById(user._id))!.passwordHash).toBe(after!.passwordHash);
     });
@@ -124,7 +136,9 @@ describe('Password policy and bcrypt cost', () => {
         username: 'nohashuser',
         passwordHash: await bcrypt.hash('legacy-password-1', 10),
       });
-      const res = await request(app).post('/api/auth/login').send({ email: 'nohash@example.com', password: 'wrong-password-1' });
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'nohash@example.com', password: 'wrong-password-1' });
       expect(res.status).toBe(401);
       expect((await UserModel.findById(user._id))!.passwordHash).toBe(user.passwordHash);
     });
@@ -135,7 +149,9 @@ describe('Password policy and bcrypt cost', () => {
         username: 'freshuser',
         passwordHash: await bcrypt.hash('fresh-password-1', 12),
       });
-      await request(app).post('/api/auth/login').send({ email: 'fresh@example.com', password: 'fresh-password-1' });
+      await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'fresh@example.com', password: 'fresh-password-1' });
       expect((await UserModel.findById(user._id))!.passwordHash).toBe(user.passwordHash);
     });
 

@@ -1,9 +1,7 @@
 {
   "id": "undocumented-empty-repo",
   "description": "No repository context at all: the user spells out the single endpoint they want.",
-  "tags": [
-    "undocumented"
-  ],
+  "tags": ["undocumented"],
   "input": {
     "projectTitle": "Pet Adoption",
     "projectDescription": "Shelter website",
@@ -27,9 +25,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "status"
-        ]
+        "required": ["status"]
       },
       "examples": [
         {

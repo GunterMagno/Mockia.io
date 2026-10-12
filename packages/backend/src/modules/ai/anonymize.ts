@@ -24,7 +24,8 @@ export const REDACTED_DESCRIPTION = '[REDACTED_DESCRIPTION]';
 const REPO_BLOCK = /^## Repository: .*\nURL: .*\nOwner: .*(?:\nBranch: .*)?/gm;
 
 // No repository: `## Project: <title>\nDescription: <description, may span lines>\nNo GitHub context available yet.`
-const PROJECT_BLOCK = /^## Project: .*\nDescription: [\s\S]*?\n(No GitHub context available yet\.)/gm;
+const PROJECT_BLOCK =
+  /^## Project: .*\nDescription: [\s\S]*?\n(No GitHub context available yet\.)/gm;
 
 // The task part without repository: `Project Name ("<title>") and Description ("<description>"), generate a beautiful`.
 // Matched with indexOf, not a regex: two lazy [\s\S]*? groups were superlinear on crafted input (32 s on 100 KB), and
@@ -65,7 +66,11 @@ export function anonymizePromptIdentifiers(text: string): string {
       `## Repository: ${REDACTED_REPO}\nURL: ${REDACTED_REPO}\nOwner: ${REDACTED_OWNER}` +
       (/\nBranch: /.test(block) ? `\nBranch: ${REDACTED_BRANCH}` : '')
   );
-  out = out.replace(PROJECT_BLOCK, (_m, tail: string) => `## Project: ${REDACTED_PROJECT}\nDescription: ${REDACTED_DESCRIPTION}\n${tail}`);
+  out = out.replace(
+    PROJECT_BLOCK,
+    (_m, tail: string) =>
+      `## Project: ${REDACTED_PROJECT}\nDescription: ${REDACTED_DESCRIPTION}\n${tail}`
+  );
   out = replaceProjectSentences(out);
   out = out.replace(REPO_URL, REDACTED_REPO);
   return out;

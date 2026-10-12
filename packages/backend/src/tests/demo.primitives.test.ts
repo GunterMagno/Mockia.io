@@ -3,8 +3,19 @@ import { connectDB, disconnectDB } from '../config/connection.js';
 import { assertProdConfig } from '../config/assertProdConfig.js';
 import { getDemoConfig } from '../modules/demo/config.js';
 import { pseudonymizeIp, pseudonymizeNet } from '../modules/demo/ipHash.js';
-import { checkProof, isChallengeSpent, issueChallenge, spendChallenge, verifyProof } from '../modules/demo/pow.js';
-import { tryConsumeDemoBudget, acquireGenerationSlot, refundDemoBudget, peekDemoBudget } from '../modules/demo/budget.js';
+import {
+  checkProof,
+  isChallengeSpent,
+  issueChallenge,
+  spendChallenge,
+  verifyProof,
+} from '../modules/demo/pow.js';
+import {
+  tryConsumeDemoBudget,
+  acquireGenerationSlot,
+  refundDemoBudget,
+  peekDemoBudget,
+} from '../modules/demo/budget.js';
 import { DemoBudgetModel } from '../models/DemoBudget.js';
 import { DemoSpentChallengeModel } from '../models/DemoSpentChallenge.js';
 
@@ -66,7 +77,8 @@ const zerosOf = (challenge: string, nonce: string): number => {
   }
   return zeros;
 };
-const bitsOf = (challenge: string): number => JSON.parse(Buffer.from(challenge.split('.')[0], 'base64url').toString('utf8')).bits as number;
+const bitsOf = (challenge: string): number =>
+  JSON.parse(Buffer.from(challenge.split('.')[0], 'base64url').toString('utf8')).bits as number;
 
 /** Brute-force a nonce for a challenge (tiny `bits` so the test is instant). */
 const solve = (challenge: string): string => {
@@ -107,8 +119,21 @@ describe('getDemoConfig', () => {
       DEMO_POW_BITS: '20',
       DEMO_MOCK_TTL_MINUTES: '10',
     });
-    expect(cfg).toMatchObject({ enabled: true, dailyGenerations: 40, perIpGenerationsPerDay: 1, perNetGenerationsPerDay: 7, maxConcurrent: 2, powBits: 20, mockTtlMinutes: 10 });
-    const bad = getDemoConfig({ DEMO_ENABLED: 'maybe', DEMO_DAILY_GENERATIONS: 'abc', DEMO_POW_BITS: '-3', DEMO_MAX_CONCURRENT: '1e9' });
+    expect(cfg).toMatchObject({
+      enabled: true,
+      dailyGenerations: 40,
+      perIpGenerationsPerDay: 1,
+      perNetGenerationsPerDay: 7,
+      maxConcurrent: 2,
+      powBits: 20,
+      mockTtlMinutes: 10,
+    });
+    const bad = getDemoConfig({
+      DEMO_ENABLED: 'maybe',
+      DEMO_DAILY_GENERATIONS: 'abc',
+      DEMO_POW_BITS: '-3',
+      DEMO_MAX_CONCURRENT: '1e9',
+    });
     expect(bad.enabled).toBe(false);
     expect(bad.dailyGenerations).toBe(150);
     expect(bad.powBits).toBe(18);
@@ -218,42 +243,62 @@ describe('proof of work', () => {
     const data = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
     data.bits = 1;
     const forged = `${Buffer.from(JSON.stringify(data)).toString('base64url')}.${sig}`;
-    await expect(verifyProof(forged, solve(forged), T0)).resolves.toEqual({ ok: false, reason: 'bad_signature' });
+    await expect(verifyProof(forged, solve(forged), T0)).resolves.toEqual({
+      ok: false,
+      reason: 'bad_signature',
+    });
   });
 
   it('rejects an altered signature and a challenge signed with another secret', async () => {
     const { challenge } = issueChallenge(T0);
     const [payload, sig] = challenge.split('.');
     const flipped = `${payload}.${sig.slice(0, -2)}${sig.endsWith('AA') ? 'BB' : 'AA'}`;
-    await expect(verifyProof(flipped, 'x', T0)).resolves.toEqual({ ok: false, reason: 'bad_signature' });
+    await expect(verifyProof(flipped, 'x', T0)).resolves.toEqual({
+      ok: false,
+      reason: 'bad_signature',
+    });
     process.env.DEMO_HMAC_SECRET = 'a-completely-different-secret-of-enough-length!';
-    await expect(verifyProof(challenge, solve(challenge), T0)).resolves.toEqual({ ok: false, reason: 'bad_signature' });
+    await expect(verifyProof(challenge, solve(challenge), T0)).resolves.toEqual({
+      ok: false,
+      reason: 'bad_signature',
+    });
   });
 
   it('rejects an expired challenge', async () => {
     const { challenge, expiresAt } = issueChallenge(T0);
     const later = new Date(new Date(expiresAt).getTime() + 1000);
-    await expect(verifyProof(challenge, solve(challenge), later)).resolves.toEqual({ ok: false, reason: 'expired' });
+    await expect(verifyProof(challenge, solve(challenge), later)).resolves.toEqual({
+      ok: false,
+      reason: 'expired',
+    });
   });
 
   it('rejects the reuse of a solved challenge', async () => {
     const { challenge } = issueChallenge(T0);
     const nonce = solve(challenge);
     await expect(verifyProof(challenge, nonce, T0)).resolves.toEqual({ ok: true });
-    await expect(verifyProof(challenge, nonce, T0)).resolves.toEqual({ ok: false, reason: 'replayed' });
+    await expect(verifyProof(challenge, nonce, T0)).resolves.toEqual({
+      ok: false,
+      reason: 'replayed',
+    });
   });
 
   it('lets exactly one of several simultaneous verifications of the same challenge through', async () => {
     const { challenge } = issueChallenge(T0);
     const nonce = solve(challenge);
-    const results = await Promise.all(Array.from({ length: 20 }, () => verifyProof(challenge, nonce, T0)));
+    const results = await Promise.all(
+      Array.from({ length: 20 }, () => verifyProof(challenge, nonce, T0))
+    );
     expect(results.filter((r) => r.ok)).toHaveLength(1);
     expect(results.filter((r) => !r.ok && r.reason === 'replayed')).toHaveLength(19);
   });
 
   it('does not burn the challenge when the work was insufficient', async () => {
     const { challenge } = issueChallenge(T0);
-    await expect(verifyProof(challenge, unsolved(challenge), T0)).resolves.toEqual({ ok: false, reason: 'insufficient_work' });
+    await expect(verifyProof(challenge, unsolved(challenge), T0)).resolves.toEqual({
+      ok: false,
+      reason: 'insufficient_work',
+    });
     await expect(verifyProof(challenge, solve(challenge), T0)).resolves.toEqual({ ok: true });
   });
 
@@ -263,7 +308,10 @@ describe('proof of work', () => {
     ['a.b.c', 'x'],
     ['.', 'x'],
     ['!!!.???', 'x'],
-    [`${Buffer.from('{"id":1}').toString('base64url')}.${Buffer.from('x').toString('base64url')}`, 'x'],
+    [
+      `${Buffer.from('{"id":1}').toString('base64url')}.${Buffer.from('x').toString('base64url')}`,
+      'x',
+    ],
     ['a'.repeat(5000), 'x'],
     [undefined as unknown as string, undefined as unknown as string],
     [{} as unknown as string, 5 as unknown as string],
@@ -275,8 +323,14 @@ describe('proof of work', () => {
 
   it('rejects an oversized or odd nonce as malformed', async () => {
     const { challenge } = issueChallenge(T0);
-    await expect(verifyProof(challenge, 'x'.repeat(200), T0)).resolves.toEqual({ ok: false, reason: 'malformed' });
-    await expect(verifyProof(challenge, 'a b\n', T0)).resolves.toEqual({ ok: false, reason: 'malformed' });
+    await expect(verifyProof(challenge, 'x'.repeat(200), T0)).resolves.toEqual({
+      ok: false,
+      reason: 'malformed',
+    });
+    await expect(verifyProof(challenge, 'a b\n', T0)).resolves.toEqual({
+      ok: false,
+      reason: 'malformed',
+    });
   });
 });
 
@@ -293,11 +347,19 @@ describe('proof of work split in a pure check and a spend (B7)', () => {
     // The same solution passes the pure check as many times as you like: only spendChallenge uses it up
     expect(checkProof(challenge, nonce, T0)).toEqual(checked);
     expect(await DemoSpentChallengeModel.countDocuments({})).toBe(0);
-    expect(checkProof(challenge, unsolved(challenge), T0)).toEqual({ ok: false, reason: 'insufficient_work' });
-    expect(checkProof(challenge, nonce, new Date(T0.getTime() + 10 * 60_000))).toEqual({ ok: false, reason: 'expired' });
+    expect(checkProof(challenge, unsolved(challenge), T0)).toEqual({
+      ok: false,
+      reason: 'insufficient_work',
+    });
+    expect(checkProof(challenge, nonce, new Date(T0.getTime() + 10 * 60_000))).toEqual({
+      ok: false,
+      reason: 'expired',
+    });
     expect(checkProof('nope', 'a', T0)).toEqual({ ok: false, reason: 'malformed' });
     const [payload, sig] = challenge.split('.');
-    expect(checkProof(`${payload}.${sig.slice(0, -2)}${sig.endsWith('AA') ? 'BB' : 'AA'}`, 'a', T0)).toEqual({ ok: false, reason: 'bad_signature' });
+    expect(
+      checkProof(`${payload}.${sig.slice(0, -2)}${sig.endsWith('AA') ? 'BB' : 'AA'}`, 'a', T0)
+    ).toEqual({ ok: false, reason: 'bad_signature' });
     expect(await DemoSpentChallengeModel.countDocuments({})).toBe(0);
   });
 
@@ -314,7 +376,9 @@ describe('proof of work split in a pure check and a spend (B7)', () => {
     const { challenge } = issueChallenge(T0);
     const checked = checkProof(challenge, solve(challenge), T0);
     if (!checked.ok) throw new Error('expected a valid proof');
-    const results = await Promise.all(Array.from({ length: 20 }, () => spendChallenge(checked.id, T0)));
+    const results = await Promise.all(
+      Array.from({ length: 20 }, () => spendChallenge(checked.id, T0))
+    );
     expect(results.filter(Boolean)).toHaveLength(1);
   });
 
@@ -322,7 +386,10 @@ describe('proof of work split in a pure check and a spend (B7)', () => {
     const { challenge } = issueChallenge(T0);
     const nonce = solve(challenge);
     await expect(verifyProof(challenge, nonce, T0)).resolves.toEqual({ ok: true });
-    await expect(verifyProof(challenge, nonce, T0)).resolves.toEqual({ ok: false, reason: 'replayed' });
+    await expect(verifyProof(challenge, nonce, T0)).resolves.toEqual({
+      ok: false,
+      reason: 'replayed',
+    });
   });
 });
 
@@ -332,16 +399,27 @@ describe('tryConsumeDemoBudget', () => {
     const ip = pseudonymizeIp('203.0.113.7', T0);
     await expect(tryConsumeDemoBudget(ip, 'generation', T0)).resolves.toEqual({ ok: true });
     await expect(tryConsumeDemoBudget(ip, 'generation', T0)).resolves.toEqual({ ok: true });
-    await expect(tryConsumeDemoBudget(ip, 'generation', T0)).resolves.toEqual({ ok: false, scope: 'ip' });
+    await expect(tryConsumeDemoBudget(ip, 'generation', T0)).resolves.toEqual({
+      ok: false,
+      scope: 'ip',
+    });
   });
 
   it('refuses everyone once the global daily budget is spent, and gives the IP unit back', async () => {
     process.env.DEMO_DAILY_GENERATIONS = '3';
     process.env.DEMO_PER_IP_GENERATIONS = '10';
     const ips = ['1.1.1.1', '2.2.2.2', '3.3.3.3', '4.4.4.4'].map((i) => pseudonymizeIp(i, T0));
-    for (const ip of ips.slice(0, 3)) await expect(tryConsumeDemoBudget(ip, 'generation', T0)).resolves.toEqual({ ok: true });
-    await expect(tryConsumeDemoBudget(ips[3], 'generation', T0)).resolves.toEqual({ ok: false, scope: 'global' });
-    const row = await DemoBudgetModel.findOne({ scope: 'ip', key: ips[3], kind: 'generation' }).lean();
+    for (const ip of ips.slice(0, 3))
+      await expect(tryConsumeDemoBudget(ip, 'generation', T0)).resolves.toEqual({ ok: true });
+    await expect(tryConsumeDemoBudget(ips[3], 'generation', T0)).resolves.toEqual({
+      ok: false,
+      scope: 'global',
+    });
+    const row = await DemoBudgetModel.findOne({
+      scope: 'ip',
+      key: ips[3],
+      kind: 'generation',
+    }).lean();
     expect(row?.count ?? 0).toBe(0);
   });
 
@@ -353,18 +431,29 @@ describe('tryConsumeDemoBudget', () => {
     await tryConsumeDemoBudget(a, 'generation', T0);
     await tryConsumeDemoBudget(b, 'generation', T0);
     const rows = await DemoBudgetModel.countDocuments({});
-    const fresh = await Promise.all(Array.from({ length: 25 }, (_, i) => tryConsumeDemoBudget(pseudonymizeIp(`9.9.9.${i}`, T0), 'generation', T0)));
+    const fresh = await Promise.all(
+      Array.from({ length: 25 }, (_, i) =>
+        tryConsumeDemoBudget(pseudonymizeIp(`9.9.9.${i}`, T0), 'generation', T0)
+      )
+    );
     expect(fresh.every((r) => !r.ok && r.scope === 'global')).toBe(true);
     expect(await DemoBudgetModel.countDocuments({})).toBe(rows);
-    await expect(tryConsumeDemoBudget(a, 'generation', T0)).resolves.toEqual({ ok: false, scope: 'ip' });
+    await expect(tryConsumeDemoBudget(a, 'generation', T0)).resolves.toEqual({
+      ok: false,
+      scope: 'ip',
+    });
     process.env.DEMO_PER_IP_GENERATIONS = '0';
-    await expect(tryConsumeDemoBudget(pseudonymizeIp('8.8.8.8', T0), 'generation', T0)).resolves.toEqual({ ok: false, scope: 'ip' });
+    await expect(
+      tryConsumeDemoBudget(pseudonymizeIp('8.8.8.8', T0), 'generation', T0)
+    ).resolves.toEqual({ ok: false, scope: 'ip' });
   });
 
   it('with 30 simultaneous calls and a cap of 2 lets exactly 2 through', async () => {
     process.env.DEMO_DAILY_GENERATIONS = '1000';
     const ip = pseudonymizeIp('203.0.113.9', T0);
-    const results = await Promise.all(Array.from({ length: 30 }, () => tryConsumeDemoBudget(ip, 'generation', T0)));
+    const results = await Promise.all(
+      Array.from({ length: 30 }, () => tryConsumeDemoBudget(ip, 'generation', T0))
+    );
     expect(results.filter((r) => r.ok)).toHaveLength(2);
     expect(results.filter((r) => !r.ok && r.scope === 'ip')).toHaveLength(28);
   });
@@ -372,7 +461,9 @@ describe('tryConsumeDemoBudget', () => {
   it('with many IPs at once never lets the global total pass the cap', async () => {
     process.env.DEMO_DAILY_GENERATIONS = '7';
     const results = await Promise.all(
-      Array.from({ length: 50 }, (_, i) => tryConsumeDemoBudget(pseudonymizeIp(`198.51.100.${i}`, T0), 'generation', T0)),
+      Array.from({ length: 50 }, (_, i) =>
+        tryConsumeDemoBudget(pseudonymizeIp(`198.51.100.${i}`, T0), 'generation', T0)
+      )
     );
     expect(results.filter((r) => r.ok)).toHaveLength(7);
     expect(results.every((r) => r.ok || r.scope === 'global')).toBe(true);
@@ -383,7 +474,9 @@ describe('tryConsumeDemoBudget', () => {
     await tryConsumeDemoBudget(ip, 'generation', T0);
     await tryConsumeDemoBudget(ip, 'generation', T0);
     const next = new Date(Date.UTC(2026, 9, 10, 0, 0, 1));
-    await expect(tryConsumeDemoBudget(pseudonymizeIp('203.0.113.7', next), 'generation', next)).resolves.toEqual({ ok: true });
+    await expect(
+      tryConsumeDemoBudget(pseudonymizeIp('203.0.113.7', next), 'generation', next)
+    ).resolves.toEqual({ ok: true });
   });
 
   it('counts mock requests separately from generations', async () => {
@@ -395,7 +488,9 @@ describe('tryConsumeDemoBudget', () => {
 
   it('refuses mock requests past the per-IP daily cap', async () => {
     const ip = pseudonymizeIp('203.0.113.7', T0);
-    const results = await Promise.all(Array.from({ length: 320 }, () => tryConsumeDemoBudget(ip, 'mockRequest', T0)));
+    const results = await Promise.all(
+      Array.from({ length: 320 }, () => tryConsumeDemoBudget(ip, 'mockRequest', T0))
+    );
     expect(results.filter((r) => r.ok)).toHaveLength(300);
   });
 
@@ -405,13 +500,15 @@ describe('tryConsumeDemoBudget', () => {
     const rows = await DemoBudgetModel.find({}).lean();
     expect(rows.length).toBeGreaterThan(0);
     expect(JSON.stringify(rows)).not.toContain('203.0.113.7');
-    for (const row of rows) expect(row.expiresAt.getTime()).toBeGreaterThanOrEqual(T0.getTime() + 47 * 3600_000);
+    for (const row of rows)
+      expect(row.expiresAt.getTime()).toBeGreaterThanOrEqual(T0.getTime() + 47 * 3600_000);
   });
 });
 
 describe('the per-network (/48) daily counter (final review I2)', () => {
   const v6 = (net: number, sub: number) => `2001:db8:${net.toString(16)}:${sub.toString(16)}::1`;
-  const consume = (ip: string, now = T0) => tryConsumeDemoBudget(pseudonymizeIp(ip, now), 'generation', now, pseudonymizeNet(ip, now));
+  const consume = (ip: string, now = T0) =>
+    tryConsumeDemoBudget(pseudonymizeIp(ip, now), 'generation', now, pseudonymizeNet(ip, now));
   const netRows = () => DemoBudgetModel.find({ scope: 'net' }).lean();
 
   beforeEach(() => {
@@ -433,7 +530,11 @@ describe('the per-network (/48) daily counter (final review I2)', () => {
     expect((await consume(v6(1, 2))).ok).toBe(true);
     const refused = await consume(v6(1, 3));
     expect(refused).toEqual({ ok: false, scope: 'net' });
-    const row = await DemoBudgetModel.findOne({ scope: 'ip', key: pseudonymizeIp(v6(1, 3), T0), kind: 'generation' }).lean();
+    const row = await DemoBudgetModel.findOne({
+      scope: 'ip',
+      key: pseudonymizeIp(v6(1, 3), T0),
+      kind: 'generation',
+    }).lean();
     expect(row?.count ?? 0).toBe(0);
     expect((await netRows())[0].count).toBe(2);
   });
@@ -447,7 +548,8 @@ describe('the per-network (/48) daily counter (final review I2)', () => {
 
   it('IPv4 does not use the counter at all', async () => {
     process.env.DEMO_PER_NET_GENERATIONS = '1';
-    for (let host = 1; host <= 10; host++) expect((await consume(`203.0.113.${host}`)).ok).toBe(true);
+    for (let host = 1; host <= 10; host++)
+      expect((await consume(`203.0.113.${host}`)).ok).toBe(true);
     expect(await netRows()).toHaveLength(0);
   });
 
@@ -479,7 +581,10 @@ describe('the per-network (/48) daily counter (final review I2)', () => {
     expect(results.filter((r) => r.ok)).toHaveLength(5);
     expect(results.every((r) => r.ok || r.scope === 'global')).toBe(true);
     expect((await netRows())[0].count).toBe(5);
-    const ipSum = (await DemoBudgetModel.find({ scope: 'ip' }).lean()).reduce((n, r) => n + r.count, 0);
+    const ipSum = (await DemoBudgetModel.find({ scope: 'ip' }).lean()).reduce(
+      (n, r) => n + r.count,
+      0
+    );
     expect(ipSum).toBe(5);
   });
 
@@ -491,9 +596,15 @@ describe('the per-network (/48) daily counter (final review I2)', () => {
     const netHash = pseudonymizeNet(ip, T0);
     await tryConsumeDemoBudget(ipHash, 'generation', T0, netHash);
     await tryConsumeDemoBudget(ipHash, 'generation', T0, netHash);
-    await expect(peekDemoBudget(ipHash, T0, netHash)).resolves.toEqual({ ipLeft: 1, globalLeft: 1000 - 2 });
+    await expect(peekDemoBudget(ipHash, T0, netHash)).resolves.toEqual({
+      ipLeft: 1,
+      globalLeft: 1000 - 2,
+    });
     await refundDemoBudget(ipHash, 'generation', T0, netHash);
-    await expect(peekDemoBudget(ipHash, T0, netHash)).resolves.toEqual({ ipLeft: 2, globalLeft: 1000 - 1 });
+    await expect(peekDemoBudget(ipHash, T0, netHash)).resolves.toEqual({
+      ipLeft: 2,
+      globalLeft: 1000 - 1,
+    });
     expect((await netRows())[0].count).toBe(1);
     // another /64 of the same /48 has used the rest of the network's allowance: the visitor sees what is really left
     const other = v6(1, 2);
@@ -525,8 +636,11 @@ describe('the per-network (/48) daily counter (final review I2)', () => {
 });
 
 describe('refundDemoBudget and peekDemoBudget (B3)', () => {
-  const count = async (scope: 'ip' | 'global', key: string, kind: 'generation' | 'mockRequest' = 'generation') =>
-    (await DemoBudgetModel.findOne({ scope, key, kind }).lean())?.count ?? 0;
+  const count = async (
+    scope: 'ip' | 'global',
+    key: string,
+    kind: 'generation' | 'mockRequest' = 'generation'
+  ) => (await DemoBudgetModel.findOne({ scope, key, kind }).lean())?.count ?? 0;
 
   it('gives back one generation unit to the visitor and to the global budget, atomically', async () => {
     const ip = pseudonymizeIp('203.0.113.7', T0);
@@ -548,7 +662,9 @@ describe('refundDemoBudget and peekDemoBudget (B3)', () => {
     expect(await count('ip', ip)).toBe(0);
     expect(await count('global', 'global')).toBe(0);
     await refundDemoBudget(pseudonymizeIp('198.51.100.1', T0), 'generation', T0); // nothing to refund: no row, no error
-    expect(await DemoBudgetModel.countDocuments({ key: pseudonymizeIp('198.51.100.1', T0) })).toBe(0);
+    expect(await DemoBudgetModel.countDocuments({ key: pseudonymizeIp('198.51.100.1', T0) })).toBe(
+      0
+    );
   });
 
   it('refunds the UTC day it is told (a refund after midnight does not touch the new day)', async () => {
@@ -557,8 +673,12 @@ describe('refundDemoBudget and peekDemoBudget (B3)', () => {
     const nextDay = new Date(Date.UTC(2026, 9, 10, 0, 5, 0));
     await tryConsumeDemoBudget(pseudonymizeIp('203.0.113.7', nextDay), 'generation', nextDay);
     await refundDemoBudget(ip, 'generation', T0);
-    expect(await DemoBudgetModel.countDocuments({ day: '2026-10-09', scope: 'ip', count: 0 })).toBe(1);
-    expect(await DemoBudgetModel.countDocuments({ day: '2026-10-10', scope: 'ip', count: 1 })).toBe(1);
+    expect(await DemoBudgetModel.countDocuments({ day: '2026-10-09', scope: 'ip', count: 0 })).toBe(
+      1
+    );
+    expect(await DemoBudgetModel.countDocuments({ day: '2026-10-10', scope: 'ip', count: 1 })).toBe(
+      1
+    );
   });
 
   it('refunds a mock request only to the visitor (the global budget is for generations)', async () => {
@@ -637,18 +757,23 @@ describe('assertProdConfig and the demo', () => {
     expect(() => assertProdConfig(prod({ DEMO_ENABLED: 'false' }))).not.toThrow();
   });
 
-  it.each([undefined, '', 'short-secret'])('rejects an enabled demo with DEMO_HMAC_SECRET %p, without echoing it', (secret) => {
-    let message = '';
-    try {
-      assertProdConfig(prod({ DEMO_ENABLED: 'true', DEMO_HMAC_SECRET: secret }));
-    } catch (e) {
-      message = (e as Error).message;
+  it.each([undefined, '', 'short-secret'])(
+    'rejects an enabled demo with DEMO_HMAC_SECRET %p, without echoing it',
+    (secret) => {
+      let message = '';
+      try {
+        assertProdConfig(prod({ DEMO_ENABLED: 'true', DEMO_HMAC_SECRET: secret }));
+      } catch (e) {
+        message = (e as Error).message;
+      }
+      expect(message).toMatch(/DEMO_HMAC_SECRET/);
+      if (secret) expect(message).not.toContain(secret);
     }
-    expect(message).toMatch(/DEMO_HMAC_SECRET/);
-    if (secret) expect(message).not.toContain(secret);
-  });
+  );
 
   it('accepts an enabled demo with a long enough secret', () => {
-    expect(() => assertProdConfig(prod({ DEMO_ENABLED: 'true', DEMO_HMAC_SECRET: 'z'.repeat(40) }))).not.toThrow();
+    expect(() =>
+      assertProdConfig(prod({ DEMO_ENABLED: 'true', DEMO_HMAC_SECRET: 'z'.repeat(40) }))
+    ).not.toThrow();
   });
 });

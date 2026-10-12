@@ -34,14 +34,14 @@
 .header {
   margin-bottom: var(--space-section);
   text-align: center;
-  
+
   h1 {
     font-size: var(--step-3);
     font-weight: 800;
     letter-spacing: -0.04em;
     margin-bottom: var(--spacing-4);
   }
-  
+
   .lastUpdated {
     color: var(--muted);
     font-size: 1rem;
@@ -56,13 +56,13 @@
   font-size: 1.05rem;
   overflow-wrap: break-word;
   color: var(--color-text);
-  
+
   section {
     margin-bottom: var(--spacing-10, 2.5rem);
     /* anchors (/privacy#ai-training) must not land under the sticky header */
     scroll-margin-top: 5rem;
   }
-  
+
   h2 {
     font-size: 1.5rem;
     font-weight: 800;
@@ -70,23 +70,23 @@
     letter-spacing: -0.02em;
     color: var(--color-accent-text);
   }
-  
+
   p {
     margin-bottom: var(--spacing-6);
     color: var(--color-text);
     opacity: 0.9;
   }
-  
+
   ul {
     margin-bottom: var(--spacing-6);
     padding-left: var(--spacing-6);
-    
+
     li {
       margin-bottom: var(--spacing-3);
       position: relative;
-      
+
       &::before {
-        content: "•";
+        content: '•';
         color: var(--color-accent-text);
         font-weight: bold;
         display: inline-block;
@@ -95,7 +95,7 @@
       }
     }
   }
-  
+
   code {
     padding: 0.1em 0.35em;
     border-radius: var(--radius-sm);
@@ -110,7 +110,7 @@
     font-weight: 700;
     border-bottom: 2px solid transparent;
     transition: all var(--transition-fast);
-    
+
     &:hover {
       border-bottom-color: var(--color-accent);
     }

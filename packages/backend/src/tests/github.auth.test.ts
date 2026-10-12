@@ -13,12 +13,16 @@ describe('GitHub routes require authentication', () => {
   afterAll(() => errorSpy.mockRestore());
 
   it('POST /api/github/parse without a token is 401', async () => {
-    const res = await request(app).post('/api/github/parse').send({ url: 'https://github.com/octocat/Hello-World' });
+    const res = await request(app)
+      .post('/api/github/parse')
+      .send({ url: 'https://github.com/octocat/Hello-World' });
     expect(res.status).toBe(401);
   });
 
   it('POST /api/github/ingest without a token is 401', async () => {
-    const res = await request(app).post('/api/github/ingest').send({ url: 'https://github.com/octocat/Hello-World' });
+    const res = await request(app)
+      .post('/api/github/ingest')
+      .send({ url: 'https://github.com/octocat/Hello-World' });
     expect(res.status).toBe(401);
   });
 

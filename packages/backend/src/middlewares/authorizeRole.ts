@@ -7,10 +7,10 @@ import type { ProjectRole } from '@mockia/shared';
 
 /**
  * Middleware factory to check if user has required role in a project
- * 
+ *
  * Usage:
  * router.post('/projects/:id/members', authenticateToken, authorizeRole(['OWNER']), handler);
- * 
+ *
  * @param allowedRoles - Array of roles that are allowed to access this endpoint
  * @returns Middleware function that checks user's role in the project
  */
@@ -18,11 +18,7 @@ export function authorizeRole(
   allowedRoles: ProjectRole[],
   getRef: (req: AuthenticatedRequest) => unknown = (req) => req.params.id
 ) {
-  return async (
-    req: AuthenticatedRequest,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> => {
+  return async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.user?.id;
       const ref = getRef(req);
@@ -30,19 +26,11 @@ export function authorizeRole(
       const projectId = typeof ref === 'string' ? ref : undefined;
 
       if (!userId) {
-        throw new AppError(
-          'User ID not found in request',
-          ErrorCode.UNAUTHORIZED,
-          401
-        );
+        throw new AppError('User ID not found in request', ErrorCode.UNAUTHORIZED, 401);
       }
 
       if (!projectId) {
-        throw new AppError(
-          'Project ID not found in request',
-          ErrorCode.VALIDATION_ERROR,
-          400
-        );
+        throw new AppError('Project ID not found in request', ErrorCode.VALIDATION_ERROR, 400);
       }
 
       // Find the project (by ID or Slug)
@@ -56,24 +44,14 @@ export function authorizeRole(
       }
 
       if (!project) {
-        throw new AppError(
-          'Project not found',
-          ErrorCode.NOT_FOUND,
-          404
-        );
+        throw new AppError('Project not found', ErrorCode.NOT_FOUND, 404);
       }
 
       // Find user in project members
-      const member = project.members.find(
-        (m) => m.userId.toString() === userId
-      );
+      const member = project.members.find((m) => m.userId.toString() === userId);
 
       if (!member) {
-        throw new AppError(
-          'You are not a member of this project',
-          ErrorCode.FORBIDDEN,
-          403
-        );
+        throw new AppError('You are not a member of this project', ErrorCode.FORBIDDEN, 403);
       }
 
       // Check if user's role is in allowed roles (normalize to uppercase for comparison)

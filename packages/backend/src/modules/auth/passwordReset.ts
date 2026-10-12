@@ -30,7 +30,11 @@ export function hashToken(raw: string): string {
  * Only its sha256 is stored. A new reset token invalidates the older unused reset tokens of the user, so only the
  * latest link works; verification links are left alone (a delayed first email must still work after a resend).
  */
-export async function createAuthToken(userId: string, purpose: AuthTokenPurpose, ttlMin: number): Promise<string> {
+export async function createAuthToken(
+  userId: string,
+  purpose: AuthTokenPurpose,
+  ttlMin: number
+): Promise<string> {
   const raw = randomBytes(32).toString('base64url');
   if (purpose === 'reset') {
     await AuthTokenModel.deleteMany({ userId, purpose, usedAt: null });
@@ -67,7 +71,11 @@ export async function consumeAuthToken(raw: string, purpose: AuthTokenPurpose): 
 
 /** Public URL of the SPA (links in emails). APP_URL is mandatory in production; the fallbacks are for local development. */
 export function appBaseUrl(env: NodeJS.ProcessEnv = process.env): string {
-  const url = env.APP_URL?.trim() || env.FRONTEND_URL?.trim() || env.CORS_ORIGIN?.split(',')[0]?.trim() || 'http://localhost:5173';
+  const url =
+    env.APP_URL?.trim() ||
+    env.FRONTEND_URL?.trim() ||
+    env.CORS_ORIGIN?.split(',')[0]?.trim() ||
+    'http://localhost:5173';
   return url.replace(/\/+$/, '');
 }
 
@@ -76,14 +84,20 @@ const linkFor = (path: '/reset-password' | '/verify-email', token: string): stri
 
 /** Logs a mail failure without the address or the link (both would end up in the log aggregator). */
 function logMailFailure(kind: string, err: unknown): void {
-  console.error(`[Auth] Could not send the ${kind} email:`, err instanceof Error ? err.message : err);
+  console.error(
+    `[Auth] Could not send the ${kind} email:`,
+    err instanceof Error ? err.message : err
+  );
 }
 
 /**
  * Email a verification link to a user. Never throws: registration and resend must not fail because of mail.
  * The token is created before returning (so the caller's response can rely on it); the SMTP delivery itself is not awaited.
  */
-export async function sendVerificationEmail(user: { id: string; email: string; username: string }, locale?: string): Promise<void> {
+export async function sendVerificationEmail(
+  user: { id: string; email: string; username: string },
+  locale?: string
+): Promise<void> {
   try {
     const token = await createAuthToken(user.id, 'verify', VERIFY_TTL_MIN);
     sendMail(user.email, 'verify', {
@@ -127,7 +141,10 @@ export async function requestPasswordReset(email: string, locale?: string): Prom
 
 /** Sets emailVerifiedAt once: an already verified user keeps the original date. */
 async function markEmailVerified(userId: string): Promise<void> {
-  await UserModel.updateOne({ _id: userId, emailVerifiedAt: null }, { $set: { emailVerifiedAt: new Date() } });
+  await UserModel.updateOne(
+    { _id: userId, emailVerifiedAt: null },
+    { $set: { emailVerifiedAt: new Date() } }
+  );
 }
 
 /**

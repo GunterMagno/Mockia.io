@@ -11,13 +11,20 @@ import type { EndpointSpec } from './scoring.js';
 export const FAKE_PROVIDERS = ['fake-perfect', 'fake-noisy'] as const;
 export type FakeProviderName = (typeof FAKE_PROVIDERS)[number];
 
-export const isFakeProvider = (name: string): name is FakeProviderName => (FAKE_PROVIDERS as readonly string[]).includes(name);
+export const isFakeProvider = (name: string): name is FakeProviderName =>
+  (FAKE_PROVIDERS as readonly string[]).includes(name);
 
 /** Rough token count (1 token ~ 4 characters), only to give the fakes a usage figure. */
 const tokens = (text: string) => Math.ceil(text.length / 4);
 
 function specOf(c: EvalCase, endpoints: EndpointSpec[]) {
-  return { apiVersion: '1.0.0', title: c.input.projectTitle, description: c.description, endpoints, dataModels: [] as unknown[] };
+  return {
+    apiVersion: '1.0.0',
+    title: c.input.projectTitle,
+    description: c.description,
+    endpoints,
+    dataModels: [] as unknown[],
+  };
 }
 
 /** Same endpoint with a response reduced to its first field (a model that "forgot" the types). */
@@ -27,7 +34,10 @@ function withThinnedResponses(endpoint: EndpointSpec): EndpointSpec {
     examples: endpoint.examples.map((example) => {
       const response = example.response as Record<string, unknown>;
       const firstKey = Object.keys(response)[0];
-      return { ...example, response: firstKey === undefined ? {} : { [firstKey]: response[firstKey] } };
+      return {
+        ...example,
+        response: firstKey === undefined ? {} : { [firstKey]: response[firstKey] },
+      };
     }),
   };
 }
@@ -73,12 +83,16 @@ export function createFakeProvider(kind: FakeProviderName, c: EvalCase, index = 
   return {
     name: kind,
     async complete(req): Promise<LlmCompletion> {
-      const text = kind === 'fake-perfect' ? JSON.stringify(specOf(c, c.expected)) : noisyText(c, index);
+      const text =
+        kind === 'fake-perfect' ? JSON.stringify(specOf(c, c.expected)) : noisyText(c, index);
       return {
         text,
         provider: kind,
         model: 'fake',
-        usage: { inputTokens: tokens(req.messages.map((m) => m.content).join('')), outputTokens: tokens(text) },
+        usage: {
+          inputTokens: tokens(req.messages.map((m) => m.content).join('')),
+          outputTokens: tokens(text),
+        },
       };
     },
   };

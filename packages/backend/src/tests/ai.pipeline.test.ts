@@ -1,6 +1,6 @@
 /**
  * AI Pipeline Tests
- * 
+ *
  * Tests for the complete AI generation pipeline including:
  * - Fake data generation and injection
  * - Prompt building with sample data

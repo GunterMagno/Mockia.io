@@ -27,25 +27,52 @@ const openApiAccess = (mobile = false) => {
 };
 
 /** Reads the key shown in the one-time field. */
-const shownKey = () => cy.get('[data-testid="new-api-key-value"]').invoke('val').then((v) => String(v));
+const shownKey = () =>
+  cy
+    .get('[data-testid="new-api-key-value"]')
+    .invoke('val')
+    .then((v) => String(v));
 
 const getMock = (key?: string) =>
-  cy.request({ url: mockUrl, headers: key === undefined ? {} : { [HEADER]: key }, failOnStatusCode: false });
+  cy.request({
+    url: mockUrl,
+    headers: key === undefined ? {} : { [HEADER]: key },
+    failOnStatusCode: false,
+  });
 
 describe('Mock API keys', () => {
   before(() => {
-    cy.request('POST', '/api/auth/register', { email: EMAIL, password: PASSWORD, username: 'keyuser', locale: 'en' });
+    cy.request('POST', '/api/auth/register', {
+      email: EMAIL,
+      password: PASSWORD,
+      username: 'keyuser',
+      locale: 'en',
+    });
     cy.request('POST', '/api/auth/login', { email: EMAIL, password: PASSWORD }).then((login) => {
       const headers = { Authorization: `Bearer ${login.body.data.tokens.accessToken}` };
-      cy.request({ method: 'POST', url: '/api/projects', headers, body: { title: TITLE, description: 'Keys' } }).then((res) => {
+      cy.request({
+        method: 'POST',
+        url: '/api/projects',
+        headers,
+        body: { title: TITLE, description: 'Keys' },
+      }).then((res) => {
         slug = res.body.data.slug;
         mockUrl = `/api/mock/${slug}/ping`;
         expect(res.body.data).to.include({ visibility: 'public', hasApiKey: false });
         expect(res.body.data).not.to.have.property('apiKey');
-        cy.request({ method: 'POST', url: `/api/endpoints/${slug}`, headers, body: { path: '/ping', method: 'GET', description: 'Ping' } })
-          .then((ep) => {
-            cy.request({ method: 'PUT', url: `/api/endpoints/${ep.body.data.id}`, headers, body: { responseBody: { pong: true }, statusCode: 200 } });
+        cy.request({
+          method: 'POST',
+          url: `/api/endpoints/${slug}`,
+          headers,
+          body: { path: '/ping', method: 'GET', description: 'Ping' },
+        }).then((ep) => {
+          cy.request({
+            method: 'PUT',
+            url: `/api/endpoints/${ep.body.data.id}`,
+            headers,
+            body: { responseBody: { pong: true }, statusCode: 200 },
           });
+        });
       });
     });
     cy.clearCookies();
@@ -75,15 +102,25 @@ describe('Mock API keys', () => {
     cy.contains('Generate an API key first to require it.').should('be.visible');
 
     // Generate: the full key is shown once, with a clear warning and an aria-live confirmation
-    cy.window().then((win) => cy.stub(win.navigator.clipboard, 'writeText').resolves().as('clipboard'));
+    cy.window().then((win) =>
+      cy.stub(win.navigator.clipboard, 'writeText').resolves().as('clipboard')
+    );
     cy.get('[data-testid="api-key-generate"]').click();
-    cy.get('[data-testid="new-api-key"]').should('contain.text', "Copy it now. You won't see it again.");
-    cy.get('[data-testid="api-access-live"]').should('have.attr', 'aria-live', 'polite').and('contain.text', "you won't see it again");
+    cy.get('[data-testid="new-api-key"]').should(
+      'contain.text',
+      "Copy it now. You won't see it again."
+    );
+    cy.get('[data-testid="api-access-live"]')
+      .should('have.attr', 'aria-live', 'polite')
+      .and('contain.text', "you won't see it again");
     shownKey().then((first) => {
       expect(first).to.match(/^mk_[0-9a-f]{48}$/);
       cy.get('[data-testid="api-key-copy"]').click();
       cy.get('@clipboard').should('have.been.calledWith', first);
-      cy.get('[data-testid="api-access-live"]').should('contain.text', 'API key copied to the clipboard');
+      cy.get('[data-testid="api-access-live"]').should(
+        'contain.text',
+        'API key copied to the clipboard'
+      );
 
       // Still public: no key needed yet
       getMock().its('status').should('eq', 200);
@@ -94,7 +131,10 @@ describe('Mock API keys', () => {
       cy.get('[data-testid="api-key-current"]').should('contain.text', first.slice(0, 9));
       cy.get('[data-testid="api-key-current"]').should('not.contain.text', first);
       cy.get('[data-testid="visibility-key"]').should('not.be.disabled').check();
-      cy.get('[data-testid="api-access-live"]').should('contain.text', 'Mock visibility is now: Requires API key');
+      cy.get('[data-testid="api-access-live"]').should(
+        'contain.text',
+        'Mock visibility is now: Requires API key'
+      );
 
       getMock().then((res) => {
         expect(res.status).to.eq(401);
@@ -107,7 +147,9 @@ describe('Mock API keys', () => {
         expect(res.headers['x-ratelimit-limit']).to.match(/^\d+$/);
         expect(res.headers['x-ratelimit-remaining']).to.match(/^\d+$/);
       });
-      getMock('mk_' + '0'.repeat(48)).its('status').should('eq', 401);
+      getMock('mk_' + '0'.repeat(48))
+        .its('status')
+        .should('eq', 401);
 
       // The key is gone from the page once dismissed
       cy.get('body').should('not.contain.text', first);
@@ -143,7 +185,10 @@ describe('Mock API keys', () => {
 
     // Back to public
     cy.get('[data-testid="visibility-public"]').check();
-    cy.get('[data-testid="api-access-live"]').should('contain.text', 'Mock visibility is now: Public');
+    cy.get('[data-testid="api-access-live"]').should(
+      'contain.text',
+      'Mock visibility is now: Public'
+    );
     getMock().its('status').should('eq', 200);
   });
 
@@ -169,7 +214,11 @@ describe('Mock API keys', () => {
         currentPeriodEnd: null,
         pastDueUntil: null,
         limits: { maxActiveProjects: 5, maxMonthlyRequests: 10_000 },
-        usage: { activeProjects: 1, monthlyRequests: 9_500, periodResetAt: new Date(Date.now() + 5 * 86400000).toISOString() },
+        usage: {
+          activeProjects: 1,
+          monthlyRequests: 9_500,
+          periodResetAt: new Date(Date.now() + 5 * 86400000).toISOString(),
+        },
         canManageBilling: false,
         checkoutAvailable: { pro: true, team: true },
         yearlyCheckoutAvailable: { pro: true, team: true },
@@ -179,7 +228,10 @@ describe('Mock API keys', () => {
     cy.intercept('GET', '**/api/billing/me', overview).as('overview');
     cy.visit('/dashboard');
     cy.wait('@overview');
-    cy.get('[data-testid="plan-chip-requests"]').should('contain.text', '9,500/10,000 requests this month');
+    cy.get('[data-testid="plan-chip-requests"]').should(
+      'contain.text',
+      '9,500/10,000 requests this month'
+    );
 
     cy.visit('/billing');
     cy.wait('@overview');

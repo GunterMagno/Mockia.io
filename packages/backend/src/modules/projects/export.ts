@@ -54,7 +54,10 @@ async function loadExportProject(projectId: string): Promise<ExportProject> {
 
   const mockApi = await MockAPIModel.findOne({ projectId: project._id }).lean();
   const docs = mockApi
-    ? await EndpointModel.find({ mockApiId: mockApi._id }).populate('responses').sort({ createdAt: 1, _id: 1 }).lean()
+    ? await EndpointModel.find({ mockApiId: mockApi._id })
+        .populate('responses')
+        .sort({ createdAt: 1, _id: 1 })
+        .lean()
     : [];
   const configs = docs.length
     ? await EndpointConfigModel.find({ endpointId: { $in: docs.map((d) => d._id) } }).lean()
@@ -63,7 +66,9 @@ async function loadExportProject(projectId: string): Promise<ExportProject> {
 
   const endpoints: ExportEndpoint[] = docs.map((doc) => {
     const cfg = configById.get(String(doc._id));
-    const responses: ExportResponse[] = ((doc.responses ?? []) as unknown as Array<Record<string, unknown>>)
+    const responses: ExportResponse[] = (
+      (doc.responses ?? []) as unknown as Array<Record<string, unknown>>
+    )
       .filter((r) => r && typeof r === 'object' && 'statusCode' in r)
       .map((r) => ({
         statusCode: Number(r.statusCode),
@@ -118,7 +123,9 @@ export async function exportPostman(projectId: string): Promise<object> {
 
   const items = project.endpoints.map((endpoint) => {
     const segments = pathSegments(endpoint.path);
-    const variableNames = [...new Set(segments.filter((s) => s.startsWith(':')).map((s) => s.slice(1)))];
+    const variableNames = [
+      ...new Set(segments.filter((s) => s.startsWith(':')).map((s) => s.slice(1))),
+    ];
     const body = requestBodyOf(endpoint);
 
     const header: Array<{ key: string; value: string }> = [];
@@ -144,7 +151,11 @@ export async function exportPostman(projectId: string): Promise<object> {
     }
     if (endpoint.description.trim()) request.description = endpoint.description.trim();
 
-    const responses = (endpoint.responses.length ? endpoint.responses : [{ statusCode: 200, body: {} } as ExportResponse]).map((r) => ({
+    const responses = (
+      endpoint.responses.length
+        ? endpoint.responses
+        : [{ statusCode: 200, body: {} } as ExportResponse]
+    ).map((r) => ({
       name: r.name?.trim() || `${r.statusCode} ${reason(r.statusCode)}`,
       originalRequest: request,
       status: reason(r.statusCode),
@@ -158,10 +169,16 @@ export async function exportPostman(projectId: string): Promise<object> {
     return { name: `${endpoint.method} /${segments.join('/')}`, request, response: responses };
   });
 
-  const variable: Array<Json> = [{ key: 'baseUrl', value: publicMockBaseUrl(project.slug), type: 'string' }];
+  const variable: Array<Json> = [
+    { key: 'baseUrl', value: publicMockBaseUrl(project.slug), type: 'string' },
+  ];
   if (project.hasApiKey) variable.push({ key: 'apiKey', value: '', type: 'secret' });
 
-  const info: Json = { _postman_id: randomUUID(), name: project.title || project.slug, schema: POSTMAN_SCHEMA };
+  const info: Json = {
+    _postman_id: randomUUID(),
+    name: project.title || project.slug,
+    schema: POSTMAN_SCHEMA,
+  };
   if (project.description.trim()) info.description = project.description.trim();
   return { info, item: items, variable };
 }
@@ -185,7 +202,11 @@ const tsString = (value: string): string => tsLiteral(value);
 
 /** Texto de una sola linea para comentarios `//` (un salto de linea sacaria el resto del comentario). */
 const oneLine = (text: string, max = 200): string =>
-  text.replace(/[\u0000-\u001f\u007f\u2028\u2029]+/g, ' ').replace(/</g, '&lt;').trim().slice(0, max);
+  text
+    .replace(/[\u0000-\u001f\u007f\u2028\u2029]+/g, ' ')
+    .replace(/</g, '&lt;')
+    .trim()
+    .slice(0, max);
 
 interface Outcome {
   status: number;
@@ -205,11 +226,16 @@ function defaultOutcome(endpoint: ExportEndpoint): Outcome {
     else if (status === 204) body = null;
     else if (status >= 400) body = getDefaultErrorBody(status);
   }
-  if (cfg?.overrideResponse !== undefined && cfg.overrideResponse !== null) body = cfg.overrideResponse;
+  if (cfg?.overrideResponse !== undefined && cfg.overrideResponse !== null)
+    body = cfg.overrideResponse;
   return { status, body };
 }
 
-function returnExpression(outcome: Outcome, headers: Record<string, string>, indent: string): string {
+function returnExpression(
+  outcome: Outcome,
+  headers: Record<string, string>,
+  indent: string
+): string {
   const hasHeaders = Object.keys(headers).length > 0;
   const init = hasHeaders
     ? `{ status: ${outcome.status}, headers: ${tsLiteral(headers, indent)} }`
@@ -228,7 +254,13 @@ function delayExpression(cfg: ExportEndpoint['config']): string | null {
   return `Math.min(30000, Math.max(0, ${base} + Math.round((Math.random() * 2 - 1) * ${jitter})))`;
 }
 
-const MSW_METHOD: Record<HttpMethod, string> = { GET: 'get', POST: 'post', PUT: 'put', DELETE: 'delete', PATCH: 'patch' };
+const MSW_METHOD: Record<HttpMethod, string> = {
+  GET: 'get',
+  POST: 'post',
+  PUT: 'put',
+  DELETE: 'delete',
+  PATCH: 'patch',
+};
 
 /** Codigo TypeScript con los handlers MSW v2 del proyecto (`export const handlers = [...]`). */
 export async function exportMswHandlers(projectId: string): Promise<string> {
@@ -257,9 +289,14 @@ export async function exportMswHandlers(projectId: string): Promise<string> {
 
     const params = variants.length > 0 ? '{ request }' : '';
     const lines: string[] = [];
-    const description = endpoint.description.trim() === `${endpoint.method} ${path}` ? '' : oneLine(endpoint.description);
+    const description =
+      endpoint.description.trim() === `${endpoint.method} ${path}`
+        ? ''
+        : oneLine(endpoint.description);
     lines.push(`  // ${endpoint.method} ${oneLine(path)}${description ? ` - ${description}` : ''}`);
-    lines.push(`  http.${MSW_METHOD[endpoint.method]}(${tsString(path)}, ${delayExpr ? 'async ' : ''}(${params}) => {`);
+    lines.push(
+      `  http.${MSW_METHOD[endpoint.method]}(${tsString(path)}, ${delayExpr ? 'async ' : ''}(${params}) => {`
+    );
     if (delayExpr) lines.push(`    await delay(${delayExpr});`);
     if (variants.length > 0) {
       lines.push('    const status = requestedStatus(request);');

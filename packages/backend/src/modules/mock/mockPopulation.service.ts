@@ -31,14 +31,14 @@ export interface PopulationResult {
 
 /**
  * Populates the database with endpoints and responses from a generated API specification
- * 
+ *
  * Steps:
  * 1. Create or update MockAPI document
  * 2. Delete any existing endpoints for this MockAPI (to avoid duplicates)
  * 3. Create Endpoint documents for each endpoint in the specification
  * 4. Create Response documents for each endpoint's responses
  * 5. Link endpoints to MockAPI
- * 
+ *
  * @param projectId - The project ID this MockAPI belongs to
  * @param specification - The generated API specification from AI
  * @returns Metadata about what was created
@@ -49,10 +49,9 @@ export async function populateEndpointsFromLLM(
   specification: MockAPIOutput
 ): Promise<PopulationResult> {
   try {
-
     // Resolve projectId if it's a slug
     let projectObjectId: Types.ObjectId;
-    
+
     if (Types.ObjectId.isValid(projectId)) {
       projectObjectId = new Types.ObjectId(projectId);
     } else {
@@ -60,11 +59,7 @@ export async function populateEndpointsFromLLM(
       const { ProjectModel } = await import('../../models/Project.js');
       const project = await ProjectModel.findOne({ slug: projectId });
       if (!project) {
-        throw new AppError(
-          'Project not found (invalid ID or slug)',
-          ErrorCode.NOT_FOUND,
-          404
-        );
+        throw new AppError('Project not found (invalid ID or slug)', ErrorCode.NOT_FOUND, 404);
       }
       projectObjectId = project._id as Types.ObjectId;
     }
@@ -174,12 +169,12 @@ export async function populateEndpointsFromLLM(
 
 /**
  * Extracts HTTP status code from an example response
- * 
+ *
  * Looks for:
  * 1. Explicit statusCode field
  * 2. status field
  * 3. Defaults to 200 if not found
- * 
+ *
  * @param example - The example object from the API specification
  * @returns The HTTP status code
  */
@@ -198,51 +193,39 @@ function extractStatusCode(example: Record<string, unknown>): number {
 
 /**
  * Deletes all endpoints and responses for a MockAPI
- * 
+ *
  * @param mockApiId - The ID of the MockAPI to delete from
  * @returns Number of endpoints deleted
  */
-export async function deleteAllEndpointsForMockAPI(
-  mockApiId: string
-): Promise<number> {
+export async function deleteAllEndpointsForMockAPI(mockApiId: string): Promise<number> {
   try {
     if (!Types.ObjectId.isValid(mockApiId)) {
-      throw new AppError(
-        'Invalid MockAPI ID format',
-        ErrorCode.VALIDATION_ERROR,
-        400
-      );
+      throw new AppError('Invalid MockAPI ID format', ErrorCode.VALIDATION_ERROR, 400);
     }
 
     const objectId = new Types.ObjectId(mockApiId);
 
     // Endpoints with their responses and configurations (no orphans)
-    const endpointIds = (await EndpointModel.find({ mockApiId: objectId }).select('_id').lean()).map((e) => e._id);
+    const endpointIds = (
+      await EndpointModel.find({ mockApiId: objectId }).select('_id').lean()
+    ).map((e) => e._id);
     return await deleteEndpointsCascade(endpointIds);
   } catch (error) {
     console.error(`Error deleting endpoints (${describeError(error)})`);
-    throw new AppError(
-      'Failed to delete endpoints',
-      ErrorCode.INTERNAL_SERVER_ERROR,
-      500
-    );
+    throw new AppError('Failed to delete endpoints', ErrorCode.INTERNAL_SERVER_ERROR, 500);
   }
 }
 
 /**
  * Retrieves all endpoints for a MockAPI
- * 
+ *
  * @param mockApiId - The ID of the MockAPI
  * @returns Array of endpoints with their responses
  */
 export async function getEndpointsForMockAPI(mockApiId: string) {
   try {
     if (!Types.ObjectId.isValid(mockApiId)) {
-      throw new AppError(
-        'Invalid MockAPI ID format',
-        ErrorCode.VALIDATION_ERROR,
-        400
-      );
+      throw new AppError('Invalid MockAPI ID format', ErrorCode.VALIDATION_ERROR, 400);
     }
 
     const endpoints = await EndpointModel.find({
@@ -254,10 +237,6 @@ export async function getEndpointsForMockAPI(mockApiId: string) {
     return endpoints;
   } catch (error) {
     console.error(`Error retrieving endpoints (${describeError(error)})`);
-    throw new AppError(
-      'Failed to retrieve endpoints',
-      ErrorCode.INTERNAL_SERVER_ERROR,
-      500
-    );
+    throw new AppError('Failed to retrieve endpoints', ErrorCode.INTERNAL_SERVER_ERROR, 500);
   }
 }

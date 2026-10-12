@@ -20,4 +20,6 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { cli } from './runner.js';
 
-cli(process.argv.slice(2), path.dirname(fileURLToPath(import.meta.url))).then((code) => process.exit(code));
+cli(process.argv.slice(2), path.dirname(fileURLToPath(import.meta.url))).then((code) =>
+  process.exit(code)
+);

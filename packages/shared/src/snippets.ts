@@ -21,7 +21,9 @@ export interface CodeSnippets {
 const NO_BODY_METHODS = new Set(['GET', 'HEAD']);
 
 const normalizeMethod = (method: string): string => {
-  const m = String(method ?? '').trim().toUpperCase();
+  const m = String(method ?? '')
+    .trim()
+    .toUpperCase();
   // Solo tokens alfabéticos: evita inyección de shell/código vía el verbo.
   return /^[A-Z]+$/.test(m) ? m : 'GET';
 };
@@ -30,9 +32,16 @@ const normalizeMethod = (method: string): string => {
 const cleanHeaders = (headers?: Record<string, string>): Array<[string, string]> =>
   Object.entries(headers ?? {})
     .filter(([k]) => k.trim() !== '')
-    .map(([k, v]) => [k.replace(/[\r\n]/g, '').trim(), String(v ?? '').replace(/[\r\n]/g, '')] as [string, string]);
+    .map(
+      ([k, v]) =>
+        [k.replace(/[\r\n]/g, '').trim(), String(v ?? '').replace(/[\r\n]/g, '')] as [
+          string,
+          string,
+        ]
+    );
 
-const hasContentType = (h: Array<[string, string]>) => h.some(([k]) => k.toLowerCase() === 'content-type');
+const hasContentType = (h: Array<[string, string]>) =>
+  h.some(([k]) => k.toLowerCase() === 'content-type');
 
 /** Escapa para comillas simples de shell: ' => '\'' */
 const shq = (s: string): string => `'${s.replace(/'/g, `'\\''`)}'`;
@@ -73,14 +82,21 @@ export function generateSnippets(req: SnippetRequest): CodeSnippets {
 
   const hasBody = req.body !== undefined && req.body !== null && !NO_BODY_METHODS.has(method);
   const bodyIsString = typeof req.body === 'string';
-  if (hasBody && !bodyIsString && !hasContentType(headers)) headers.push(['Content-Type', 'application/json']);
+  if (hasBody && !bodyIsString && !hasContentType(headers))
+    headers.push(['Content-Type', 'application/json']);
 
   // Cuerpo serializado: string tal cual, resto JSON.
-  const rawBody = hasBody ? (bodyIsString ? (req.body as string) : (JSON.stringify(req.body) ?? '')) : '';
+  const rawBody = hasBody
+    ? bodyIsString
+      ? (req.body as string)
+      : (JSON.stringify(req.body) ?? '')
+    : '';
   const prettyBody = hasBody && !bodyIsString ? (JSON.stringify(req.body, null, 2) ?? '') : '';
 
   // ---- cURL ----
-  const curlParts: string[] = [`curl ${method === 'HEAD' ? '-I ' : method === 'GET' ? '' : `-X ${method} `}${shq(url)}`];
+  const curlParts: string[] = [
+    `curl ${method === 'HEAD' ? '-I ' : method === 'GET' ? '' : `-X ${method} `}${shq(url)}`,
+  ];
   headers.forEach(([k, v]) => curlParts.push(`-H ${shq(`${k}: ${v}`)}`));
   // --data-raw: plain -d treats a body starting with '@' as a file to read (local file exfiltration on copy-paste).
   if (hasBody) curlParts.push(`--data-raw ${shq(rawBody)}`);
@@ -89,11 +105,15 @@ export function generateSnippets(req: SnippetRequest): CodeSnippets {
   // ---- Fetch ----
   const fetchOpts: string[] = [`  method: ${js(method)},`];
   if (headers.length) {
-    fetchOpts.push(`  headers: {\n${headers.map(([k, v]) => `    ${js(k)}: ${js(v)},`).join('\n')}\n  },`);
+    fetchOpts.push(
+      `  headers: {\n${headers.map(([k, v]) => `    ${js(k)}: ${js(v)},`).join('\n')}\n  },`
+    );
   }
   if (hasBody) {
     fetchOpts.push(
-      bodyIsString ? `  body: ${js(rawBody)},` : `  body: JSON.stringify(${indentBlock(prettyBody, 2)}),`
+      bodyIsString
+        ? `  body: ${js(rawBody)},`
+        : `  body: JSON.stringify(${indentBlock(prettyBody, 2)}),`
     );
   }
   const fetchSnippet =
@@ -103,18 +123,23 @@ export function generateSnippets(req: SnippetRequest): CodeSnippets {
   // ---- Axios ----
   const axiosOpts: string[] = [`  method: ${js(method.toLowerCase())},`, `  url: ${js(url)},`];
   if (headers.length) {
-    axiosOpts.push(`  headers: {\n${headers.map(([k, v]) => `    ${js(k)}: ${js(v)},`).join('\n')}\n  },`);
+    axiosOpts.push(
+      `  headers: {\n${headers.map(([k, v]) => `    ${js(k)}: ${js(v)},`).join('\n')}\n  },`
+    );
   }
   if (hasBody) {
-    axiosOpts.push(bodyIsString ? `  data: ${js(rawBody)},` : `  data: ${indentBlock(prettyBody, 2)},`);
+    axiosOpts.push(
+      bodyIsString ? `  data: ${js(rawBody)},` : `  data: ${indentBlock(prettyBody, 2)},`
+    );
   }
-  const axiosSnippet =
-    `import axios from "axios";\n\nconst { data } = await axios({\n${axiosOpts.join('\n')}\n});\nconsole.log(data);`;
+  const axiosSnippet = `import axios from "axios";\n\nconst { data } = await axios({\n${axiosOpts.join('\n')}\n});\nconsole.log(data);`;
 
   // ---- Python (requests) ----
   const pyArgs: string[] = [`    ${js(method)},`, `    ${js(url)},`];
   if (headers.length) {
-    pyArgs.push(`    headers={\n${headers.map(([k, v]) => `        ${js(k)}: ${js(v)},`).join('\n')}\n    },`);
+    pyArgs.push(
+      `    headers={\n${headers.map(([k, v]) => `        ${js(k)}: ${js(v)},`).join('\n')}\n    },`
+    );
   }
   if (hasBody) {
     pyArgs.push(bodyIsString ? `    data=${js(rawBody)},` : `    json=${py(req.body, 1)},`);

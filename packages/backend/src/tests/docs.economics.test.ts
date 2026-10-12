@@ -1,6 +1,12 @@
 import fs from 'fs';
 import path from 'path';
-import { PLANS, PLAN_LIMITS, PLAN_PRICE_USD, ANNUAL_MONTHS_CHARGED, type Plan } from '@mockia/shared';
+import {
+  PLANS,
+  PLAN_LIMITS,
+  PLAN_PRICE_USD,
+  ANNUAL_MONTHS_CHARGED,
+  type Plan,
+} from '@mockia/shared';
 
 const ROOT = path.resolve(__dirname, '../../../..');
 const read = (rel: string): string => fs.readFileSync(path.join(ROOT, rel), 'utf8');
@@ -12,7 +18,9 @@ type Row = Record<string, string>;
 /** Primera tabla Markdown que tenga la cabecera dada: filas como {cabecera: celda}. */
 const parseTable = (markdown: string, firstHeader: string): Row[] => {
   const lines = markdown.split(/\r?\n/);
-  const start = lines.findIndex((l) => l.trim().startsWith('|') && l.split('|')[1]?.trim() === firstHeader);
+  const start = lines.findIndex(
+    (l) => l.trim().startsWith('|') && l.split('|')[1]?.trim() === firstHeader
+  );
   if (start < 0) throw new Error(`No hay tabla que empiece por "${firstHeader}"`);
   const cells = (line: string) =>
     line
@@ -32,7 +40,12 @@ const parseTable = (markdown: string, firstHeader: string): Row[] => {
 /** "10.000" -> 10000; "1.000.000" -> 1000000; "Ilimitados" -> Infinity. */
 const toNumber = (cell: string): number => {
   if (/ilimitad/i.test(cell)) return Infinity;
-  const n = Number(cell.replace(/[^\d,]/g, '').replace(/\./g, '').replace(',', '.'));
+  const n = Number(
+    cell
+      .replace(/[^\d,]/g, '')
+      .replace(/\./g, '')
+      .replace(',', '.')
+  );
   if (Number.isNaN(n)) throw new Error(`Celda no numerica: "${cell}"`);
   return n;
 };
@@ -52,11 +65,14 @@ describe('docs/economia-planes.md', () => {
     expect(rows.map((r) => r['Plan']).sort()).toEqual(PLANS.map((p) => NAMES[p]).sort());
   });
 
-  it.each(PLANS.map((p) => [p]))('el precio mensual y el anual de %s coinciden con PLAN_PRICE_USD', (plan) => {
-    const row = rowOf(plan);
-    expect(usd(row['Precio mensual (USD)'])).toBe(PLAN_PRICE_USD[plan].monthly);
-    expect(usd(row['Precio anual (USD)'])).toBe(PLAN_PRICE_USD[plan].annual);
-  });
+  it.each(PLANS.map((p) => [p]))(
+    'el precio mensual y el anual de %s coinciden con PLAN_PRICE_USD',
+    (plan) => {
+      const row = rowOf(plan);
+      expect(usd(row['Precio mensual (USD)'])).toBe(PLAN_PRICE_USD[plan].monthly);
+      expect(usd(row['Precio anual (USD)'])).toBe(PLAN_PRICE_USD[plan].annual);
+    }
+  );
 
   it.each(PLANS.map((p) => [p]))('los limites de %s coinciden con PLAN_LIMITS', (plan) => {
     const row = rowOf(plan);
@@ -82,7 +98,9 @@ describe('docs/economia-planes.md', () => {
   });
 
   it('incluye la formula del margen, el procedimiento para medir el coste y la regla del peor caso con Starter', () => {
-    expect(doc).toMatch(/margen\s*=\s*precio\s*[−-]\s*comisi[oó]n de Stripe\s*[−-]\s*\(generaciones\s*[×x]\s*coste por generaci[oó]n\)\s*[−-]\s*hosting prorrateado/i);
+    expect(doc).toMatch(
+      /margen\s*=\s*precio\s*[−-]\s*comisi[oó]n de Stripe\s*[−-]\s*\(generaciones\s*[×x]\s*coste por generaci[oó]n\)\s*[−-]\s*hosting prorrateado/i
+    );
     expect(doc).toContain('npm run eval');
     expect(doc).toMatch(/peor caso/i);
     expect(doc).toMatch(/Starter/);
@@ -102,7 +120,10 @@ describe('docs/economia-planes.md', () => {
   it('recoge el gasto fijo diario de la demo (DEMO_DAILY_GENERATIONS × coste por generación), sin cifras', () => {
     expect(doc).toMatch(/DEMO_DAILY_GENERATIONS\s*×\s*coste por generación/);
     expect(doc).toContain('docs/demo.md');
-    const section = doc.slice(doc.indexOf('## Gasto fijo de la demo pública'), doc.indexOf('## Cómo reajustar un valor'));
+    const section = doc.slice(
+      doc.indexOf('## Gasto fijo de la demo pública'),
+      doc.indexOf('## Cómo reajustar un valor')
+    );
     expect(section.length).toBeGreaterThan(200);
     expect(section).not.toMatch(/\d+(?:[.,]\d+)?\s*(?:\$|€|USD|EUR)/);
   });

@@ -54,6 +54,9 @@ const endpointConfigSchema = new Schema<EndpointConfigDocument>(
   { timestamps: true }
 );
 
-export const EndpointConfigModel = model<EndpointConfigDocument>('EndpointConfig', endpointConfigSchema);
+export const EndpointConfigModel = model<EndpointConfigDocument>(
+  'EndpointConfig',
+  endpointConfigSchema
+);
 
 export type { EndpointConfigDocument };
