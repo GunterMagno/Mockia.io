@@ -254,7 +254,7 @@ const AUTH_HEADER =
   /((?:authorization|proxy-authorization|x-api-key|api-key)["']?\s*[:=]\s*["']?)(?:(?:bearer|basic|token)\s+)?(?:\[REDACTED_KEY\]|[^\s"',;}\]]{1,2000})/gi;
 
 /** Any `Bearer <token>` (no digit requirement, unlike `BEARER`: a provider error is not prose to preserve). */
-const ANY_BEARER = /\b(Bearer\s+)[A-Za-z0-9._~+/=-]{4,}/gi;
+const ANY_BEARER = /\b(Bearer\s{1,16})[A-Za-z0-9._~+/=-]{4,2000}/gi;
 
 /** Shortest secret worth searching for literally; a tinier one would shred the text. */
 const MIN_LITERAL_SECRET = 6;

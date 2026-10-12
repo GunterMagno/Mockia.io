@@ -85,3 +85,48 @@ export async function reserveAiGeneration(
     },
   };
 }
+
+/** Monthly cap of generations made with the user's OWN AI key when BYOK_MAX_MONTHLY_GENERATIONS is unset or not valid. */
+export const DEFAULT_BYOK_MAX_MONTHLY_GENERATIONS = 3000;
+
+/**
+ * BYOK_MAX_MONTHLY_GENERATIONS: a plain positive integer; anything else (empty, text, zero, negative, decimals) falls
+ * back to the default, so a typo can never switch the protection off. The cap protects the server, not the owner's wallet
+ * (the user pays their provider): it is the same for every plan.
+ */
+export function byokMonthlyLimit(env: NodeJS.ProcessEnv = process.env): number {
+  const raw = (env.BYOK_MAX_MONTHLY_GENERATIONS ?? '').trim();
+  if (!/^\d{1,9}$/.test(raw)) return DEFAULT_BYOK_MAX_MONTHLY_GENERATIONS;
+  const n = Number.parseInt(raw, 10);
+  return n > 0 ? n : DEFAULT_BYOK_MAX_MONTHLY_GENERATIONS;
+}
+
+/**
+ * Reserves one generation made with the user's own AI key against THEIR monthly cap (`byokGenerations`, never the plan's
+ * `aiGenerations`: a user who pays their own provider does not spend the platform's quota). Same atomic reservation and
+ * the same idempotent `release()` as `reserveAiGeneration`; the caller gives it back under the refund rules of ruling B3-R3.
+ */
+export async function reserveByokGeneration(
+  userId: string,
+  now: Date = aiQuotaClock.now()
+): Promise<AiReservation> {
+  const plan = await getUserPlan(userId);
+  const limit = byokMonthlyLimit();
+  const slot = await reserveAiGenerationSlot(userId, limit, now, 'byokGenerations');
+  if (!slot.ok) return { ok: false, used: slot.used, limit, resetsAt: nextPeriodStart(now) };
+
+  let released = false;
+  return {
+    ok: true,
+    plan,
+    release: async () => {
+      if (released) return;
+      released = true;
+      try {
+        await releaseAiGenerationSlot(userId, slot.period, 'byokGenerations');
+      } catch (err) {
+        console.error('[AI quota] could not give back a reserved own-key generation:', err);
+      }
+    },
+  };
+}

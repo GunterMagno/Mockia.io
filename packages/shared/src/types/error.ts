@@ -42,4 +42,12 @@ export enum ErrorCode {
   AI_PROVIDER_URL_INVALID = 'AI_PROVIDER_URL_INVALID',
   /** 400: the AI provider refused the key (401/403 when it was checked); nothing was saved. */
   AI_PROVIDER_REJECTED = 'AI_PROVIDER_REJECTED',
+  /** 409: the stored key of a credential cannot be opened (moved or altered record, or the key that sealed it is gone): re-enter it. */
+  AI_CREDENTIAL_UNREADABLE = 'AI_CREDENTIAL_UNREADABLE',
+  /** 429: the user's own monthly cap of generations with their AI key is spent (the body carries used, limit and resetsAt). */
+  AI_BYOK_QUOTA_EXCEEDED = 'AI_BYOK_QUOTA_EXCEEDED',
+  /** 402: the user's AI provider says the account has no credit or balance left. */
+  AI_PROVIDER_NO_CREDIT = 'AI_PROVIDER_NO_CREDIT',
+  /** 429: the user's AI provider is throttling their key (rate or spending limit). */
+  AI_PROVIDER_RATE_LIMITED = 'AI_PROVIDER_RATE_LIMITED',
 }

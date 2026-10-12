@@ -192,6 +192,9 @@ const RESERVE_ATTEMPTS = 5;
 
 export type AiSlot = { ok: true; period: string; used: number } | { ok: false; used: number };
 
+/** The monthly counters that are reserved atomically: the plan's AI generations, and the user's own-key generations. */
+export type AiCounter = 'aiGenerations' | 'byokGenerations';
+
 /**
  * Takes one AI generation of the month for `ownerId` if fewer than `limit` have been taken, in a single operation:
  * `$inc` guarded by `aiGenerations < limit` (a missing field, as in documents that only counted requests, counts as 0).
@@ -202,37 +205,42 @@ export type AiSlot = { ok: true; period: string; used: number } | { ok: false; u
 export async function reserveAiGenerationSlot(
   ownerId: string,
   limit: number,
-  now = new Date()
+  now = new Date(),
+  counter: AiCounter = 'aiGenerations'
 ): Promise<AiSlot> {
   const period = periodOf(now);
   if (!(limit > 0)) return { ok: false, used: 0 };
   // The unique index must exist, or the "at the limit" collision would insert a second document instead
   await UsageModel.init();
-  const filter = { ownerId, period, aiGenerations: { $not: { $gte: limit } } };
+  const filter = { ownerId, period, [counter]: { $not: { $gte: limit } } };
   for (let attempt = 1; ; attempt++) {
     try {
       const doc = await UsageModel.findOneAndUpdate(
         filter,
-        { $inc: { aiGenerations: 1 } },
+        { $inc: { [counter]: 1 } },
         { upsert: true, new: true, setDefaultsOnInsert: true }
       )
-        .select('aiGenerations')
+        .select(counter)
         .lean();
-      return { ok: true, period, used: doc?.aiGenerations ?? 1 };
+      return { ok: true, period, used: doc?.[counter] ?? 1 };
     } catch (err) {
       if ((err as { code?: number }).code !== DUPLICATE_KEY) throw err;
-      const doc = await UsageModel.findOne({ ownerId, period }).select('aiGenerations').lean();
-      const used = doc?.aiGenerations ?? 0;
+      const doc = await UsageModel.findOne({ ownerId, period }).select(counter).lean();
+      const used = doc?.[counter] ?? 0;
       if (used >= limit || attempt >= RESERVE_ATTEMPTS) return { ok: false, used };
     }
   }
 }
 
 /** Gives back one reserved generation of `period` (the generation failed). Never goes below zero, never creates a document. */
-export async function releaseAiGenerationSlot(ownerId: string, period: string): Promise<void> {
+export async function releaseAiGenerationSlot(
+  ownerId: string,
+  period: string,
+  counter: AiCounter = 'aiGenerations'
+): Promise<void> {
   await UsageModel.updateOne(
-    { ownerId, period, aiGenerations: { $gt: 0 } },
-    { $inc: { aiGenerations: -1 } }
+    { ownerId, period, [counter]: { $gt: 0 } },
+    { $inc: { [counter]: -1 } }
   );
 }
 

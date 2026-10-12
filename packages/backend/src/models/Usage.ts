@@ -5,12 +5,14 @@ import { Schema, model, Document, Types } from 'mongoose';
  * One document per owner and UTC month ('YYYY-MM'); `requests` only grows through $inc.
  * `aiGenerations` counts the successful AI generations of the month (reserved before the model is called and
  * given back with $inc -1 if the generation fails); documents written before it existed simply lack the field.
+ * `byokGenerations` is the same for generations made with the user's OWN AI key (its own monthly cap, never the plan's).
  */
 interface UsageDocument extends Document {
   ownerId: Types.ObjectId;
   period: string;
   requests: number;
   aiGenerations: number;
+  byokGenerations: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -21,6 +23,7 @@ const usageSchema = new Schema<UsageDocument>(
     period: { type: String, required: true, match: /^\d{4}-\d{2}$/ },
     requests: { type: Number, required: true, default: 0, min: 0 },
     aiGenerations: { type: Number, default: 0, min: 0 },
+    byokGenerations: { type: Number, default: 0, min: 0 },
   },
   { timestamps: true }
 );
