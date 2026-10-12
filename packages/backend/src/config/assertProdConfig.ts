@@ -10,6 +10,7 @@
 
 import { parseAiProviders } from './ai.js';
 import { duplicatePriceEnvGroups } from '../modules/billing/prices.js';
+import { invalidAdminEmailCount } from './admin.js';
 
 const MIN_SECRET_LENGTH = 32;
 
@@ -105,6 +106,15 @@ export function assertProdConfig(env: NodeJS.ProcessEnv = process.env): void {
   for (const names of duplicatePriceEnvGroups(env)) {
     problems.push(
       `${names.join(' and ')} have the same Stripe price id; each plan and interval needs its own Price`
+    );
+  }
+
+  // ADMIN_EMAILS decides who sees the owner's data. An entry that is not an address (a typo, "*") would silently give
+  // nobody access, or look like it gives somebody; fail at boot. Counts only, never the entries.
+  const badAdmins = invalidAdminEmailCount(env);
+  if (badAdmins > 0) {
+    problems.push(
+      `ADMIN_EMAILS has ${badAdmins} entr${badAdmins === 1 ? 'y' : 'ies'} that ${badAdmins === 1 ? 'is' : 'are'} not a valid email address; use a comma-separated list of addresses (or leave it empty)`
     );
   }
 

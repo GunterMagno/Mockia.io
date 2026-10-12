@@ -12,6 +12,7 @@ import { authRouter } from './modules/auth/routes.js';
 import { testOutboxRouter, shouldMountTestOutbox } from './modules/testSupport/outboxRoutes.js';
 import { projectsRouter } from './modules/projects/routes.js';
 import { userRouter } from './modules/users/routes.js';
+import { adminRouter } from './modules/admin/routes.js';
 import { githubRouter } from './routes/github.routes.js';
 import { mockRouter } from './routes/mock.routes.js';
 import { mockRouter as catchAllMockRouter } from './modules/mock/mockRouter.js';
@@ -182,6 +183,9 @@ if (shouldMountTestOutbox()) {
 
 // Users routes (protected)
 app.use('/api/users', userRouter);
+
+// Owner-only routes (ADMIN_EMAILS, verified address); every path under it is guarded, see modules/admin/routes.ts
+app.use('/api/admin', adminRouter);
 
 // Projects routes (protected)
 app.use('/api/projects', projectsRouter);
