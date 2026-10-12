@@ -96,3 +96,52 @@ Las copias contienen datos personales de usuarios: **un usuario que borra su cue
 - **Copia en rojo**: abre la ejecución; los mensajes no incluyen la URI. Causas habituales: contraseña caducada o IP no permitida en Atlas (`server selection error`), URI sin nombre de base («la copia está vacía o es demasiado pequeña») o clave pública mal copiada.
 - **Simulacro en rojo**: lo más probable es un cambio en las herramientas (`age`, `mongodb-database-tools`) o en Mongo; el mensaje `drill FALLA: …` dice qué comprobación no pasó. Hasta que vuelva a verde, no te fíes de las copias nuevas.
 - **Rotación de clave**: genera una pareja nueva, cambia `BACKUP_AGE_RECIPIENT` y **conserva la clave privada antigua** mientras queden copias cifradas con ella (hasta 14 días en GitHub, más en S3).
+
+## Panel de métricas
+
+El titular tiene una API de métricas, `GET /api/admin/metrics?days=7|30|90` (por defecto 30; cualquier otro valor es un 400). La pantalla `/admin` que la muestra llega en la tarea siguiente; mientras tanto se puede consultar con `curl` y el token de acceso de tu sesión.
+
+### Quién puede verla
+
+Solo los correos de `ADMIN_EMAILS` (lista separada por comas, sin distinguir mayúsculas) **y con el correo verificado en la cuenta**. No hay ningún rol en la base de datos: ninguna escritura en un usuario da acceso. Quien no es administrador recibe un 403 idéntico tanto si su correo no está en la lista como si no está verificado; sin sesión, un 401. Vacía (por defecto) = nadie.
+
+### Qué contiene
+
+Solo agregados, sin correos, ids de usuario, IPs ni contenido. Los días van en UTC y la ventana trae siempre los `days` días completos, hoy incluido, con los días sin actividad a 0.
+
+| Bloque    | Qué cuenta                                                                                                                                                                                                                                                                                    |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `users`   | Total y verificados (todas las cuentas); `byPlan` por el plan que **se aplica hoy** (un `past_due` fuera de gracia o un cancelado cuentan como `free`; un `past_due` dentro de los 7 días de gracia mantiene su plan); `newPerDay` altas por día de la ventana.                               |
+| `funnel`  | Cohorte registrada **dentro de la ventana**: registrados, verificados, con proyecto y con al menos una generación de IA (`Usage.aiGenerations > 0` en alguno de sus meses). Cada paso exige haber cumplido el anterior: «con proyecto» son los verificados con proyecto, y así sucesivamente. |
+| `billing` | `paying`: cuentas de pago con `billingStatus` **activa**, por plan. `mrrUsdEstimate`: ingreso mensual recurrente estimado.                                                                                                                                                                    |
+| `ai`      | Llamadas y errores por día y ámbito (`users`, `demo`, `byok`), tokens de entrada y salida, `errorRatio` (todo desenlace distinto de `ok` cuenta como error), `estimatedCostUsd` y `unpriced`.                                                                                                 |
+| `demo`    | `generationsPerDay`: generaciones de la demo pública por día (llamadas de IA con ámbito `demo`).                                                                                                                                                                                              |
+
+### El MRR es una estimación, no facturación
+
+Se calcula desde el catálogo de precios de `@mockia/shared` (`PLAN_PRICE_USD`), no desde Stripe: ignora impuestos, descuentos, cupones, reembolsos y el cambio de divisa. Reglas:
+
+- Cuentan solo las cuentas con `billingStatus` activa. Las `past_due` (aún sin cobrar) y las canceladas **no** cuentan.
+- Intervalo anual: el precio anual dividido entre 12 (el de Pro, 290 USD al año, aporta 24,17 al mes). Intervalo mensual: el precio mensual.
+- **Si el intervalo de una cuenta no se conoce** (cuentas anteriores a que se guardara el intervalo, o cuyo precio de Stripe no se reconoció) se cuenta como **mensual**. Si tienes suscripciones anuales así, el MRR estará algo sobrestimado hasta que su próximo evento de Stripe rellene el intervalo.
+
+La cifra que manda es la de Stripe; úsala para contrastar, no para contabilidad.
+
+### Coste estimado de la IA: `AI_PRICES_JSON`
+
+El servidor **no trae precios**: los pones tú, en USD por millón de tokens, tal como los publica cada proveedor.
+
+```bash
+AI_PRICES_JSON='{"openrouter/anthropic/claude-3.5-sonnet":{"inputPerMTok":3,"outputPerMTok":15}}'
+```
+
+- La clave es `<proveedor>/<modelo>` exactamente como aparece en las métricas (el modelo puede contener barras). Los nombres que ves en la API vienen de las propias llamadas registradas; mira `ai.unpriced` para saber cuáles te faltan.
+- Vacía o sin definir (por defecto) = **sin estimación**: `estimatedCostUsd` es `null` y `unpriced` va vacía; los tokens se siguen sumando.
+- Un JSON inválido (o con una forma distinta, un precio negativo, una clave sin `/`) se **ignora entero** con un aviso en el log (`AI_PRICES_JSON is not valid`, sin repetir el valor) y el coste queda en `null`. En producción además impide arrancar (`assertProdConfig`, que tampoco reproduce el valor): una tabla a medias daría un coste equivocado sin avisar.
+- Un modelo sin precio suma sus tokens pero no coste, y se lista en `ai.unpriced`. Las llamadas fallidas se registran con modelo `unknown` y sin tokens, así que aparecerán como `<proveedor>/unknown` sin precio: es normal.
+- **Las llamadas con la clave propia del usuario (`byok`) nunca cuentan como coste**: las paga el usuario. Sí suman a los tokens y a las llamadas.
+- El coste solo refleja lo que tiene tokens guardados (`ok` con uso informado); no es la factura del proveedor.
+
+### Caché y rendimiento
+
+Cada ventana (7, 30 y 90) se calcula como mucho una vez cada 60 segundos y se guarda en la memoria del proceso: dos pestañas o recargas seguidas no repiten las agregaciones (con varias instancias cada una tiene la suya). Las consultas usan los índices `User.createdAt`, `AiCall.at`, `Project.ownerId` y `Usage.ownerId`. Un fallo no se cachea.
