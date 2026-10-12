@@ -26,7 +26,11 @@ const auth = { Authorization: `Bearer ${TOKEN}` };
 
 const HOUR = 60 * 60 * 1000;
 
-const call = (outcome: AiCallOutcome, ageMs: number, scope: 'users' | 'demo' | 'byok' = 'users') => ({
+const call = (
+  outcome: AiCallOutcome,
+  ageMs: number,
+  scope: 'users' | 'demo' | 'byok' = 'users'
+) => ({
   at: new Date(Date.now() - ageMs),
   scope,
   plan: scope === 'demo' ? ('anonymous' as const) : ('free' as const),
@@ -283,9 +287,16 @@ describe('/api/ops/summary', () => {
         expect(getLlmStatus()).toEqual({
           'users:local': { scope: 'users', provider: 'local', breaker: 'closed' },
         });
-        for (let i = 0; i < 3; i++) await getLlm().complete({ messages }).catch(() => undefined);
+        for (let i = 0; i < 3; i++)
+          await getLlm()
+            .complete({ messages })
+            .catch(() => undefined);
         const status = getLlmStatus();
-        expect(status['users:local']).toEqual({ scope: 'users', provider: 'local', breaker: 'open' });
+        expect(status['users:local']).toEqual({
+          scope: 'users',
+          provider: 'local',
+          breaker: 'open',
+        });
         expect(JSON.stringify(status)).not.toContain(dead);
         expect(JSON.stringify(status)).not.toMatch(/https?:|127\.0\.0\.1|key/i);
       } finally {
@@ -312,7 +323,10 @@ describe('/api/ops/summary', () => {
       const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
       const savedKey = openRouterConfig.apiKey;
       try {
-        for (let i = 0; i < 3; i++) await getLlm().complete({ messages }).catch(() => undefined);
+        for (let i = 0; i < 3; i++)
+          await getLlm()
+            .complete({ messages })
+            .catch(() => undefined);
         const res = await request(app).get('/api/ops/summary').set(auth);
         expect(res.body.ai.breakers['users:local']).toEqual({
           scope: 'users',

@@ -162,6 +162,64 @@ Hazla en **cualquier topología** (Render, el compose solo o el compose con un p
 
    Si la comprobación confirma que en Render el acceso directo funciona, las opciones son: aceptar el riesgo con un `DEMO_DAILY_GENERATIONS` pequeño y el límite de gasto del proveedor; subir `DEMO_POW_BITS`; o cambiar la topología para que el backend no sea accesible directamente (no hay forma de lograrlo con la reescritura del sitio estático de Render y el plan gratuito; exigiría un proxy propio delante, p. ej. el nginx del compose, con el backend sin URL pública).
 
+## Resumen operativo: `GET /api/ops/summary`
+
+Está pensado para los flujos de vigilancia y de comprobación tras desplegar de GitHub Actions (tareas A3 y A4 del plan de operaciones); también sirve a mano. Devuelve cifras y nombres de proveedor, **ningún dato personal** (ni correos, ni ids de usuario, ni IP, ni proyectos, ni contenido).
+
+**Variables** (ambas apagadas por defecto):
+
+| Variable                           | Defecto | Qué hace                                                                                                                                                                                                                                                                                                                                                        |
+| ---------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OPS_TOKEN`                        | vacío   | Secreto del endpoint: `openssl rand -hex 32` (mínimo 32 caracteres). Vacío = el endpoint **no existe** (404, igual que cualquier ruta desconocida). Uno de menos de 32 caracteres impide arrancar en producción (sin repetir el valor) y, fuera de producción, se trata como vacío. Es un secreto: solo en el entorno del servicio y en los secretos de GitHub. |
+| `RENDER_GIT_COMMIT` / `GIT_COMMIT` | vacío   | Versión desplegada, que `GET /api/health` devuelve como `commit` (`null` si no hay ninguna). Render pone `RENDER_GIT_COMMIT` por su cuenta; con Docker Compose: `GIT_COMMIT=$(git rev-parse HEAD) docker compose -f docker-compose.prod.yml up -d`.                                                                                                             |
+
+**Llamada**:
+
+```
+curl -s -H "Authorization: Bearer $OPS_TOKEN" https://<backend>/api/ops/summary
+```
+
+Sin cabecera o con un token erróneo: 401 con el mismo cuerpo siempre (no dice qué falló). Más de 60 peticiones por minuto desde una misma IP, incluidas las erróneas: 429 (limitador propio, montado antes de los generales de `/api`; no consume el cupo de 1 000 cada 15 minutos). La respuesta no se cachea.
+
+**Forma** (sin envoltorio `data`; las proporciones van con 4 decimales):
+
+```json
+{
+  "generatedAt": "2026-10-12T10:00:00.000Z",
+  "db": { "ok": true },
+  "demo": { "enabled": true, "generationsToday": 80, "dailyLimit": 100, "usedRatio": 0.8 },
+  "ai": {
+    "last60m": {
+      "calls": 10,
+      "errors": 4,
+      "errorRatio": 0.4,
+      "byScope": { "users": { "calls": 6, "errors": 1 }, "demo": { "calls": 4, "errors": 3 } }
+    },
+    "breakers": { "users:local": { "scope": "users", "provider": "local", "breaker": "open" } }
+  },
+  "caller": { "pseudonym": "3f9c…(64 hex)" }
+}
+```
+
+- `db.ok`: la conexión con MongoDB está viva. Si no se puede leer, las cifras que viven en la base salen a cero; la lectura importante es `db.ok`.
+- `demo`: generaciones de la demo gastadas hoy (UTC, contador global) frente a `DEMO_DAILY_GENERATIONS`; `usedRatio` es 0 con límite 0 y nunca pasa de 1.
+- `ai.last60m`: llamadas de IA (eventos `AiCall`: ámbito, plan, proveedor, resultado, tokens y latencia; sin contenido ni identidad; se borran a los 90 días) de los últimos 60 minutos, por ámbito (`users`, `demo`, `byok`). **`errors` son las llamadas cuyo resultado no es `ok`**: `invalid`, `truncated`, `timeout`, `refused` y `error`. Se cuentan todas a propósito: un proveedor que rechaza (`refused`) o no contesta a tiempo (`timeout`) es justo lo que el titular quiere ver, y el origen (nuestro o del proveedor) se distingue en el panel de métricas, no aquí. `errorRatio = errors / calls` (0 si no hubo llamadas). Una sola llamada a la cadena cuenta una vez aunque haya habido reparación o respaldo.
+- `ai.breakers`: estado del cortacircuitos de cada cadena construida, con clave `<ámbito>:<proveedor>` y valor `closed` o `open`. Solo nombres: nunca URLs, claves ni modelos. `open` significa «falló y aún no se ha visto que se recupere»: dura desde que se abre hasta que una petición posterior tiene éxito (también pasado el minuto de enfriamiento), para que una vigilancia cada 15 minutos lo vea. Un proveedor sin cortacircuitos (el de reserva, que siempre se intenta) sale siempre `closed`. Una cadena que nadie ha usado todavía no aparece (la de la demo se crea con la primera generación).
+- `caller.pseudonym`: el seudónimo de hoy (el mismo HMAC de la IP que usan los cupos de la demo) de **quien hace la llamada**, o `null` si no hay `DEMO_HMAC_SECRET`. Sirve para comprobar desde fuera si `X-Forwarded-For` es falsificable (ver el siguiente apartado). Cambia cada día UTC y no se puede revertir sin el secreto.
+
+### Comprobar `TRUST_PROXY` con el resumen
+
+Es la comprobación manual de arriba, sin leer logs. Llama **directamente a la URL pública del backend** con dos valores distintos de `X-Forwarded-For` y compara el seudónimo:
+
+```
+for ip in 203.0.113.7 203.0.113.8; do
+  curl -s -H "Authorization: Bearer $OPS_TOKEN" -H "X-Forwarded-For: $ip" https://<backend>/api/ops/summary | grep -o '"pseudonym":"[^"]*"'
+done
+```
+
+- **Mismo seudónimo en las dos**: la cabecera falsificada no cambia la IP que ve el servidor. Correcto.
+- **Seudónimos distintos**: quien llama puede elegir su «IP» y anular los cupos por visitante. `TRUST_PROXY` cuenta más saltos de los que de verdad hay delante del backend; sigue "Comprobación de `TRUST_PROXY`".
+
 ## Qué se guarda (y cuánto)
 
 Resumen operativo de lo que los textos legales declaran; si algo de esto cambia, cambian los textos.
