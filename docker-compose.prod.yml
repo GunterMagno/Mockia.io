@@ -78,6 +78,9 @@ services:
       # Token de GET /api/ops/summary (resumen operativo para la vigilancia): secreto aleatorio de 32 caracteres o mas.
       # Vacio = el endpoint no existe. Uno mas corto impide arrancar.
       OPS_TOKEN: ${OPS_TOKEN:-}
+      # Precios del panel de metricas (coste estimado de la IA): JSON {"<proveedor>/<modelo>": {"inputPerMTok": n, "outputPerMTok": n}}
+      # en USD por millon de tokens. Vacio = sin estimacion de coste. Un JSON invalido impide arrancar.
+      AI_PRICES_JSON: ${AI_PRICES_JSON:-}
       # Version desplegada que devuelve /api/health como `commit`: GIT_COMMIT=$(git rev-parse HEAD) docker compose ... up -d
       GIT_COMMIT: ${GIT_COMMIT:-}
       # Correo transaccional (verificacion de email y recuperar contrasena). Sin SMTP_URL no se envia nada.

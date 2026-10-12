@@ -87,6 +87,11 @@ services:
       # Render fija RENDER_GIT_COMMIT por su cuenta: /api/health lo devuelve como `commit`.
       - key: OPS_TOKEN
         sync: false
+      # Tabla de precios del panel de metricas (coste estimado de la IA): JSON {"<proveedor>/<modelo>": {"inputPerMTok": n,
+      # "outputPerMTok": n}} en USD por millon de tokens. Se rellena en el panel de Render (sync: false). Vacia (por defecto) =
+      # sin estimacion de coste. Un JSON invalido impide arrancar en produccion.
+      - key: AI_PRICES_JSON
+        sync: false
       # Transactional email (verification and password reset links). Without SMTP_URL nobody receives them and
       # unverified users cannot use AI generation or billing. Resend or Brevo (free plan); see docs/08_despliegue.md.
       - key: SMTP_URL
