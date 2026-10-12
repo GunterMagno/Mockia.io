@@ -75,11 +75,22 @@ const feedbackLimiter = rateLimit({
  *               requirement:
  *                 type: string
  *                 maxLength: 4000
+ *               credentialId:
+ *                 type: string
+ *                 description: >
+ *                   One of the caller's own AI credentials (POST /ai-credentials). Generates with the user's own AI key:
+ *                   no fallback to the platform's AI, the plan's monthly quota is not used (a separate monthly cap,
+ *                   BYOK_MAX_MONTHLY_GENERATIONS, applies) and nothing is stored for training. Not yours, missing or
+ *                   malformed is the same 404 AI_CREDENTIAL_NOT_FOUND; 404 BYOK_DISABLED when the feature is off.
  *     responses:
  *       200:
  *         description: Success
  *       429:
- *         description: Per-minute limit (RATE_LIMIT_ERROR) or the plan's monthly AI generation quota (AI_QUOTA_EXCEEDED; the body carries used, limit and resetsAt, Retry-After is the seconds to the next UTC month)
+ *         description: Per-minute limit (RATE_LIMIT_ERROR), the plan's monthly AI generation quota (AI_QUOTA_EXCEEDED), the monthly cap of generations with the user's own key (AI_BYOK_QUOTA_EXCEEDED; both carry used, limit and resetsAt, Retry-After is the seconds to the next UTC month) or the user's provider throttling the key (AI_PROVIDER_RATE_LIMITED)
+ *       402:
+ *         description: With credentialId, the user's AI provider reports no credit (AI_PROVIDER_NO_CREDIT)
+ *       400:
+ *         description: Invalid body, or with credentialId the provider rejected the key (AI_PROVIDER_REJECTED)
  */
 // Read only (nothing is saved): any member, viewers included
 router.post(
@@ -114,11 +125,22 @@ router.post(
  *               requirement:
  *                 type: string
  *                 maxLength: 4000
+ *               credentialId:
+ *                 type: string
+ *                 description: >
+ *                   One of the caller's own AI credentials (POST /ai-credentials). Generates with the user's own AI key:
+ *                   no fallback to the platform's AI, the plan's monthly quota is not used (a separate monthly cap,
+ *                   BYOK_MAX_MONTHLY_GENERATIONS, applies) and nothing is stored for training. Not yours, missing or
+ *                   malformed is the same 404 AI_CREDENTIAL_NOT_FOUND; 404 BYOK_DISABLED when the feature is off.
  *     responses:
  *       200:
  *         description: Success
  *       429:
- *         description: Per-minute limit (RATE_LIMIT_ERROR) or the plan's monthly AI generation quota (AI_QUOTA_EXCEEDED; the body carries used, limit and resetsAt, Retry-After is the seconds to the next UTC month)
+ *         description: Per-minute limit (RATE_LIMIT_ERROR), the plan's monthly AI generation quota (AI_QUOTA_EXCEEDED), the monthly cap of generations with the user's own key (AI_BYOK_QUOTA_EXCEEDED; both carry used, limit and resetsAt, Retry-After is the seconds to the next UTC month) or the user's provider throttling the key (AI_PROVIDER_RATE_LIMITED)
+ *       402:
+ *         description: With credentialId, the user's AI provider reports no credit (AI_PROVIDER_NO_CREDIT)
+ *       400:
+ *         description: Invalid body, or with credentialId the provider rejected the key (AI_PROVIDER_REJECTED)
  */
 // Writes endpoints into the project: owner or editor
 router.post(
