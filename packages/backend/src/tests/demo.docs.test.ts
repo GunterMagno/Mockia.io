@@ -240,18 +240,21 @@ describe('textos legales de la demo', () => {
         /almacenamiento de sesión de esta pestaña/,
         /hasta que lo reclames o la cierres/,
         /estrictamente necesario/,
+        /junto con su clave de reclamo/, // L1: el secreto que reclama la demo se guarda con el id y se declara
       ],
       en: [
         /Only if you decide to save the project/,
         /session storage of this tab/,
         /until you claim it or close the tab/,
         /strictly necessary/,
+        /together with its claim key/,
       ],
       zh: [
         /只有当你决定保存该项目时/,
         /此标签页的会话存储/,
         /直到你认领它或关闭该标签页/,
         /严格必要/,
+        /及其认领密钥/,
       ],
     };
     for (const l of LANGS) {

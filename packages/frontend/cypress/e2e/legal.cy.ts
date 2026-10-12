@@ -296,6 +296,7 @@ const DEMO_PRIVACY: Record<Lang, DemoPrivacyCopy> = {
       /almacenamiento de sesión de esta pestaña/,
       /hasta que lo reclames o la cierres/,
       /estrictamente necesario/,
+      /junto con su clave de reclamo/,
     ],
     objection: /derecho de oposición/i,
     forbidden: [/se guarda la dirección IP en claro/i, /guardamos tu dirección IP en claro/i],
@@ -322,6 +323,7 @@ const DEMO_PRIVACY: Record<Lang, DemoPrivacyCopy> = {
       /session storage of this tab/,
       /until you claim it or close the tab/,
       /strictly necessary/,
+      /together with its claim key/,
     ],
     objection: /right to object/i,
     forbidden: [/IP address is stored in clear/i, /we store your IP address in clear/i],
@@ -340,6 +342,7 @@ const DEMO_PRIVACY: Record<Lang, DemoPrivacyCopy> = {
       /此标签页的会话存储/,
       /直到你认领它或关闭该标签页/,
       /严格必要/,
+      /及其认领密钥/,
     ],
     objection: /反对权/,
     forbidden: [/以明文保存 IP 地址/, /明文保存你的 IP/],
@@ -474,6 +477,7 @@ describe('Legal: la demo publica sin registro (Cookies)', () => {
       /almacenamiento de sesión de esta pestaña/,
       /hasta que lo reclames o la cierres/,
       /estrictamente necesario/,
+      /junto con su clave de reclamo/,
     ],
     en: [
       /The public demo does not use cookies or local storage/,
@@ -481,6 +485,7 @@ describe('Legal: la demo publica sin registro (Cookies)', () => {
       /session storage of this tab/,
       /until you claim it or close the tab/,
       /strictly necessary/,
+      /together with its claim key/,
     ],
     zh: [
       /公开演示不使用 Cookie，也不使用本地存储/,
@@ -488,6 +493,7 @@ describe('Legal: la demo publica sin registro (Cookies)', () => {
       /此标签页的会话存储/,
       /直到你认领它或关闭该标签页/,
       /严格必要/,
+      /及其认领密钥/,
     ],
   };
 
