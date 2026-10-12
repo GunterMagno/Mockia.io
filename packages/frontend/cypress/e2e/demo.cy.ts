@@ -7,6 +7,8 @@ Cypress.on('window:before:load', (win) => win.localStorage.setItem('mockia_local
 
 const MAX_CHARS = 6000;
 const DEMO_ID = 'a1b2c3d4e5f6';
+/** Secreto de reclamo de las demos simuladas (la API real lo entrega una sola vez, en la respuesta de generate). */
+const CLAIM_TOKEN = '0f1e2d3c4b5a69788796a5b4c3d2e1f0';
 
 const envelope = <T>(data: T) => ({ success: true, data, timestamp: new Date().toISOString() });
 const failure = (code: string, message: string) => ({
@@ -33,6 +35,7 @@ const leadingZeroBits = async (text: string): Promise<number> => {
 const generated = (overrides: Record<string, unknown> = {}) =>
   envelope({
     demoId: DEMO_ID,
+    claimToken: CLAIM_TOKEN,
     baseUrl: `http://localhost:5173/api/demo-mock/${DEMO_ID}`,
     endpoints: [
       {
@@ -819,21 +822,35 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
           (res.body.data as MailEntry[]).filter((m) => m.to === to && m.template === 'verify')
         );
 
-    /** Una demo real en la base de datos (sin IA); el alias @realDemoId lleva su id. */
+    /** Una demo real en la base de datos (sin IA); los alias @realDemoId y @realClaimToken llevan su id publico y su secreto. */
     const createRealDemo = () =>
       cy.request('POST', '/api/__test__/demo-mock', {}).then((res) => {
         cy.wrap(res.body.data.demoId as string).as('realDemoId');
+        cy.wrap(res.body.data.claimToken as string).as('realClaimToken');
+        Cypress.env('realClaimToken', res.body.data.claimToken as string);
       });
+
+    /** Lo que la pagina guarda en sessionStorage al pulsar guardar: JSON { demoId, claimToken }, o null. */
+    const pendingEntry = () =>
+      cy.window().then((win) => {
+        const raw = win.sessionStorage.getItem(KEY);
+        return raw === null ? null : (JSON.parse(raw) as { demoId: string; claimToken: string });
+      });
+    /** Deja una entrada pendiente como la dejaria el boton de guardar (para los casos que parten de ella). */
+    const seedPending = (win: Cypress.AUTWindow, value: unknown) =>
+      win.sessionStorage.setItem(KEY, typeof value === 'string' ? value : JSON.stringify(value));
 
     /** Abre /demo con la generacion simulada que devuelve el id de la demo real, y la genera. */
     const generateRealDemo = () => {
       cy.get<string>('@realDemoId').then((demoId) => {
+        const claimToken = Cypress.env('realClaimToken') as string;
         stubStatus();
         stubChallenge();
         stubGenerate({
           statusCode: 201,
           body: generated({
             demoId,
+            claimToken,
             baseUrl: `http://localhost:5173/api/demo-mock/${demoId}`,
             endpoints: [
               {
@@ -886,6 +903,14 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
     };
     const claimNotice = () => cy.get('[data-testid="demo-claim"]');
     const pending = () => cy.window().then((win) => win.sessionStorage.getItem(KEY));
+    /** El almacenamiento guarda { demoId, claimToken } de la demo real, y nada de eso va en la URL. */
+    const shouldKeepRealDemo = () =>
+      cy.get<string>('@realDemoId').then((demoId) =>
+        cy.get<string>('@realClaimToken').then((claimToken) => {
+          pendingEntry().should('deep.equal', { demoId, claimToken });
+          cy.location('href').should('not.contain', demoId).and('not.contain', claimToken);
+        })
+      );
 
     before(() => {
       cy.request({ url: '/api/__test__/outbox', failOnStatusCode: false })
@@ -904,11 +929,23 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
       cy.window().then((win) => expect(Object.keys(win.sessionStorage)).to.deep.equal([]));
       cy.contains('a', 'Create your free account').click();
       cy.location('pathname').should('eq', '/signup');
-      cy.get<string>('@realDemoId').then((demoId) => pending().should('eq', demoId)); // y no va en la URL
+      shouldKeepRealDemo(); // id publico + secreto en sessionStorage, ninguno en la URL
       cy.location('search').should('eq', '');
+      cy.intercept('POST', claimUrl).as('claimRequest');
 
       signUp(uniqueEmail('keep'));
       cy.url().should('include', '/dashboard');
+      // El secreto viaja en el cuerpo del POST (nunca en la URL ni en una cabecera) y el id publico solo en la ruta
+      cy.wait('@claimRequest').then(({ request }) => {
+        cy.get<string>('@realDemoId').then((demoId) =>
+          cy.get<string>('@realClaimToken').then((claimToken) => {
+            expect(request.body).to.deep.equal({ claimToken });
+            expect(new URL(request.url).pathname).to.eq(`/api/demo/${demoId}/claim`);
+            expect(request.url).not.to.contain(claimToken);
+            expect(JSON.stringify(request.headers)).not.to.contain(claimToken);
+          })
+        );
+      });
       claimNotice()
         .should('have.attr', 'data-state', 'done')
         .and('contain', 'Your demo is now a project of your account: Demo - products');
@@ -947,7 +984,7 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
       claimNotice()
         .should('have.attr', 'data-state', 'verify')
         .and('contain', 'Verify your email address and we will save it as a project');
-      cy.get<string>('@realDemoId').then((demoId) => pending().should('eq', demoId));
+      shouldKeepRealDemo();
       cy.contains('Demo - products').should('not.exist');
 
       mailsFor(email).then((mails) => {
@@ -988,7 +1025,7 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
         .and('have.attr', 'role', 'alert')
         .and('contain', 'your Free plan allows 5 active projects');
       claimNotice().contains('a', 'See plans').should('have.attr', 'href', '/billing');
-      cy.get<string>('@realDemoId').then((demoId) => pending().should('eq', demoId));
+      shouldKeepRealDemo();
       cy.contains('Demo - products').should('not.exist');
       // Con hueco (aqui: la segunda respuesta ya es la real), el mismo boton la guarda
       claimNotice().contains('button', 'Try again').click();
@@ -1014,6 +1051,7 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
 
     it('la demo ya no existe (caducada o reclamada): aviso, enlace a una demo nueva y el id pendiente se borra', () => {
       cy.get<string>('@realDemoId').then((demoId) => {
+        const claimToken = Cypress.env('realClaimToken') as string;
         // Se reclama antes con otra cuenta: para la nuestra ya no queda nada
         const first = uniqueEmail('first');
         registerViaApi(first);
@@ -1023,6 +1061,7 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
               method: 'POST',
               url: `/api/demo/${demoId}/claim`,
               headers: { Authorization: `Bearer ${login.body.data.tokens.accessToken as string}` },
+              body: { claimToken },
             })
               .its('status')
               .should('eq', 201);
@@ -1033,7 +1072,7 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
         registerViaApi(email);
         cy.visit('/login', {
           onBeforeLoad(win) {
-            win.sessionStorage.setItem(KEY, demoId);
+            seedPending(win, { demoId, claimToken });
           },
         });
         logIn(email);
@@ -1060,6 +1099,84 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
       cy.get('[data-testid="demo-claim"]').should('not.exist');
       pending().should('eq', null);
       cy.get('@claim.all').should('have.length', 0);
+    });
+
+    it('el formato antiguo (solo el id, sin secreto) o un secreto mal formado se ignoran y se borran, sin peticion de reclamo', () => {
+      cy.get<string>('@realDemoId').then((demoId) => {
+        for (const bad of [
+          demoId, // formato anterior: solo el id publico
+          JSON.stringify({ demoId }),
+          JSON.stringify({ demoId, claimToken: 'no-es-un-secreto' }),
+          JSON.stringify({ demoId, claimToken: demoId.toUpperCase() }),
+          '{"demoId":',
+        ]) {
+          const email = uniqueEmail('badfmt');
+          registerViaApi(email);
+          cy.intercept('POST', claimUrl).as('claim');
+          cy.visit('/login', {
+            onBeforeLoad(win) {
+              seedPending(win, bad);
+            },
+          });
+          logIn(email);
+          cy.contains('My projects').should('be.visible');
+          cy.get('[data-testid="demo-claim"]').should('not.exist');
+          pending().should('eq', null);
+          cy.get('@claim.all').should('have.length', 0);
+          cy.clearCookies();
+        }
+      });
+    });
+
+    it('con el id correcto pero un secreto que no es el de esa demo: aviso de que no esta disponible, la demo sigue viva y se borra la entrada', () => {
+      cy.get<string>('@realDemoId').then((demoId) => {
+        const email = uniqueEmail('wrongtoken');
+        registerViaApi(email);
+        cy.visit('/login', {
+          onBeforeLoad(win) {
+            seedPending(win, { demoId, claimToken: 'ab'.repeat(16) });
+          },
+        });
+        logIn(email);
+        claimNotice().should('have.attr', 'data-state', 'gone');
+        pending().should('eq', null);
+        // La demo no se consumio: sigue sirviendose
+        cy.request(`/api/demo-mock/${demoId}/products`).its('status').should('eq', 200);
+      });
+    });
+
+    it('el enlace compartido (solo el id publico de la demo) no sirve para reclamarla, ni como id ni como secreto', () => {
+      cy.get<string>('@realDemoId').then((demoId) => {
+        const email = uniqueEmail('stranger');
+        registerViaApi(email);
+        cy.request('POST', '/api/auth/login', { email, password: PASSWORD }).then((login) => {
+          const headers = {
+            Authorization: `Bearer ${login.body.data.tokens.accessToken as string}`,
+          };
+          for (const body of [{}, { claimToken: demoId }, { claimToken: 'f'.repeat(32) }]) {
+            cy.request({
+              method: 'POST',
+              url: `/api/demo/${demoId}/claim`,
+              headers,
+              body,
+              failOnStatusCode: false,
+            })
+              .its('status')
+              .should('eq', 404);
+          }
+          cy.request(`/api/demo-mock/${demoId}/products`).its('status').should('eq', 200);
+          cy.get<string>('@realClaimToken').then((claimToken) => {
+            cy.request({
+              method: 'POST',
+              url: `/api/demo/${demoId}/claim`,
+              headers,
+              body: { claimToken },
+            })
+              .its('status')
+              .should('eq', 201);
+          });
+        });
+      });
     });
 
     it('sin demo pendiente no hay aviso ni peticion de reclamo', () => {
@@ -1095,6 +1212,7 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
     ] as const) {
       it(`los avisos de conservar la demo estan en ${lang}`, () => {
         cy.get<string>('@realDemoId').then((demoId) => {
+          const claimToken = Cypress.env('realClaimToken') as string;
           const email = uniqueEmail(`lang${lang}`);
           registerViaApi(email);
           cy.then(() => {
@@ -1103,7 +1221,7 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
           cy.intercept('POST', claimUrl, { statusCode: 404, body: failure('NOT_FOUND', 'gone') });
           cy.visit('/login', {
             onBeforeLoad(win) {
-              win.sessionStorage.setItem(KEY, demoId);
+              seedPending(win, { demoId, claimToken });
             },
           });
           cy.get('input[name="email"]').type(email);

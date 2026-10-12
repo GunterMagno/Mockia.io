@@ -3,8 +3,9 @@ import { api } from './api';
 import type { Project } from './projectService';
 
 /**
- * Reclamar una demo: POST /demo/:demoId/claim con la sesion del usuario. Convierte el mock efimero en un proyecto de
- * su cuenta (no consume cuota de IA). El resultado se normaliza para que la interfaz decida el mensaje.
+ * Reclamar una demo: POST /demo/:demoId/claim con la sesion del usuario y el secreto de la demo en el cuerpo (el id de la
+ * URL es publico y no basta). Convierte el mock efimero en un proyecto de su cuenta (no consume cuota de IA). El
+ * resultado se normaliza para que la interfaz decida el mensaje.
  */
 export type ClaimOutcome =
   | { kind: 'done'; project: Project }
@@ -12,15 +13,17 @@ export type ClaimOutcome =
   | { kind: 'verify' }
   /** 402 PLAN_LIMIT_REACHED: la cuenta esta en su limite de proyectos; la demo sigue disponible. */
   | { kind: 'planLimit'; plan: string | null; limit: number | null }
-  /** 404: vencio, no existe o ya se reclamo (el servidor no distingue). */
+  /** 404: vencio, no existe, ya se reclamo o el secreto no es el suyo (el servidor no distingue). */
   | { kind: 'gone' }
   /** 429: demasiados intentos. */
   | { kind: 'rateLimit' }
   | { kind: 'error' };
 
-export async function claimDemo(demoId: string): Promise<ClaimOutcome> {
+export async function claimDemo(demoId: string, claimToken: string): Promise<ClaimOutcome> {
   try {
-    const res = await api.post<{ data: Project }>(`/demo/${encodeURIComponent(demoId)}/claim`);
+    const res = await api.post<{ data: Project }>(`/demo/${encodeURIComponent(demoId)}/claim`, {
+      claimToken,
+    });
     return { kind: 'done', project: res.data.data };
   } catch (err) {
     if (!axios.isAxiosError(err) || !err.response) return { kind: 'error' };

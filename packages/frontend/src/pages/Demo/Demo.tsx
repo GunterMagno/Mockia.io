@@ -26,7 +26,7 @@ import styles from './Demo.module.scss';
 /**
  * Demo publica: una sola pantalla, sin cuenta. Todo el estado vive en memoria (la demo no usa cookies ni almacenamiento
  * local); al recargar, la demo se olvida. La UNICA excepcion es la accion explicita de guardar el proyecto: solo entonces
- * el id de la demo se recuerda en el almacenamiento de sesion de la pestana (services/demoPending.ts) para reclamarla
+ * el id de la demo y su secreto de reclamo se recuerdan en el almacenamiento de sesion de la pestana (services/demoPending.ts) para reclamarla
  * tras registrarse. El reto de prueba de trabajo se resuelve en un Web Worker.
  */
 
@@ -562,7 +562,7 @@ const Demo: React.FC = () => {
                 to={user ? PATHS.dashboard : PATHS.signup}
                 data-testid="demo-keep"
                 onClick={() => {
-                  if (!expired) rememberPendingDemo(result.demoId);
+                  if (!expired) rememberPendingDemo(result.demoId, result.claimToken);
                 }}
               >
                 {user ? t('demo.cta.saveButton') : t('demo.cta.button')}

@@ -23,7 +23,7 @@ type State =
 const RETRY_AFTER_FOCUS_MS = 5_000;
 
 /**
- * Reclama la demo que el visitante decidio conservar antes de registrarse (su id esta en sessionStorage, ver
+ * Reclama la demo que el visitante decidio conservar antes de registrarse (su id y su secreto de reclamo estan en sessionStorage, ver
  * services/demoPending.ts). Vive en el panel, que es adonde llevan el registro, el inicio de sesion y el enlace de
  * verificacion. El servidor decide si hace falta el correo verificado: aqui solo se interpreta su respuesta.
  *   - hecho: el proyecto aparece en el panel y se borra el id pendiente;
@@ -50,12 +50,12 @@ const DemoClaimNotice: React.FC<{ onClaimed?: (project: Project) => void }> = ({
   }, []);
 
   const attempt = useCallback(async () => {
-    const demoId = readPendingDemo();
-    if (!demoId || inFlight.current) return;
+    const pendingDemo = readPendingDemo();
+    if (!pendingDemo || inFlight.current) return;
     inFlight.current = true;
     lastTry.current = Date.now();
     setState({ kind: 'saving' });
-    const outcome = await claimDemo(demoId);
+    const outcome = await claimDemo(pendingDemo.demoId, pendingDemo.claimToken);
     inFlight.current = false;
     if (outcome.kind === 'done') {
       clearPendingDemo();

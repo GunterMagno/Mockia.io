@@ -43,7 +43,10 @@ export interface DemoEndpoint {
 }
 
 export interface DemoResult {
+  /** Publico: va en la URL del mock y puede compartirse. No sirve para reclamar la demo. */
   demoId: string;
+  /** Secreto que reclama la demo como proyecto. Solo llega en esta respuesta; no se muestra ni va a la URL. */
+  claimToken: string;
   baseUrl: string;
   endpoints: DemoEndpoint[];
   expiresAt: string;
