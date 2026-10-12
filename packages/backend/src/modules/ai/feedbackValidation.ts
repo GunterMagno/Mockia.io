@@ -34,7 +34,7 @@ export const feedbackSchema = Joi.object({
 export const MAX_REQUIREMENT_CHARS = 4000;
 
 /**
- * Body of POST /ai/generate-mock-api-spec and /ai/generate-and-save. Only these two fields survive (the validate
+ * Body of POST /ai/generate-mock-api-spec and /ai/generate-and-save. Only these three fields survive (the validate
  * middleware strips the rest): a client-sent temperature or maxTokens is dropped, the server decides the sampling.
  */
 export const generationBodySchema = Joi.object({
@@ -54,4 +54,12 @@ export const generationBodySchema = Joi.object({
       'string.empty': 'requirement is required (description of what the mock API should do)',
       'string.max': `requirement is too long (${MAX_REQUIREMENT_CHARS} characters maximum)`,
     }),
+  // The AI credential of the caller to generate with (bring your own AI). Any string passes here on purpose: a missing,
+  // someone else's or malformed id must all be the same 404 from the handler, not a 400 that tells them apart. Only the
+  // type and a sane length are checked (an object here would otherwise reach a database filter).
+  credentialId: Joi.string().trim().min(1).max(100).allow(null).optional().messages({
+    'string.base': 'credentialId must be a string',
+    'string.empty': 'credentialId must not be empty',
+    'string.max': 'credentialId is too long',
+  }),
 });

@@ -7,7 +7,13 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/authenticateToken.js';
 import { asyncHandler } from '../middlewares/errorHandler.js';
 import { consumeAiQuota } from '../modules/ai/aiRateLimit.js';
-import { aiQuotaClock, peekAiGeneration, reserveAiGeneration } from '../modules/billing/aiQuota.js';
+import {
+  aiQuotaClock,
+  peekAiGeneration,
+  reserveAiGeneration,
+  reserveByokGeneration,
+  type AiReservation,
+} from '../modules/billing/aiQuota.js';
 import type { Plan } from '../modules/billing/plans.js';
 import { completeAndRecord } from '../modules/metrics/aiCalls.js';
 import { parseAiProviders, getSpecGenerationSampling } from '../config/ai.js';
@@ -20,6 +26,8 @@ import {
 } from '../modules/ai/providers/index.js';
 import { newGenerationId, persistGeneration } from '../modules/ai/generationStore.js';
 import { recordFeedback } from '../modules/ai/feedback.js';
+import { prepareCredentialUse } from '../modules/byok/provider.js';
+import { markCredentialRejected, markCredentialUsed } from '../modules/byok/service.js';
 import { AppError } from '../middlewares/errorHandler.js';
 import { ErrorCode } from '@mockia/shared';
 import {
@@ -47,18 +55,22 @@ async function enforceAiRateLimit(userId: string, res: Response): Promise<void> 
 }
 
 /**
- * Monthly AI generation quota of the user's plan (modules/billing/aiQuota.ts). Reserves ONE generation before any model
- * is called. Spent: answers 429 AI_QUOTA_EXCEEDED itself (used, limit, resetsAt in the body, Retry-After = seconds to
- * the next UTC month) and returns null, so the caller stops without touching the LLM. Otherwise returns the `release`
- * function, which the caller invokes on a failure path only when createRefundTracker allows it, and never after a successful answer,
- * and the plan the quota was reserved under (the AiCall metric carries it).
+ * Reserves ONE generation before any model is called, from the platform's monthly plan quota (reserveAiGeneration) or, for
+ * a generation with the user's own AI key, from their own monthly cap (reserveByokGeneration). Spent: answers 429 itself
+ * (AI_QUOTA_EXCEEDED or AI_BYOK_QUOTA_EXCEEDED, with used, limit, resetsAt in the body and Retry-After = seconds to the
+ * next UTC month) and returns null, so the caller stops without touching any model. Otherwise returns the `release`
+ * function, which the caller invokes on a failure path only when createRefundTracker allows it, and never after a
+ * successful answer, and the plan the quota was reserved under (the AiCall metric carries it).
  */
 async function reserveOrReject(
   userId: string,
-  res: Response
+  res: Response,
+  own: boolean = false
 ): Promise<{ release: () => Promise<void>; plan: Plan } | null> {
   const now = aiQuotaClock.now();
-  const reservation = await reserveAiGeneration(userId, now);
+  const reservation: AiReservation = own
+    ? await reserveByokGeneration(userId, now)
+    : await reserveAiGeneration(userId, now);
   if (reservation.ok) return { release: reservation.release, plan: reservation.plan };
   const retryAfter = Math.max(
     1,
@@ -68,8 +80,10 @@ async function reserveOrReject(
   res.status(429).json({
     success: false,
     error: {
-      code: ErrorCode.AI_QUOTA_EXCEEDED,
-      message: `Monthly AI generation quota reached (${reservation.used} of ${reservation.limit}). It resets on ${reservation.resetsAt.toISOString()}.`,
+      code: own ? ErrorCode.AI_BYOK_QUOTA_EXCEEDED : ErrorCode.AI_QUOTA_EXCEEDED,
+      message: own
+        ? `Monthly limit of generations with your own AI reached (${reservation.used} of ${reservation.limit}). It resets on ${reservation.resetsAt.toISOString()}.`
+        : `Monthly AI generation quota reached (${reservation.used} of ${reservation.limit}). It resets on ${reservation.resetsAt.toISOString()}.`,
       used: reservation.used,
       limit: reservation.limit,
       resetsAt: reservation.resetsAt.toISOString(),
@@ -119,6 +133,73 @@ async function complete(operation: string, req: LlmRequest, plan: Plan): Promise
       `inputTokens=${result.usage?.inputTokens ?? 'n/a'} outputTokens=${result.usage?.outputTokens ?? 'n/a'}`
   );
   return result;
+}
+
+/**
+ * One generation as the handlers see it: whose AI answers, which quota paid for it and what to do when it ends. Two kinds:
+ *  - the platform's (default): the provider chain of AI_PROVIDERS, the plan's monthly quota, the answer may be stored for
+ *    training with the user's consent;
+ *  - the user's own AI (`credentialId`, decisions D8-D10): ONLY that provider, with no fallback to the platform's chain,
+ *    their own monthly counter and nothing stored for training whatever the consent.
+ */
+interface GenerationSession {
+  own: boolean;
+  plan: Plan;
+  release: () => Promise<void>;
+  complete(operation: string, req: LlmRequest): Promise<LlmCompletion>;
+  /** The generation worked (never throws). */
+  succeeded(): Promise<void>;
+  /** The generation failed with `error` (never throws). */
+  failed(error: unknown): Promise<void>;
+}
+
+/** Starts a generation: authorises the credential, reserves the quota. Null when the quota is spent (429 already sent). */
+async function openGeneration(
+  userId: string,
+  credentialId: string | null | undefined,
+  res: Response
+): Promise<GenerationSession | null> {
+  if (credentialId === undefined || credentialId === null) {
+    // One generation of the monthly plan quota, reserved BEFORE any prompt or model work; 429 when it is spent
+    const reservation = await reserveOrReject(userId, res);
+    if (!reservation) return null;
+    return {
+      own: false,
+      plan: reservation.plan,
+      release: reservation.release,
+      complete: (operation, req) => complete(operation, req, reservation.plan),
+      succeeded: async () => undefined,
+      failed: async () => undefined,
+    };
+  }
+
+  // The credential is looked up for the AUTHENTICATED user, its key is opened in memory (inside `llm`), and only then does
+  // the user's own monthly cap get charged: a credential that is not theirs costs them nothing and sends nothing anywhere
+  const credential = await prepareCredentialUse(userId, credentialId);
+  const reservation = await reserveOrReject(userId, res, true);
+  if (!reservation) return null;
+  return {
+    own: true,
+    plan: reservation.plan,
+    release: reservation.release,
+    complete: async (operation, req) => {
+      const result = await completeAndRecord(credential.llm, req, {
+        scope: 'byok',
+        plan: reservation.plan,
+      });
+      console.log(
+        `[AI] ${operation} done (own AI) provider=${result.provider} model=${result.model} ` +
+          `inputTokens=${result.usage?.inputTokens ?? 'n/a'} outputTokens=${result.usage?.outputTokens ?? 'n/a'}`
+      );
+      return result;
+    },
+    succeeded: () => markCredentialUsed(userId, credential.id),
+    failed: async (error) => {
+      if ((error as { code?: unknown } | null)?.code === ErrorCode.AI_PROVIDER_REJECTED) {
+        await markCredentialRejected(userId, credential.id);
+      }
+    },
+  };
 }
 
 /** Token usage in the shape the API has always returned (zeros when the provider does not report it). */
@@ -197,7 +278,7 @@ export const generateMockAPISpecHandler = asyncHandler(
 
     await enforceAiRateLimit(userId, res);
 
-    const { projectId, requirement } = req.body;
+    const { projectId, requirement, credentialId } = req.body;
 
     // Validation
     if (!projectId) {
@@ -212,45 +293,46 @@ export const generateMockAPISpecHandler = asyncHandler(
       );
     }
 
-    // One generation of the monthly plan quota, reserved BEFORE any prompt or model work; 429 when it is spent
-    const reservation = await reserveOrReject(userId, res);
-    if (!reservation) return;
-    const { release, plan } = reservation;
+    // The quota is reserved BEFORE any prompt or model work (the plan's, or the user's own when `credentialId` is given);
+    // 429 when it is spent
+    const session = await openGeneration(userId, credentialId, res);
+    if (!session) return;
     const refunds = createRefundTracker();
 
     try {
       // Build prompt from project context and user requirement
       const messages = await buildPrompt(projectId, requirement);
 
-      // Call the LLM provider chain with structured messages
+      // Call the LLM provider with structured messages
       // Sampling is the server's (the validate middleware strips any client temperature / maxTokens)
-      const completion = await complete(
-        'generate-mock-api-spec',
-        {
-          messages,
-          ...getSpecGenerationSampling(),
-          jsonSchema: MOCK_SPEC_JSON_SCHEMA,
-          validate: specRouteValidator,
-          ...refunds.hooks,
-        },
-        plan
-      );
+      const completion = await session.complete('generate-mock-api-spec', {
+        messages,
+        ...getSpecGenerationSampling(),
+        jsonSchema: MOCK_SPEC_JSON_SCHEMA,
+        validate: specRouteValidator,
+        ...refunds.hooks,
+      });
       const responseContent = completion.text;
 
       // Validate and extract the mock API specification
       const mockAPISpec = extractMockAPIFromResponse(responseContent);
 
-      // The id always goes back to the client (so it can rate the result); the content is stored only with consent
-      const generationId = newGenerationId();
-      await persistGeneration({
-        generationId,
-        userId,
-        messages,
-        output: responseContent,
-        parsedOk: true,
-        provider: completion.provider,
-        model: completion.model,
-      });
+      // The id always goes back to the client (so it can rate the result); the content is stored only with consent.
+      // With the user's own AI nothing is stored for training whatever the consent (D9), so there is no id either.
+      let generationId: string | undefined;
+      if (!session.own) {
+        generationId = newGenerationId();
+        await persistGeneration({
+          generationId,
+          userId,
+          messages,
+          output: responseContent,
+          parsedOk: true,
+          provider: completion.provider,
+          model: completion.model,
+        });
+      }
+      await session.succeeded();
 
       // Return the generated specification. The reservation is kept: if the client has already disconnected, the model
       // did answer and the generation was paid for, so nothing is given back.
@@ -265,7 +347,8 @@ export const generateMockAPISpecHandler = asyncHandler(
       });
     } catch (error) {
       // The user gets no result, but the unit comes back only if no provider can have billed it (see createRefundTracker)
-      if (refunds.mayRefund()) await release();
+      if (refunds.mayRefund()) await session.release();
+      await session.failed(error);
       throw error;
     }
   }
@@ -299,7 +382,7 @@ export const generateAndSaveHandler = asyncHandler(
 
     await enforceAiRateLimit(userId, res);
 
-    const { projectId, requirement } = req.body;
+    const { projectId, requirement, credentialId } = req.body;
 
     // Validation
     if (!projectId) {
@@ -310,10 +393,10 @@ export const generateAndSaveHandler = asyncHandler(
       throw new AppError('requirement is required', ErrorCode.VALIDATION_ERROR, 400);
     }
 
-    // One generation of the monthly plan quota, reserved BEFORE any prompt or model work; 429 when it is spent
-    const reservation = await reserveOrReject(userId, res);
-    if (!reservation) return;
-    const { release, plan } = reservation;
+    // The quota is reserved BEFORE any prompt or model work (the plan's, or the user's own when `credentialId` is given);
+    // 429 when it is spent
+    const session = await openGeneration(userId, credentialId, res);
+    if (!session) return;
     const refunds = createRefundTracker();
 
     try {
@@ -322,18 +405,14 @@ export const generateAndSaveHandler = asyncHandler(
       const messages = await buildPrompt(projectId, requirement);
       console.log(`[AI] Prompt built with ${messages.length} messages`);
 
-      // 2. Call the LLM provider chain
-      const completion = await complete(
-        'generate-and-save',
-        {
-          messages,
-          ...getSpecGenerationSampling(),
-          jsonSchema: MOCK_SPEC_JSON_SCHEMA,
-          validate: saveRouteValidator,
-          ...refunds.hooks,
-        },
-        plan
-      );
+      // 2. Call the LLM provider
+      const completion = await session.complete('generate-and-save', {
+        messages,
+        ...getSpecGenerationSampling(),
+        jsonSchema: MOCK_SPEC_JSON_SCHEMA,
+        validate: saveRouteValidator,
+        ...refunds.hooks,
+      });
 
       // 3. Get response content (the provider already rejects empty answers)
       const responseContent = completion.text;
@@ -351,17 +430,22 @@ export const generateAndSaveHandler = asyncHandler(
         `[AI] Pipeline completed: ${pipelineResult.databaseResult.endpointsCreated} endpoints created`
       );
 
-      // 5. Id for the client's feedback; the content is stored only for users who consented
-      const generationId = newGenerationId();
-      await persistGeneration({
-        generationId,
-        userId,
-        messages,
-        output: responseContent,
-        parsedOk: true,
-        provider: completion.provider,
-        model: completion.model,
-      });
+      // 5. Id for the client's feedback; the content is stored only for users who consented. With the user's own AI
+      // nothing is stored for training whatever the consent (D9), so there is no id either.
+      let generationId: string | undefined;
+      if (!session.own) {
+        generationId = newGenerationId();
+        await persistGeneration({
+          generationId,
+          userId,
+          messages,
+          output: responseContent,
+          parsedOk: true,
+          provider: completion.provider,
+          model: completion.model,
+        });
+      }
+      await session.succeeded();
 
       // 6. Return complete result
       res.status(200).json({
@@ -383,7 +467,8 @@ export const generateAndSaveHandler = asyncHandler(
     } catch (error) {
       console.error(`[AI] Error during generation (${describeError(error)})`);
       // Same rule as the spec route: the reserved generation comes back only when no provider can have billed it
-      if (refunds.mayRefund()) await release();
+      if (refunds.mayRefund()) await session.release();
+      await session.failed(error);
       throw error;
     }
   }

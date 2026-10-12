@@ -8,6 +8,7 @@ import {
   type AiCredentialsConfig,
 } from '@mockia/shared';
 import { AppError } from '../../middlewares/errorHandler.js';
+import { describeError } from '../../utils/safeErrorLog.js';
 import { AiCredentialModel, type AiCredentialDocument } from '../../models/AiCredential.js';
 import { seal } from './crypto.js';
 import { verifyPathFor } from './presets.js';
@@ -63,6 +64,14 @@ export function providerFetch(): typeof fetch {
   );
 }
 
+/** Longest a generation may wait for the user's provider (a slow model can take a minute or two); the request's overall deadline still applies. */
+export const GENERATION_TIMEOUT_MS = 120_000;
+
+/** The SSRF-hardened client used to generate with a user's key (or, in tests, the injected one). */
+export function generationFetch(): typeof fetch {
+  return fetchOverride ?? createSafeFetch({ timeoutMs: GENERATION_TIMEOUT_MS });
+}
+
 /** Refusals of the URL policy (as opposed to the network failing or the provider answering badly). */
 const POLICY_REASONS: ReadonlySet<SafeHttpReason> = new Set([
   'invalid_url',
@@ -104,10 +113,12 @@ async function verifyKey(
  * URL and shape helpers
  * ---------------------------------------------------------------------------------------------------------------- */
 
-const urlInvalid = (message: string) =>
+export const urlInvalid = (message: string) =>
   new AppError(message, ErrorCode.AI_PROVIDER_URL_INVALID, 400);
-const notFound = () =>
+/** The one answer for a credential that is not yours, does not exist or is not even an id: they must look identical. */
+export const credentialNotFound = () =>
   new AppError('AI credential not found', ErrorCode.AI_CREDENTIAL_NOT_FOUND, 404);
+const notFound = credentialNotFound;
 
 /**
  * The base URL a credential will use. With a preset the client's value is IGNORED. `custom` needs
@@ -158,7 +169,7 @@ export function resolveBaseUrl(
 const OBJECT_ID = /^[a-f0-9]{24}$/i;
 
 /** Anything that is not a 24-hex string cannot belong to anyone: the same 404 as a missing credential. */
-function credentialObjectId(id: string): Types.ObjectId {
+export function credentialObjectId(id: string): Types.ObjectId {
   if (typeof id !== 'string' || !OBJECT_ID.test(id)) throw notFound();
   return new Types.ObjectId(id);
 }
@@ -349,4 +360,32 @@ export async function deleteCredential(userId: string, id: string): Promise<Remo
   const removed = await AiCredentialModel.findOneAndDelete({ _id, userId }).lean();
   if (!removed) throw notFound();
   return { label: removed.label, providerName: providerName(removed.preset, removed.baseUrl) };
+}
+
+/* ------------------------------------------------------------------------------------------------------------------
+ * What a generation leaves on the credential (never the key, never provider text)
+ * ---------------------------------------------------------------------------------------------------------------- */
+
+/** A generation with this credential worked: remember when, and forget an earlier failure. Never throws. */
+export async function markCredentialUsed(userId: string, credId: Types.ObjectId): Promise<void> {
+  try {
+    await AiCredentialModel.updateOne(
+      { _id: credId, userId },
+      { $set: { lastUsedAt: new Date() }, $unset: { lastError: '' } }
+    );
+  } catch (err) {
+    console.error(`[BYOK] could not record the use of a credential (${describeError(err)})`);
+  }
+}
+
+/** The provider refused this credential's key (401/403): the owner sees it in their list. Never throws. */
+export async function markCredentialRejected(
+  userId: string,
+  credId: Types.ObjectId
+): Promise<void> {
+  try {
+    await AiCredentialModel.updateOne({ _id: credId, userId }, { $set: { lastError: 'rejected' } });
+  } catch (err) {
+    console.error(`[BYOK] could not mark a credential as rejected (${describeError(err)})`);
+  }
 }
