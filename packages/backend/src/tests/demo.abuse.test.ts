@@ -18,6 +18,7 @@ import { demoClock, resetDemoFlood } from '../modules/demo/mockRouter.js';
 import { demoRouter, resetDemoApiLimits } from '../modules/demo/routes.js';
 import { pseudonymizeIp } from '../modules/demo/ipHash.js';
 import { resetLlm } from '../modules/ai/providers/index.js';
+import { drainAiCalls } from '../modules/metrics/aiCalls.js';
 import { openRouterConfig } from '../config/ai.js';
 
 /**
@@ -214,7 +215,14 @@ const ipCountOf = async (address: string): Promise<number> =>
     }).lean()
   )?.count ?? 0;
 
+/**
+ * Collections a demo generation may write: its own, plus the anonymous AiCall metric event (task O1: no user, no IP,
+ * no content). Every other collection must stay untouched.
+ */
+const DEMO_COLLECTIONS = ['demomocks', 'demobudgets', 'demospentchallenges', 'aicalls'];
+
 const collectionCounts = async (): Promise<Record<string, number>> => {
+  await drainAiCalls(); // the metric event is written after the response, not before it
   const names = (await mongoose.connection.db!.listCollections().toArray())
     .map((c) => c.name)
     .sort();
@@ -905,8 +913,7 @@ describe('demo publica: escenarios de abuso de extremo a extremo', () => {
         await request(app).options(`/api/demo-mock/${id}/products`);
         await request(app).get(`/api/demo-mock/${'0'.repeat(32)}/products`);
       });
-      for (const name of touched)
-        expect(['demomocks', 'demobudgets', 'demospentchallenges']).toContain(name);
+      for (const name of touched) expect(DEMO_COLLECTIONS).toContain(name);
       expect(touched.size).toBeGreaterThan(0);
     });
 
@@ -967,8 +974,7 @@ describe('demo publica: escenarios de abuso de extremo a extremo', () => {
       expect([201, 502]).toContain(res.status);
       const after = await collectionCounts();
       for (const name of Object.keys(after)) {
-        if (!['demomocks', 'demobudgets', 'demospentchallenges'].includes(name))
-          expect(after[name]).toBe(before[name] ?? 0);
+        if (!DEMO_COLLECTIONS.includes(name)) expect(after[name]).toBe(before[name] ?? 0);
       }
       if (res.status === 201) {
         // Whatever was kept is served only under /api/demo-mock/<id>/ and never reaches real data

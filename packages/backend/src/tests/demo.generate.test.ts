@@ -26,6 +26,7 @@ import { LlmResponseError, type LlmProvider } from '../modules/ai/providers/type
 import { invalidatePlanCache } from '../modules/billing/plans.js';
 import { openRouterConfig } from '../config/ai.js';
 import * as budget from '../modules/demo/budget.js';
+import { drainAiCalls } from '../modules/metrics/aiCalls.js';
 
 /**
  * Task B3: POST /api/demo/challenge, POST /api/demo/generate and GET /api/demo/status. Real Mongo, the real Express app
@@ -222,6 +223,7 @@ const ipCount = async (ip: string): Promise<number> =>
 const globalCount = async (): Promise<number> => (await budgetRow('global', 'global'))?.count ?? 0;
 
 const collectionCounts = async (): Promise<Record<string, number>> => {
+  await drainAiCalls(); // the metric event is written after the response, not before it
   const names = (await mongoose.connection.db!.listCollections().toArray()).map((c) => c.name);
   const out: Record<string, number> = {};
   for (const name of names)
@@ -1140,7 +1142,10 @@ describe('demo publica: reto y generacion con IA', () => {
       const changed = Object.keys({ ...before, ...after }).filter(
         (k) => (before[k] ?? 0) !== (after[k] ?? 0)
       );
-      expect(changed.sort()).toEqual(['demobudgets', 'demomocks', 'demospentchallenges'].sort());
+      // aicalls: the anonymous metric event of the AI call (task O1), the only thing besides the demo's own collections
+      expect(changed.sort()).toEqual(
+        ['aicalls', 'demobudgets', 'demomocks', 'demospentchallenges'].sort()
+      );
     });
 
     it('the mock is served as JSON with nosniff even if the model writes HTML in a body', async () => {

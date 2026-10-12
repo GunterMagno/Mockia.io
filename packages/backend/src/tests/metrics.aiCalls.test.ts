@@ -19,7 +19,7 @@ import { DemoSpentChallengeModel } from '../models/DemoSpentChallenge.js';
 import { AiCallModel } from '../models/AiCall.js';
 import { AppError } from '../middlewares/errorHandler.js';
 import { openRouterConfig } from '../config/ai.js';
-import { demoClock, resetDemoFlood } from '../modules/demo/mockRouter.js';
+import { resetDemoFlood } from '../modules/demo/mockRouter.js';
 import { resetDemoApiLimits } from '../modules/demo/routes.js';
 import { resetLlm, type ProviderOutcome } from '../modules/ai/providers/index.js';
 import { LlmResponseError } from '../modules/ai/providers/types.js';
