@@ -187,3 +187,52 @@ describe('todos los workflows de .github/workflows', () => {
     }
   );
 });
+
+/**
+ * Tareas A3 y A4: vigilancia programada (monitor.yml) y comprobacion tras desplegar (post-deploy.yml). Ambos abren
+ * incidencias (issues: write en su trabajo) y reciben las URL y el token como secretos de GitHub.
+ */
+describe.each(['monitor.yml', 'post-deploy.yml'])('%s (incidencias automaticas)', (file) => {
+  const wf = (): Obj => load(`.github/workflows/${file}`);
+  const jobs = (): Obj[] => Object.values<Obj>(wf().jobs);
+  const allSteps = (): Obj[] => jobs().flatMap((j) => j.steps as Obj[]);
+
+  it('solo el trabajo escribe issues (el workflow entero es contents: read)', () => {
+    expect(wf().permissions).toEqual({ contents: 'read' });
+    for (const job of jobs()) expect(writeScopes(job.permissions)).toEqual(['issues']);
+  });
+
+  it('los secretos llegan por entorno y nunca se interpolan dentro de un script `run`', () => {
+    for (const step of allSteps()) expect(String(step.run ?? '')).not.toMatch(/\$\{\{/);
+    const env = jobs().map((j) => j.env as Obj)[0];
+    expect(env.BACKEND_URL).toBe('${{ secrets.BACKEND_URL }}');
+    expect(env.OPS_TOKEN).toBe('${{ secrets.OPS_TOKEN }}');
+  });
+
+  it('sin secretos termina en verde con un aviso (los pasos siguientes dependen de la comprobacion)', () => {
+    const [check, ...rest] = allSteps();
+    expect(String(check.run)).toMatch(/::notice::/);
+    expect(String(check.run)).toMatch(/exit 0/);
+    for (const step of rest) expect(String(step.if)).toContain('steps.config.outputs.enabled');
+  });
+
+  it('tiene limite de tiempo y no se solapa consigo mismo', () => {
+    for (const job of jobs()) expect(job['timeout-minutes']).toBeGreaterThan(0);
+    expect(wf().concurrency?.group).toBeTruthy();
+  });
+});
+
+describe('monitor.yml y post-deploy.yml: disparadores', () => {
+  it('el monitor corre cada 15 minutos y a mano', () => {
+    const on = load('.github/workflows/monitor.yml').on as Obj;
+    expect((on.schedule as Obj[]).map((s) => s.cron)).toEqual(['*/15 * * * *']);
+    expect(on).toHaveProperty('workflow_dispatch');
+  });
+
+  it('la comprobacion tras desplegar corre en push a main y a mano, y una ejecucion nueva cancela la anterior', () => {
+    const wf = load('.github/workflows/post-deploy.yml');
+    expect((wf.on as Obj).push.branches).toEqual(['main']);
+    expect(wf.on).toHaveProperty('workflow_dispatch');
+    expect(wf.concurrency['cancel-in-progress']).toBe(true);
+  });
+});

@@ -1,0 +1,68 @@
+name: Post-deploy
+
+# Comprobacion automatica tras desplegar: en cada push a main espera (hasta 10 min) a que /api/health informe del commit
+# de este push y comprueba cabeceras de seguridad, CORS cerrado a origenes ajenos y, con OPS_TOKEN, que la IP real no se
+# pueda falsificar con X-Forwarded-For (TRUST_PROXY; antes era una comprobacion manual, ver docs/demo.md). Si falla algo
+# critico abre una incidencia `post-deploy-auto` (y deja la ejecucion en rojo); X-Forwarded-For falsificable abre un aviso.
+# Las incidencias se cierran solas cuando un despliegue posterior pasa. La logica esta en scripts/ci/smoke-checks.mjs.
+#
+# Secretos del repositorio (Settings > Secrets and variables > Actions):
+#   BACKEND_URL  URL publica del backend, sin barra final (la misma que usa el monitor)
+#   OPS_TOKEN    opcional; el mismo OPS_TOKEN del backend. Sin el no se comprueba TRUST_PROXY
+# Sin BACKEND_URL termina en verde con un aviso. Si el servidor no expone commit (RENDER_GIT_COMMIT / GIT_COMMIT), salta la
+# espera y lo anota. Una ejecucion manual fuera de main tampoco compara el commit (el despliegue es el de main).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Un push nuevo cancela la espera del anterior: ya no tiene sentido esperar un commit que fue sustituido
+concurrency:
+  group: post-deploy
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: Wait for the deploy, then check it
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      issues: write # abrir, comentar y cerrar las incidencias `post-deploy-auto`
+    env:
+      BACKEND_URL: ${{ secrets.BACKEND_URL }}
+      OPS_TOKEN: ${{ secrets.OPS_TOKEN }}
+
+    steps:
+      - name: Check configuration
+        id: config
+        run: |
+          if [ -z "$BACKEND_URL" ]; then
+            echo "::notice::Post-deploy checks are not configured: define the secret BACKEND_URL (OPS_TOKEN is optional; see docs/demo.md). Nothing was done."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout code
+        if: steps.config.outputs.enabled == 'true'
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: scripts/ci
+
+      - name: Setup Node.js
+        if: steps.config.outputs.enabled == 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Wait for the deploy and check it (scripts/ci/smoke.mjs)
+        if: steps.config.outputs.enabled == 'true'
+        run: node scripts/ci/smoke.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # El commit solo se compara en main (alli esta lo desplegado); en otra rama queda vacio y no se compara
+          EXPECTED_SHA: ${{ github.ref == 'refs/heads/main' && github.sha || '' }}
