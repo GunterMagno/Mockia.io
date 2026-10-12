@@ -1,0 +1,21 @@
+.DS_Store
+node_modules/
+dist/
+.env
+.prettierignore
+coverage/
+build/
+# Artefactos locales y de trabajo (no forman parte del producto)
+~
+.tmp-repos/
+.superpowers/
+.claude/
+packages/backend/.tmp-repos/
+packages/backend/scratch/
+packages/backend/scratch-check.js
+# Terceros, exportaciones y compilados
+*.min.js
+packages/frontend/public/como-funciona/
+Mockia_Insomnia_Tests.json
+packages/frontend/vite.config.js
+packages/frontend/vite.config.d.ts

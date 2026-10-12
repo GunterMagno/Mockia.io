@@ -1,6 +1,21 @@
 {
   "root": true,
-  "ignorePatterns": ["packages/backend/scratch/"],
+  "ignorePatterns": [
+    "node_modules/",
+    "dist/",
+    "build/",
+    "coverage/",
+    "/~/",
+    "/.tmp-repos/",
+    "/.superpowers/",
+    "/.claude/",
+    "packages/backend/scratch/",
+    "packages/backend/scratch-check.js",
+    "packages/backend/.tmp-repos/",
+    "packages/frontend/public/",
+    "packages/frontend/vite.config.js",
+    "packages/frontend/vite.config.d.ts"
+  ],
   "env": {
     "node": true,
     "es2021": true
