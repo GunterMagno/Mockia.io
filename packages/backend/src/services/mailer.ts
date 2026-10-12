@@ -13,12 +13,18 @@ import nodemailer, { type Transporter } from 'nodemailer';
  * - Templates are plain HTML + text in English, Spanish and Chinese, chosen by `data.locale` (default en).
  */
 
-export type MailTemplate = 'verify' | 'reset' | 'payment_failed' | 'trial_will_end';
+export type MailTemplate =
+  | 'verify'
+  | 'reset'
+  | 'payment_failed'
+  | 'trial_will_end'
+  | 'ai_key_added'
+  | 'ai_key_removed';
 export type MailLocale = 'en' | 'es' | 'zh';
 
 export const MAIL_LOCALES: readonly MailLocale[] = ['en', 'es', 'zh'];
 
-/** Data a template needs: `link` is mandatory; `username`, `locale` and (billing notices) `date`, already formatted for the reader, are optional. */
+/** Data a template needs: `link` is mandatory; `username`, `locale`, (billing notices) `date`, already formatted for the reader, and (AI key notices) `provider` and `label` are optional. Never put a secret here. */
 export type MailData = Record<string, string> & { link: string };
 
 export interface RenderedMail {
@@ -176,6 +182,75 @@ const COPY: Record<MailTemplate, Record<MailLocale, Copy>> = {
       fallback: '如果按钮无法使用，请将以下链接复制到浏览器中：',
       expires: '你可以在试用结束前随时取消，不会产生任何扣费。',
       ignore: '如果你想保留当前套餐，无需任何操作。',
+    },
+  },
+  ai_key_added: {
+    en: {
+      subject: 'You added an AI key to Mockia',
+      greeting: (n) => (n ? `Hi ${n},` : 'Hi,'),
+      intro: (d) =>
+        `A ${d.provider ?? 'provider'} API key named "${d.label ?? ''}" was just added to your Mockia account. Mockia will use it, only for you, to generate with your own AI.`,
+      button: 'Review my AI keys',
+      fallback: 'If the button does not work, copy this link into your browser:',
+      expires:
+        'We never show or send the key itself. If this was not you, remove the key right away and change your password.',
+      ignore: 'If you added it, you do not need to do anything.',
+    },
+    es: {
+      subject: 'Has añadido una clave de IA a Mockia',
+      greeting: (n) => (n ? `Hola ${n},` : 'Hola,'),
+      intro: (d) =>
+        `Se acaba de añadir a tu cuenta de Mockia una clave de API de ${d.provider ?? 'un proveedor'} llamada "${d.label ?? ''}". Mockia la usará, solo para ti, para generar con tu propia IA.`,
+      button: 'Revisar mis claves de IA',
+      fallback: 'Si el botón no funciona, copia este enlace en tu navegador:',
+      expires:
+        'Nunca mostramos ni enviamos la clave. Si no has sido tú, elimina la clave ahora mismo y cambia tu contraseña.',
+      ignore: 'Si la has añadido tú, no tienes que hacer nada.',
+    },
+    zh: {
+      subject: '你向 Mockia 添加了一个 AI 密钥',
+      greeting: (n) => (n ? `你好 ${n}，` : '你好，'),
+      intro: (d) =>
+        `你的 Mockia 账户刚刚添加了一个名为“${d.label ?? ''}”的 ${d.provider ?? '服务商'} API 密钥。Mockia 只会为你使用它，以便用你自己的 AI 进行生成。`,
+      button: '查看我的 AI 密钥',
+      fallback: '如果按钮无法使用，请将以下链接复制到浏览器中：',
+      expires: '我们不会显示或发送密钥本身。如果这不是你本人的操作，请立即删除该密钥并更改密码。',
+      ignore: '如果是你自己添加的，无需任何操作。',
+    },
+  },
+  ai_key_removed: {
+    en: {
+      subject: 'You removed an AI key from Mockia',
+      greeting: (n) => (n ? `Hi ${n},` : 'Hi,'),
+      intro: (d) =>
+        `The ${d.provider ?? 'provider'} API key named "${d.label ?? ''}" was just removed from your Mockia account. Mockia can no longer use it.`,
+      button: 'Review my AI keys',
+      fallback: 'If the button does not work, copy this link into your browser:',
+      expires:
+        'Removing it from Mockia does not cancel the key at your provider: revoke it there too if you no longer want it to work.',
+      ignore: 'If this was not you, change your password right away.',
+    },
+    es: {
+      subject: 'Has eliminado una clave de IA de Mockia',
+      greeting: (n) => (n ? `Hola ${n},` : 'Hola,'),
+      intro: (d) =>
+        `Se acaba de eliminar de tu cuenta de Mockia la clave de API de ${d.provider ?? 'un proveedor'} llamada "${d.label ?? ''}". Mockia ya no puede usarla.`,
+      button: 'Revisar mis claves de IA',
+      fallback: 'Si el botón no funciona, copia este enlace en tu navegador:',
+      expires:
+        'Eliminarla de Mockia no la anula en tu proveedor: revócala también allí si ya no quieres que funcione.',
+      ignore: 'Si no has sido tú, cambia tu contraseña ahora mismo.',
+    },
+    zh: {
+      subject: '你从 Mockia 删除了一个 AI 密钥',
+      greeting: (n) => (n ? `你好 ${n}，` : '你好，'),
+      intro: (d) =>
+        `你的 Mockia 账户刚刚删除了名为“${d.label ?? ''}”的 ${d.provider ?? '服务商'} API 密钥。Mockia 不能再使用它。`,
+      button: '查看我的 AI 密钥',
+      fallback: '如果按钮无法使用，请将以下链接复制到浏览器中：',
+      expires:
+        '从 Mockia 删除并不会在你的服务商处作废该密钥：如果不再希望它生效，请也在服务商处撤销。',
+      ignore: '如果这不是你本人的操作，请立即更改密码。',
     },
   },
 };

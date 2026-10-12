@@ -13,6 +13,7 @@ import { testOutboxRouter, shouldMountTestOutbox } from './modules/testSupport/o
 import { projectsRouter } from './modules/projects/routes.js';
 import { userRouter } from './modules/users/routes.js';
 import { adminRouter } from './modules/admin/routes.js';
+import { aiCredentialsRouter } from './modules/byok/routes.js';
 import { opsRouter } from './modules/ops/routes.js';
 import { githubRouter } from './routes/github.routes.js';
 import { mockRouter } from './routes/mock.routes.js';
@@ -191,6 +192,9 @@ if (shouldMountTestOutbox()) {
 
 // Users routes (protected)
 app.use('/api/users', userRouter);
+
+// The user's own AI keys (BYOK): off with 404 unless BYOK_ENABLED=true, session + verified email, sealed at rest, never returned
+app.use('/api/ai-credentials', aiCredentialsRouter);
 
 // Owner-only routes (ADMIN_EMAILS, verified address); every path under it is guarded, see modules/admin/routes.ts
 app.use('/api/admin', adminRouter);

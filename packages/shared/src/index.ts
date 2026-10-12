@@ -8,3 +8,4 @@ export * from './snippets.js';
 export * from './billing.js';
 export * from './legal.js';
 export * from './admin.js';
+export * from './byok.js';

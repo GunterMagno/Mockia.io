@@ -14,6 +14,8 @@ import { AiGenerationModel } from '../../models/AiGeneration.js';
 import { AiFeedbackModel } from '../../models/AiFeedback.js';
 import { RefreshSessionModel } from '../../models/RefreshSession.js';
 import { AuthTokenModel } from '../../models/AuthToken.js';
+import { AiCredentialModel } from '../../models/AiCredential.js';
+import { toMeta } from '../byok/service.js';
 import { deleteProjectsCascade } from '../projects/cascade.js';
 import { cancelAllSubscriptions } from '../billing/service.js';
 import { forgetOwnerUsage } from '../billing/usage.js';
@@ -56,6 +58,7 @@ export async function exportUserData(userId: string): Promise<Record<string, unk
     memberOf,
     aiGenerations,
     aiFeedback,
+    aiCredentials,
   ] = await Promise.all([
     MockAPIModel.find({ projectId: { $in: projectIds } })
       .sort({ createdAt: 1 })
@@ -72,6 +75,7 @@ export async function exportUserData(userId: string): Promise<Record<string, unk
       .lean(),
     AiGenerationModel.find({ userId: uid }).sort({ createdAt: 1 }).lean(),
     AiFeedbackModel.find({ userId: uid }).sort({ createdAt: 1 }).lean(),
+    AiCredentialModel.find({ userId: uid }).sort({ createdAt: 1, _id: 1 }).lean(),
   ]);
 
   const endpoints = await EndpointModel.find({ mockApiId: { $in: mockApis.map((m) => m._id) } })
@@ -229,6 +233,9 @@ export async function exportUserData(userId: string): Promise<Record<string, unk
       createdAt: iso(f.createdAt),
       expiresAt: iso(f.expiresAt),
     })),
+    // The AI keys the user brought: metadata only (provider, label, model, last 4 characters). The key itself is sealed with
+    // a server secret and is deliberately not exportable: the user already has it, and a leaked export must not carry it.
+    aiCredentials: aiCredentials.map((c) => ({ ...toMeta(c), baseUrl: c.baseUrl })),
     sessions: sessions.map((s) => ({
       createdAt: iso(s.createdAt),
       expiresAt: iso(s.expiresAt),
@@ -247,7 +254,7 @@ export async function exportUserData(userId: string): Promise<Record<string, unk
  *  2. live Stripe subscription: cancelled FIRST; if Stripe fails (502) or is not configured (409) nothing is deleted
  *  3. projects with all their children (`deleteProjectsCascade`, archived ones too); where the user is only a member
  *     of somebody else's project, just the membership is removed
- *  4. notifications, usage counters, refresh sessions, auth tokens
+ *  4. notifications, usage counters, refresh sessions, auth tokens, AI credentials
  *  5. the user
  * Steps 3-5 are idempotent: if one fails the user still exists and can simply retry.
  *
@@ -303,6 +310,8 @@ export async function deleteUserAccount(userId: string, password: string): Promi
   await revokeAllForUser(userId);
   await RefreshSessionModel.deleteMany({ userId: uid });
   await AuthTokenModel.deleteMany({ userId: uid });
+  // The AI keys the user brought (sealed): gone with the account
+  await AiCredentialModel.deleteMany({ userId: uid });
 
   await UserModel.deleteOne({ _id: uid });
   invalidatePlanCache(userId);

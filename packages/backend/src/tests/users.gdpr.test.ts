@@ -21,6 +21,7 @@ import { DemoBudgetModel } from '../models/DemoBudget.js';
 import { DemoMockModel } from '../models/DemoMock.js';
 import { DemoSpentChallengeModel } from '../models/DemoSpentChallenge.js';
 import { AiCallModel } from '../models/AiCall.js';
+import { AiCredentialModel } from '../models/AiCredential.js';
 
 // RGPD: derecho de acceso/portabilidad (GET /users/me/export) y de supresion (DELETE /users/me).
 const PASSWORD = 'gdpr-test-password-1';
@@ -42,6 +43,7 @@ const ALL_MODELS = [
   RefreshSessionModel,
   AuthTokenModel,
   GitHubContextModel,
+  AiCredentialModel,
 ] as const;
 
 const realFetch = global.fetch;
@@ -141,6 +143,22 @@ async function seedUserData(userId: Types.ObjectId) {
     provider: 'p',
     model: 'm',
     expiresAt: new Date(Date.now() + 86_400_000),
+  });
+  // An AI key the user brought (BYOK): only its sealed form exists; the export must show metadata and never this record
+  await AiCredentialModel.create({
+    userId,
+    label: `key-${userId.toString()}`,
+    preset: 'openai',
+    baseUrl: 'https://api.openai.com/v1',
+    model: 'gpt-4o-mini',
+    sealed: {
+      v: 1,
+      kid: 'k1',
+      iv: 'SEALED-IV-MARKER',
+      tag: 'SEALED-TAG-MARKER',
+      ct: 'SEALED-CT-MARKER',
+    },
+    last4: 'wxyz',
   });
   await AuthTokenModel.create({
     tokenHash: `hash-${userId.toString()}`,
@@ -288,6 +306,16 @@ describe('RGPD - exportar y borrar la cuenta', () => {
       expect(data.usage).toEqual([
         expect.objectContaining({ period: '2026-10', requests: 7, aiGenerations: 3 }),
       ]);
+      // The AI keys: metadata of the user's own only; the sealed record never leaves the database (K3)
+      expect(data.aiCredentials).toEqual([
+        expect.objectContaining({
+          label: `key-${alice._id.toString()}`,
+          preset: 'openai',
+          model: 'gpt-4o-mini',
+          last4: 'wxyz',
+        }),
+      ]);
+      expect(raw).not.toMatch(/SEALED-(IV|TAG|CT)-MARKER|"sealed"/);
       expect(data.sessions.length).toBeGreaterThanOrEqual(1);
       expect(Object.keys(data.sessions[0]).sort()).toEqual(
         ['createdAt', 'expiresAt', 'status', 'ip', 'ua'].sort()

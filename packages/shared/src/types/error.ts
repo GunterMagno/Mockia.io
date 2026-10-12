@@ -30,4 +30,16 @@ export enum ErrorCode {
   DEMO_IP_LIMIT = 'DEMO_IP_LIMIT',
   /** 429: too many requests to the demo in a short time (in-memory flood guard). */
   DEMO_RATE_LIMIT = 'DEMO_RATE_LIMIT',
+  /** 404: the "bring your own AI" feature is switched off on this server (BYOK_ENABLED). */
+  BYOK_DISABLED = 'BYOK_DISABLED',
+  /** 404: no AI credential with that id belongs to the user (also what another user's id gets). */
+  AI_CREDENTIAL_NOT_FOUND = 'AI_CREDENTIAL_NOT_FOUND',
+  /** 409: the user already keeps the maximum number of AI credentials. */
+  AI_CREDENTIAL_LIMIT_REACHED = 'AI_CREDENTIAL_LIMIT_REACHED',
+  /** 409: the user already has an AI credential with that label. */
+  AI_CREDENTIAL_LABEL_TAKEN = 'AI_CREDENTIAL_LABEL_TAKEN',
+  /** 400: the provider URL of a custom credential is not allowed (custom URLs off, not https, private host...). */
+  AI_PROVIDER_URL_INVALID = 'AI_PROVIDER_URL_INVALID',
+  /** 400: the AI provider refused the key (401/403 when it was checked); nothing was saved. */
+  AI_PROVIDER_REJECTED = 'AI_PROVIDER_REJECTED',
 }
