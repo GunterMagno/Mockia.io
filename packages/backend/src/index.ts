@@ -1,3 +1,5 @@
+// Loads .env before any module reads process.env at import time (config/ai.ts builds openRouterConfig on import)
+import 'dotenv/config';
 import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
