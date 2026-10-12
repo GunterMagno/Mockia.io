@@ -52,7 +52,7 @@ jobs:
 
       - name: Checkout code
         if: steps.config.outputs.enabled == 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install age and mongodb-database-tools
         if: steps.config.outputs.enabled == 'true'
@@ -69,7 +69,7 @@ jobs:
 
       - name: Upload encrypted artifact (14 days)
         if: steps.config.outputs.enabled == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: mockia-backup-${{ github.run_id }}
           path: ${{ steps.dump.outputs.file }}
