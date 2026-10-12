@@ -10,6 +10,8 @@
 import axios from 'axios';
 import { callOpenRouterWithRetry } from '../../../services/openRouter.service.js';
 import { getOpenRouterModel } from '../../../config/ai.js';
+import { SafeHttpError } from '../../byok/safeHttp.js';
+import { withProviderOutcome, type ProviderOutcome } from './outcome.js';
 import {
   LlmResponseError,
   type LlmCompletion,
@@ -98,11 +100,83 @@ export interface OpenAiCompatibleConfig {
   timeoutMs: number;
   /** Sent as `Authorization: Bearer ...` only when set. */
   apiKey?: string;
+  /**
+   * A fetch-like function used INSTEAD of axios (the SSRF-hardened client of a user's own AI provider: byok/safeHttp).
+   * Without it the request goes through axios exactly as before. `timeoutMs` and the caller's `signal` are applied to it
+   * through the AbortSignal it receives.
+   */
+  transport?: typeof fetch;
 }
 
 /** `http://llm:11434`, `http://llm:11434/` and `http://llm:11434/v1` all give `http://llm:11434/v1/chat/completions`. */
 export function chatCompletionsUrl(baseUrl: string): string {
   return `${baseUrl.trim().replace(/\/+$/, '').replace(/\/v1$/, '')}/v1/chat/completions`;
+}
+
+/** Network error codes that mean "nothing reached the provider" (so nothing was generated or billed). */
+const UNREACHABLE = new Set(['ECONNREFUSED', 'ENOTFOUND', 'EAI_AGAIN']);
+
+/** Whether a failure of the injected transport happened before the provider could have generated anything. */
+function transportOutcome(err: SafeHttpError): ProviderOutcome {
+  switch (err.reason) {
+    case 'timeout':
+    case 'response_too_large':
+      return 'uncertain';
+    case 'network_error': {
+      const code = err.code ?? '';
+      // Refused / not found / failed TLS handshake: no request was delivered. A reset or a cut stream is not.
+      return UNREACHABLE.has(code) || /CERT|TLS|SSL|SELF_SIGNED/.test(code)
+        ? 'refused'
+        : 'uncertain';
+    }
+    default:
+      return 'refused'; // the policy said no, or a 3xx/encoding answer was an explicit reply: nothing generated
+  }
+}
+
+/** An HTTP error answer from the provider. Named like classifyFailure reports it (`http_401`); never carries the body. */
+class ProviderHttpError extends Error {
+  constructor(public readonly status: number) {
+    super(`provider answered HTTP ${status}`);
+    this.name = `http_${status}`;
+    Object.setPrototypeOf(this, ProviderHttpError.prototype);
+  }
+}
+
+async function completeThroughTransport(
+  transport: typeof fetch,
+  config: OpenAiCompatibleConfig,
+  req: LlmRequest,
+  headers: Record<string, string>
+): Promise<unknown> {
+  const signals: AbortSignal[] = [AbortSignal.timeout(config.timeoutMs)];
+  if (req.signal) signals.push(req.signal);
+  let response: Response;
+  try {
+    response = await transport(chatCompletionsUrl(config.baseUrl), {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        model: config.model,
+        messages: req.messages,
+        ...buildChatParams(req),
+      }),
+      signal: AbortSignal.any(signals),
+    });
+  } catch (err) {
+    // Say what the failed call amounts to for billing. Only our own errors are marked: an abort reason belongs to the
+    // caller (providerOutcomeOf already reads AbortError/TimeoutError as uncertain)
+    throw err instanceof SafeHttpError ? withProviderOutcome(err, transportOutcome(err)) : err;
+  }
+  if (!response.ok) {
+    void response.body?.cancel().catch(() => undefined);
+    throw withProviderOutcome(new ProviderHttpError(response.status), 'refused');
+  }
+  try {
+    return await response.json();
+  } catch {
+    throw new LlmResponseError('invalid_envelope');
+  }
 }
 
 export function createOpenAiCompatibleProvider(config: OpenAiCompatibleConfig): LlmProvider {
@@ -112,6 +186,11 @@ export function createOpenAiCompatibleProvider(config: OpenAiCompatibleConfig): 
       if (!config.baseUrl) throw new Error(`${config.name}: base URL is not configured`);
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (config.apiKey) headers.Authorization = `Bearer ${config.apiKey}`;
+
+      if (config.transport) {
+        const data = await completeThroughTransport(config.transport, config, req, headers);
+        return readCompletion(data, config.name, config.model);
+      }
 
       const response = await axios.post(
         chatCompletionsUrl(config.baseUrl),
