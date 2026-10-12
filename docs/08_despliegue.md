@@ -152,3 +152,19 @@ El Monorepo integra un flujo de integración continua mediante **GitHub Actions*
 - **Validación Automatizada (Lint & Format Check):** Inspecciona el cumplimiento de guías de estilo de código mediante Prettier y ESLint de forma paralela en backend y frontend.
 - **Verificación de Tipos TypeScript:** Compila de forma secuencial y estricta el monorepo empezando por el paquete `@mockia/shared` y continuando con `@mockia/backend` y `@mockia/frontend` para garantizar la consistencia estática de los contratos e interfaces de datos compartidos.
 - **Ejecución de Pruebas Automatizadas:** Levanta un servicio temporal contenerizado de MongoDB en las máquinas virtuales de GitHub, compila el backend y ejecuta la batería completa de pruebas unitarias y de integración de endpoints (con cobertura).
+
+### Seguridad automática (`security.yml` y Dependabot)
+
+Además del CI, tres comprobaciones de seguridad corren solas (`.github/workflows/security.yml`, en `push` a `main`, en cada `pull request` y cada lunes por la mañana, para enterarse de avisos nuevos en dependencias que no han cambiado):
+
+| Trabajo     | Qué hace                                                                                                                                               | Bloquea                                       |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------- |
+| `codeql`    | Análisis estático de JavaScript/TypeScript con CodeQL (reglas `security-and-quality`); los resultados aparecen en _Security > Code scanning_.          | Sí, si la rama protegida lo exige             |
+| `npm-audit` | `npm audit --omit=dev --audit-level=high`: vulnerabilidades conocidas en las dependencias de **producción** (las de desarrollo no llegan al servidor). | **No todavía** (ver abajo): avisa en amarillo |
+| `gitleaks`  | Busca secretos (claves, tokens) en el historial con el binario oficial de gitleaks (versión y hash fijados). En un PR mira solo sus commits.           | Sí, si la rama protegida lo exige             |
+
+- **`npm audit` avisa, no bloquea, mientras haya deuda heredada.** El 2026-10-12 ya había 8 hallazgos altos y 3 críticos en producción (`simple-git`, `tar`, `proxy-addr`, `axios`, `joi`, `js-yaml`, `path-to-regexp`, `form-data`…). Un trabajo rojo desde el primer día en todos los PR se acaba ignorando. Cuando `npm audit` salga limpio hay que quitar `continue-on-error: true` del trabajo `npm-audit` y marcarlo como obligatorio.
+- **Un hallazgo de gitleaks sobre un secreto real** no se resuelve borrando el fichero: el secreto sigue en el historial. Hay que **revocarlo/rotarlo** en el proveedor primero. Si es un falso positivo, se añade a un `.gitleaks.toml` en la raíz (`[allowlist]` con la ruta o la huella exacta y un comentario que explique por qué); no se desactiva el trabajo.
+- **Dependabot** (`.github/dependabot.yml`) revisa cada lunes `npm` (raíz y `packages/*`) y `github-actions`, y agrupa las actualizaciones menores y de parche en un solo PR por ecosistema; las mayores llegan una a una. Las acciones de terceros se fijan a una versión mayor concreta (`@v4`, nunca `@main`) y Dependabot propone las subidas.
+- **Reglas para todos los workflows**, comprobadas por `packages/backend/src/tests/ci.workflows.test.ts` (recorre todo `.github/workflows/`): sin `pull_request_target`, todo `uses:` fijado a versión mayor o SHA, `permissions` declarado al nivel del workflow y solo lectura salvo `issues: write` (vigilancia) y `security-events: write` (solo CodeQL).
+- **Una vez, a mano en GitHub:** activar _Settings > Code security_: Dependabot alerts y Dependabot security updates, y _Code scanning_ (los resultados de CodeQL se suben aunque no se active, pero en repositorios privados necesitan GitHub Advanced Security).
