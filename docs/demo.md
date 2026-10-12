@@ -164,7 +164,7 @@ Hazla en **cualquier topología** (Render, el compose solo o el compose con un p
 
 ## Resumen operativo: `GET /api/ops/summary`
 
-Está pensado para los flujos de vigilancia y de comprobación tras desplegar de GitHub Actions (tareas A3 y A4 del plan de operaciones); también sirve a mano. Devuelve cifras y nombres de proveedor, **ningún dato personal** (ni correos, ni ids de usuario, ni IP, ni proyectos, ni contenido).
+Lo leen dos flujos de GitHub Actions, la vigilancia cada 15 minutos (`.github/workflows/monitor.yml`) y la comprobación tras desplegar (`.github/workflows/post-deploy.yml`), descritos en "Vigilancia y comprobación tras desplegar" más abajo; también sirve a mano. Devuelve cifras y nombres de proveedor, **ningún dato personal** (ni correos, ni ids de usuario, ni IP, ni proyectos, ni contenido).
 
 **Variables** (ambas apagadas por defecto):
 
@@ -209,7 +209,7 @@ Sin cabecera o con un token erróneo: 401 con el mismo cuerpo siempre (no dice q
 
 ### Comprobar `TRUST_PROXY` con el resumen
 
-Es la comprobación manual de arriba, sin leer logs. Llama **directamente a la URL pública del backend** con dos valores distintos de `X-Forwarded-For` y compara el seudónimo:
+Es la comprobación manual de arriba, sin leer logs (y `post-deploy.yml` la repite sola tras cada despliegue a `main` cuando están definidos `BACKEND_URL` y `OPS_TOKEN`: ver el apartado siguiente). Llama **directamente a la URL pública del backend** con dos valores distintos de `X-Forwarded-For` y compara el seudónimo:
 
 ```
 for ip in 203.0.113.7 203.0.113.8; do
@@ -219,6 +219,34 @@ done
 
 - **Mismo seudónimo en las dos**: la cabecera falsificada no cambia la IP que ve el servidor. Correcto.
 - **Seudónimos distintos**: quien llama puede elegir su «IP» y anular los cupos por visitante. `TRUST_PROXY` cuenta más saltos de los que de verdad hay delante del backend; sigue "Comprobación de `TRUST_PROXY`".
+
+## Vigilancia y comprobación tras desplegar (GitHub Actions)
+
+Dos flujos sin servicios externos: avisan abriendo una **incidencia de GitHub** (te llega por correo si tienes activadas las notificaciones del repositorio) y la cierran solos cuando el problema desaparece. Los dos terminan en verde con un `::notice::` si no hay secretos configurados, así que no rompen un fork ni un repositorio recién creado.
+
+**Secretos que hay que definir** (Settings > Secrets and variables > Actions > Repository secrets):
+
+| Secreto       | Obligatorio | Valor                                                                                                                                                 |
+| ------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BACKEND_URL` | sí\*        | URL pública del backend, sin barra final (p. ej. `https://mockia-api.onrender.com`). Es la URL **directa** del backend, no la del frontend.           |
+| `APP_URL`     | no          | URL pública de la aplicación web. Solo la usa la vigilancia (comprueba que `/` responde).                                                             |
+| `OPS_TOKEN`   | no          | El mismo `OPS_TOKEN` que tiene el backend. Sin él la vigilancia solo mira la disponibilidad y la comprobación tras desplegar no revisa `TRUST_PROXY`. |
+
+- Basta uno de `BACKEND_URL` o `APP_URL` para la vigilancia, y `BACKEND_URL` para la comprobación tras desplegar. Con `OPS_TOKEN` el servidor ha de tener también `DEMO_HMAC_SECRET`; sin él `caller.pseudonym` es `null` y `TRUST_PROXY` no se puede comprobar de forma automática.
+
+**Vigilancia (`monitor.yml`, cada 15 minutos y a mano desde la pestaña Actions).** Sondea `/api/health` y `/` con hasta 3 intentos separados 30 segundos (un fallo aislado de red no abre nada) y, con `OPS_TOKEN`, lee el resumen. Etiqueta de las incidencias: `incident-auto`; **una incidencia por problema**, que se comenta solo si cambia la gravedad o pasan 6 horas sin novedad, y se cierra cuando el problema deja de detectarse. Si no se puede comprobar una clave (por ejemplo, el resumen no responde), su incidencia se deja como está.
+
+| Clave          | Cuándo se abre                                                           | Gravedad                      |
+| -------------- | ------------------------------------------------------------------------ | ----------------------------- |
+| `down`         | `/api/health` o la aplicación fallan en los 3 intentos                   | incidente                     |
+| `db-down`      | el resumen dice `db.ok: false` (se mira antes que cualquier cifra)       | incidente                     |
+| `ai-errors`    | `ai.last60m.errorRatio` ≥ 0,5 con al menos 10 llamadas en la última hora | aviso                         |
+| `breaker-open` | algún cortacircuitos de `ai.breakers` está `open`                        | aviso                         |
+| `demo-budget`  | `demo.usedRatio` ≥ 0,8 (≥ 1: el cupo del día está agotado)               | aviso; incidente si llega a 1 |
+
+**Comprobación tras desplegar (`post-deploy.yml`, en cada push a `main` y a mano).** Espera hasta 10 minutos a que `/api/health` devuelva el commit del push (si el servidor no expone `commit` salta la espera y lo anota) y comprueba, llamando directamente al backend: cabeceras de seguridad de helmet, que un origen ajeno **no** obtiene `access-control-allow-origin` en `/api/projects`, y —con `OPS_TOKEN`— que dos peticiones con `X-Forwarded-For` distintos dan el **mismo** seudónimo. Etiqueta: `post-deploy-auto`. Un fallo del commit, de las cabeceras o de CORS abre un **incidente** y deja la ejecución en rojo; un seudónimo distinto abre un **aviso** `ip-spoofable` que apunta a este documento ("Comprobar `TRUST_PROXY` con el resumen"). Si el seudónimo es `null` no se puede decidir y solo se anota, sin alarma. Que el commit coincida exige que la plataforma lo exponga: Render pone `RENDER_GIT_COMMIT` solo; con Docker Compose, `GIT_COMMIT=$(git rev-parse HEAD)`.
+
+Notas: GitHub desactiva los flujos programados de un repositorio público tras 60 días sin actividad (hay que reactivarlo en la pestaña Actions) y el cron de Actions puede retrasarse unos minutos con carga. Si un push a `main` no provoca despliegue (Render con el despliegue automático apagado), `post-deploy.yml` abrirá el incidente `deploy-commit`: es lo esperado, porque lo desplegado no es ese commit.
 
 ## Qué se guarda (y cuánto)
 
