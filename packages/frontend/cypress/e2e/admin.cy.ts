@@ -316,6 +316,17 @@ describe('Panel del titular /admin', () => {
     cy.get('[data-testid="stat-users"]').should('contain.text', '1,234');
   });
 
+  it('una respuesta 200 con otra forma no deja la pantalla en blanco: mensaje con reintento', () => {
+    stubSession();
+    cy.intercept('GET', '/api/admin/me', { statusCode: 200, body: envelope({ isAdmin: true }) });
+    cy.intercept('GET', '/api/admin/metrics*', { statusCode: 200, body: envelope({}) }).as('odd');
+    cy.visit('/admin');
+    cy.wait('@odd');
+    cy.contains('h1', 'Owner panel').should('be.visible');
+    cy.get('[role="alert"]').should('contain.text', 'Could not load the metrics');
+    cy.contains('button', 'Try again').should('be.visible');
+  });
+
   it('si no se puede comprobar el acceso (5xx en /admin/me) tambien hay reintento y no se piden metricas', () => {
     stubSession();
     cy.intercept('GET', '/api/admin/me', { statusCode: 500, body: {} }).as('meFail');
