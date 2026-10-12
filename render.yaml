@@ -76,6 +76,11 @@ services:
         sync: false
       - key: AI_DEMO_TIMEOUT_MS
         sync: false
+      # Administrador del despliegue (panel de metricas, /api/admin). Lista de correos separados por comas; el correo
+      # tambien debe estar VERIFICADO en la cuenta. Vacia (por defecto) = nadie es administrador. Se rellena en el panel de
+      # Render (sync: false), no en este fichero; un valor que no sea un correo impide arrancar.
+      - key: ADMIN_EMAILS
+        sync: false
       # Transactional email (verification and password reset links). Without SMTP_URL nobody receives them and
       # unverified users cannot use AI generation or billing. Resend or Brevo (free plan); see docs/08_despliegue.md.
       - key: SMTP_URL

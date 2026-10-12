@@ -72,6 +72,9 @@ services:
       DEMO_MOCK_TTL_MINUTES: ${DEMO_MOCK_TTL_MINUTES:-}
       AI_DEMO_PROVIDERS: ${AI_DEMO_PROVIDERS:-}
       AI_DEMO_TIMEOUT_MS: ${AI_DEMO_TIMEOUT_MS:-}
+      # Administrador del despliegue (panel de metricas, /api/admin): correos separados por comas, con el correo VERIFICADO
+      # en la cuenta. Vacio = nadie es administrador. Una entrada que no sea un correo impide arrancar.
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-}
       # Correo transaccional (verificacion de email y recuperar contrasena). Sin SMTP_URL no se envia nada.
       SMTP_URL: ${SMTP_URL:-}
       MAIL_FROM: ${MAIL_FROM:-}
