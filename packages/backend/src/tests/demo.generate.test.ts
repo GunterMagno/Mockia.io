@@ -451,6 +451,70 @@ describe('demo publica: reto y generacion con IA', () => {
     });
   });
 
+  /* ----------------------------------------------------------------------------- (a2) protocolo de baseUrl (M6) */
+
+  describe('(a2) baseUrl con https cuando la peticion llego por TLS', () => {
+    const savedAppUrl = process.env.APP_URL;
+    afterEach(() => {
+      if (savedAppUrl === undefined) delete process.env.APP_URL;
+      else process.env.APP_URL = savedAppUrl;
+      app.set('trust proxy', 1);
+    });
+
+    const withHeaders = async (headers: Record<string, string>) => {
+      const ip = newIp();
+      const pow = await solved(ip);
+      let req = request(app).post('/api/demo/generate').set('X-Forwarded-For', ip);
+      for (const [k, v] of Object.entries(headers)) req = req.set(k, v);
+      const res = await req.send({ ...pow, source: SHOP });
+      expect(res.status).toBe(201);
+      return res.body.data.baseUrl as string;
+    };
+
+    it('X-Forwarded-Proto: https con trust proxy -> https://', async () => {
+      delete process.env.APP_URL;
+      const baseUrl = await withHeaders({
+        'X-Forwarded-Proto': 'https',
+        Host: 'mock.example.test',
+      });
+      expect(baseUrl).toMatch(/^https:\/\/mock\.example\.test\/api\/demo-mock\/[0-9a-f]{32}$/);
+    });
+
+    it('sin la cabecera y sin APP_URL https se queda en http://', async () => {
+      delete process.env.APP_URL;
+      const baseUrl = await withHeaders({ Host: 'mock.example.test' });
+      expect(baseUrl.startsWith('http://mock.example.test/')).toBe(true);
+    });
+
+    it('sin trust proxy la cabecera X-Forwarded-Proto no se cree (la pone cualquiera)', async () => {
+      delete process.env.APP_URL;
+      app.set('trust proxy', 0);
+      const baseUrl = await withHeaders({
+        'X-Forwarded-Proto': 'https',
+        Host: 'mock.example.test',
+      });
+      expect(baseUrl.startsWith('http://mock.example.test/')).toBe(true);
+    });
+
+    it('APP_URL https y el mismo host -> https:// aunque el proxy no mande la cabecera', async () => {
+      process.env.APP_URL = 'https://app.example.test';
+      const baseUrl = await withHeaders({ Host: 'app.example.test' });
+      expect(baseUrl.startsWith('https://app.example.test/api/demo-mock/')).toBe(true);
+    });
+
+    it('APP_URL https pero otro host (p. ej. localhost) no fuerza https', async () => {
+      process.env.APP_URL = 'https://app.example.test';
+      const baseUrl = await withHeaders({ Host: 'localhost:3000' });
+      expect(baseUrl.startsWith('http://localhost:3000/')).toBe(true);
+    });
+
+    it('APP_URL http no cambia nada', async () => {
+      process.env.APP_URL = 'http://app.example.test';
+      const baseUrl = await withHeaders({ Host: 'app.example.test' });
+      expect(baseUrl.startsWith('http://app.example.test/')).toBe(true);
+    });
+  });
+
   /* --------------------------------------------------------------------------------------- (b) kill switch */
 
   describe('(b) DEMO_ENABLED=false', () => {

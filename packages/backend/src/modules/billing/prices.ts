@@ -24,15 +24,51 @@ export function priceIdFor(plan: PaidPlan, interval: BillingInterval): string | 
   return id || undefined;
 }
 
-/** Plan e intervalo de un price id, solo si es uno de los configurados. Un id desconocido (o vacio) no es nada. */
+/**
+ * Grupos de variables STRIPE_PRICE_* que tienen el MISMO price id (ignorando espacios; las vacias no cuentan). Cada grupo
+ * lista los nombres de las variables, nunca el valor. Un id repetido es siempre un error de configuracion: del id no se
+ * puede deducir ni el plan ni el intervalo.
+ */
+export function duplicatePriceEnvGroups(env: NodeJS.ProcessEnv = process.env): string[][] {
+  const byValue = new Map<string, string[]>();
+  for (const plan of PAID_PLANS) {
+    for (const interval of INTERVALS) {
+      const name = priceEnvName(plan, interval);
+      const value = env[name]?.trim();
+      if (!value) continue;
+      byValue.set(value, [...(byValue.get(value) ?? []), name]);
+    }
+  }
+  return [...byValue.values()].filter((names) => names.length > 1);
+}
+
+const reportedAmbiguous = new Set<string>();
+
+/**
+ * Plan e intervalo de un price id, solo si es uno de los configurados. Un id desconocido (o vacio) no es nada.
+ * Un id que esas variables comparten (dos o mas) tampoco: antes ganaba la primera (Starter) en silencio, y un cliente de
+ * Pro podia quedar como Starter. assertProdConfig impide arrancar asi en produccion; aqui se rechaza y se avisa (una vez).
+ */
 export function planAndIntervalOfPrice(
   priceId: unknown
 ): { plan: PaidPlan; interval: BillingInterval } | undefined {
   if (typeof priceId !== 'string' || priceId === '') return undefined;
+  const matches: Array<{ plan: PaidPlan; interval: BillingInterval }> = [];
   for (const plan of PAID_PLANS) {
     for (const interval of INTERVALS) {
-      if (priceIdFor(plan, interval) === priceId) return { plan, interval };
+      if (priceIdFor(plan, interval) === priceId) matches.push({ plan, interval });
     }
   }
-  return undefined;
+  if (matches.length > 1) {
+    const names = matches.map((m) => priceEnvName(m.plan, m.interval));
+    const key = names.join(',');
+    if (!reportedAmbiguous.has(key)) {
+      reportedAmbiguous.add(key);
+      console.error(
+        `[Billing] ${names.join(' and ')} share the same Stripe price id; it cannot be mapped to a plan, so it grants none. Give each variable its own Price.`
+      );
+    }
+    return undefined;
+  }
+  return matches[0];
 }

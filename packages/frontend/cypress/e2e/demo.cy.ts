@@ -533,7 +533,10 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
     const back = new Intl.DateTimeFormat('en', { hour: 'numeric', minute: '2-digit' }).format(
       new Date(now + 7200 * 1000)
     );
-    cy.contains('[data-testid="demo-problem"]', "today's attempts").should('contain.text', back);
+    cy.contains('[data-testid="demo-problem"]', 'demo quota for this network').should(
+      'contain.text',
+      back
+    );
     cy.contains('[data-testid="demo-problem"] a', 'Create your free account').should(
       'have.attr',
       'href',
@@ -551,15 +554,59 @@ describe('Demo publica: probar Mockia sin registrarse', () => {
     generateButton().click();
     cy.contains('[data-testid="demo-problem"]', 'Too many requests')
       .should('be.visible')
-      .and('not.contain.text', "today's attempts");
+      .and('not.contain.text', 'quota for this network');
     generateButton().should('be.enabled');
   });
+
+  // M4: el cupo se cuenta por red (varias personas pueden compartir una IP): el aviso no acusa de nada a quien lo lee
+  const NEUTRAL_QUOTA: Record<Lang, { text: RegExp; accusing: RegExp }> = {
+    en: {
+      text: /The demo quota for this network has been reached today/,
+      accusing: /You have used|today's attempts/,
+    },
+    es: {
+      text: /Se alcanzó el cupo de la demo de esta red hoy/,
+      accusing: /Has usado|tus intentos|los intentos de hoy/,
+    },
+    zh: { text: /今天这个网络的演示额度已用完/, accusing: /你今天的次数|你已用完/ },
+  };
+  for (const lang of ['en', 'es', 'zh'] as Lang[]) {
+    it(`(e3) cupo agotado (${lang}): el aviso es neutro, sin "has usado tus intentos", ni antes de pulsar ni tras el 429`, () => {
+      uiLocale = lang;
+      const { text, accusing } = NEUTRAL_QUOTA[lang];
+      // Antes de pulsar nada: remainingToday 0
+      stubStatus({ remainingToday: 0 });
+      cy.visit('/demo');
+      cy.wait('@status');
+      cy.get('[data-testid="demo-problem"]')
+        .should('be.visible')
+        .invoke('text')
+        .should('match', text)
+        .and('not.match', accusing);
+      // Tras un 429 DEMO_LIMIT_REACHED (cupo de la red agotado aunque a esta persona le queden intentos)
+      stubStatus();
+      stubChallenge(4);
+      stubGenerate({
+        statusCode: 429,
+        headers: { 'retry-after': '3600' },
+        body: failure('DEMO_LIMIT_REACHED', 'The demo generations for today have been used up'),
+      });
+      cy.visit('/demo');
+      cy.get('main button[type="button"]').first().click();
+      cy.wait('@generate');
+      cy.get('[data-testid="demo-problem"]')
+        .should('be.visible')
+        .invoke('text')
+        .should('match', text)
+        .and('not.match', accusing);
+    });
+  }
 
   it('(e2) sin intentos hoy (remainingToday 0): avisa antes de pulsar y 502 explica que el intento cuenta', () => {
     stubStatus({ remainingToday: 0 });
     cy.visit('/demo');
     cy.wait('@status');
-    cy.contains("today's attempts").should('be.visible');
+    cy.contains('demo quota for this network').should('be.visible');
     generateButton().should('be.disabled');
 
     stubStatus();

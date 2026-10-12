@@ -104,6 +104,26 @@ describe('(a) los seis price ids resuelven a su plan e intervalo', () => {
   });
 });
 
+describe('(a2) un price id repetido en dos variables no se resuelve en silencio (M12)', () => {
+  it('con el mismo id en STRIPE_PRICE_PRO y STRIPE_PRICE_STARTER_MONTHLY no concede ningun plan y lo registra sin el valor', () => {
+    process.env.STRIPE_PRICE_PRO = 'price_shared_secret_id';
+    process.env.STRIPE_PRICE_STARTER_MONTHLY = 'price_shared_secret_id';
+    const errorLog = jest.spyOn(console, 'error');
+    expect(planAndIntervalOfPrice('price_shared_secret_id')).toBeUndefined();
+    const sub = { id: 'sub_1', items: { data: [{ price: { id: 'price_shared_secret_id' } }] } };
+    expect(planFromSubscription(sub)).toBeUndefined();
+    const logged = errorLog.mock.calls.map((c) => c.join(' ')).join(' | ');
+    expect(logged).toMatch(/STRIPE_PRICE_STARTER_MONTHLY/);
+    expect(logged).toMatch(/STRIPE_PRICE_PRO\b/);
+    expect(logged).not.toContain('price_shared_secret_id');
+    // el resto de ids sigue resolviendo
+    expect(planAndIntervalOfPrice('price_starter_y')).toEqual({
+      plan: 'starter',
+      interval: 'year',
+    });
+  });
+});
+
 describe('(b) POST /api/billing/checkout con plan starter', () => {
   const fetchOk = () => {
     const fetchMock = jest.fn().mockResolvedValue({

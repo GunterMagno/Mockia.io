@@ -336,7 +336,7 @@ const es: Messages = {
       unavailable:
         'Puede estar apagada, ocupada o sin presupuesto por hoy. Inténtalo de nuevo en un momento, o crea una cuenta gratis para generar APIs mock sin los límites de la demo.',
       limit:
-        'Has usado los intentos de hoy. Vuelve sobre las {time}, o crea una cuenta gratis para seguir.',
+        'Se alcanzó el cupo de la demo de esta red hoy. Vuelve sobre las {time}, o crea una cuenta gratis para seguir.',
       rateLimit: 'Demasiadas peticiones. Espera un minuto e inténtalo de nuevo.',
       badOutput:
         'La IA devolvió algo que no pudimos usar. Este intento ha contado en el límite de hoy. Vuelve a intentarlo o elige una plantilla.',

@@ -71,6 +71,67 @@ describe('assertProdConfig', () => {
       ).not.toThrow();
     });
 
+    describe('Stripe price ids', () => {
+      const prices = (over: Record<string, string | undefined> = {}): NodeJS.ProcessEnv => ({
+        ...validProd(),
+        STRIPE_PRICE_STARTER_MONTHLY: 'price_1AAAAAAAAAAAAAAAAAAAAAAA',
+        STRIPE_PRICE_STARTER_YEARLY: 'price_1BBBBBBBBBBBBBBBBBBBBBBB',
+        STRIPE_PRICE_PRO: 'price_1CCCCCCCCCCCCCCCCCCCCCCC',
+        STRIPE_PRICE_PRO_YEARLY: 'price_1DDDDDDDDDDDDDDDDDDDDDDD',
+        STRIPE_PRICE_TEAM: 'price_1EEEEEEEEEEEEEEEEEEEEEEE',
+        STRIPE_PRICE_TEAM_YEARLY: 'price_1FFFFFFFFFFFFFFFFFFFFFFF',
+        ...over,
+      });
+
+      it('accepts six different price ids, or none configured', () => {
+        expect(() => assertProdConfig(prices())).not.toThrow();
+        expect(() => assertProdConfig(validProd())).not.toThrow();
+      });
+
+      it('accepts several variables left empty (they mean "not configured", not "the same price")', () => {
+        const env = prices({
+          STRIPE_PRICE_TEAM: '',
+          STRIPE_PRICE_TEAM_YEARLY: '  ',
+          STRIPE_PRICE_PRO_YEARLY: undefined,
+        });
+        expect(() => assertProdConfig(env)).not.toThrow();
+      });
+
+      it('rejects two variables with the same price id naming BOTH, without echoing the value', () => {
+        const dup = 'price_1SHAREDSHAREDSHAREDSHARED';
+        const env = prices({ STRIPE_PRICE_PRO: dup, STRIPE_PRICE_STARTER_MONTHLY: dup });
+        let message = '';
+        try {
+          assertProdConfig(env);
+        } catch (err) {
+          message = (err as Error).message;
+        }
+        expect(message).toMatch(/STRIPE_PRICE_PRO\b/);
+        expect(message).toMatch(/STRIPE_PRICE_STARTER_MONTHLY\b/);
+        expect(message).not.toContain(dup);
+      });
+
+      it('compares ignoring surrounding spaces and reports every group of repeated ids', () => {
+        const env = prices({
+          STRIPE_PRICE_PRO_YEARLY: ' price_1CCCCCCCCCCCCCCCCCCCCCCC ',
+          STRIPE_PRICE_TEAM_YEARLY: 'price_1BBBBBBBBBBBBBBBBBBBBBBB',
+        });
+        expect(() => assertProdConfig(env)).toThrow(/STRIPE_PRICE_PRO\b.*STRIPE_PRICE_PRO_YEARLY/s);
+        expect(() => assertProdConfig(env)).toThrow(
+          /STRIPE_PRICE_STARTER_YEARLY.*STRIPE_PRICE_TEAM_YEARLY/s
+        );
+      });
+
+      it('does not throw outside production', () => {
+        const env = prices({
+          NODE_ENV: 'development',
+          STRIPE_PRICE_PRO: 'price_x',
+          STRIPE_PRICE_TEAM: 'price_x',
+        });
+        expect(() => assertProdConfig(env)).not.toThrow();
+      });
+    });
+
     it('rejects a short JWT secret', () => {
       const env = { ...validProd(), JWT_REFRESH_SECRET: 'too-short' };
       expect(() => assertProdConfig(env)).toThrow(/JWT_REFRESH_SECRET/);

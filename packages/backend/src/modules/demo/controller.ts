@@ -59,11 +59,29 @@ export const resetChallengeLimiter = (): void => challengeLimiter.clear();
 
 const envelope = <T>(data: T) => ({ success: true, data, timestamp: new Date().toISOString() });
 
+/**
+ * Scheme of the public URL. `req.protocol` already honours X-Forwarded-Proto when `trust proxy` is set (and ignores it
+ * otherwise, so a visitor cannot choose it). Behind a TLS terminator that does not forward the header, APP_URL decides:
+ * only for requests to APP_URL's own host, so a local call to another host keeps its real scheme.
+ */
+function schemeOf(req: Request, host: string): 'http' | 'https' {
+  if (req.protocol === 'https') return 'https';
+  try {
+    const app = new URL(process.env.APP_URL ?? '');
+    if (app.protocol === 'https:' && app.host.toLowerCase() === host.toLowerCase()) return 'https';
+  } catch {
+    // APP_URL unset or not a URL: keep the request's own scheme
+  }
+  return 'http';
+}
+
 /** Public base URL of the visitor's mock: absolute when the Host header looks sane, otherwise relative to the origin. */
 function baseUrlOf(req: Request, demoId: string): string {
   const path = `/api/demo-mock/${demoId}`;
   const host = req.get('host') ?? '';
-  return /^[A-Za-z0-9.\-:[\]]{1,255}$/.test(host) ? `${req.protocol}://${host}${path}` : path;
+  return /^[A-Za-z0-9.\-:[\]]{1,255}$/.test(host)
+    ? `${schemeOf(req, host)}://${host}${path}`
+    : path;
 }
 
 /** GET /api/demo/status */

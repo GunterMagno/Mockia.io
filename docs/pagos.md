@@ -33,7 +33,7 @@ Por qué: el código solo habla con la cuenta cuyas claves le des. Mezclar clave
 
 - [ ] En **cada uno de los seis precios**, **Tax behavior = Exclusive** (el impuesto se suma al precio mostrado). Es lo que prometen los Términos ("los precios se indican sin impuestos").
 - [ ] En cada producto, **Tax code = `txcd_35000000`** (el código fiscal acordado para el software como servicio). Comprueba en el selector de códigos del producto que ese código sigue siendo el de SaaS que quieres (Stripe distingue algunos usos, p. ej. personal o empresarial) y confírmalo con la gestoría.
-- [ ] Copiar los seis identificadores `price_...` (no `prod_...`) a `STRIPE_PRICE_STARTER_MONTHLY`, `STRIPE_PRICE_STARTER_YEARLY`, `STRIPE_PRICE_PRO`, `STRIPE_PRICE_TEAM`, `STRIPE_PRICE_PRO_YEARLY` y `STRIPE_PRICE_TEAM_YEARLY` (paso 9).
+- [ ] Copiar los seis identificadores `price_...` (no `prod_...`) a `STRIPE_PRICE_STARTER_MONTHLY`, `STRIPE_PRICE_STARTER_YEARLY`, `STRIPE_PRICE_PRO`, `STRIPE_PRICE_TEAM`, `STRIPE_PRICE_PRO_YEARLY` y `STRIPE_PRICE_TEAM_YEARLY` (paso 9). Cada variable necesita su propio `price_...`: si dos comparten el mismo identificador, el backend en producción no arranca (el error nombra las dos variables, sin mostrar el valor).
 - [ ] Opcional pero recomendable: añadir el precio en euros a cada Price (ver "Precio en euros" más abajo).
 
 Por qué: el código deduce el plan **y el intervalo** del `price_...` de la suscripción (un `price_...` que no sea uno de los seis configurados nunca concede un plan de pago). Con `tax_behavior` vacío Stripe Tax no sabe si el importe incluye impuesto y rechaza la sesión o cobra de más; el tax code decide el tipo aplicable.

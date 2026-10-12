@@ -337,7 +337,7 @@ const en = {
       unavailable:
         'It may be turned off, busy or out of budget for today. Try again in a moment, or create a free account to generate mock APIs without the demo limits.',
       limit:
-        "You have used today's attempts. Come back around {time}, or create a free account to keep going.",
+        'The demo quota for this network has been reached today. Come back around {time}, or create a free account to keep going.',
       rateLimit: 'Too many requests. Wait a minute and try again.',
       badOutput:
         "The AI returned something we could not use. This attempt counted toward today's limit. Try again or pick a template.",

@@ -9,6 +9,7 @@
  */
 
 import { parseAiProviders } from './ai.js';
+import { duplicatePriceEnvGroups } from '../modules/billing/prices.js';
 
 const MIN_SECRET_LENGTH = 32;
 
@@ -97,6 +98,14 @@ export function assertProdConfig(env: NodeJS.ProcessEnv = process.env): void {
         `DEMO_HMAC_SECRET must be set to a random secret of at least ${MIN_SECRET_LENGTH} characters when DEMO_ENABLED is true`
       );
     }
+  }
+
+  // Two plans sharing a Stripe price id cannot be told apart in webhooks (a Pro customer would be read as Starter).
+  // Names only, never the id.
+  for (const names of duplicatePriceEnvGroups(env)) {
+    problems.push(
+      `${names.join(' and ')} have the same Stripe price id; each plan and interval needs its own Price`
+    );
   }
 
   // Missing JWT_ACCESS_SECRET / JWT_REFRESH_SECRET is reported by assertJwtConfig(); here we reject weak values that are set.
