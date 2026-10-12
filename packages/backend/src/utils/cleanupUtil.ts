@@ -1,5 +1,4 @@
 import fs from 'fs/promises';
-import path from 'path';
 
 /**
  * Removes a directory and all its contents recursively

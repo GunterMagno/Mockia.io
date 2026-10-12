@@ -11,8 +11,6 @@ import { mockCache } from '../modules/mock/mockCache.service.js';
 
 describe('Mock Router Delay and Status Code Interceptors', () => {
   let accessToken: string;
-  let userId: string;
-  let projectId: string;
   let projectSlug: string;
   let apiKey: string;
   let endpointId: string;
@@ -33,7 +31,6 @@ describe('Mock Router Delay and Status Code Interceptors', () => {
       username: 'testdelayuser',
       passwordHash: hashedPassword,
     });
-    userId = user._id.toString();
 
     // 2. Log in
     const loginRes = await request(app).post('/api/auth/login').send({
@@ -55,7 +52,6 @@ describe('Mock Router Delay and Status Code Interceptors', () => {
       apiKeyPrefix: apiKey.slice(0, 9),
       isArchived: false,
     });
-    projectId = project._id.toString();
     projectSlug = project.slug;
 
     // 4. Create an endpoint

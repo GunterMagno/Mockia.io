@@ -53,7 +53,7 @@ function sessionMeta(req: Request): SessionMeta {
  * @throws 409 if email already exists
  */
 export const register = asyncHandler(
-  async (req: Request<{}, {}, CreateUserRequest>, res: Response, next: NextFunction) => {
+  async (req: Request<{}, {}, CreateUserRequest>, res: Response, _next: NextFunction) => {
     const createUserRequest: CreateUserRequest = req.body;
 
     // Call the service to register the user
@@ -84,7 +84,7 @@ export const register = asyncHandler(
  * @throws 401 if credentials are invalid
  */
 export const login = asyncHandler(
-  async (req: Request<{}, {}, LoginRequest>, res: Response, next: NextFunction) => {
+  async (req: Request<{}, {}, LoginRequest>, res: Response, _next: NextFunction) => {
     const loginRequest: LoginRequest = req.body;
 
     const { user, accessToken, refreshToken, persistent } = await loginUser(
@@ -113,7 +113,7 @@ export const login = asyncHandler(
  * @throws 401 if the cookie is missing, invalid, expired, revoked or reused (the cookie is cleared)
  * @throws 403 if the CSRF header is missing
  */
-export const refresh = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+export const refresh = asyncHandler(async (req: Request, res: Response, _next: NextFunction) => {
   let issued: IssuedSession;
   try {
     issued = await refreshTokens(readRefreshCookie(req), sessionMeta(req));
@@ -139,7 +139,7 @@ export const refresh = asyncHandler(async (req: Request, res: Response, next: Ne
  * Idempotent: always 204, even for an unknown, expired or missing cookie.
  * Requires the `X-Requested-With: mockia` header (403 otherwise; nothing is revoked or cleared).
  */
-export const logout = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+export const logout = asyncHandler(async (req: Request, res: Response, _next: NextFunction) => {
   // Cleared first: even if revoking fails the browser stops holding the credential
   clearRefreshCookie(res);
   await logoutSession(readRefreshCookie(req));

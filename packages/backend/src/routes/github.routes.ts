@@ -3,7 +3,6 @@ import { parseGithubUrl, ingestGithubRepo } from '../controllers/github.controll
 import { parseGithubUrlSchema, ingestGithubRepoSchema } from '../validation/github.validation.js';
 import { validate } from '../middlewares/validateRequest.js';
 import { authenticateToken } from '../middlewares/authenticateToken.js';
-import { authorizeRole } from '../middlewares/authorizeRole.js';
 
 /**
  * GitHub router

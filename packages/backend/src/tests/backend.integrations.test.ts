@@ -8,7 +8,6 @@ import bcrypt from 'bcrypt';
 
 describe('Backend Integration Tests', () => {
   let userToken: string;
-  let userId: string;
   let projectId: string;
 
   beforeAll(async () => {
@@ -18,12 +17,11 @@ describe('Backend Integration Tests', () => {
     await MockAPIModel.deleteMany({});
 
     const hashedPassword = await bcrypt.hash('password123', 10);
-    const user = await UserModel.create({
+    await UserModel.create({
       email: 'integration@test.com',
       username: 'integration',
       passwordHash: hashedPassword,
     });
-    userId = user._id.toString();
 
     const loginRes = await request(app)
       .post('/api/auth/login')

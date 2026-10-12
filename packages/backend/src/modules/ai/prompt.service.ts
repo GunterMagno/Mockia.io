@@ -9,7 +9,6 @@
 
 import { SYSTEM_PROMPT } from './systemPrompt.js';
 import { getProjectContext } from '../../services/github-context.service.js';
-import { buildSampleData, formatSampleDataForPrompt } from './fakeDataProvider.js';
 import { ProjectModel } from '../../models/Project.js';
 import { AppError } from '../../middlewares/errorHandler.js';
 import { ErrorCode, type MockAPIOutput } from '@mockia/shared';

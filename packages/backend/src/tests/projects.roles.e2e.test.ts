@@ -9,7 +9,6 @@ describe('Projects - Roles and Access Control E2E', () => {
   let ownerToken: string;
   let editorToken: string;
   let viewerToken: string;
-  let ownerId: string;
   let editorId: string;
   let viewerId: string;
   let projectId: string;
@@ -23,12 +22,11 @@ describe('Projects - Roles and Access Control E2E', () => {
       console.log('Creating test users...');
       const hashedPassword = await bcrypt.hash('testpassword123', 10);
 
-      const ownerUser = await UserModel.create({
+      await UserModel.create({
         email: 'owner@example.com',
         username: 'owneruser',
         passwordHash: hashedPassword,
       });
-      ownerId = ownerUser._id.toString();
 
       const editorUser = await UserModel.create({
         email: 'editor@example.com',

@@ -8,7 +8,7 @@ import { UsageModel } from '../models/Usage.js';
 import { RefreshSessionModel } from '../models/RefreshSession.js';
 import { exportUserData } from '../modules/users/gdpr.js';
 import { setAiTrainingConsent } from '../modules/ai/consent.js';
-import { flushUsage, periodOf, recordRequest, resetUsage } from '../modules/billing/usage.js';
+import { flushUsage, recordRequest, resetUsage } from '../modules/billing/usage.js';
 
 /**
  * Account deletion vs. billing (every live Stripe subscription of the customer is cancelled, retries do not loop),

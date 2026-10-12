@@ -1,16 +1,11 @@
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
 import {
   getOpenRouterApiKey,
   getOpenRouterModel,
   getOpenRouterBaseUrl,
   retryConfig,
 } from '../config/ai.js';
-import type {
-  OpenRouterPayload,
-  OpenRouterResponse,
-  OpenRouterMessage,
-  OpenRouterError,
-} from '../types/ai.js';
+import type { OpenRouterPayload, OpenRouterResponse, OpenRouterMessage } from '../types/ai.js';
 import { AppError } from '../middlewares/errorHandler.js';
 import { ErrorCode } from '@mockia/shared';
 import { describeError } from '../utils/safeErrorLog.js';
@@ -105,7 +100,6 @@ export async function callOpenRouterWithRetry(
     ...options,
   };
 
-  let lastError: AxiosError | null = null;
   // An attempt that timed out (or ended in a way we cannot classify) may have been billed, whatever the later attempts say
   let mayHaveBeenBilled = false;
 
@@ -133,7 +127,6 @@ export async function callOpenRouterWithRetry(
       console.log('[OpenRouter] ✓ API call successful');
       return response.data;
     } catch (error) {
-      lastError = error as AxiosError;
       if (providerOutcomeOf(error) === 'uncertain') mayHaveBeenBilled = true;
 
       // The caller gave up: no retries and no error translation, whoever cancelled wants out.

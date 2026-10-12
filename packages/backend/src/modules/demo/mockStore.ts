@@ -51,6 +51,7 @@ export const ALLOWED_DEMO_HEADERS = new Set([
 ]);
 
 /** C0 controls (except TAB, LF, CR, which are fine inside text) and DEL. */
+// eslint-disable-next-line no-control-regex -- detectar caracteres de control es justo el objetivo
 const CONTROL = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/;
 const HEADER_VALUE = /^[\x20-\x7e]*$/;
 // No "%": Express hands the router the DECODED path, so a stored "/a%20b" could never match any request.

@@ -22,7 +22,7 @@ import { asyncHandler } from '../middlewares/errorHandler.js';
  * @throws 400 if validation fails or URL is invalid
  */
 export const parseGithubUrl = asyncHandler(
-  async (req: Request<{}, any, { url: string }>, res: Response, next: NextFunction) => {
+  async (req: Request<{}, any, { url: string }>, res: Response, _next: NextFunction) => {
     const { url } = req.body;
 
     const parsed = parseGitHubUrl(url);
@@ -56,7 +56,7 @@ export const ingestGithubRepo = asyncHandler(
   async (
     req: Request<{}, any, { url: string; branch?: string }>,
     res: Response,
-    next: NextFunction
+    _next: NextFunction
   ) => {
     const startTime = Date.now();
     let repoPath: string | null = null;
@@ -95,10 +95,8 @@ export const ingestGithubRepo = asyncHandler(
         },
         timestamp: new Date().toISOString(),
       });
-    } catch (error) {
-      // Error will be handled by asyncHandler
-      throw error;
     } finally {
+      // Los errores los gestiona asyncHandler; aqui solo se limpia el repositorio temporal
       // Clean temporary repository
       if (repoPath) {
         console.log(`Cleaning temporary repository...`);

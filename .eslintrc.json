@@ -34,12 +34,18 @@
   "rules": {
     "no-console": "warn",
     "no-debugger": "warn",
+    // Convencion: lo que empieza por _ se ignora (argumentos, variables y propiedades descartadas con rest)
     "@typescript-eslint/no-unused-vars": [
       "error",
       {
-        "argsIgnorePattern": "^_"
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_",
+        "ignoreRestSiblings": true
       }
     ],
+    // El tipo vacio es el valor habitual de los genericos de Express (Request<{}, {}, Body>) para params y query;
+    // el resto de tipos prohibidos por la regla (Object, Function...) siguen prohibidos
+    "@typescript-eslint/ban-types": ["error", { "extendDefaults": true, "types": { "{}": false } }],
     "@typescript-eslint/explicit-function-return-types": "off",
     "@typescript-eslint/no-explicit-any": "warn",
     "prettier/prettier": "error"
@@ -69,6 +75,9 @@
         }
       },
       "rules": {
+        // El "extends" de este override reactivaba no-explicit-any como error y hacia que el frontend fuese mas
+        // estricto que el backend; se mantiene la politica comun (aviso) hasta tipar los catch y las respuestas
+        "@typescript-eslint/no-explicit-any": "warn",
         "react/react-in-jsx-scope": "off",
         "react/prop-types": "off",
         "react-hooks/rules-of-hooks": "error",

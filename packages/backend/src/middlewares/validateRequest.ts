@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import Joi, { Schema } from 'joi';
+import { Schema } from 'joi';
 import { ErrorCode } from '@mockia/shared';
 import { AppError } from './errorHandler.js';
 

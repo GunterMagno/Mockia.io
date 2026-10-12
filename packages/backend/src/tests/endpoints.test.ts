@@ -8,8 +8,6 @@ import bcrypt from 'bcrypt';
 
 describe('Endpoints CRUD (endpoints.routes)', () => {
   let accessToken: string;
-  let userId: string;
-  let projectId: string;
   let projectSlug: string;
   let testEndpointId: string;
 
@@ -29,7 +27,6 @@ describe('Endpoints CRUD (endpoints.routes)', () => {
         username: 'testendpointsuser',
         passwordHash: hashedPassword,
       });
-      userId = user._id.toString();
 
       // 2. Log in to retrieve JWT access token
       const loginRes = await request(app)
@@ -51,7 +48,6 @@ describe('Endpoints CRUD (endpoints.routes)', () => {
         members: [{ userId: user._id, role: 'owner' as any, addedAt: new Date() }],
         isArchived: false,
       });
-      projectId = project._id.toString();
       projectSlug = project.slug;
     } catch (error) {
       console.error('Error in beforeAll of endpoints test:', error);

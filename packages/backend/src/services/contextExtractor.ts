@@ -4,7 +4,7 @@ import { GitHubContextModel, type GitHubContextDocument } from '../models/GitHub
 import { ProjectModel } from '../models/Project.js';
 import { parseTypeScriptFile } from '../utils/parsers/tsParser.js';
 import { parseSwaggerFile } from '../utils/parsers/swaggerParser.js';
-import { codeAnalyzer, parseGitHubUrl, type AnalyzedFile } from './github.service.js';
+import { codeAnalyzer, parseGitHubUrl } from './github.service.js';
 import { AppError } from '../middlewares/errorHandler.js';
 import { ErrorCode } from '@mockia/shared';
 
@@ -24,7 +24,7 @@ export function extractRoutesFromFileContent(
   // 1. Find explicit HTTP method calls on client libraries or router:
   // e.g. axios.get('/api/users') or router.post('/login')
   const apiCallRegex =
-    /(?:axios|fetch|client|api|router|app)\.(get|post|put|patch|delete)\(\s*['"`](\/[^'"`\s\?]+)['"`]/gi;
+    /(?:axios|fetch|client|api|router|app)\.(get|post|put|patch|delete)\(\s*['"`](\/[^'"`\s?]+)['"`]/gi;
   let match;
 
   while ((match = apiCallRegex.exec(content)) !== null) {
@@ -41,7 +41,7 @@ export function extractRoutesFromFileContent(
   }
 
   // 2. Also search for generic path strings (e.g., fetch("/api/v1/projects"))
-  const pathRegex = /['"`](\/[a-zA-Z0-9_\-]+(?:\/[a-zA-Z0-9_\-:{}/]+)+)['"`]/g;
+  const pathRegex = /['"`](\/[a-zA-Z0-9_-]+(?:\/[a-zA-Z0-9_\-:{}/]+)+)['"`]/g;
   while ((match = pathRegex.exec(content)) !== null) {
     const rawPath = match[1];
 

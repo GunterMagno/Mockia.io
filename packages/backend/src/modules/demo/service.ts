@@ -308,7 +308,6 @@ function demoLlm() {
 }
 
 export async function generateDemoMock(input: GenerateInput): Promise<GenerateResult> {
-  const cfg = getDemoConfig();
   const now = demoClock.now();
   const ipHash = pseudonymizeIp(input.ip || 'unknown', now);
   // IPv6 only: the pseudonym of the /48, so a whole routed prefix is one more counter and not 65 536 visitors

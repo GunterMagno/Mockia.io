@@ -1,6 +1,6 @@
 import swaggerJsdoc from 'swagger-jsdoc';
 import path from 'path';
-// @ts-ignore
+// @ts-expect-error pathHelper.cjs no tiene declaraciones de tipos
 import { getSwaggerDirname } from './pathHelper.cjs';
 
 const swaggerDirname = getSwaggerDirname();

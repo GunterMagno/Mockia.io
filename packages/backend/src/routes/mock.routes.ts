@@ -141,4 +141,4 @@ mockRouter.get(
 // Catch-all route using regex - matches /:projectSlug and /:projectSlug/*
 // Group 1: projectSlug
 // Group 2: optional path
-mockRouter.all(/^\/([^\/]+)(?:\/(.*))?$/, mockProxyHandler);
+mockRouter.all(/^\/([^/]+)(?:\/(.*))?$/, mockProxyHandler);

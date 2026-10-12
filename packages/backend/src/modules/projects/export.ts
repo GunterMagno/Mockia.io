@@ -203,6 +203,7 @@ const tsString = (value: string): string => tsLiteral(value);
 /** Texto de una sola linea para comentarios `//` (un salto de linea sacaria el resto del comentario). */
 const oneLine = (text: string, max = 200): string =>
   text
+    // eslint-disable-next-line no-control-regex -- eliminar caracteres de control es justo el objetivo
     .replace(/[\u0000-\u001f\u007f\u2028\u2029]+/g, ' ')
     .replace(/</g, '&lt;')
     .trim()

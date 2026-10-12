@@ -34,7 +34,7 @@ const PEM_UNTERMINATED = /-----BEGIN [A-Z0-9 ]{0,40}KEY-----[\s\S]*$/;
 
 /** `scheme://user:password@host/...`: the whole URL goes (the host of a private database identifies the system). */
 const URL_CREDENTIALS =
-  /(?<![A-Za-z0-9+.-])[a-z][a-z0-9+.-]{0,15}:\/\/[^\s\/@:'"`<>]{1,128}:[^\s'"`<>]{1,256}@[^\s'"`<>)]{1,256}/g;
+  /(?<![A-Za-z0-9+.-])[a-z][a-z0-9+.-]{0,15}:\/\/[^\s/@:'"`<>]{1,128}:[^\s'"`<>]{1,256}@[^\s'"`<>)]{1,256}/g;
 
 const TOKEN_PATTERNS: RegExp[] = [
   new RegExp(`${NB}(?:sk|pk|rk)_(?:live|test)_[A-Za-z0-9]{8,}`, 'g'), // Stripe
@@ -113,7 +113,7 @@ function isNotALiteralSecret(raw: string): boolean {
   if (raw.length < 6) return true; // too short to be worth losing the surrounding sentence
   const lower = raw.toLowerCase().replace(/[;,)}\]]+$/, '');
   if (TYPE_WORDS.has(lower)) return true;
-  if (/^[<{(\[$]/.test(raw)) return true; // <token>, ${TOKEN}, {...}, (...), [...], $TOKEN
+  if (/^[<{([$]/.test(raw)) return true; // <token>, ${TOKEN}, {...}, (...), [...], $TOKEN
   if (/^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*|\([^)]*\)?|\[[^\]]*\]?)+/.test(raw)) return true; // process.env.X, Joi.string(), a[0]
   if (/^(?:process|env|req|res|this|config|import)\b/.test(raw)) return true;
   return false;

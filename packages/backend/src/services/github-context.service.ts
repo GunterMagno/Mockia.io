@@ -6,7 +6,6 @@ import type { GitHubContext } from '@mockia/shared';
 import { parseGitHubUrl, cloneRepository } from './github.service.js';
 import { extractContextForProject } from './contextExtractor.js';
 import * as fs from 'fs/promises';
-import * as path from 'path';
 
 /**
  * Maps a MongoDB GitHubContextDocument to a GitHubContext DTO

@@ -860,7 +860,6 @@ describe('demo publica: reto y generacion con IA', () => {
         name: 'p',
         complete: async () => Promise.reject(err),
       });
-      const hanging: LlmProvider = { name: 'p', complete: () => new Promise(() => undefined) };
       const run = async (
         provider: LlmProvider,
         validate?: (t: string) => string | null,

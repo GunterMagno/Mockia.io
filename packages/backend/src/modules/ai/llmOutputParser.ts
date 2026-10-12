@@ -32,7 +32,7 @@ export function extractJsonFromLLMOutput(
     throw new AppError('AI output too large', ErrorCode.VALIDATION_ERROR, 400);
   }
 
-  const text = rawOutput.replace(/^﻿/, '').trim();
+  const text = rawOutput.replace(/^\uFEFF/, '').trim();
 
   // Candidatos en orden de preferencia: bloques markdown, objeto {..}, array [..], texto completo.
   // Antes solo se probaba UN candidato: un bloque de codigo no-JSON o un array rompian el parseo.

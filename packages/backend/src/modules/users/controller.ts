@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import {
   getUserProfile,
   updateUserProfile,
@@ -17,7 +17,7 @@ import { asyncHandler } from '../../middlewares/errorHandler.js';
  * Read-only endpoint to fetch authenticated user's profile
  */
 export const getProfile = asyncHandler(
-  async (req: AuthRequest, res: Response, next: NextFunction) => {
+  async (req: AuthRequest, res: Response, _next: NextFunction) => {
     const userId = req.user?.id;
     if (!userId) {
       res.status(401).json({ error: 'Unauthorized' });
@@ -34,7 +34,7 @@ export const getProfile = asyncHandler(
  * Update authenticated user's profile (username only)
  */
 export const updateProfile = asyncHandler(
-  async (req: AuthRequest, res: Response, next: NextFunction) => {
+  async (req: AuthRequest, res: Response, _next: NextFunction) => {
     const userId = req.user?.id;
     if (!userId) {
       res.status(401).json({ error: 'Unauthorized' });
@@ -56,7 +56,7 @@ export const updateProfile = asyncHandler(
  * normally do not send it here: the new cookie then lasts for the browser session).
  */
 export const changePassword = asyncHandler(
-  async (req: AuthRequest, res: Response, next: NextFunction) => {
+  async (req: AuthRequest, res: Response, _next: NextFunction) => {
     const userId = req.user?.id;
     if (!userId) {
       res.status(401).json({ error: 'Unauthorized' });
@@ -85,7 +85,7 @@ export const changePassword = asyncHandler(
  * Save the interface language of the authenticated user
  */
 export const updatePreferences = asyncHandler(
-  async (req: AuthRequest, res: Response, next: NextFunction) => {
+  async (req: AuthRequest, res: Response, _next: NextFunction) => {
     const userId = req.user?.id;
     if (!userId) {
       res.status(401).json({ error: 'Unauthorized' });
@@ -102,7 +102,7 @@ export const updatePreferences = asyncHandler(
  * Downloads every personal datum of the authenticated user as a JSON attachment (GDPR access / portability).
  */
 export const exportMyData = asyncHandler(
-  async (req: AuthRequest, res: Response, next: NextFunction) => {
+  async (req: AuthRequest, res: Response, _next: NextFunction) => {
     const userId = req.user?.id;
     if (!userId) {
       res.status(401).json({ error: 'Unauthorized' });
@@ -123,7 +123,7 @@ export const exportMyData = asyncHandler(
  * Permanently deletes the account and all its data (GDPR erasure). 204 and the refresh cookie is cleared.
  */
 export const deleteMyAccount = asyncHandler(
-  async (req: AuthRequest, res: Response, next: NextFunction) => {
+  async (req: AuthRequest, res: Response, _next: NextFunction) => {
     const userId = req.user?.id;
     if (!userId) {
       res.status(401).json({ error: 'Unauthorized' });
@@ -141,7 +141,7 @@ export const deleteMyAccount = asyncHandler(
  * Opt in (200 with the consent state) or out (204: every stored generation and feedback row of the user is erased).
  */
 export const updateAiConsent = asyncHandler(
-  async (req: AuthRequest, res: Response, next: NextFunction) => {
+  async (req: AuthRequest, res: Response, _next: NextFunction) => {
     const userId = req.user?.id;
     if (!userId) {
       res.status(401).json({ error: 'Unauthorized' });

@@ -3,12 +3,10 @@
  * Orchestrates parser -> validator -> database population
  */
 
-import { extractJsonFromLLMOutput, tryExtractJsonFromLLMOutput } from './llmOutputParser.js';
+import { extractJsonFromLLMOutput } from './llmOutputParser.js';
 import { validateGeneratedApi } from './llmOutputValidator.js';
 import { populateEndpointsFromLLM } from '../mock/mockPopulation.service.js';
 import { MockAPIOutput } from '@mockia/shared';
-import { AppError } from '../../middlewares/errorHandler.js';
-import { ErrorCode } from '@mockia/shared';
 import { describeError } from '../../utils/safeErrorLog.js';
 
 /**

@@ -20,7 +20,12 @@ export class AppError extends Error {
  * Global error handling middleware
  * Normalizes all error responses
  */
-export const errorHandler = (err: Error, req: Request, res: Response, next: NextFunction): void => {
+export const errorHandler = (
+  err: Error,
+  req: Request,
+  res: Response,
+  _next: NextFunction
+): void => {
   let appError: AppError;
 
   if (err instanceof AppError) {
