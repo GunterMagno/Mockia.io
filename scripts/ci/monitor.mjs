@@ -12,33 +12,16 @@
 //   MONITOR_DRY_RUN=1      no llama a gh: imprime lo que haria. MONITOR_DRY_RUN_ISSUES: JSON de incidencias abiertas simuladas.
 //   MONITOR_RETRY_DELAY_MS espera entre intentos (defecto 30000; para pruebas locales).
 
-import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import {
-  decide,
-  evaluatedKeys,
-  reconcile,
-  issueTitle,
-  issueBody,
-  commentBody,
-  closeBody,
-  redact,
-} from './monitor-decide.mjs';
+import { decide, evaluatedKeys, errorCode, redact } from './monitor-decide.mjs';
+import { syncIssues } from './issues.mjs';
 
 export const LABEL = 'incident-auto';
 const ATTEMPTS = 3;
 const REQUEST_TIMEOUT_MS = 15_000;
 
 const defaultSleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-/** Nombre corto del error, nunca su mensaje (puede traer la URL entera, con sus credenciales). */
-function errorCode(err) {
-  if (err?.name === 'TimeoutError' || err?.name === 'AbortError') return 'timeout';
-  // fetch envuelve el fallo de red en un TypeError generico; el motivo (ECONNREFUSED, ENOTFOUND...) esta en `cause.code`
-  if (/^[A-Z][A-Z0-9_]{2,40}$/.test(err?.cause?.code ?? '')) return err.cause.code;
-  return /^[\w.-]{1,40}$/.test(err?.name ?? '') ? err.name : 'error';
-}
 
 /**
  * Sondea una URL hasta `attempts` veces y se detiene en el primer exito. Devuelve un `Probe` (ver monitor-decide.mjs).
@@ -92,27 +75,6 @@ export async function fetchSummary(backendUrl, token, fetchFn = fetch) {
   }
 }
 
-// --- gh -----------------------------------------------------------------------------------------------------------------
-
-function makeGh(env, secrets) {
-  const repo = env.GITHUB_REPOSITORY ? ['--repo', env.GITHUB_REPOSITORY] : [];
-  return (args, input) => {
-    try {
-      return execFileSync('gh', [...args, ...repo], {
-        input,
-        encoding: 'utf8',
-        env: { ...process.env, GH_TOKEN: env.GITHUB_TOKEN },
-        stdio: ['pipe', 'pipe', 'pipe'],
-      });
-    } catch (err) {
-      // El texto va por stdin y el token por entorno: el mensaje de gh no los contiene, y aun asi se limpia
-      throw new Error(
-        `gh ${args.slice(0, 2).join(' ')} fallo: ${redact(String(err.stderr || err.message).trim(), secrets)}`
-      );
-    }
-  };
-}
-
 async function run(env = process.env) {
   const backendUrl = (env.BACKEND_URL ?? '').trim().replace(/\/+$/, '');
   const appUrl = (env.APP_URL ?? '').trim().replace(/\/+$/, '');
@@ -150,75 +112,17 @@ async function run(env = process.env) {
     return 0;
   }
 
-  const gh = makeGh(env, secrets);
-  const openIssues = dryRun
-    ? JSON.parse(env.MONITOR_DRY_RUN_ISSUES || '[]')
-    : JSON.parse(
-        gh([
-          'issue',
-          'list',
-          '--label',
-          LABEL,
-          '--state',
-          'open',
-          '--limit',
-          '100',
-          '--json',
-          'number,body,updatedAt',
-        ])
-      );
-  const plan = reconcile(findings, openIssues, { evaluated });
-
-  const act = (description, args, input) => {
-    if (dryRun)
-      console.log(`[dry-run] ${description}${input ? `\n${redact(input, secrets)}` : ''}`);
-    else gh(args, input);
-  };
-
-  if (plan.toOpen.length > 0) {
-    act('gh label create', [
-      'label',
-      'create',
-      LABEL,
-      '--color',
-      'B60205',
-      '--description',
-      'Incidencia abierta y cerrada por el monitor',
-      '--force',
-    ]);
-  }
-  for (const f of plan.toOpen) {
-    act(
-      `abrir ${f.key}`,
-      ['issue', 'create', '--title', issueTitle(f, secrets), '--label', LABEL, '--body-file', '-'],
-      issueBody(f, { secrets })
-    );
-  }
-  for (const c of plan.toComment) {
-    if (c.reason === 'severity-changed') {
-      act(
-        `actualizar #${c.number} (${c.finding.key})`,
-        ['issue', 'edit', String(c.number), '--body-file', '-'],
-        issueBody(c.finding, { secrets })
-      );
-    }
-    act(
-      `comentar #${c.number} (${c.reason})`,
-      ['issue', 'comment', String(c.number), '--body-file', '-'],
-      commentBody(c.finding, c.reason, { secrets })
-    );
-  }
-  for (const c of plan.toClose) {
-    act(`cerrar #${c.number} (${c.key}, ${c.reason})`, [
-      'issue',
-      'close',
-      String(c.number),
-      '--comment',
-      closeBody(c.reason),
-    ]);
-  }
+  const counts = syncIssues({
+    label: LABEL,
+    description: 'Incidencia abierta y cerrada por el monitor',
+    findings,
+    evaluated,
+    env,
+    secrets,
+    bodyOptions: { source: 'monitor.yml', schedule: ' (cada 15 minutos)' },
+  });
   console.log(
-    `Incidencias: ${plan.toOpen.length} abiertas, ${plan.toComment.length} comentadas, ${plan.toClose.length} cerradas.`
+    `Incidencias: ${counts.opened} abiertas, ${counts.commented} comentadas, ${counts.closed} cerradas.`
   );
   return 0;
 }

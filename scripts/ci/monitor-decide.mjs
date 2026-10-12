@@ -30,6 +30,14 @@ const TITLES = {
   'demo-budget': 'El presupuesto diario de la demo se acaba',
 };
 
+/** Nombre corto de un error de fetch, nunca su mensaje (puede traer la URL entera, con sus credenciales). */
+export function errorCode(err) {
+  if (err?.name === 'TimeoutError' || err?.name === 'AbortError') return 'timeout';
+  // fetch envuelve el fallo de red en un TypeError generico; el motivo (ECONNREFUSED, ENOTFOUND...) esta en `cause.code`
+  if (/^[A-Z][A-Z0-9_]{2,40}$/.test(err?.cause?.code ?? '')) return err.cause.code;
+  return /^[w.-]{1,40}$/.test(err?.name ?? '') ? err.name : 'error';
+}
+
 // --- Texto seguro -------------------------------------------------------------------------------------------------------
 
 /** URL sin credenciales, sin query y sin fragmento (las tres cosas pueden llevar secretos). */
@@ -168,7 +176,10 @@ export function issueTitle(finding, secrets = []) {
 }
 
 /** Cuerpo de la incidencia: la marca (clave y gravedad) permite reconocerla en la siguiente ejecucion. */
-export function issueBody(finding, { secrets = [] } = {}) {
+export function issueBody(
+  finding,
+  { secrets = [], source = 'monitor.yml', schedule = ' (cada 15 minutos)' } = {}
+) {
   return redact(
     [
       `<!-- monitor-key: ${finding.key}; severity: ${finding.severity} -->`,
@@ -177,7 +188,7 @@ export function issueBody(finding, { secrets = [] } = {}) {
       finding.detail,
       '',
       '---',
-      'Abierta automaticamente por `.github/workflows/monitor.yml` (cada 15 minutos). Se cierra sola cuando el problema desaparece; no la cierres a mano mientras siga ocurriendo.',
+      `Abierta automaticamente por \`.github/workflows/${source}\`${schedule}. Se cierra sola cuando el problema desaparece; no la cierres a mano mientras siga ocurriendo.`,
     ].join('\n'),
     secrets
   );
