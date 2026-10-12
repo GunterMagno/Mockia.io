@@ -76,6 +76,20 @@ export function getAiQuotaInfo(err: any): AiQuotaInfo | null {
   return { used, limit, resetsAt };
 }
 
+/** Mensaje de cuota agotada con uso, tope y fecha de reinicio, en el idioma activo (el proveedor lo deja en <html lang>). */
+export function aiQuotaMessage(quota: AiQuotaInfo, t: Translate): string {
+  const lang = document.documentElement.lang || 'en';
+  const number = new Intl.NumberFormat(lang);
+  return t('billing.errors.aiQuota', {
+    used: number.format(quota.used),
+    limit: number.format(quota.limit),
+    // UTC: el contador se reinicia a las 00:00 UTC del dia 1 (igual que el medidor de /billing)
+    date: new Intl.DateTimeFormat(lang, { dateStyle: 'long', timeZone: 'UTC' }).format(
+      new Date(quota.resetsAt)
+    ),
+  });
+}
+
 /** Errores de facturacion con codigo propio: sus details son datos (plan, limite), no mensajes. */
 function billingError(code: unknown, details: any, t: Translate): string | null {
   switch (code) {
@@ -108,18 +122,7 @@ export function getBackendErrorMessage(err: any, t: Translate): string {
 
     // Cuota de IA agotada: mensaje propio con cifras y fecha (en el idioma activo, que el proveedor deja en <html lang>)
     const quota = getAiQuotaInfo(err);
-    if (quota) {
-      const lang = document.documentElement.lang || 'en';
-      const number = new Intl.NumberFormat(lang);
-      return t('billing.errors.aiQuota', {
-        used: number.format(quota.used),
-        limit: number.format(quota.limit),
-        // UTC: el contador se reinicia a las 00:00 UTC del dia 1 (igual que el medidor de /billing)
-        date: new Intl.DateTimeFormat(lang, { dateStyle: 'long', timeZone: 'UTC' }).format(
-          new Date(quota.resetsAt)
-        ),
-      });
-    }
+    if (quota) return aiQuotaMessage(quota, t);
 
     const billing = billingError(data?.error?.code, data?.error?.details, t);
     if (billing) return billing;

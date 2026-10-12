@@ -40,3 +40,27 @@ export const generateAndSaveEndpoints = async (
   });
   return res.data.data;
 };
+
+/** Cuota mensual de IA tal y como la informa GET /ai/quota (solo informa: no reserva nada). */
+export interface AiQuotaStatus {
+  used: number;
+  /** null: el plan no tiene tope. */
+  limit: number | null;
+  resetsAt: string;
+  available: boolean;
+}
+
+/**
+ * Consulta la cuota de IA sin gastarla. Si la consulta falla (red, servidor antiguo) devuelve null: quien llama sigue
+ * como si no hubiera aviso, porque la reserva atomica del servidor es la que decide.
+ */
+export const fetchAiQuota = async (): Promise<AiQuotaStatus | null> => {
+  try {
+    const res = await api.get<{ data: AiQuotaStatus }>('/ai/quota');
+    const d = res.data?.data;
+    if (!d || typeof d.available !== 'boolean') return null;
+    return d;
+  } catch {
+    return null;
+  }
+};

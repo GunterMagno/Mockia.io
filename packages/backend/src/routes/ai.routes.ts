@@ -9,6 +9,7 @@ import {
   generateAndSaveHandler,
   aiHealthCheckHandler,
   feedbackHandler,
+  aiQuotaHandler,
 } from '../controllers/ai.controller.js';
 import { authenticateToken } from '../middlewares/authenticateToken.js';
 import { requireVerifiedEmail } from '../middlewares/requireVerifiedEmail.js';
@@ -178,6 +179,23 @@ router.post(
   validate({ body: feedbackSchema }),
   feedbackHandler
 );
+
+/**
+ * @swagger
+ * /ai/quota:
+ *   get:
+ *     summary: Monthly AI generation quota of the caller (informative, reserves nothing)
+ *     description: >
+ *       `available` says whether a generation would be accepted right now. It never changes the counter; the atomic
+ *       reservation made by the generation routes (429 AI_QUOTA_EXCEEDED) remains the authority.
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: "{ used, limit (null without a finite cap), resetsAt, available }"
+ */
+router.get('/quota', authenticateToken, aiQuotaHandler);
 
 /**
  * @swagger

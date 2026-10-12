@@ -6,8 +6,17 @@ import {
   hardDeleteProject,
 } from '../../../services/projectService';
 import { parseGithubUrl } from '../../../services/githubService';
-import { generateAndSaveEndpoints, MAX_AI_REQUIREMENT_CHARS } from '../../../services/aiService';
-import { getBackendErrorCode, getBackendErrorMessage } from '../../../utils/error';
+import {
+  fetchAiQuota,
+  generateAndSaveEndpoints,
+  MAX_AI_REQUIREMENT_CHARS,
+} from '../../../services/aiService';
+import {
+  aiQuotaMessage,
+  getBackendErrorCode,
+  getBackendErrorMessage,
+  type AiQuotaInfo,
+} from '../../../utils/error';
 import { Link } from 'react-router-dom';
 import { PATHS } from '../../../routes/paths';
 import type { Project } from '../../../services/projectService';
@@ -64,6 +73,8 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
   const [createdProject, setCreatedProject] = useState<Project | null>(null);
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [generationId, setGenerationId] = useState<string | undefined>(undefined);
+  // Cuota de IA ya agotada, conocida ANTES de clonar el repositorio (solo informa; la reserva del servidor decide)
+  const [exhaustedQuota, setExhaustedQuota] = useState<AiQuotaInfo | null>(null);
 
   const apiBaseUrl =
     import.meta.env.VITE_API_URL &&
@@ -94,6 +105,14 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
     setCreatedProject(null);
     setCopiedUrl(false);
     setGenerationId(undefined);
+    setExhaustedQuota(null);
+  };
+
+  /** Cuota de IA agotada segun GET /ai/quota, o null si hay cupo o la consulta falla (entonces todo sigue como siempre). */
+  const findExhaustedQuota = async (): Promise<AiQuotaInfo | null> => {
+    const quota = await fetchAiQuota();
+    if (!quota || quota.available || quota.limit === null) return null;
+    return { used: quota.used, limit: quota.limit, resetsAt: quota.resetsAt };
   };
 
   const closeAndReset = () => {
@@ -123,6 +142,8 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
         setGithubInfo(info);
         setStep('ai_prompt');
         setShouldGenerate(true); // Ensure it's active when moving to next step
+        // Aviso temprano: clonar un repositorio para quedarse sin IA al final no sirve de nada
+        setExhaustedQuota(await findExhaustedQuota());
       } catch (err) {
         setError(getBackendErrorMessage(err, t));
         playErrorSound();
@@ -144,6 +165,20 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
 
     const messages =
       mode === 'github' ? tl('createProject.progressGithub') : tl('createProject.progressEmpty');
+
+    // Importar de GitHub clona el repositorio ANTES de pedir la IA: con la cuota agotada se avisa sin clonar nada
+    if (mode === 'github' && shouldGenerate) {
+      const exhausted = await findExhaustedQuota();
+      if (exhausted) {
+        setExhaustedQuota(exhausted);
+        setError(aiQuotaMessage(exhausted, t));
+        setQuotaReached(true);
+        playErrorSound();
+        setLoading(false);
+        return;
+      }
+      setExhaustedQuota(null);
+    }
 
     setProgress(messages);
     setProgressIdx(0);
@@ -200,6 +235,9 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
       setLoading(false);
     }
   };
+
+  const preQuotaNotice =
+    mode === 'github' && shouldGenerate && exhaustedQuota ? aiQuotaMessage(exhaustedQuota, t) : '';
 
   return (
     <Modal isOpen={isOpen} onClose={closeAndReset} noPadding maxWidth="900px">
@@ -401,10 +439,10 @@ const CreateProjectModal: React.FC<Props> = ({ isOpen, onClose, onCreated }) => 
                 </article>
               )}
 
-              <ModalErrorAlert message={error} />
-              {(limitReached || quotaReached) && (
+              <ModalErrorAlert message={error || preQuotaNotice} />
+              {(limitReached || quotaReached || preQuotaNotice) && (
                 <Link to={PATHS.billing} className={styles.upgradeLink} onClick={closeAndReset}>
-                  {t(quotaReached ? 'billing.viewPlans' : 'billing.upgradeCta')} →
+                  {t(quotaReached || preQuotaNotice ? 'billing.viewPlans' : 'billing.upgradeCta')} →
                 </Link>
               )}
 

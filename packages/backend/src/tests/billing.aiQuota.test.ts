@@ -642,6 +642,74 @@ describe('cuota mensual de generaciones de IA', () => {
     });
   });
 
+  describe('(l) GET /ai/quota: informa de la cuota sin reservar nada', () => {
+    const usedOf = (body: { data: { used: number } }) => body.data.used;
+
+    it('Free con 5/5 -> available:false; con 4/5 -> true; el contador no cambia con la consulta', async () => {
+      const u = await createUser('l1@example.com');
+      await UsageModel.create({ ownerId: u.id, period: periodOf(new Date()), aiGenerations: 5 });
+      const full = await request(app).get('/api/ai/quota').set(u.auth);
+      expect(full.status).toBe(200);
+      expect(full.body.data).toEqual({
+        used: 5,
+        limit: 5,
+        resetsAt: nextPeriodStart(new Date()).toISOString(),
+        available: false,
+      });
+      await UsageModel.updateOne(
+        { ownerId: u.id, period: periodOf(new Date()) },
+        { $set: { aiGenerations: 4 } }
+      );
+      const room = await request(app).get('/api/ai/quota').set(u.auth);
+      expect(room.body.data).toMatchObject({ used: 4, limit: 5, available: true });
+      // Preguntar no reserva: tres consultas mas y el contador sigue en 4
+      for (let i = 0; i < 3; i++) await request(app).get('/api/ai/quota').set(u.auth);
+      expect(await usedNow(u.idStr)).toBe(4);
+      expect(usedOf(room.body)).toBe(4);
+    });
+
+    it('sin uso este mes: used 0 y disponible; un plan de pago usa su propio tope', async () => {
+      const free = await createUser('l2@example.com');
+      const fresh = await request(app).get('/api/ai/quota').set(free.auth);
+      expect(fresh.body.data).toMatchObject({ used: 0, limit: 5, available: true });
+      const pro = await createUser('l2-pro@example.com', { plan: 'pro', billingStatus: 'active' });
+      const res = await request(app).get('/api/ai/quota').set(pro.auth);
+      expect(res.body.data).toMatchObject({ used: 0, limit: 300, available: true });
+      expect(await UsageModel.countDocuments({})).toBe(0); // no crea documentos
+    });
+
+    it('un plan sin tope finito responde limit:null y available:true', async () => {
+      const u = await createUser('l3@example.com', { plan: 'team', billingStatus: 'active' });
+      const saved = PLAN_LIMITS.team.maxMonthlyAiGenerations;
+      PLAN_LIMITS.team.maxMonthlyAiGenerations = Infinity;
+      try {
+        const res = await request(app).get('/api/ai/quota').set(u.auth);
+        expect(res.status).toBe(200);
+        expect(res.body.data).toMatchObject({ limit: null, available: true });
+        expect(typeof res.body.data.resetsAt).toBe('string');
+      } finally {
+        PLAN_LIMITS.team.maxMonthlyAiGenerations = saved;
+      }
+    });
+
+    it('la consulta y la reserva coinciden: cuando dice disponible, reservar funciona; cuando no, se rechaza', async () => {
+      const u = await createUser('l4@example.com');
+      for (let i = 0; i < 5; i++) {
+        const q = await request(app).get('/api/ai/quota').set(u.auth);
+        expect(q.body.data.available).toBe(true);
+        expect((await reserveAiGeneration(u.idStr)).ok).toBe(true);
+      }
+      const q = await request(app).get('/api/ai/quota').set(u.auth);
+      expect(q.body.data.available).toBe(false);
+      expect((await reserveAiGeneration(u.idStr)).ok).toBe(false);
+    });
+
+    it('exige sesion: sin token 401', async () => {
+      const res = await request(app).get('/api/ai/quota');
+      expect(res.status).toBe(401);
+    });
+  });
+
   describe('(i) bajar de plan conserva los proyectos y solo bloquea crear', () => {
     it('un Starter con 20 proyectos (venia de Pro) conserva los 20 y POST /projects devuelve el error de limite existente', async () => {
       const u = await createUser('i@example.com', { plan: 'pro', billingStatus: 'active' });

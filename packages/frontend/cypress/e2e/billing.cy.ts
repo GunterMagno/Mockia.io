@@ -562,6 +562,7 @@ describe('Billing: planes, limites y facturacion', () => {
         text: RegExp;
         link: string;
         generic: RegExp;
+        github: string;
       };
       const T: Record<Lang, Texts> = {
         en: {
@@ -576,6 +577,7 @@ describe('Billing: planes, limites y facturacion', () => {
           link: 'See plans',
           text: /You’ve used 5 of the 5 AI generations included in your plan this month/,
           generic: /Too many requests|AI generation failed/i,
+          github: 'GitHub import',
         },
         es: {
           newProject: 'Nuevo proyecto',
@@ -589,6 +591,7 @@ describe('Billing: planes, limites y facturacion', () => {
           link: 'Ver planes',
           text: /Has usado 5 de las 5 generaciones con IA incluidas en tu plan este mes/,
           generic: /Demasiadas peticiones|Falló la generación/i,
+          github: 'Importar desde GitHub',
         },
         zh: {
           newProject: '新建项目',
@@ -602,6 +605,7 @@ describe('Billing: planes, limites y facturacion', () => {
           link: '查看方案',
           text: /本月你的方案包含的 5 次 AI 生成已用 5 次/,
           generic: /请求过于频繁|AI 生成失败/,
+          github: '从 GitHub 导入',
         },
       };
       const email = `aiquota${Date.now()}@example.com`;
@@ -702,6 +706,94 @@ describe('Billing: planes, limites y facturacion', () => {
           cy.location('pathname').should('eq', '/billing');
         });
       }
+
+      // L2: con la cuota ya agotada, importar de GitHub avisa ANTES de crear el proyecto y clonar el repositorio
+      describe('importar de GitHub con la cuota agotada', () => {
+        const exhausted = {
+          success: true,
+          data: { used: 5, limit: 5, resetsAt: '2026-11-01T00:00:00.000Z', available: false },
+        };
+        const parsed = {
+          success: true,
+          data: {
+            owner: 'octo',
+            repo: 'demo',
+            branch: 'main',
+            url: 'https://github.com/octo/demo',
+          },
+        };
+        const startImport = (tx: Texts) => {
+          cy.contains('button', tx.newProject).click();
+          cy.contains(tx.github).click();
+          cy.get('input[type="url"]').type('https://github.com/octo/demo');
+          cy.contains('button', tx.cont).click();
+        };
+
+        beforeEach(() => {
+          cy.intercept('POST', '**/api/github/parse', parsed).as('parse');
+          cy.intercept('POST', '**/api/projects', { statusCode: 500, body: { success: false } }).as(
+            'createProject'
+          );
+          cy.intercept('POST', '**/api/projects/*/import/github', {
+            statusCode: 500,
+            body: { success: false },
+          }).as('clone');
+        });
+
+        for (const lang of ['en', 'es', 'zh'] as Lang[]) {
+          it(`(${lang}) el aviso con enlace a /billing sale antes de clonar y crear no llama a ninguna ruta de proyecto`, () => {
+            uiLocale = lang;
+            const tx = T[lang];
+            cy.intercept('GET', '**/api/ai/quota', exhausted).as('quota');
+            login();
+            startImport(tx);
+            cy.wait('@parse');
+            cy.wait('@quota');
+            cy.get('[role="dialog"]').within(() => {
+              cy.get('[role="alert"]')
+                .should('contain.text', tx.date)
+                .invoke('text')
+                .should('match', tx.text);
+              cy.get('a[href="/billing"]')
+                .scrollIntoView()
+                .should('contain.text', tx.link)
+                .and('be.visible');
+            });
+            // Pulsar "Crear" tampoco clona: la cuota se vuelve a mirar y se bloquea antes de crear nada
+            cy.contains('button', tx.create).click();
+            cy.get('@quota.all').should('have.length.at.least', 2);
+            cy.get('[role="dialog"] a[href="/billing"]').scrollIntoView().should('be.visible');
+            cy.get('@createProject.all').should('have.length', 0);
+            cy.get('@clone.all').should('have.length', 0);
+          });
+        }
+
+        it('sin la generacion con IA marcada, la cuota agotada no impide importar el repositorio', () => {
+          const tx = T.en;
+          cy.intercept('GET', '**/api/ai/quota', exhausted).as('quota');
+          login();
+          startImport(tx);
+          cy.wait('@quota');
+          cy.get('[role="dialog"] a[href="/billing"]').scrollIntoView().should('be.visible');
+          cy.get('#shouldGenerate').uncheck();
+          cy.get('[role="dialog"] a[href="/billing"]').should('not.exist');
+          cy.contains('button', tx.create).click();
+          cy.wait('@createProject');
+        });
+
+        it('si la consulta de cuota falla el flujo sigue como antes (no bloquea)', () => {
+          const tx = T.en;
+          cy.intercept('GET', '**/api/ai/quota', { statusCode: 500, body: { success: false } }).as(
+            'quota'
+          );
+          login();
+          startImport(tx);
+          cy.wait('@quota');
+          cy.get('[role="dialog"] a[href="/billing"]').should('not.exist');
+          cy.contains('button', tx.create).click();
+          cy.wait('@createProject');
+        });
+      });
 
       it('otros errores de IA siguen mostrandose como antes (traducidos) y sin enlace de planes', () => {
         login();

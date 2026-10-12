@@ -7,7 +7,7 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../middlewares/authenticateToken.js';
 import { asyncHandler } from '../middlewares/errorHandler.js';
 import { consumeAiQuota } from '../modules/ai/aiRateLimit.js';
-import { aiQuotaClock, reserveAiGeneration } from '../modules/billing/aiQuota.js';
+import { aiQuotaClock, peekAiGeneration, reserveAiGeneration } from '../modules/billing/aiQuota.js';
 import { parseAiProviders, getSpecGenerationSampling } from '../config/ai.js';
 import { describeError } from '../utils/safeErrorLog.js';
 import {
@@ -406,3 +406,21 @@ export const aiHealthCheckHandler = asyncHandler(
     });
   }
 );
+
+/**
+ * GET /api/ai/quota
+ * Tells the client whether a generation is still available this month. Informative only: it reserves nothing, so the
+ * atomic reservation made by the generation routes stays the authority.
+ */
+export const aiQuotaHandler = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
+  const quota = await peekAiGeneration(req.user!.id);
+  res.status(200).json({
+    success: true,
+    data: {
+      used: quota.used,
+      limit: quota.limit,
+      resetsAt: quota.resetsAt.toISOString(),
+      available: quota.available,
+    },
+  });
+});
