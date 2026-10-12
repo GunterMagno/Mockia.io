@@ -267,3 +267,37 @@ jobs:
           JWT_ACCESS_SECRET: test-secret-key-super-secure-for-testing
           JWT_REFRESH_SECRET: test-refresh-secret-key-for-testing
           SUPPRESS_LOGS: true
+
+  backup-drill:
+    name: Backup and restore drill
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    services:
+      mongodb:
+        image: mongo:latest
+        ports:
+          - 27017:27017
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+        env:
+          CYPRESS_INSTALL_BINARY: '0'
+
+      - name: Install age and mongodb-database-tools
+        run: bash scripts/ci/install-backup-tools.sh
+
+      - name: Encrypted backup and restore drill (scripts/ci/backup-drill.sh)
+        run: bash scripts/ci/backup-drill.sh
+        env:
+          DRILL_MONGO_URI: mongodb://localhost:27017

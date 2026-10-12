@@ -1,0 +1,95 @@
+name: Backup
+
+# Copia diaria cifrada de MongoDB. La clave PRIVADA no esta en GitHub: solo la publica (BACKUP_AGE_RECIPIENT).
+# Sin los secretos MONGODB_URI_BACKUP y BACKUP_AGE_RECIPIENT termina en verde con un aviso.
+# Guia de claves, restauracion y retencion: docs/operaciones.md
+on:
+  schedule:
+    - cron: '17 3 * * *' # 03:17 UTC cada dia
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Nunca dos copias a la vez
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: Encrypted MongoDB backup
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # Usuario de SOLO LECTURA sobre la base de produccion; la URI incluye el nombre de la base
+      MONGODB_URI_BACKUP: ${{ secrets.MONGODB_URI_BACKUP }}
+      BACKUP_AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
+      # Opcional: almacenamiento compatible con S3 (S3, R2, B2, MinIO...)
+      BACKUP_S3_BUCKET: ${{ secrets.BACKUP_S3_BUCKET }}
+      BACKUP_S3_ENDPOINT: ${{ secrets.BACKUP_S3_ENDPOINT }}
+      BACKUP_S3_REGION: ${{ secrets.BACKUP_S3_REGION }}
+      BACKUP_S3_PREFIX: ${{ secrets.BACKUP_S3_PREFIX }}
+      BACKUP_S3_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
+      BACKUP_S3_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
+
+    steps:
+      - name: Check configuration
+        id: config
+        run: |
+          if [ -z "$MONGODB_URI_BACKUP" ] || [ -z "$BACKUP_AGE_RECIPIENT" ]; then
+            echo "::notice::Backups are not configured: define the secrets MONGODB_URI_BACKUP and BACKUP_AGE_RECIPIENT (see docs/operaciones.md). Nothing was done."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+          if [ -n "$BACKUP_S3_BUCKET" ] && [ -n "$BACKUP_S3_ACCESS_KEY_ID" ] && [ -n "$BACKUP_S3_SECRET_ACCESS_KEY" ]; then
+            echo "s3=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::BACKUP_S3_* is not (fully) configured: the encrypted copy is only kept as a workflow artifact (14 days)."
+            echo "s3=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout code
+        if: steps.config.outputs.enabled == 'true'
+        uses: actions/checkout@v4
+
+      - name: Install age and mongodb-database-tools
+        if: steps.config.outputs.enabled == 'true'
+        run: bash scripts/ci/install-backup-tools.sh
+
+      - name: Dump and encrypt
+        id: dump
+        if: steps.config.outputs.enabled == 'true'
+        run: |
+          mkdir -p "$RUNNER_TEMP/backup"
+          file="$(bash scripts/ci/backup.sh "$MONGODB_URI_BACKUP" "$BACKUP_AGE_RECIPIENT" "$RUNNER_TEMP/backup")"
+          echo "file=$file" >> "$GITHUB_OUTPUT"
+          echo "name=$(basename "$file")" >> "$GITHUB_OUTPUT"
+
+      - name: Upload encrypted artifact (14 days)
+        if: steps.config.outputs.enabled == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mockia-backup-${{ github.run_id }}
+          path: ${{ steps.dump.outputs.file }}
+          retention-days: 14
+          if-no-files-found: error
+          compression-level: 0
+
+      - name: Upload to S3-compatible storage
+        if: steps.config.outputs.enabled == 'true' && steps.config.outputs.s3 == 'true'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.BACKUP_S3_REGION || 'auto' }}
+          BACKUP_FILE: ${{ steps.dump.outputs.file }}
+          BACKUP_NAME: ${{ steps.dump.outputs.name }}
+        run: |
+          # La CLI de AWS ya viene en el runner. Con BACKUP_S3_ENDPOINT sirve para R2, B2, MinIO, etc.
+          args=(--only-show-errors)
+          if [ -n "$BACKUP_S3_ENDPOINT" ]; then args+=(--endpoint-url "$BACKUP_S3_ENDPOINT"); fi
+          prefix="${BACKUP_S3_PREFIX:-mockia}"
+          prefix="${prefix#/}"; prefix="${prefix%/}"
+          aws s3 cp "${args[@]}" "$BACKUP_FILE" "s3://$BACKUP_S3_BUCKET/$prefix/$BACKUP_NAME"
+          echo "::notice::Encrypted copy uploaded to the configured S3-compatible bucket."
