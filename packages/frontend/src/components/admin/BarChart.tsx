@@ -21,7 +21,7 @@ const BarChart: React.FC<Omit<ChartFrameProps, 'render'>> = (props) => {
     const barW = Math.max(1, band * 0.72);
     const y = (v: number) => MARGIN.top + innerH - (v / top) * innerH;
     const cx = (i: number) => MARGIN.left + band * i + band / 2;
-    const slots = Math.max(2, Math.floor(innerW / 64));
+    const slots = Math.max(2, Math.floor(innerW / 72));
 
     return (
       <>
@@ -45,15 +45,13 @@ const BarChart: React.FC<Omit<ChartFrameProps, 'render'>> = (props) => {
             </text>
           </g>
         ))}
-        {labelIndexes(n, slots).map((i, k, all) => (
+        {labelIndexes(n, slots).map((i) => (
           <text
             key={days[i]}
             className={styles.axis}
             x={cx(i)}
             y={height - 8}
-            textAnchor={
-              k === 0 && n > 1 ? 'start' : k === all.length - 1 && n > 1 ? 'end' : 'middle'
-            }
+            textAnchor={i === 0 && n > 1 ? 'start' : i === n - 1 && n > 1 ? 'end' : 'middle'}
           >
             {formatDate(`${days[i]}T00:00:00Z`, {
               month: 'short',
