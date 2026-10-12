@@ -19,3 +19,5 @@ packages/frontend/public/como-funciona/
 Mockia_Insomnia_Tests.json
 packages/frontend/vite.config.js
 packages/frontend/vite.config.d.ts
+packages/frontend/cypress/downloads/
+packages/frontend/cypress/screenshots/

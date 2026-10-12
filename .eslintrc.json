@@ -13,6 +13,8 @@
     "packages/backend/scratch-check.js",
     "packages/backend/.tmp-repos/",
     "packages/frontend/public/",
+    "packages/frontend/cypress/downloads/",
+    "packages/frontend/cypress/screenshots/",
     "packages/frontend/vite.config.js",
     "packages/frontend/vite.config.d.ts"
   ],
