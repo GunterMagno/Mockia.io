@@ -1,0 +1,225 @@
+/* Graficos y tarjetas del panel del titular: solo tokens. El SVG usa clases (no colores sueltos). */
+
+/* ---- Tarjeta de cifra ---- */
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  min-width: 0;
+  padding: var(--spacing-5);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+}
+
+.statLabel {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.statValue {
+  margin: 0;
+  color: var(--color-accent-text);
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-black);
+  line-height: var(--leading-tight);
+  overflow-wrap: anywhere;
+}
+
+.statText {
+  font-size: var(--text-lg);
+}
+
+.statNote {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+/* ---- Grafico ---- */
+.frame {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  min-width: 0;
+  margin: 0;
+  padding: var(--spacing-5);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+}
+
+.title {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-black);
+}
+
+.plot {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.svg {
+  display: block;
+  max-width: 100%;
+}
+
+.grid {
+  stroke: var(--color-border);
+  stroke-width: 1;
+}
+
+.axis {
+  fill: var(--color-text-muted);
+  font-family: var(--font-ui);
+  font-size: 11px;
+}
+
+.line {
+  fill: none;
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.area {
+  stroke: none;
+  opacity: 0.14;
+}
+
+.dot {
+  stroke: var(--color-surface);
+  stroke-width: 1.5;
+}
+
+.tone-accent {
+  color: var(--color-accent-text);
+}
+.tone-ok {
+  color: var(--color-ok);
+}
+.tone-warn {
+  color: var(--color-warn);
+}
+
+/* Las series heredan el color de su grupo con currentColor */
+.line {
+  stroke: currentColor;
+}
+.area,
+.dot {
+  fill: currentColor;
+}
+
+.bar-accent {
+  fill: var(--color-accent-text);
+}
+.bar-ok {
+  fill: var(--color-ok);
+}
+.bar-warn {
+  fill: var(--color-warn);
+}
+
+/* ---- Leyenda ---- */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2) var(--spacing-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+
+  li {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-2);
+  }
+}
+
+.swatch {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: var(--radius-sm);
+}
+.fill-accent {
+  background: var(--color-accent-text);
+}
+.fill-ok {
+  background: var(--color-ok);
+}
+.fill-warn {
+  background: var(--color-warn);
+}
+
+/* ---- Tabla equivalente (plegada) ---- */
+.data {
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--spacing-3);
+
+  summary {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap);
+    color: var(--color-accent-text);
+    font-weight: var(--weight-bold);
+    cursor: pointer;
+  }
+
+  summary:focus-visible,
+  .tableWrap:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+}
+
+.tableWrap {
+  max-height: 18rem;
+  margin-top: var(--spacing-2);
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+
+  caption {
+    padding: var(--spacing-2) var(--spacing-3);
+    color: var(--color-text-muted);
+    text-align: left;
+  }
+
+  th,
+  td {
+    padding: var(--spacing-2) var(--spacing-3);
+    border-top: 1px solid var(--color-border);
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  th[scope='row'],
+  thead th:first-child {
+    text-align: left;
+    font-weight: var(--weight-medium);
+  }
+
+  thead th {
+    position: sticky;
+    top: 0;
+    background: var(--color-surface-2);
+    color: var(--color-text);
+    font-weight: var(--weight-bold);
+  }
+}

@@ -10,6 +10,7 @@ import ResetPassword from './pages/Auth/ResetPassword';
 import VerifyEmail from './pages/Auth/VerifyEmail';
 import Dashboard from './pages/Dashboard/Dashboard';
 import Billing from './pages/Billing/Billing';
+import Admin from './pages/Admin/Admin';
 import ProtectedRoute from './routes/ProtectedRoute';
 import Index from './pages/Landing/Index';
 import MockEditor from './pages/MockEditor/MockEditor';
@@ -59,6 +60,7 @@ const AppShell: React.FC = () => {
             <Route element={<ProtectedRoute />}>
               <Route path={PATHS.dashboard} element={<Dashboard />} />
               <Route path={PATHS.billing} element={<Billing />} />
+              <Route path={PATHS.admin} element={<Admin />} />
               <Route path={PATHS.editorPattern} element={<MockEditor />} />
             </Route>
             <Route path="*" element={<NotFound />} />

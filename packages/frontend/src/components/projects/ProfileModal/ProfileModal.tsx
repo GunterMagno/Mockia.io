@@ -11,6 +11,7 @@ import { getBackendErrorMessage } from '../../../utils/error';
 import ModalErrorAlert from '../../ui/ModalErrorAlert/ModalErrorAlert';
 import { useI18n } from '../../../i18n/I18nProvider';
 import AccountData from '../../ui/AccountData/AccountData';
+import { useIsAdmin } from '../../../hooks/useIsAdmin';
 
 type Props = {
   isOpen: boolean;
@@ -19,6 +20,7 @@ type Props = {
 
 const ProfileModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const { logout } = useAuth();
+  const isAdmin = useIsAdmin(isOpen).status === 'admin';
   const { t } = useI18n();
   const uid = useId();
   const navigate = useNavigate();
@@ -136,6 +138,13 @@ const ProfileModal: React.FC<Props> = ({ isOpen, onClose }) => {
             <span>{t('billing.title')}</span>
             <span aria-hidden="true">→</span>
           </Link>
+
+          {isAdmin && (
+            <Link to={PATHS.admin} className={styles.billingLink} onClick={onClose}>
+              <span>{t('admin.navLink')}</span>
+              <span aria-hidden="true">→</span>
+            </Link>
+          )}
 
           {email && <AccountData email={email} onDeleted={onClose} />}
 

@@ -15,6 +15,7 @@ export const PATHS = {
   demo: '/demo',
   dashboard: '/dashboard',
   billing: '/billing',
+  admin: '/admin',
   editorPattern: '/editor/:id',
   editor: (slug: string) => `/editor/${slug}`,
 } as const;
@@ -34,7 +35,7 @@ const PUBLIC = [
   PATHS.demo,
 ];
 /** Requieren cuenta: solo estas piden login. */
-const PROTECTED = [PATHS.dashboard, PATHS.billing, PATHS.editorPattern];
+const PROTECTED = [PATHS.dashboard, PATHS.billing, PATHS.admin, PATHS.editorPattern];
 
 const matches = (patterns: string[], path: string) =>
   patterns.some((pattern) => matchPath({ path: pattern, end: true }, path));
