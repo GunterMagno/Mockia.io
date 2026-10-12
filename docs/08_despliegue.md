@@ -2,6 +2,8 @@
 
 Este apartado describe la arquitectura de despliegue de Mockia.io en entornos de producción, analizando la dockerización, la configuración del proxy inverso (Nginx), la integración continua (GitHub Actions) y las pautas para asegurar el entorno bajo HTTPS/SSL.
 
+Para la operación diaria del servicio una vez desplegado (copias de seguridad cifradas y cómo restaurarlas, panel de métricas del titular en `/admin`, vigilancia automática y simulacro de restauración) ver [`docs/operaciones.md`](operaciones.md).
+
 ## 8.1 URL de la Aplicación en Producción
 
 El proyecto se encuentra totalmente operativo y accesible a través de Internet en las siguientes direcciones:
@@ -165,6 +167,6 @@ Además del CI, tres comprobaciones de seguridad corren solas (`.github/workflow
 
 - **`npm audit` avisa, no bloquea, mientras haya deuda heredada.** El 2026-10-12 ya había 8 hallazgos altos y 3 críticos en producción (`simple-git`, `tar`, `proxy-addr`, `axios`, `joi`, `js-yaml`, `path-to-regexp`, `form-data`…). Un trabajo rojo desde el primer día en todos los PR se acaba ignorando. Cuando `npm audit` salga limpio hay que quitar `continue-on-error: true` del trabajo `npm-audit` y marcarlo como obligatorio.
 - **Un hallazgo de gitleaks sobre un secreto real** no se resuelve borrando el fichero: el secreto sigue en el historial. Hay que **revocarlo/rotarlo** en el proveedor primero. Si es un falso positivo, se añade a un `.gitleaks.toml` en la raíz (`[allowlist]` con la ruta o la huella exacta y un comentario que explique por qué); no se desactiva el trabajo.
-- **Dependabot** (`.github/dependabot.yml`) revisa cada lunes `npm` (raíz y `packages/*`) y `github-actions`, y agrupa las actualizaciones menores y de parche en un solo PR por ecosistema; las mayores llegan una a una. Las acciones de terceros se fijan a una versión mayor concreta (`@v4`, nunca `@main`) y Dependabot propone las subidas.
+- **Dependabot** (`.github/dependabot.yml`) revisa cada lunes `npm` (solo la raíz `/`: el monorepo tiene un único `package-lock.json` y Dependabot lee los workspaces desde ahí; listar también `/packages/*` abriría PR duplicados sobre el mismo lockfile) y `github-actions`, y agrupa las actualizaciones menores y de parche en un solo PR por ecosistema; las mayores llegan una a una. Las acciones de terceros se fijan a una versión mayor concreta (`@v7`, `@v4`…, nunca `@main`) y Dependabot propone las subidas.
 - **Reglas para todos los workflows**, comprobadas por `packages/backend/src/tests/ci.workflows.test.ts` (recorre todo `.github/workflows/`): sin `pull_request_target`, todo `uses:` fijado a versión mayor o SHA, `permissions` declarado al nivel del workflow y solo lectura salvo `issues: write` (vigilancia) y `security-events: write` (solo CodeQL).
 - **Una vez, a mano en GitHub:** activar _Settings > Code security_: Dependabot alerts y Dependabot security updates, y _Code scanning_ (los resultados de CodeQL se suben aunque no se active, pero en repositorios privados necesitan GitHub Advanced Security).

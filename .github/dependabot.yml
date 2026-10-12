@@ -5,11 +5,11 @@
 version: 2
 
 updates:
-  # Monorepo con npm workspaces: un unico package-lock.json en la raiz y un package.json por paquete.
+  # Monorepo con npm workspaces: un unico package-lock.json en la raiz (no hay lockfile en packages/*). Dependabot
+  # lee los workspaces desde la raiz y actualiza ese lockfile, asi que basta con '/'. Listar tambien '/packages/*'
+  # abriria dos PR por el mismo paquete (uno por directorio) sobre el mismo fichero y se pisarian entre si.
   - package-ecosystem: npm
-    directories:
-      - '/'
-      - '/packages/*'
+    directory: '/'
     schedule:
       interval: weekly
       day: monday

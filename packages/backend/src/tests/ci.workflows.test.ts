@@ -47,14 +47,19 @@ describe('Dependabot (.github/dependabot.yml)', () => {
     expect(cfg().version).toBe(2);
   });
 
-  it('vigila npm en la raiz y en packages/* y github-actions, todos con frecuencia semanal', () => {
+  it('vigila npm solo en la raiz (un unico package-lock.json) y github-actions, todos con frecuencia semanal', () => {
     const npm = updates().filter((u) => u['package-ecosystem'] === 'npm');
     const actions = updates().filter((u) => u['package-ecosystem'] === 'github-actions');
     expect(npm.length).toBeGreaterThan(0);
     expect(actions.length).toBeGreaterThan(0);
     const npmDirs = npm.flatMap(dirsOf);
-    expect(npmDirs).toContain('/');
-    expect(npmDirs).toContain('/packages/*');
+    // Un unico package-lock.json en la raiz: listar tambien '/packages/*' abriria PR duplicados sobre el mismo lockfile
+    expect(npmDirs).toEqual(['/']);
+    expect(fs.existsSync(path.join(ROOT, 'package-lock.json'))).toBe(true);
+    const nested = fs
+      .readdirSync(path.join(ROOT, 'packages'))
+      .filter((d) => fs.existsSync(path.join(ROOT, 'packages', d, 'package-lock.json')));
+    expect(nested).toEqual([]);
     expect(actions.flatMap(dirsOf)).toContain('/');
     for (const u of updates()) expect(u.schedule?.interval).toBe('weekly');
   });
