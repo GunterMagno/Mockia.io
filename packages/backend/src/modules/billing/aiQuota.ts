@@ -1,4 +1,4 @@
-import { PLAN_LIMITS, getUserPlan } from './plans.js';
+import { PLAN_LIMITS, getUserPlan, type Plan } from './plans.js';
 import {
   getMonthlyUsageDetail,
   nextPeriodStart,
@@ -16,7 +16,7 @@ import {
  */
 
 export type AiReservation =
-  | { ok: true; release: () => Promise<void> }
+  | { ok: true; release: () => Promise<void>; plan: Plan }
   | { ok: false; used: number; limit: number; resetsAt: Date };
 
 /** Clock of the AI quota (UTC month boundaries). Tests replace `now` to cross a month without touching the system date. */
@@ -24,11 +24,11 @@ export const aiQuotaClock = { now: (): Date => new Date() };
 
 const NO_RELEASE = async (): Promise<void> => undefined;
 
-/** Monthly cap of the user's effective plan, or null when the plan has no finite cap (not metered). The single place that decides it. */
-async function aiLimitOf(userId: string): Promise<number | null> {
+/** Effective plan and its monthly cap, or null when the plan has no finite cap (not metered). The single place that decides it. */
+async function aiLimitOf(userId: string): Promise<{ plan: Plan; limit: number | null }> {
   const plan = await getUserPlan(userId);
   const limit = PLAN_LIMITS[plan].maxMonthlyAiGenerations;
-  return Number.isFinite(limit) ? limit : null;
+  return { plan, limit: Number.isFinite(limit) ? limit : null };
 }
 
 export interface AiQuotaStatus {
@@ -49,7 +49,7 @@ export async function peekAiGeneration(
   userId: string,
   now: Date = aiQuotaClock.now()
 ): Promise<AiQuotaStatus> {
-  const limit = await aiLimitOf(userId);
+  const { limit } = await aiLimitOf(userId);
   const resetsAt = nextPeriodStart(now);
   if (limit === null) return { used: 0, limit: null, resetsAt, available: true };
   const { aiGenerations } = await getMonthlyUsageDetail(userId, now);
@@ -64,8 +64,8 @@ export async function reserveAiGeneration(
   userId: string,
   now: Date = aiQuotaClock.now()
 ): Promise<AiReservation> {
-  const limit = await aiLimitOf(userId);
-  if (limit === null) return { ok: true, release: NO_RELEASE };
+  const { plan, limit } = await aiLimitOf(userId);
+  if (limit === null) return { ok: true, release: NO_RELEASE, plan };
 
   const slot = await reserveAiGenerationSlot(userId, limit, now);
   if (!slot.ok) return { ok: false, used: slot.used, limit, resetsAt: nextPeriodStart(now) };
@@ -73,6 +73,7 @@ export async function reserveAiGeneration(
   let released = false;
   return {
     ok: true,
+    plan,
     release: async () => {
       if (released) return;
       released = true;

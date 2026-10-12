@@ -25,7 +25,7 @@ import {
   type LlmProvider,
   type LlmRequest,
 } from './types.js';
-import { providerOutcomeOf } from './outcome.js';
+import { providerOutcomeOf, withLlmFailure } from './outcome.js';
 
 export { providerOutcomeOf, type ProviderOutcome } from './outcome.js';
 
@@ -135,10 +135,13 @@ function toServiceError(err: unknown): AppError {
     err instanceof LlmResponseError &&
     (err.kind === 'invalid_output' || err.kind === 'truncated')
   ) {
-    return new AppError(
-      'The AI returned an invalid answer. Please try again.',
-      ErrorCode.EXTERNAL_SERVICE_ERROR,
-      502
+    return withLlmFailure(
+      new AppError(
+        'The AI returned an invalid answer. Please try again.',
+        ErrorCode.EXTERNAL_SERVICE_ERROR,
+        502
+      ),
+      err.kind
     );
   }
   return new AppError(
@@ -183,7 +186,7 @@ async function completeValidated(provider: LlmProvider, req: LlmRequest): Promis
 
 /** One request to one provider, reported to the caller's hooks: that it left, and how it ended. */
 async function callProvider(provider: LlmProvider, req: LlmRequest): Promise<LlmCompletion> {
-  req.onProviderCall?.();
+  req.onProviderCall?.(provider.name);
   try {
     const completion = await provider.complete(req);
     req.onProviderResult?.('answered');

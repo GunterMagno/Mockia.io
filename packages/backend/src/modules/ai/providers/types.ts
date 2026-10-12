@@ -33,9 +33,9 @@ export interface LlmRequest {
    * internal retries are part of that one call), after its circuit breaker let it through and before any I/O. It is not
    * called for a provider skipped by an open circuit. A caller that pays per model call uses it to tell "nothing was
    * ever sent" (safe to refund) from "a request was started" (the provider may bill what it generated, whatever the
-   * outcome: answer, invalid output, HTTP error, timeout or deadline).
+   * outcome: answer, invalid output, HTTP error, timeout or deadline). It receives the provider's name, for the metrics.
    */
-  onProviderCall?: () => void;
+  onProviderCall?: (provider?: string) => void;
   /**
    * Called when a request reported by `onProviderCall` ends, with what it amounted to: 'answered' (the provider produced a
    * completion, usable or not), 'refused' (an explicit HTTP error or an unreachable server: nothing generated) or

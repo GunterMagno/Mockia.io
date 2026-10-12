@@ -8,6 +8,7 @@ import {
 } from '../../config/ai.js';
 import { describeError } from '../../utils/safeErrorLog.js';
 import { getLlm, type ChatMessage } from '../ai/providers/index.js';
+import { completeAndRecord } from '../metrics/aiCalls.js';
 import {
   extractJsonFromLLMOutput,
   validateGeneratedApi,
@@ -368,16 +369,21 @@ export async function generateDemoMock(input: GenerateInput): Promise<GenerateRe
     } catch {
       throw unavailable('The demo is not available right now.');
     }
-    const completion = await llm.complete({
-      messages: buildDemoMessages(input.source),
-      temperature: getSpecGenerationSampling().temperature,
-      maxTokens: DEMO_MAX_TOKENS,
-      jsonSchema: MOCK_SPEC_JSON_SCHEMA,
-      validate: demoOutputValidator,
-      onProviderCall: () => {
-        requestSent = true;
+    // The single point where a demo AI call is recorded as an anonymous AiCall metric (no visitor, no IP, no content)
+    const completion = await completeAndRecord(
+      llm,
+      {
+        messages: buildDemoMessages(input.source),
+        temperature: getSpecGenerationSampling().temperature,
+        maxTokens: DEMO_MAX_TOKENS,
+        jsonSchema: MOCK_SPEC_JSON_SCHEMA,
+        validate: demoOutputValidator,
+        onProviderCall: () => {
+          requestSent = true;
+        },
       },
-    });
+      { scope: 'demo', plan: 'anonymous' }
+    );
 
     // 5. The mock. The validator already ran this parse, so a failure here is a defensive path only.
     let created;

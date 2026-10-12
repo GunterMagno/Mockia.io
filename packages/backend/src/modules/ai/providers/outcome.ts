@@ -44,3 +44,32 @@ export function withProviderOutcome<T extends Error>(err: T, outcome: ProviderOu
   (err as T & { providerOutcome?: ProviderOutcome }).providerOutcome = outcome;
   return err;
 }
+
+/** True when the error carries the outcome of the request that produced it (see withProviderOutcome). */
+export function carriesProviderOutcome(err: unknown): boolean {
+  const marked = (err as { providerOutcome?: unknown } | null)?.providerOutcome;
+  return marked === 'answered' || marked === 'refused' || marked === 'uncertain';
+}
+
+type LlmFailureKind = LlmResponseError['kind'];
+
+/**
+ * Marks the error the chain finally throws with WHY the model's answer was unusable. The chain turns an
+ * LlmResponseError into a generic 502, and the metrics need to tell a cut answer (truncated) from an invalid one.
+ */
+export function withLlmFailure<T extends Error>(err: T, kind: LlmFailureKind): T {
+  (err as T & { llmFailure?: LlmFailureKind }).llmFailure = kind;
+  return err;
+}
+
+/** Why the model's answer was unusable, if that is what made this error (directly or through the chain's 502). */
+export function llmFailureOf(err: unknown): LlmFailureKind | undefined {
+  if (err instanceof LlmResponseError) return err.kind;
+  const marked = (err as { llmFailure?: unknown } | null)?.llmFailure;
+  return marked === 'invalid_envelope' ||
+    marked === 'empty_content' ||
+    marked === 'truncated' ||
+    marked === 'invalid_output'
+    ? marked
+    : undefined;
+}

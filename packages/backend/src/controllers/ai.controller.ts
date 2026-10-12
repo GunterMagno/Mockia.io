@@ -8,6 +8,8 @@ import { AuthenticatedRequest } from '../middlewares/authenticateToken.js';
 import { asyncHandler } from '../middlewares/errorHandler.js';
 import { consumeAiQuota } from '../modules/ai/aiRateLimit.js';
 import { aiQuotaClock, peekAiGeneration, reserveAiGeneration } from '../modules/billing/aiQuota.js';
+import type { Plan } from '../modules/billing/plans.js';
+import { completeAndRecord } from '../modules/metrics/aiCalls.js';
 import { parseAiProviders, getSpecGenerationSampling } from '../config/ai.js';
 import { describeError } from '../utils/safeErrorLog.js';
 import {
@@ -48,15 +50,16 @@ async function enforceAiRateLimit(userId: string, res: Response): Promise<void> 
  * Monthly AI generation quota of the user's plan (modules/billing/aiQuota.ts). Reserves ONE generation before any model
  * is called. Spent: answers 429 AI_QUOTA_EXCEEDED itself (used, limit, resetsAt in the body, Retry-After = seconds to
  * the next UTC month) and returns null, so the caller stops without touching the LLM. Otherwise returns the `release`
- * function, which the caller invokes on a failure path only when createRefundTracker allows it, and never after a successful answer.
+ * function, which the caller invokes on a failure path only when createRefundTracker allows it, and never after a successful answer,
+ * and the plan the quota was reserved under (the AiCall metric carries it).
  */
 async function reserveOrReject(
   userId: string,
   res: Response
-): Promise<(() => Promise<void>) | null> {
+): Promise<{ release: () => Promise<void>; plan: Plan } | null> {
   const now = aiQuotaClock.now();
   const reservation = await reserveAiGeneration(userId, now);
-  if (reservation.ok) return reservation.release;
+  if (reservation.ok) return { release: reservation.release, plan: reservation.plan };
   const retryAfter = Math.max(
     1,
     Math.ceil((reservation.resetsAt.getTime() - now.getTime()) / 1000)
@@ -106,10 +109,11 @@ export function createRefundTracker() {
 
 /**
  * Runs one completion through the configured provider chain (local model first, OpenRouter as reserve, per
- * AI_PROVIDERS) and logs which provider answered. The log never carries the prompt or the answer.
+ * AI_PROVIDERS) and logs which provider answered. The log never carries the prompt or the answer. This is the single
+ * point where a user's AI call is recorded as an anonymous AiCall metric (success or failure, see completeAndRecord).
  */
-async function complete(operation: string, req: LlmRequest): Promise<LlmCompletion> {
-  const result = await getLlm().complete(req);
+async function complete(operation: string, req: LlmRequest, plan: Plan): Promise<LlmCompletion> {
+  const result = await completeAndRecord(getLlm(), req, { scope: 'users', plan });
   console.log(
     `[AI] ${operation} done provider=${result.provider} model=${result.model} ` +
       `inputTokens=${result.usage?.inputTokens ?? 'n/a'} outputTokens=${result.usage?.outputTokens ?? 'n/a'}`
@@ -209,8 +213,9 @@ export const generateMockAPISpecHandler = asyncHandler(
     }
 
     // One generation of the monthly plan quota, reserved BEFORE any prompt or model work; 429 when it is spent
-    const release = await reserveOrReject(userId, res);
-    if (!release) return;
+    const reservation = await reserveOrReject(userId, res);
+    if (!reservation) return;
+    const { release, plan } = reservation;
     const refunds = createRefundTracker();
 
     try {
@@ -219,13 +224,17 @@ export const generateMockAPISpecHandler = asyncHandler(
 
       // Call the LLM provider chain with structured messages
       // Sampling is the server's (the validate middleware strips any client temperature / maxTokens)
-      const completion = await complete('generate-mock-api-spec', {
-        messages,
-        ...getSpecGenerationSampling(),
-        jsonSchema: MOCK_SPEC_JSON_SCHEMA,
-        validate: specRouteValidator,
-        ...refunds.hooks,
-      });
+      const completion = await complete(
+        'generate-mock-api-spec',
+        {
+          messages,
+          ...getSpecGenerationSampling(),
+          jsonSchema: MOCK_SPEC_JSON_SCHEMA,
+          validate: specRouteValidator,
+          ...refunds.hooks,
+        },
+        plan
+      );
       const responseContent = completion.text;
 
       // Validate and extract the mock API specification
@@ -302,8 +311,9 @@ export const generateAndSaveHandler = asyncHandler(
     }
 
     // One generation of the monthly plan quota, reserved BEFORE any prompt or model work; 429 when it is spent
-    const release = await reserveOrReject(userId, res);
-    if (!release) return;
+    const reservation = await reserveOrReject(userId, res);
+    if (!reservation) return;
+    const { release, plan } = reservation;
     const refunds = createRefundTracker();
 
     try {
@@ -313,13 +323,17 @@ export const generateAndSaveHandler = asyncHandler(
       console.log(`[AI] Prompt built with ${messages.length} messages`);
 
       // 2. Call the LLM provider chain
-      const completion = await complete('generate-and-save', {
-        messages,
-        ...getSpecGenerationSampling(),
-        jsonSchema: MOCK_SPEC_JSON_SCHEMA,
-        validate: saveRouteValidator,
-        ...refunds.hooks,
-      });
+      const completion = await complete(
+        'generate-and-save',
+        {
+          messages,
+          ...getSpecGenerationSampling(),
+          jsonSchema: MOCK_SPEC_JSON_SCHEMA,
+          validate: saveRouteValidator,
+          ...refunds.hooks,
+        },
+        plan
+      );
 
       // 3. Get response content (the provider already rejects empty answers)
       const responseContent = completion.text;

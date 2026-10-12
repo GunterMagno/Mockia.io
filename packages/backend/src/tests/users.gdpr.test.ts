@@ -20,6 +20,7 @@ import { AuthTokenModel } from '../models/AuthToken.js';
 import { DemoBudgetModel } from '../models/DemoBudget.js';
 import { DemoMockModel } from '../models/DemoMock.js';
 import { DemoSpentChallengeModel } from '../models/DemoSpentChallenge.js';
+import { AiCallModel } from '../models/AiCall.js';
 
 // RGPD: derecho de acceso/portabilidad (GET /users/me/export) y de supresion (DELETE /users/me).
 const PASSWORD = 'gdpr-test-password-1';
@@ -194,7 +195,7 @@ describe('RGPD - exportar y borrar la cuenta', () => {
         if (sub) walk(sub, `${full}.`);
       });
     };
-    for (const model of [DemoBudgetModel, DemoMockModel, DemoSpentChallengeModel])
+    for (const model of [DemoBudgetModel, DemoMockModel, DemoSpentChallengeModel, AiCallModel])
       walk(model.schema, `${model.modelName}.`);
     expect(offenders).toEqual([]);
   });
@@ -203,7 +204,8 @@ describe('RGPD - exportar y borrar la cuenta', () => {
     const covered = ALL_MODELS.map((m) => m.modelName).sort();
     // The public demo's collections (anonymous visitors) hold no account data: only daily IP pseudonyms with a TTL of
     // at most 48 h and ephemeral mocks, none of them linked to a user. They are deliberately outside erase/export.
-    const demoOnly = ['DemoBudget', 'DemoMock', 'DemoSpentChallenge'];
+    // AiCall (task O1) is the same kind of thing: anonymous metric events with a 90-day TTL and no field that identifies anyone.
+    const demoOnly = ['DemoBudget', 'DemoMock', 'DemoSpentChallenge', 'AiCall'];
     expect(
       mongoose
         .modelNames()
