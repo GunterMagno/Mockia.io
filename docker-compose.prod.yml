@@ -81,6 +81,14 @@ services:
       # Precios del panel de metricas (coste estimado de la IA): JSON {"<proveedor>/<modelo>": {"inputPerMTok": n, "outputPerMTok": n}}
       # en USD por millon de tokens. Vacio = sin estimacion de coste. Un JSON invalido impide arrancar.
       AI_PRICES_JSON: ${AI_PRICES_JSON:-}
+      # IA propia del usuario (BYOK), apagada por defecto. BYOK_KEYS es el llavero secreto que cifra sus claves:
+      # "id:base64(32 bytes),..." (la primera es la activa; `npm run byok:genkey -w @mockia/backend --silent` genera una).
+      # Con BYOK_ENABLED=true y un llavero ausente o invalido el backend no arranca. Nunca pongas un valor en este fichero.
+      BYOK_ENABLED: ${BYOK_ENABLED:-false}
+      BYOK_KEYS: ${BYOK_KEYS:-}
+      # Direcciones personalizadas de proveedor: apagado salvo decision expresa. Tope mensual de generaciones por usuario.
+      BYOK_ALLOW_CUSTOM_URLS: ${BYOK_ALLOW_CUSTOM_URLS:-false}
+      BYOK_MAX_MONTHLY_GENERATIONS: ${BYOK_MAX_MONTHLY_GENERATIONS:-3000}
       # Version desplegada que devuelve /api/health como `commit`: GIT_COMMIT=$(git rev-parse HEAD) docker compose ... up -d
       GIT_COMMIT: ${GIT_COMMIT:-}
       # Correo transaccional (verificacion de email y recuperar contrasena). Sin SMTP_URL no se envia nada.

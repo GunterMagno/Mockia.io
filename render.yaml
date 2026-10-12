@@ -92,6 +92,21 @@ services:
       # sin estimacion de coste. Un JSON invalido impide arrancar en produccion.
       - key: AI_PRICES_JSON
         sync: false
+      # IA propia del usuario (BYOK): cada persona guarda su clave de un proveedor compatible con OpenAI y el servidor la
+      # cifra con el llavero BYOK_KEYS. Apagado por defecto: BYOK_ENABLED y BYOK_KEYS se rellenan en el panel de Render
+      # (sync: false), nunca aqui. BYOK_KEYS es un secreto: "id:base64(32 bytes),..." (la primera es la activa); se genera
+      # con `npm run byok:genkey -w @mockia/backend --silent` y NO lleva generateValue (Render generaria un llavero que
+      # no se puede copiar ni rotar). Con BYOK_ENABLED=true y un llavero ausente o invalido el backend no arranca.
+      - key: BYOK_ENABLED
+        sync: false
+      - key: BYOK_KEYS
+        sync: false
+      # Direcciones personalizadas de proveedor (mas superficie SSRF): apagado salvo decision expresa.
+      - key: BYOK_ALLOW_CUSTOM_URLS
+        value: 'false'
+      # Tope mensual de generaciones por usuario con su propia clave (protege al servidor, no a la clave del usuario).
+      - key: BYOK_MAX_MONTHLY_GENERATIONS
+        value: '3000'
       # Transactional email (verification and password reset links). Without SMTP_URL nobody receives them and
       # unverified users cannot use AI generation or billing. Resend or Brevo (free plan); see docs/08_despliegue.md.
       - key: SMTP_URL
