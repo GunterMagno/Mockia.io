@@ -94,7 +94,8 @@ type RetriableConfig = InternalAxiosRequestConfig & { _retried?: boolean };
 // Check for HTML responses (SPA fallback) when JSON is expected
 api.interceptors.response.use(
   (response) => {
-    const contentType = response.headers['content-type'] || '';
+    // Since axios 1.20 a header value is typed string | number | boolean | string[] | AxiosHeaders
+    const contentType = String(response.headers['content-type'] || '');
     if (
       contentType.includes('text/html') ||
       (typeof response.data === 'string' && response.data.trim().startsWith('<!DOCTYPE html>'))
