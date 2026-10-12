@@ -426,6 +426,7 @@ describe('createDemoMock', () => {
       [
         '__v',
         '_id',
+        'claimTokenHash', // L1: SHA-256 of the claim token (a hash, no user or project)
         'createdAt',
         'demoId',
         'endpoints',

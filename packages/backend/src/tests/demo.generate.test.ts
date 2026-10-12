@@ -356,6 +356,20 @@ describe('demo publica: reto y generacion con IA', () => {
       expect(Date.parse(data.expiresAt)).toBeGreaterThan(Date.now());
       expect(data.remainingToday).toBe(1);
       expect(res.headers['set-cookie']).toBeUndefined();
+      // L1: el secreto de reclamo viaja SOLO en esta respuesta; no es el id publico ni se guarda en claro
+      expect(data.claimToken).toMatch(/^[0-9a-f]{32}$/);
+      expect(data.claimToken).not.toBe(data.demoId);
+      expect(data.baseUrl).not.toContain(data.claimToken);
+      const stored = await DemoMockModel.findOne({ demoId: data.demoId }).lean();
+      expect(JSON.stringify(stored)).not.toContain(data.claimToken);
+      const publicReads = await Promise.all([
+        request(app).get(`/api/demo-mock/${data.demoId}/products`),
+        request(app).get('/api/demo/status').set('X-Forwarded-For', ip),
+      ]);
+      for (const r of publicReads) {
+        expect(JSON.stringify(r.body)).not.toContain(data.claimToken);
+        expect(JSON.stringify(r.headers)).not.toContain(data.claimToken);
+      }
 
       const list = await request(app).get(`/api/demo-mock/${data.demoId}/products`);
       expect(list.status).toBe(200);

@@ -61,7 +61,10 @@ export interface GenerateInput {
 }
 
 export interface GenerateResult {
+  /** Public: it is in the mock's URL and the mock may be shared. */
   demoId: string;
+  /** Secret that claims the demo as a project (task L1). Handed out here and nowhere else; only its hash is stored. */
+  claimToken: string;
   endpoints: DemoEndpoint[];
   expiresAt: string;
   /** null when the counter could not be read after the mock was created. */
@@ -395,6 +398,7 @@ export async function generateDemoMock(input: GenerateInput): Promise<GenerateRe
     const left = await peekDemoBudget(ipHash, now, netHash).catch(() => null);
     return {
       demoId: created.demoId,
+      claimToken: created.claimToken,
       endpoints: created.endpoints,
       expiresAt: created.expiresAt.toISOString(),
       remainingToday: left ? left.ipLeft : null,

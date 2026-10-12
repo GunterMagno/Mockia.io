@@ -20,8 +20,13 @@ export interface DemoEndpointDocument {
 }
 
 export interface DemoMockDocument {
-  /** 128 random bits, hex. */
+  /** 128 random bits, hex. PUBLIC: it is in the mock's URL and may be shared. It grants no right to claim the demo. */
   demoId: string;
+  /**
+   * SHA-256 (hex) of the claim token: 128 random bits handed to the creator once, in the generate response, and never
+   * stored in clear. Whoever shows the token may claim the demo as a project of their account (see modules/demo/claim.ts).
+   */
+  claimTokenHash: string;
   ipHash: string;
   endpoints: DemoEndpointDocument[];
   requestCount: number;
@@ -43,6 +48,7 @@ const endpointSchema = new Schema<DemoEndpointDocument>(
 const demoMockSchema = new Schema<DemoMockDocument>(
   {
     demoId: { type: String, required: true, match: /^[0-9a-f]{32}$/ },
+    claimTokenHash: { type: String, required: true, match: /^[0-9a-f]{64}$/ },
     ipHash: { type: String, required: true },
     endpoints: { type: [endpointSchema], required: true },
     requestCount: { type: Number, required: true, default: 0, min: 0 },

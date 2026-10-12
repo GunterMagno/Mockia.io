@@ -109,6 +109,7 @@ export async function generateHandler(req: Request, res: Response): Promise<void
   res.status(201).json(
     envelope({
       demoId: result.demoId,
+      claimToken: result.claimToken,
       baseUrl: baseUrlOf(req, result.demoId),
       endpoints: result.endpoints,
       expiresAt: result.expiresAt,
@@ -119,10 +120,17 @@ export async function generateHandler(req: Request, res: Response): Promise<void
 
 export const isDemoEnabled = (): boolean => getDemoConfig().enabled;
 
-/** POST /api/demo/:demoId/claim: the signed-in, verified user keeps the demo as a project of their account. */
+/** POST /api/demo/:demoId/claim { claimToken }: the signed-in, verified user keeps the demo as a project of their account. */
 export async function claimHandler(req: Request, res: Response): Promise<void> {
   const userId = (req as AuthenticatedRequest).user?.id;
   if (!userId) throw new DemoRefusal('Missing authorization header', ErrorCode.UNAUTHORIZED, 401);
-  const project = await claimDemoMock(userId, String(req.params.demoId ?? ''), demoClock.now());
+  // The id in the URL is public (it is also the mock's address); the secret travels in the JSON body, never in the URL
+  const claimToken = (req.body as { claimToken?: unknown } | undefined)?.claimToken;
+  const project = await claimDemoMock(
+    userId,
+    String(req.params.demoId ?? ''),
+    claimToken,
+    demoClock.now()
+  );
   res.status(201).json(envelope(project));
 }

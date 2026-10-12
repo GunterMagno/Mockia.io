@@ -14,7 +14,6 @@ import {
   type AuthenticatedRequest,
 } from '../../middlewares/authenticateToken.js';
 import { requireVerifiedEmail } from '../../middlewares/requireVerifiedEmail.js';
-import { enforceProjectLimit } from '../../middlewares/planGate.js';
 import {
   availabilityHandler,
   challengeHandler,
@@ -70,9 +69,9 @@ export const resetDemoApiLimits = (): void => {
   resetDemoAvailabilityCache();
 };
 
-const errorBody = (code: ErrorCode, message: string) => ({
+const errorBody = (code: ErrorCode, message: string, details?: Record<string, unknown>) => ({
   success: false,
-  error: { code, message },
+  error: { code, message, ...(details ? { details } : {}) },
   timestamp: new Date().toISOString(),
 });
 
@@ -98,7 +97,8 @@ const guardedMiddleware =
 demoRouter.get('/availability', guarded(availabilityHandler));
 
 // Signed-in users only (their own limiter, keyed by account, not by address), so it sits before the anonymous flood guard
-// too. Order: session -> verified email -> per-account limiter -> plan project limit (402, the demo is untouched) -> claim.
+// too. Order: session -> verified email -> per-account limiter -> small JSON body ({ claimToken }) -> claim, which checks
+// the plan's project limit itself (402, the demo untouched) because it has to do it under its per-account lock.
 // It does not depend on DEMO_ENABLED: copying a mock that already exists costs no AI and no demo budget.
 const perAccountClaimLimit: RequestHandler = (req, _res, next) => {
   const userId = (req as AuthenticatedRequest).user?.id ?? 'unknown';
@@ -119,7 +119,7 @@ demoRouter.post(
   authenticateToken,
   guardedMiddleware(requireVerifiedEmail),
   perAccountClaimLimit,
-  enforceProjectLimit,
+  express.json({ limit: '1kb', strict: true }),
   guarded(claimHandler)
 );
 
@@ -173,12 +173,15 @@ demoRouter.use((err: unknown, _req: Request, res: Response, next: NextFunction) 
   let status = 500;
   let code = ErrorCode.INTERNAL_SERVER_ERROR;
   let message = 'The demo could not process your request. Please try again.';
+  let details: Record<string, unknown> | undefined;
 
   const e = err as { type?: unknown; status?: unknown; statusCode?: unknown };
   if (err instanceof DemoRefusal && err.retryAfterSeconds)
     res.setHeader('Retry-After', String(err.retryAfterSeconds));
   if (err instanceof AppError) {
     ({ statusCode: status, code, message } = err);
+    // Fixed texts everywhere; only the plan-limit refusal carries its details (plan, limit, active: nothing of the visitor)
+    if ((code as string) === 'PLAN_LIMIT_REACHED') details = err.details;
   } else if (e?.type === 'entity.too.large') {
     status = 413;
     code = ErrorCode.VALIDATION_ERROR;
@@ -194,5 +197,5 @@ demoRouter.use((err: unknown, _req: Request, res: Response, next: NextFunction) 
   } else {
     console.error(`[Demo] unexpected error (${describeError(err)})`);
   }
-  res.status(status).json(errorBody(code, message));
+  res.status(status).json(errorBody(code, message, details));
 });

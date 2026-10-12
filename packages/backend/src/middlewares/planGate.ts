@@ -12,13 +12,39 @@ const body = (code: string, message: string, details: Record<string, unknown>) =
   timestamp: new Date().toISOString(),
 });
 
+/** Where an account stands against the active-project limit of its effective plan. */
+export interface ProjectLimitState {
+  plan: string;
+  limit: number;
+  active: number;
+  /** True when the account already has as many active projects as its plan allows (or more). */
+  reached: boolean;
+}
+
+/** Counts the active (non-archived) projects the user OWNS; unlimited plans skip the count. */
+export async function getProjectLimitState(userId: string): Promise<ProjectLimitState> {
+  const plan = await getUserPlan(userId);
+  const limit = PLAN_LIMITS[plan].maxActiveProjects;
+  if (!Number.isFinite(limit)) return { plan, limit, active: 0, reached: false };
+  const active = await ProjectModel.countDocuments({
+    ownerId: userId,
+    isArchived: { $ne: true },
+  });
+  return { plan, limit, active, reached: active >= limit };
+}
+
+/** The 402 PLAN_LIMIT_REACHED message and details, shared by the middleware and the demo claim. */
+export const planLimitMessage = (state: ProjectLimitState): string =>
+  `The ${state.plan} plan allows ${state.limit} active projects. Archive one or upgrade.`;
+
 /**
  * Blocks creating a project when the owner is at the active-project limit of their effective plan.
  * Mount after authenticateToken on POST /api/projects. Responds 402 PLAN_LIMIT_REACHED.
  * Archived projects do not count. Unlimited plans (team) skip the count query.
  *
  * ponytail: count-then-create is not atomic; two concurrent creates at limit-1 can both pass.
- * Acceptable for a soft commercial limit; use a transaction/unique counter if it must be strict.
+ * Acceptable for a soft commercial limit; use a transaction/unique counter if it must be strict. The demo claim
+ * (modules/demo/claim.ts) does NOT accept that: it serializes per account and recounts after creating (task L1).
  */
 export const enforceProjectLimit: RequestHandler = async (
   req: Request,
@@ -28,27 +54,16 @@ export const enforceProjectLimit: RequestHandler = async (
   try {
     const userId = (req as AuthenticatedRequest).user?.id;
     if (!userId) return next(); // authenticateToken owns the 401
-    const plan = await getUserPlan(userId);
-    const limit = PLAN_LIMITS[plan].maxActiveProjects;
-    if (Number.isFinite(limit)) {
-      const active = await ProjectModel.countDocuments({
-        ownerId: userId,
-        isArchived: { $ne: true },
-      });
-      if (active >= limit) {
-        res.status(402).json(
-          body(
-            'PLAN_LIMIT_REACHED',
-            `The ${plan} plan allows ${limit} active projects. Archive one or upgrade.`,
-            {
-              plan,
-              limit,
-              active,
-            }
-          )
-        );
-        return;
-      }
+    const state = await getProjectLimitState(userId);
+    if (state.reached) {
+      res.status(402).json(
+        body('PLAN_LIMIT_REACHED', planLimitMessage(state), {
+          plan: state.plan,
+          limit: state.limit,
+          active: state.active,
+        })
+      );
+      return;
     }
     next();
   } catch (err) {

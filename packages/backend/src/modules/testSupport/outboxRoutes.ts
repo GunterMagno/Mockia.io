@@ -40,14 +40,16 @@ const E2E_DEMO_ENDPOINTS: DemoEndpoint[] = [
 ];
 
 /**
- * POST /api/__test__/demo-mock -> 201 { success, data: { demoId } }
+ * POST /api/__test__/demo-mock -> 201 { success, data: { demoId, claimToken } }
  * Creates a real ephemeral demo mock WITHOUT going through the AI (the e2e suite has no model), so the spec can walk the
  * whole "build a demo, sign up, keep it" path against the real claim endpoint. Same mount condition as the outbox.
  */
 testOutboxRouter.post('/demo-mock', async (_req, res, next) => {
   try {
-    const { demoId } = await createDemoMock('e2e-visitor', E2E_DEMO_ENDPOINTS);
-    res.status(201).json({ success: true, data: { demoId }, timestamp: new Date().toISOString() });
+    const { demoId, claimToken } = await createDemoMock('e2e-visitor', E2E_DEMO_ENDPOINTS);
+    res
+      .status(201)
+      .json({ success: true, data: { demoId, claimToken }, timestamp: new Date().toISOString() });
   } catch (err) {
     next(err);
   }

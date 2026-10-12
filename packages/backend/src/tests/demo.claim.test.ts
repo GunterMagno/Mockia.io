@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import request from 'supertest';
 import bcrypt from 'bcrypt';
 import mongoose from 'mongoose';
@@ -18,6 +19,7 @@ import { demoClock, resetDemoFlood } from '../modules/demo/mockRouter.js';
 import { CLAIMS_PER_WINDOW, resetDemoApiLimits } from '../modules/demo/routes.js';
 import { createDemoMock, type DemoEndpoint } from '../modules/demo/mockStore.js';
 import { invalidatePlanCache } from '../modules/billing/plans.js';
+import { flushUsage } from '../modules/billing/usage.js';
 import { mockCache } from '../modules/mock/mockCache.service.js';
 
 /**
@@ -67,11 +69,19 @@ async function createUser(opts: { verified?: boolean } = {}) {
   };
 }
 
-const newDemo = async (endpoints: DemoEndpoint[] = ENDPOINTS) =>
-  (await createDemoMock('pseudonym-of-a-visitor', endpoints, demoClock.now())).demoId;
-const claim = (demoId: string, auth?: Record<string, string>) => {
+/** claimToken de cada demo creada en el test (el servidor solo lo entrega al crearla). */
+const tokens = new Map<string, string>();
+const newDemo = async (endpoints: DemoEndpoint[] = ENDPOINTS) => {
+  const made = await createDemoMock('pseudonym-of-a-visitor', endpoints, demoClock.now());
+  tokens.set(made.demoId, made.claimToken);
+  return made.demoId;
+};
+/** Por defecto envia el token de ese demo; `null` no envia cuerpo; cualquier otro valor se envia tal cual. */
+const claim = (demoId: string, auth?: Record<string, string>, token?: unknown) => {
   const req = request(app).post(`/api/demo/${demoId}/claim`);
-  return auth ? req.set(auth) : req;
+  if (auth) req.set(auth);
+  const value = token === undefined ? tokens.get(demoId) : token;
+  return value === null ? req : req.send({ claimToken: value });
 };
 const demoExists = async (demoId: string) => (await DemoMockModel.countDocuments({ demoId })) === 1;
 
@@ -107,6 +117,7 @@ describe('demo publica: reclamar la demo como proyecto (POST /api/demo/:demoId/c
     process.env.DEMO_HMAC_SECRET = SECRET;
     process.env.DEMO_ENABLED = 'true';
     clockOffset = 0;
+    tokens.clear();
     demoClock.now = () => new Date(Date.now() + clockOffset);
     resetDemoFlood();
     resetDemoApiLimits();
@@ -200,6 +211,8 @@ describe('demo publica: reclamar la demo como proyecto (POST /api/demo/:demoId/c
       const empty = await request(app).get(`/api/mock/${dto.slug}/empty`);
       expect(empty.status).toBe(200);
       expect(empty.body).toEqual({});
+      // el motor cuenta las peticiones servidas en memoria y las escribe cada 5 s: que no caiga en un test posterior
+      await flushUsage();
     });
 
     it('no consume cuota de IA del usuario ni presupuesto de la demo (ni crea ninguna otra cosa)', async () => {
@@ -311,6 +324,7 @@ describe('demo publica: reclamar la demo como proyecto (POST /api/demo/:demoId/c
         [
           '__v',
           '_id',
+          'claimTokenHash',
           'createdAt',
           'demoId',
           'endpoints',
@@ -323,6 +337,158 @@ describe('demo publica: reclamar la demo como proyecto (POST /api/demo/:demoId/c
   });
 
   /* ----------------------------------------------------------------------------------------------- auth */
+
+  describe('L1 (a) el id publico de la demo ya no basta: hace falta el claimToken', () => {
+    it('un token ausente o erroneo da el mismo 404 que "no existe" y NO consume ni borra la demo', async () => {
+      const user = await createUser();
+      const demoId = await newDemo();
+      const real = tokens.get(demoId)!;
+      const gone = await claim('f'.repeat(32), user.auth, 'f'.repeat(32));
+      expect(gone.status).toBe(404);
+
+      const wrong: Array<[string, unknown]> = [
+        ['ausente (sin cuerpo)', null],
+        ['ausente (objeto vacio)', {}],
+        ['otro token bien formado', 'a'.repeat(32)],
+        ['un caracter distinto', real.slice(0, 31) + (real.endsWith('0') ? '1' : '0')],
+        ['el propio demoId (lo que ve cualquiera con el enlace)', demoId],
+        ['vacio', ''],
+        ['no hexadecimal', 'z'.repeat(32)],
+        ['mayusculas', real.toUpperCase()],
+        ['largo (cabe en el cuerpo)', 'a'.repeat(600)],
+        ['un numero', 12345],
+        ['un array', ['x']],
+        ['un objeto con operadores de Mongo', { $ne: 'x' }],
+      ];
+      for (const [i, [label, value]] of wrong.entries()) {
+        if (i % 4 === 0) resetDemoApiLimits(); // 12 intentos > el limite por cuenta: aqui solo se prueba el token
+        const res = await claim(demoId, user.auth, value);
+        expect([label, res.status]).toEqual([label, 404]);
+        expect(res.body.error.code).toBe(gone.body.error.code);
+        expect(res.body.error.message).toBe(gone.body.error.message);
+        expect(await demoExists(demoId)).toBe(true);
+        expect(await ProjectModel.countDocuments({})).toBe(0);
+      }
+      // la demo sigue sirviendose y se reclama con el token correcto
+      expect((await request(app).get(`/api/demo-mock/${demoId}/products`)).status).toBe(200);
+      resetDemoApiLimits();
+      expect((await claim(demoId, user.auth)).status).toBe(201);
+    });
+
+    it('un cuerpo que no es JSON no reclama ni consume; el token en la URL o en una cabecera no cuenta', async () => {
+      const user = await createUser();
+      const demoId = await newDemo();
+      const token = tokens.get(demoId)!;
+      const asText = await request(app)
+        .post(`/api/demo/${demoId}/claim`)
+        .set(user.auth)
+        .set('Content-Type', 'text/plain')
+        .send(token);
+      expect(asText.status).toBe(404);
+      const broken = await request(app)
+        .post(`/api/demo/${demoId}/claim`)
+        .set(user.auth)
+        .set('Content-Type', 'application/json')
+        .send('{"claimToken":');
+      expect(broken.status).toBe(400);
+      const elsewhere = await request(app)
+        .post(`/api/demo/${demoId}/claim?claimToken=${token}`)
+        .set(user.auth)
+        .set('X-Claim-Token', token);
+      expect(elsewhere.status).toBe(404);
+      const huge = await claim(demoId, user.auth, 'a'.repeat(5000));
+      expect(huge.status).toBe(413); // el cuerpo admite 1 KB: un secreto son 32 caracteres
+      expect(await demoExists(demoId)).toBe(true);
+      expect(await ProjectModel.countDocuments({})).toBe(0);
+    });
+
+    it('con el token correcto crea el proyecto como hasta ahora, y no se puede reutilizar', async () => {
+      const user = await createUser();
+      const demoId = await newDemo();
+      const res = await claim(demoId, user.auth);
+      expect(res.status).toBe(201);
+      expect(res.body.data.ownerId).toBe(user.id);
+      expect(await ProjectModel.countDocuments({})).toBe(1);
+      expect(await demoExists(demoId)).toBe(false);
+      expect((await claim(demoId, user.auth)).status).toBe(404);
+    });
+
+    it('el token de una demo no sirve para otra', async () => {
+      const user = await createUser();
+      const a = await newDemo();
+      const b = await newDemo();
+      expect((await claim(a, user.auth, tokens.get(b))).status).toBe(404);
+      expect(await demoExists(a)).toBe(true);
+      expect(await demoExists(b)).toBe(true);
+    });
+
+    it('quien solo tiene el enlace compartido (el demoId) no puede quedarse la demo de otra persona', async () => {
+      const owner = await createUser();
+      const stranger = await createUser();
+      const demoId = await newDemo();
+      for (const guess of [demoId, {}, null]) {
+        expect((await claim(demoId, stranger.auth, guess)).status).toBe(404);
+      }
+      expect(await ProjectModel.countDocuments({ ownerId: stranger.id })).toBe(0);
+      expect((await claim(demoId, owner.auth)).status).toBe(201);
+    });
+
+    it('un token erroneo cuenta para el limitador por cuenta (no se puede adivinar gratis)', async () => {
+      const user = await createUser();
+      const demoId = await newDemo();
+      for (let i = 0; i < CLAIMS_PER_WINDOW; i++) {
+        expect((await claim(demoId, user.auth, 'b'.repeat(32))).status).toBe(404);
+      }
+      expect((await claim(demoId, user.auth)).status).toBe(429);
+      expect(await demoExists(demoId)).toBe(true);
+    });
+
+    it('compara el hash en tiempo constante (crypto.timingSafeEqual)', async () => {
+      const user = await createUser();
+      const demoId = await newDemo();
+      const spy = jest.spyOn(crypto, 'timingSafeEqual');
+      expect((await claim(demoId, user.auth, 'c'.repeat(32))).status).toBe(404);
+      expect(spy).toHaveBeenCalled();
+      spy.mockClear();
+      expect((await claim(demoId, user.auth)).status).toBe(201);
+      expect(spy).toHaveBeenCalled();
+    });
+  });
+
+  describe('L1 (c) el token no se guarda en claro', () => {
+    it('DemoMock guarda solo el hash SHA-256 (64 hex): ni el token ni nada que lo contenga', async () => {
+      const made = await createDemoMock('pseudonym-of-a-visitor', ENDPOINTS, demoClock.now());
+      expect(made.claimToken).toMatch(/^[0-9a-f]{32}$/);
+      expect(made.claimToken).not.toBe(made.demoId);
+      const doc = await DemoMockModel.findOne({ demoId: made.demoId }).lean();
+      const raw = await mongoose.connection.db!.collection('demomocks').findOne({});
+      for (const view of [JSON.stringify(doc), JSON.stringify(raw)]) {
+        expect(view).not.toContain(made.claimToken);
+      }
+      expect(doc!.claimTokenHash).toBe(
+        crypto.createHash('sha256').update(made.claimToken).digest('hex')
+      );
+    });
+
+    it('cada demo tiene su propio token (128 bits aleatorios)', async () => {
+      const seen = new Set<string>();
+      for (let i = 0; i < 20; i++) {
+        seen.add(
+          (await createDemoMock('pseudonym-of-a-visitor', ENDPOINTS, demoClock.now())).claimToken
+        );
+      }
+      expect(seen.size).toBe(20);
+    });
+
+    it('el router publico del mock nunca devuelve el token ni su hash', async () => {
+      const made = await createDemoMock('pseudonym-of-a-visitor', ENDPOINTS, demoClock.now());
+      const doc = await DemoMockModel.findOne({ demoId: made.demoId }).lean();
+      const res = await request(app).get(`/api/demo-mock/${made.demoId}/products`);
+      const dump = JSON.stringify([res.body, res.headers]);
+      expect(dump).not.toContain(made.claimToken);
+      expect(dump).not.toContain(doc!.claimTokenHash);
+    });
+  });
 
   describe('(c) sesion y correo verificado', () => {
     it('sin sesion: 401 y el demo sigue disponible', async () => {
@@ -401,6 +567,125 @@ describe('demo publica: reclamar la demo como proyecto (POST /api/demo/:demoId/c
   });
 
   /* --------------------------------------------------------------------------------------- atomicity */
+
+  describe('L1 (d) reclamos simultaneos con la cuenta a limite-1 no sobrepasan el limite', () => {
+    const fill = async (ownerId: string, n: number) => {
+      for (let i = 0; i < n; i++) {
+        await ProjectModel.create({
+          title: `p${i}`,
+          slug: `race-${ownerId}-${i}`,
+          ownerId,
+          members: [{ userId: ownerId, role: 'owner' }],
+        });
+      }
+    };
+    const active = (ownerId: string) =>
+      ProjectModel.countDocuments({ ownerId, isArchived: { $ne: true } });
+
+    /** Hace que, justo despues de guardar el proyecto del reclamo, "otra instancia" cree otro de la misma cuenta. */
+    const injectForeignProject = (ownerId: string) => {
+      const realSave = ProjectModel.prototype.save;
+      let injected = false;
+      jest.spyOn(ProjectModel.prototype, 'save').mockImplementation(async function (
+        this: InstanceType<typeof ProjectModel>,
+        ...args: Parameters<typeof realSave>
+      ) {
+        const saved = await realSave.apply(this, args);
+        if (!injected) {
+          injected = true;
+          await ProjectModel.collection.insertOne({
+            title: 'foreign',
+            slug: `foreign-${Date.now()}`,
+            ownerId: new mongoose.Types.ObjectId(ownerId),
+            members: [],
+            isArchived: false,
+          });
+        }
+        return saved;
+      } as never);
+      return () => injected;
+    };
+
+    it('dos demos distintas de la misma cuenta a la vez (Free: 4 de 5): exactamente UN proyecto nuevo y el otro recibe 402', async () => {
+      const user = await createUser();
+      await fill(user.id, 4);
+      const a = await newDemo();
+      const b = await newDemo();
+      const results = await Promise.all([claim(a, user.auth), claim(b, user.auth)]);
+      expect(results.map((r) => r.status).sort()).toEqual([201, 402]);
+      const loser = results.find((r) => r.status === 402)!;
+      expect(loser.body.error.code).toBe('PLAN_LIMIT_REACHED');
+      expect(loser.body.error.details).toMatchObject({ plan: 'free', limit: 5 });
+      expect(await active(user.id)).toBe(5);
+      // la demo del perdedor sigue disponible (tambien para el router) y se reclama al liberar un hueco
+      const lostId = results[0].status === 402 ? a : b;
+      expect(await demoExists(lostId)).toBe(true);
+      expect((await request(app).get(`/api/demo-mock/${lostId}/products`)).status).toBe(200);
+      await ProjectModel.updateOne({ ownerId: user.id }, { $set: { isArchived: true } });
+      invalidatePlanCache();
+      expect((await claim(lostId, user.auth)).status).toBe(201);
+    });
+
+    it('seis reclamos a la vez con cuatro huecos libres: nunca se supera el limite', async () => {
+      const user = await createUser();
+      await fill(user.id, 1);
+      const ids: string[] = [];
+      for (let i = 0; i < 6; i++) ids.push(await newDemo());
+      const results = await Promise.all(ids.map((id) => claim(id, user.auth)));
+      expect(results.filter((r) => r.status === 201)).toHaveLength(4);
+      expect(results.filter((r) => r.status === 402)).toHaveLength(2);
+      expect(await active(user.id)).toBe(5);
+      expect(await DemoMockModel.countDocuments({})).toBe(2);
+    });
+
+    it('COMPENSACION: si otra instancia crea un proyecto entre medias, el reclamo recuenta, borra el suyo, restaura la demo con su caducidad original y responde 402', async () => {
+      const user = await createUser();
+      await fill(user.id, 4);
+      const demoId = await newDemo();
+      await DemoMockModel.updateOne({ demoId }, { $set: { requestCount: 3 } });
+      const before = await DemoMockModel.findOne({ demoId }).lean();
+      const injected = injectForeignProject(user.id);
+
+      const res = await claim(demoId, user.auth);
+      jest.restoreAllMocks();
+      expect(injected()).toBe(true);
+      expect(res.status).toBe(402);
+      expect(res.body.error.code).toBe('PLAN_LIMIT_REACHED');
+      expect(res.body.error.details).toMatchObject({ plan: 'free', limit: 5 });
+      // 4 propios + 1 de la otra instancia: el recien creado se borro con todo lo que colgaba de el
+      expect(await active(user.id)).toBe(5);
+      expect(await MockAPIModel.countDocuments({})).toBe(0);
+      expect(await EndpointModel.countDocuments({})).toBe(0);
+      expect(await ResponseModel.countDocuments({})).toBe(0);
+      const after = await DemoMockModel.findOne({ demoId }).lean();
+      expect(after).not.toBeNull();
+      expect(after!.expiresAt).toEqual(before!.expiresAt);
+      expect(after!.requestCount).toBe(3);
+      expect(after!.claimTokenHash).toBe(before!.claimTokenHash);
+      expect(after!.endpoints).toHaveLength(ENDPOINTS.length);
+      // con el mismo token se reclama en cuanto hay hueco
+      await ProjectModel.updateOne(
+        { ownerId: user.id, title: 'foreign' },
+        { $set: { isArchived: true } }
+      );
+      invalidatePlanCache();
+      expect((await claim(demoId, user.auth)).status).toBe(201);
+    });
+
+    it('si falla el borrado del proyecto sobrante se archiva, la demo vuelve igualmente y se responde 402', async () => {
+      const user = await createUser();
+      await fill(user.id, 4);
+      const demoId = await newDemo();
+      jest.spyOn(console, 'error').mockImplementation(() => undefined);
+      injectForeignProject(user.id);
+      jest.spyOn(ProjectModel, 'deleteMany').mockRejectedValueOnce(new Error('boom'));
+      const res = await claim(demoId, user.auth);
+      jest.restoreAllMocks();
+      expect(res.status).toBe(402);
+      expect(await demoExists(demoId)).toBe(true);
+      expect(await active(user.id)).toBe(5); // el sobrante quedo archivado: no cuenta
+    });
+  });
 
   describe('(e) atomicidad', () => {
     it('8 reclamos simultaneos del mismo usuario producen exactamente UN proyecto', async () => {
@@ -529,8 +814,11 @@ describe('demo publica: reclamar la demo como proyecto (POST /api/demo/:demoId/c
       const made = await request(app).post('/api/__test__/demo-mock').send({});
       expect(made.status).toBe(201);
       const demoId = made.body.data.demoId as string;
+      const claimToken = made.body.data.claimToken as string;
       expect(demoId).toMatch(/^[0-9a-f]{32}$/);
-      expect((await claim(demoId, user.auth)).status).toBe(201);
+      expect(claimToken).toMatch(/^[0-9a-f]{32}$/);
+      expect((await claim(demoId, user.auth, null)).status).toBe(404);
+      expect((await claim(demoId, user.auth, claimToken)).status).toBe(201);
       expect(await ProjectModel.countDocuments({})).toBe(1);
     });
   });

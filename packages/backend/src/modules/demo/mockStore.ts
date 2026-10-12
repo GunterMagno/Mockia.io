@@ -161,23 +161,33 @@ export async function createDemoMock(
   ipHash: string,
   endpoints: DemoEndpoint[],
   now: Date = new Date()
-): Promise<{ demoId: string; expiresAt: Date; endpoints: DemoEndpoint[] }> {
+): Promise<{ demoId: string; claimToken: string; expiresAt: Date; endpoints: DemoEndpoint[] }> {
   const cfg = getDemoConfig();
   const clean = prepareDemoEndpoints(endpoints);
   const demoId = crypto.randomBytes(16).toString('hex');
+  // Independent of the id: the id is public (it is in the mock's URL), the token is the only key that claims the demo
+  const claimToken = crypto.randomBytes(16).toString('hex');
   const expiresAt = new Date(now.getTime() + cfg.mockTtlMinutes * 60 * 1000);
   await DemoMockModel.create({
     demoId,
+    claimTokenHash: hashClaimToken(claimToken),
     ipHash,
     endpoints: clean,
     requestCount: 0,
     createdAt: now,
     expiresAt,
   });
-  return { demoId, expiresAt, endpoints: clean.map(toPublicEndpoint) };
+  return { demoId, claimToken, expiresAt, endpoints: clean.map(toPublicEndpoint) };
 }
 
 export const isDemoId = (value: string): boolean => /^[0-9a-f]{32}$/.test(value);
+
+/** Claim tokens have the same shape as ids: 128 bits, lower-case hex. */
+export const isClaimToken = isDemoId;
+
+/** What DemoMock keeps of a claim token (never the token itself). */
+export const hashClaimToken = (token: string): string =>
+  crypto.createHash('sha256').update(token, 'utf8').digest('hex');
 
 /** The demo mock if it exists and has not expired at `now` (null otherwise). */
 export async function findLiveDemoMock(
