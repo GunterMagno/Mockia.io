@@ -81,6 +81,12 @@ services:
       # Render (sync: false), no en este fichero; un valor que no sea un correo impide arrancar.
       - key: ADMIN_EMAILS
         sync: false
+      # Token de GET /api/ops/summary (lo leen los workflows de vigilancia y de comprobacion tras desplegar). Un secreto largo
+      # y aleatorio (minimo 32 caracteres; p. ej. `openssl rand -hex 32`) que se rellena en el panel de Render (sync: false),
+      # no en este fichero. Vacio (por defecto) = el endpoint no existe. Uno de menos de 32 caracteres impide arrancar.
+      # Render fija RENDER_GIT_COMMIT por su cuenta: /api/health lo devuelve como `commit`.
+      - key: OPS_TOKEN
+        sync: false
       # Transactional email (verification and password reset links). Without SMTP_URL nobody receives them and
       # unverified users cannot use AI generation or billing. Resend or Brevo (free plan); see docs/08_despliegue.md.
       - key: SMTP_URL

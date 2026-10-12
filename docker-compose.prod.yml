@@ -75,6 +75,11 @@ services:
       # Administrador del despliegue (panel de metricas, /api/admin): correos separados por comas, con el correo VERIFICADO
       # en la cuenta. Vacio = nadie es administrador. Una entrada que no sea un correo impide arrancar.
       ADMIN_EMAILS: ${ADMIN_EMAILS:-}
+      # Token de GET /api/ops/summary (resumen operativo para la vigilancia): secreto aleatorio de 32 caracteres o mas.
+      # Vacio = el endpoint no existe. Uno mas corto impide arrancar.
+      OPS_TOKEN: ${OPS_TOKEN:-}
+      # Version desplegada que devuelve /api/health como `commit`: GIT_COMMIT=$(git rev-parse HEAD) docker compose ... up -d
+      GIT_COMMIT: ${GIT_COMMIT:-}
       # Correo transaccional (verificacion de email y recuperar contrasena). Sin SMTP_URL no se envia nada.
       SMTP_URL: ${SMTP_URL:-}
       MAIL_FROM: ${MAIL_FROM:-}
