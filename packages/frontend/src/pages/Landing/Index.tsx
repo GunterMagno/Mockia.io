@@ -132,33 +132,33 @@ const Index: React.FC = () => {
                   {'{'}
                   {'\n'}
                   {'  '}
-                  <span className={styles.key}>"status"</span>:{' '}
+                  <span className={styles.key}>&quot;status&quot;</span>:{' '}
                   <span className={styles.number}>200</span>,{'\n'}
                   {'  '}
-                  <span className={styles.key}>"data"</span>: {'{'}
+                  <span className={styles.key}>&quot;data&quot;</span>: {'{'}
                   {'\n'}
                   {'    '}
-                  <span className={styles.key}>"id"</span>:{' '}
-                  <span className={styles.string}>"usr_9A2FK0"</span>,{'\n'}
+                  <span className={styles.key}>&quot;id&quot;</span>:{' '}
+                  <span className={styles.string}>&quot;usr_9A2FK0&quot;</span>,{'\n'}
                   {'    '}
-                  <span className={styles.key}>"name"</span>:{' '}
-                  <span className={styles.string}>"Alex Rivers"</span>,{'\n'}
+                  <span className={styles.key}>&quot;name&quot;</span>:{' '}
+                  <span className={styles.string}>&quot;Alex Rivers&quot;</span>,{'\n'}
                   {'    '}
-                  <span className={styles.key}>"role"</span>:{' '}
-                  <span className={styles.string}>"admin"</span>,{'\n'}
+                  <span className={styles.key}>&quot;role&quot;</span>:{' '}
+                  <span className={styles.string}>&quot;admin&quot;</span>,{'\n'}
                   {'    '}
-                  <span className={styles.key}>"permissions"</span>: [{'\n'}
+                  <span className={styles.key}>&quot;permissions&quot;</span>: [{'\n'}
                   {'      '}
-                  <span className={styles.string}>"read:repo"</span>,{'\n'}
+                  <span className={styles.string}>&quot;read:repo&quot;</span>,{'\n'}
                   {'      '}
-                  <span className={styles.string}>"write:mock"</span>
+                  <span className={styles.string}>&quot;write:mock&quot;</span>
                   {'\n'}
                   {'    '}]{'\n'}
                   {'  '}
                   {'}'},{'\n'}
                   {'  '}
-                  <span className={styles.key}>"latency"</span>:{' '}
-                  <span className={styles.string}>"12ms"</span>
+                  <span className={styles.key}>&quot;latency&quot;</span>:{' '}
+                  <span className={styles.string}>&quot;12ms&quot;</span>
                   {'\n'}
                   {'}'}
                 </code>
@@ -242,14 +242,14 @@ const Index: React.FC = () => {
               <pre>
                 <code>
                   {'{ '}
-                  <span className={styles.key}>"id"</span>:{' '}
-                  <span className={styles.string}>"usr_9A2FK0"</span>,{'\n'}
+                  <span className={styles.key}>&quot;id&quot;</span>:{' '}
+                  <span className={styles.string}>&quot;usr_9A2FK0&quot;</span>,{'\n'}
                   {'  '}
-                  <span className={styles.key}>"name"</span>:{' '}
-                  <span className={styles.string}>"Alex Rivers"</span>,{'\n'}
+                  <span className={styles.key}>&quot;name&quot;</span>:{' '}
+                  <span className={styles.string}>&quot;Alex Rivers&quot;</span>,{'\n'}
                   {'  '}
-                  <span className={styles.key}>"role"</span>:{' '}
-                  <span className={styles.string}>"admin"</span> {'}'}
+                  <span className={styles.key}>&quot;role&quot;</span>:{' '}
+                  <span className={styles.string}>&quot;admin&quot;</span> {'}'}
                 </code>
               </pre>
             </article>

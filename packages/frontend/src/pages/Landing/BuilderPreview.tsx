@@ -119,11 +119,11 @@ const BuilderPreview: React.FC = () => {
               {'{'}
               {'\n'}
               {'  '}
-              <span className={styles.key}>"status"</span>:{' '}
+              <span className={styles.key}>&quot;status&quot;</span>:{' '}
               <span className={isError ? styles.bad : styles.ok}>{status}</span>,{'\n'}
               {'  '}
-              <span className={styles.key}>"latency"</span>:{' '}
-              <span className={styles.str}>"{delay}ms"</span>
+              <span className={styles.key}>&quot;latency&quot;</span>:{' '}
+              <span className={styles.str}>&quot;{delay}ms&quot;</span>
               {'\n'}
               {'}'}
             </code>

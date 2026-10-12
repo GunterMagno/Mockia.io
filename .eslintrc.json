@@ -83,6 +83,14 @@
         "react-hooks/rules-of-hooks": "error",
         "react-hooks/exhaustive-deps": "warn"
       }
+    },
+    {
+      // Elementos de react-three-fiber (<icosahedronGeometry args=...>, <meshBasicMaterial wireframe .../>): sus
+      // props no son atributos DOM y react/no-unknown-property no las conoce
+      "files": ["packages/frontend/src/pages/Landing/HeroScene.tsx"],
+      "rules": {
+        "react/no-unknown-property": "off"
+      }
     }
   ]
 }

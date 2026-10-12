@@ -4,7 +4,6 @@ Cypress.on('window:before:load', (win) => win.localStorage.setItem('mockia_local
 describe('Editor Flow', () => {
   const randomEmail = `editoruser${Date.now()}@example.com`;
   const password = 'Password123!';
-  let projectId: string;
   let projectSlug: string;
 
   before(() => {
@@ -26,7 +25,6 @@ describe('Editor Flow', () => {
           headers: { Authorization: `Bearer ${token}` },
           body: { title: 'Editor Test Project', description: 'Test' },
         }).then((projRes) => {
-          projectId = projRes.body.data.id;
           projectSlug = projRes.body.data.slug;
         });
       });

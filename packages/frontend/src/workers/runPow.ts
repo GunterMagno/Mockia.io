@@ -41,7 +41,6 @@ export function runPow(challenge: string, bits: number): PowRun {
 
   const running = worker;
   let fallback: AbortController | null = null;
-  let guard: ReturnType<typeof setTimeout> | undefined;
   let settle: (result: PowResult) => void = () => undefined;
   const promise = new Promise<PowResult>((resolve) => {
     settle = (result) => {
@@ -50,7 +49,7 @@ export function runPow(challenge: string, bits: number): PowRun {
       resolve(result);
     };
   });
-  guard = setTimeout(() => settle({ error: 'timeout' }), POW_MAX_MS + GUARD_EXTRA_MS);
+  const guard = setTimeout(() => settle({ error: 'timeout' }), POW_MAX_MS + GUARD_EXTRA_MS);
   running.onmessage = (event: MessageEvent<PowResult>) => settle(event.data ?? { error: 'failed' });
   running.onmessageerror = () => settle({ error: 'failed' });
   // Un worker que no arranca (CSP, fichero no servido...) no debe dejar la barra girando para siempre
