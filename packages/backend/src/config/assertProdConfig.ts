@@ -13,6 +13,7 @@ import { duplicatePriceEnvGroups } from '../modules/billing/prices.js';
 import { invalidAdminEmailCount } from './admin.js';
 import { isOpsTokenTooShort, MIN_OPS_TOKEN_LENGTH } from './ops.js';
 import { parseAiPrices } from './aiPrices.js';
+import { ByokCryptoError, loadKeyring } from '../modules/byok/crypto.js';
 
 const MIN_SECRET_LENGTH = 32;
 
@@ -134,6 +135,20 @@ export function assertProdConfig(env: NodeJS.ProcessEnv = process.env): void {
     problems.push(
       'AI_PRICES_JSON must be a JSON object {"<provider>/<model>": {"inputPerMTok": number, "outputPerMTok": number}} (or empty)'
     );
+  }
+
+  // BYOK (users bring their own AI key): their keys are stored sealed with the keyring in BYOK_KEYS, so turning the
+  // feature on without a valid keyring would either fail on the first save or store nothing safely. Off (default)
+  // asks for nothing. The message names the rule and the entry position, never the value.
+  if (/^(true|1|yes|on)$/i.test(env.BYOK_ENABLED?.trim() ?? '')) {
+    try {
+      loadKeyring(env);
+    } catch (err) {
+      const detail = err instanceof ByokCryptoError ? err.message : 'BYOK keyring is invalid';
+      problems.push(
+        `BYOK_KEYS must hold a valid keyring when BYOK_ENABLED is true ("id:base64(32 bytes)", comma separated; generate one with npm run byok:genkey): ${detail}`
+      );
+    }
   }
 
   // Missing JWT_ACCESS_SECRET / JWT_REFRESH_SECRET is reported by assertJwtConfig(); here we reject weak values that are set.

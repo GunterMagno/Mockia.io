@@ -10,6 +10,7 @@
     "build:prod": "tsc && node -e \"import('fs').then(fs => { fs.mkdirSync('dist/config', { recursive: true }); fs.copyFileSync('src/config/pathHelper.cjs', 'dist/config/pathHelper.cjs'); })\"",
     "start": "node dist/index.js",
     "backfill:email-verified": "tsx scripts/backfill-email-verified.ts",
+    "byok:genkey": "tsx scripts/byok-genkey.ts",
     "eval": "tsx evals/run.ts",
     "ai:export-dataset": "tsx scripts/ai/export-dataset.ts",
     "ai:val-to-cases": "tsx evals/val-to-cases.ts",
