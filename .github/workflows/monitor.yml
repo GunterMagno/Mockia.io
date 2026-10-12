@@ -1,0 +1,69 @@
+name: Monitor
+
+# Vigilancia cada 15 minutos sin servicios externos: sondea el backend y la aplicacion (3 intentos separados 30 s antes
+# de dar la alarma), lee el resumen operativo (/api/ops/summary) si hay OPS_TOKEN, y abre, comenta o cierra incidencias
+# de GitHub con la etiqueta `incident-auto` (una por problema; GitHub las envia por correo). La logica esta en
+# scripts/ci/monitor-decide.mjs (con pruebas) y scripts/ci/monitor.mjs.
+#
+# Secretos del repositorio (Settings > Secrets and variables > Actions):
+#   BACKEND_URL  URL publica del backend, sin barra final (p. ej. https://mockia-api.onrender.com)
+#   APP_URL      URL publica de la aplicacion web
+#   OPS_TOKEN    opcional; el mismo OPS_TOKEN del backend. Sin el solo se vigila que responda
+# Sin BACKEND_URL ni APP_URL termina en verde con un aviso. Guia: docs/demo.md ("Resumen operativo").
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Nunca dos ejecuciones a la vez (se pisarian al abrir la misma incidencia)
+concurrency:
+  group: monitor
+  cancel-in-progress: false
+
+jobs:
+  monitor:
+    name: Probe, then open or close incidents
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write # abrir, comentar y cerrar las incidencias `incident-auto`
+    env:
+      BACKEND_URL: ${{ secrets.BACKEND_URL }}
+      APP_URL: ${{ secrets.APP_URL }}
+      OPS_TOKEN: ${{ secrets.OPS_TOKEN }}
+
+    steps:
+      - name: Check configuration
+        id: config
+        run: |
+          if [ -z "$BACKEND_URL" ] && [ -z "$APP_URL" ]; then
+            echo "::notice::Monitoring is not configured: define the secrets BACKEND_URL and/or APP_URL (OPS_TOKEN is optional; see docs/demo.md). Nothing was done."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+          if [ -z "$OPS_TOKEN" ]; then
+            echo "::notice::OPS_TOKEN is not defined: only availability is checked (no AI, circuit breaker or demo budget alerts)."
+          fi
+
+      - name: Checkout code
+        if: steps.config.outputs.enabled == 'true'
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: scripts/ci
+
+      - name: Setup Node.js
+        if: steps.config.outputs.enabled == 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Probe and manage incidents (scripts/ci/monitor.mjs)
+        if: steps.config.outputs.enabled == 'true'
+        run: node scripts/ci/monitor.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
