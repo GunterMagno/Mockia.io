@@ -4,6 +4,9 @@ import path from 'path';
 // The clone writes part of the repository and then fails (network drop, missing branch, private repo...)
 jest.mock('simple-git', () => ({
   simpleGit: () => ({
+    env() {
+      return this;
+    },
     raw: async (args: string[]) => {
       const target = args[args.length - 1];
       await (

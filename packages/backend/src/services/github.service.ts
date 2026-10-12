@@ -139,6 +139,76 @@ export async function checkRepoAccessibility(owner: string, repo: string): Promi
   }
 }
 
+/** Owner and repository names as GitHub allows them: letters, digits, dot, underscore and hyphen. */
+const SAFE_NAME = /^(?!-)(?!\.+$)[A-Za-z0-9._-]{1,100}$/;
+/** Branch names: same alphabet plus "/", "@" and "+"; never starts with "-" and never has "..". */
+const SAFE_BRANCH = /^(?!-)[A-Za-z0-9._/@+-]{1,200}$/;
+
+/**
+ * Variables git (or the shell it needs on Windows) really needs. The child process gets nothing else: it must not
+ * inherit the server's secrets, nor EDITOR/PAGER/GIT_* settings (simple-git refuses to run with those as well).
+ */
+const GIT_ENV_ALLOWLIST = new Set(
+  [
+    'PATH',
+    'HOME',
+    'USERPROFILE',
+    'HOMEDRIVE',
+    'HOMEPATH',
+    'SYSTEMROOT',
+    'SYSTEMDRIVE',
+    'WINDIR',
+    'TEMP',
+    'TMP',
+    'TMPDIR',
+    'LANG',
+    'LC_ALL',
+    'APPDATA',
+    'LOCALAPPDATA',
+    'PROGRAMDATA',
+    'COMSPEC',
+    'PATHEXT',
+    'HTTP_PROXY',
+    'HTTPS_PROXY',
+    'NO_PROXY',
+    'SSL_CERT_FILE',
+    'SSL_CERT_DIR',
+  ].map((name) => name.toLowerCase())
+);
+
+function buildGitEnv(): Record<string, string> {
+  const env: Record<string, string> = {};
+  for (const [key, value] of Object.entries(process.env)) {
+    if (value !== undefined && GIT_ENV_ALLOWLIST.has(key.toLowerCase())) {
+      env[key] = value;
+    }
+  }
+  // Only https (no ext::, file://, ssh...) and never ask for credentials on a server without a terminal
+  env.GIT_ALLOW_PROTOCOL = 'https';
+  env.GIT_TERMINAL_PROMPT = '0';
+  return env;
+}
+
+/**
+ * owner, repo and branch come from a URL typed by a user. Git must never be able to read any of them as an option
+ * or as another transport (ext::, file://, ssh), so they are checked again here, next to the command, whatever the
+ * caller already validated.
+ */
+function assertSafeCloneInput(owner: string, repo: string, branch?: string): void {
+  if (typeof owner !== 'string' || !SAFE_NAME.test(owner)) {
+    throw new AppError('Invalid repository owner', ErrorCode.VALIDATION_ERROR, 400);
+  }
+  if (typeof repo !== 'string' || !SAFE_NAME.test(repo)) {
+    throw new AppError('Invalid repository name', ErrorCode.VALIDATION_ERROR, 400);
+  }
+  if (
+    branch !== undefined &&
+    (typeof branch !== 'string' || !SAFE_BRANCH.test(branch) || branch.includes('..'))
+  ) {
+    throw new AppError('Invalid branch name', ErrorCode.VALIDATION_ERROR, 400);
+  }
+}
+
 /**
  * Clones a GitHub repository to a temporary directory
  *
@@ -156,6 +226,8 @@ export async function cloneRepository(
   repo: string,
   branch?: string
 ): Promise<string> {
+  assertSafeCloneInput(owner, repo, branch);
+
   // Created before the try so a failed clone can always remove what it left behind (Privacy: the copy is deleted)
   const tempDir = path.join(process.cwd(), '.tmp-repos', `${owner}-${repo}-${Date.now()}`);
   try {
@@ -165,13 +237,15 @@ export async function cloneRepository(
     // Build repository URL
     const repoUrl = `https://github.com/${owner}/${repo}.git`;
 
-    // Create simple-git instance
-    const git: SimpleGit = simpleGit();
+    // Create simple-git instance with a minimal environment (see buildGitEnv)
+    const git: SimpleGit = simpleGit({
+      allowEnvironment: ['GIT_ALLOW_PROTOCOL', 'GIT_TERMINAL_PROMPT'],
+    }).env(buildGitEnv());
 
-    // Clone the repository
+    // Clone the repository; "--" ends the options so nothing after it can be taken as one
     const cloneOptions = branch
-      ? ['clone', '--branch', branch, repoUrl, tempDir]
-      : ['clone', repoUrl, tempDir];
+      ? ['clone', '--branch', branch, '--', repoUrl, tempDir]
+      : ['clone', '--', repoUrl, tempDir];
 
     await git.raw(cloneOptions);
 
