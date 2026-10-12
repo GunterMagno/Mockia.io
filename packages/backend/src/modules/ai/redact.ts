@@ -241,3 +241,49 @@ function walkTarget(value: unknown): unknown {
   }
   return value;
 }
+
+/* ------------------------------------------------------------------------------------------------------------------
+ * Text that comes back from a user's own AI provider (BYOK)
+ * ---------------------------------------------------------------------------------------------------------------- */
+
+/**
+ * `Authorization: <anything>` / `"authorization":"Bearer x"` / `x-api-key: x`, in header, JSON or JS-object form. Group 1
+ * keeps the name and separator; the value (with an optional scheme word) goes.
+ */
+const AUTH_HEADER =
+  /((?:authorization|proxy-authorization|x-api-key|api-key)["']?\s*[:=]\s*["']?)(?:(?:bearer|basic|token)\s+)?(?:\[REDACTED_KEY\]|[^\s"',;}\]]{1,2000})/gi;
+
+/** Any `Bearer <token>` (no digit requirement, unlike `BEARER`: a provider error is not prose to preserve). */
+const ANY_BEARER = /\b(Bearer\s+)[A-Za-z0-9._~+/=-]{4,}/gi;
+
+/** Shortest secret worth searching for literally; a tinier one would shred the text. */
+const MIN_LITERAL_SECRET = 6;
+
+/**
+ * Cleans a text that an AI provider (or the network stack, or a library) produced about a failure, before it can reach a
+ * log, an error message, a notification or the database. Provider errors often QUOTE what they were sent ("Incorrect API
+ * key provided: sk-...") and some echo the request headers, so this removes, on top of `redactSecrets`:
+ *  - the key itself (`secret`, when given) wherever it appears, also URL-encoded and base64-encoded;
+ *  - `Authorization` / `x-api-key` header values and any `Bearer ...` token, whether or not they contain a digit.
+ * The primary defence is that this feature never builds a message from a provider's body in the first place; this is the
+ * second line for the strings that still come from outside (an unexpected library error, the model name a provider
+ * reports). Pure and idempotent.
+ */
+export function redactProviderError(text: string, secret?: string): string {
+  if (!text) return text;
+  let out = text;
+  if (secret && secret.length >= MIN_LITERAL_SECRET) {
+    for (const form of new Set([
+      secret,
+      encodeURIComponent(secret),
+      Buffer.from(secret, 'utf8').toString('base64'),
+      Buffer.from(secret, 'utf8').toString('base64url'),
+      JSON.stringify(secret).slice(1, -1),
+    ])) {
+      if (form.length >= MIN_LITERAL_SECRET) out = out.split(form).join(REDACTED_KEY);
+    }
+  }
+  out = out.replace(AUTH_HEADER, (_whole, head: string) => `${head}${REDACTED_KEY}`);
+  out = out.replace(ANY_BEARER, `$1${REDACTED_KEY}`);
+  return redactSecrets(out);
+}

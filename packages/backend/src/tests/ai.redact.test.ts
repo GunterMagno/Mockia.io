@@ -1,4 +1,9 @@
-import { redactSecrets, redactDeep, redactTarget } from '../modules/ai/redact.js';
+import {
+  redactSecrets,
+  redactDeep,
+  redactTarget,
+  redactProviderError,
+} from '../modules/ai/redact.js';
 
 /**
  * Redaction of training data. Fixtures are assembled at runtime ('sk_' + 'live_' ...) so the source file itself never
@@ -370,5 +375,59 @@ describe('redactSecrets on adversarial 100 KB input', () => {
   });
   it('"eyJxxxxx.eyJxxxxx." chains without a third segment: < 200 ms', () => {
     expect(timed('eyJabcdef.'.repeat(10000))).toBeLessThan(200);
+  });
+});
+
+// BYOK: what a user's AI provider says back about a failure may quote the key or the Authorization header we sent
+describe('redactProviderError', () => {
+  // A throw-away sentinel, not a real key, assembled so the file holds no scannable secret
+  const KEY = 'qk' + '-' + rep('7f3a', 6);
+
+  it('removes the exact key wherever it appears, also URL-encoded and base64', () => {
+    const odd = 'a b/' + rep('Z', 8) + '+=';
+    const text = [
+      `Incorrect API key provided: ${KEY}.`,
+      `again ${KEY}${KEY}`,
+      `query ?key=${encodeURIComponent(odd)}`,
+      `b64 ${Buffer.from(KEY).toString('base64')}`,
+    ].join(' | ');
+    const out = redactProviderError(text, KEY);
+    expect(out).not.toContain(KEY);
+    expect(out).not.toContain(Buffer.from(KEY).toString('base64'));
+    expect(redactProviderError(`?key=${encodeURIComponent(odd)}`, odd)).not.toContain(
+      encodeURIComponent(odd)
+    );
+  });
+
+  it('removes Authorization headers (any case, JSON or header form) and Bearer tokens even without the key', () => {
+    const cases = [
+      'Authorization: Bearer opaque-token-value',
+      '{"authorization":"Bearer opaque-token-value"}',
+      'AUTHORIZATION = Basic dXNlcjpwYXNz',
+      "headers: { 'Authorization': 'Bearer opaque-token-value' }",
+      'x-api-key: opaque-token-value',
+      'sent Bearer opaque-token-value to the server',
+    ];
+    for (const text of cases) {
+      const out = redactProviderError(text);
+      expect(out).not.toContain('opaque-token-value');
+      expect(out).not.toContain('dXNlcjpwYXNz');
+      expect(out).toContain(REDACTED_KEY);
+    }
+  });
+
+  it('removes sk- style keys and leaves ordinary text alone', () => {
+    expect(redactProviderError(`bad key ${SK_DASH} here`)).not.toContain(SK_DASH);
+    expect(redactProviderError('The model `gpt-9` does not exist (HTTP 404).')).toBe(
+      'The model `gpt-9` does not exist (HTTP 404).'
+    );
+  });
+
+  it('is idempotent, handles empty input and ignores a missing or tiny secret', () => {
+    const once = redactProviderError(`Authorization: Bearer abc ${KEY}`, KEY);
+    expect(redactProviderError(once, KEY)).toBe(once);
+    expect(redactProviderError('', KEY)).toBe('');
+    // A one-character "secret" must not shred the text
+    expect(redactProviderError('hello world', 'o')).toBe('hello world');
   });
 });
