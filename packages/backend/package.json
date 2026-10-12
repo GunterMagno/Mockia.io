@@ -11,6 +11,7 @@
     "start": "node dist/index.js",
     "backfill:email-verified": "tsx scripts/backfill-email-verified.ts",
     "byok:genkey": "tsx scripts/byok-genkey.ts",
+    "byok:rotate": "tsx scripts/byok-rotate.ts",
     "eval": "tsx evals/run.ts",
     "ai:export-dataset": "tsx scripts/ai/export-dataset.ts",
     "ai:val-to-cases": "tsx evals/val-to-cases.ts",
