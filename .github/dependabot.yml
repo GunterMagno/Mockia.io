@@ -1,0 +1,41 @@
+# Actualizaciones automaticas de dependencias (una vez por semana, agrupadas para no abrir un PR por paquete).
+# Las menores y de parche van en un solo PR por ecosistema; las mayores (con cambios incompatibles) siguen llegando
+# como PR propio para revisarlas una a una. Los avisos de seguridad de GitHub (Dependabot security updates) abren su
+# PR aparte, sin esperar al lunes, y no dependen de este fichero.
+version: 2
+
+updates:
+  # Monorepo con npm workspaces: un unico package-lock.json en la raiz y un package.json por paquete.
+  - package-ecosystem: npm
+    directories:
+      - '/'
+      - '/packages/*'
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Europe/Madrid
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: 'chore(deps)'
+    groups:
+      npm-minor-patch:
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: github-actions
+    directory: '/'
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Europe/Madrid
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: 'ci(deps)'
+    groups:
+      actions-minor-patch:
+        update-types:
+          - minor
+          - patch

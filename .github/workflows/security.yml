@@ -1,0 +1,108 @@
+name: Security
+
+# Tres comprobaciones automaticas: analisis estatico del codigo (CodeQL), vulnerabilidades conocidas en las
+# dependencias de produccion (npm audit) y secretos subidos por error al historial (gitleaks).
+# El cron semanal sirve para enterarse de avisos nuevos en dependencias que no han cambiado.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    - cron: '17 5 * * 1' # lunes 05:17 UTC (minuto poco habitual: las 00 y 30 van saturadas)
+  workflow_dispatch:
+
+# Permisos minimos para todo el workflow; CodeQL pide ademas security-events: write en su propio trabajo.
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  codeql:
+    name: CodeQL (JavaScript/TypeScript)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write # subir los resultados a la pestana Security > Code scanning
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+          # security-and-quality anade reglas de calidad a las de seguridad por defecto.
+          queries: security-and-quality
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:javascript-typescript
+
+  npm-audit:
+    name: npm audit (dependencias de produccion)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # TODO(A2): ADVERTENCIA, no bloquea, mientras haya hallazgos altos/criticos heredados.
+    # El 2026-10-12 `npm audit --omit=dev --audit-level=high` ya salia con codigo 1 (8 altas y 3 criticas: simple-git,
+    # tar, proxy-addr, axios, joi, js-yaml, path-to-regexp, form-data...). Un trabajo rojo desde el primer dia, en todos
+    # los PR, se acaba ignorando y tapa los hallazgos nuevos. Cuando `npm audit` salga limpio, QUITA la linea
+    # `continue-on-error` de abajo y pasara a bloquear (y habra que marcarlo como obligatorio en la proteccion de main).
+    continue-on-error: true
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      # Sin `npm ci`: audit lee package-lock.json y no instala nada.
+      - name: npm audit (solo produccion, falla con hallazgos altos o criticos)
+        run: npm audit --omit=dev --audit-level=high
+
+  gitleaks:
+    name: gitleaks (secretos en el historial)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # historial completo: un secreto borrado en un commit posterior sigue estando en el historial
+
+      # Binario oficial con version fijada y comprobacion de su hash (no se ejecuta nada sin verificar).
+      # Para actualizarlo: cambia GITLEAKS_VERSION y el SHA-256 de gitleaks_<version>_checksums.txt de la release.
+      - name: Install gitleaks
+        env:
+          GITLEAKS_VERSION: 8.30.1
+          GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+        run: |
+          set -euo pipefail
+          curl -sSfL -o "$RUNNER_TEMP/gitleaks.tar.gz" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/gitleaks.tar.gz" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/gitleaks-bin"
+          tar -xzf "$RUNNER_TEMP/gitleaks.tar.gz" -C "$RUNNER_TEMP/gitleaks-bin" gitleaks
+          echo "$RUNNER_TEMP/gitleaks-bin" >> "$GITHUB_PATH"
+
+      # En un PR se escanean solo sus commits (base..head); en push a main y en el cron, todo el historial.
+      # Las SHA llegan por variables de entorno, nunca interpoladas en el script. --redact: el secreto no se imprime.
+      - name: Scan history
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          if [ -n "${PR_BASE_SHA:-}" ]; then
+            gitleaks git --redact --verbose --log-opts="${PR_BASE_SHA}..${PR_HEAD_SHA}" .
+          else
+            gitleaks git --redact --verbose .
+          fi

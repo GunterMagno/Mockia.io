@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main, develop]
 
+# Permisos minimos del GITHUB_TOKEN: ningun trabajo de CI escribe en el repositorio (ci.workflows.test.ts lo exige)
+permissions:
+  contents: read
+
 # Una ejecucion nueva en la misma rama cancela la anterior (ahorra minutos y evita resultados desfasados)
 concurrency:
   group: ci-${{ github.ref }}
