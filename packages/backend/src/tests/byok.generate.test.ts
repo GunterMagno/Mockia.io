@@ -886,34 +886,34 @@ describe('generating with the user’s own AI key (BYOK) - /api/ai/*', () => {
 
   // -------------------------------------------------------------------------------------------------------------------
   describe('(g) decision D9: never the training-data store', () => {
-    it('a user who consented gets no stored generation from their own AI (and does from the platform AI: the control)', async () => {
-      const alice = await createUser();
-      await setAiTrainingConsent(alice.id, true);
-      const cred = await makeCredential(alice);
-      expectedKey = cred.key;
-      const projectId = await makeProject(alice);
+    it.each(['generate-mock-api-spec', 'generate-and-save'] as const)(
+      '%s: a user who consented gets no stored generation from their own AI (and does from the platform AI: the control)',
+      async (route) => {
+        const alice = await createUser();
+        await setAiTrainingConsent(alice.id, true);
+        const cred = await makeCredential(alice);
+        expectedKey = cred.key;
+        const projectId = await makeProject(alice);
 
-      const res = await generate('generate-and-save', alice, {
-        projectId,
-        requirement: 'x',
-        credentialId: cred.id,
-      });
-      expect(res.status).toBe(200);
-      expect(await AiGenerationModel.countDocuments({})).toBe(0);
+        const res = await generate(route, alice, {
+          projectId,
+          requirement: 'x',
+          credentialId: cred.id,
+        });
+        expect(res.status).toBe(200);
+        expect(await AiGenerationModel.countDocuments({})).toBe(0);
 
-      // the control: without credentialId the same user, with the same consent, IS stored (so the check above is not vacuous)
-      getLlmSpy.mockReturnValue({
-        name: 'platform',
-        complete: async () => ({ text: SPEC, provider: 'platform', model: 'm' }),
-      });
-      const platform = await generate('generate-mock-api-spec', alice, {
-        projectId,
-        requirement: 'x',
-      });
-      expect(platform.status).toBe(200);
-      expect(await AiGenerationModel.countDocuments({})).toBe(1);
-      expect(await counters(alice.id)).toEqual({ platform: 1, byok: 1 });
-    });
+        // the control: without credentialId the same user, with the same consent, IS stored (so the check above is not vacuous)
+        getLlmSpy.mockReturnValue({
+          name: 'platform',
+          complete: async () => ({ text: SPEC, provider: 'platform', model: 'm' }),
+        });
+        const platform = await generate(route, alice, { projectId, requirement: 'x' });
+        expect(platform.status).toBe(200);
+        expect(await AiGenerationModel.countDocuments({})).toBe(1);
+        expect(await counters(alice.id)).toEqual({ platform: 1, byok: 1 });
+      }
+    );
   });
 
   // -------------------------------------------------------------------------------------------------------------------
